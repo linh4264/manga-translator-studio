@@ -3,6 +3,8 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="darkreader-lock">
+    <meta name="color-scheme" content="light">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy"
         content="default-src 'self' data: blob: https:; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; connect-src 'self' data: blob: https: https://generativelanguage.googleapis.com https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; frame-src 'self' data: blob:; child-src 'self' data: blob:; object-src 'none'; base-uri 'self';">
@@ -101,293 +103,7 @@
                     </button>
                 </div>
 
-                <!-- API Key & Multi-Provider Selection Input -->
-                <div id="api-settings-section" class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-3">
-                    <!-- Local Mode Indicator -->
-                    <div id="local-mode-indicator"
-                        class="hidden flex items-center space-x-2 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-amber-400 text-xs">
-                        <i class="fa-solid fa-triangle-exclamation animate-bounce"></i>
-                        <span>Chạy Cục Bộ (Yêu cầu API Key cá nhân)</span>
-                    </div>
 
-                    <!-- AI Provider Selector -->
-                    <div class="space-y-1">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                            <span>Nhà cung cấp AI (Provider)</span>
-                            <span class="text-[9px] text-indigo-400 font-normal"><i class="fa-solid fa-microchip"></i> Đa mô hình</span>
-                        </label>
-                        <select id="ai-provider-select" onchange="updateAiProvider(this.value)"
-                            class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
-                            <option value="gemini" selected>Google Gemini API (Khuyên dùng)</option>
-                            <option value="claude">Anthropic Claude API</option>
-                            <option value="openai">OpenAI API (GPT-4o)</option>
-                            <option value="custom">Custom / Local LLM (Ollama, LM Studio)</option>
-                        </select>
-                    </div>
-
-                    <!-- API Endpoint Base URL (for Custom / Local LLM) -->
-                    <div id="api-endpoint-container" class="hidden space-y-1">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">API Endpoint Base URL</label>
-                        <input type="text" id="api-endpoint-input" onchange="updateApiEndpoint(this.value)"
-                            placeholder="http://localhost:11434/v1"
-                            class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
-                        <p class="text-[9px] text-slate-500 leading-relaxed">Ví dụ: Ollama: http://localhost:11434/v1 | LM Studio: http://localhost:1234/v1</p>
-                    </div>
-
-                    <div class="space-y-1">
-                        <label id="api-key-label" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gemini API Key</label>
-                        <div class="relative">
-                            <input type="password" id="api-key-input" placeholder="Tự động sử dụng key của hệ thống..."
-                                class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors pr-8">
-                            <button id="api-key-eye" onclick="toggleApiKeyVisibility()"
-                                class="absolute right-2.5 top-2 text-slate-500 hover:text-slate-300">
-                                <i class="fa-solid fa-eye text-[11px]"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Dynamic Model Selector with Smart Locking & New Generation Models -->
-                    <div class="space-y-1">
-                        <div class="flex justify-between items-center">
-                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mô hình AI (Model)</label>
-                            <span id="model-lock-badge"
-                                class="text-[9px] text-indigo-400 font-bold bg-indigo-500/10 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                <i class="fa-solid fa-lock"></i> Hệ thống
-                            </span>
-                        </div>
-                        <select id="model-select" onchange="updateSelectedModel(this.value)"
-                            class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
-                            <!-- Options updated dynamically by updateAiProvider -->
-                            <option value="gemini-3.5-flash">Gemini 3.5 Flash (Mới nhất)</option>
-                            <option value="gemini-3-flash-preview">Gemini 3 Flash Preview (mạnh, preview)</option>
-                            <option value="gemini-3.1-flash-lite" selected>Gemini 3.1 Flash-Lite (Khuyến nghị, nhanh/tiết kiệm)</option>
-                            <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview (chuyên sâu)</option>
-                            <option value="gemini-2.5-flash">Gemini 2.5 Flash (ổn định)</option>
-                            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (rẻ/nhanh)</option>
-                            <option value="gemini-2.5-pro">Gemini 2.5 Pro (chất lượng cao)</option>
-                            <option value="__custom__">Tự nhập model...</option>
-                        </select>
-                        <input id="custom-model-input" type="text" placeholder="gemini-3.5-flash-lite"
-                            class="hidden w-full mt-2 bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
-                        <p id="model-select-note" class="text-[9px] text-slate-500 leading-relaxed mt-1">
-                            * Mô hình được khóa cố định để đảm bảo chạy mượt mà bằng phím tự động của Sandbox Canvas.
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Translation Settings -->
-                <div id="translation-settings-section"
-                    class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-3">
-                    <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <i class="fa-solid fa-sliders text-indigo-400"></i> Cấu hình dịch thuật
-                    </h3>
-
-                    <!-- Source Language Selector -->
-                    <div class="space-y-1">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ngôn ngữ nguồn (Source Lang)</label>
-                        <select id="source-lang-select" onchange="updateSourceLanguage(this.value)"
-                            class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
-                            <option value="ja" selected>🇯🇵 Tiếng Nhật (Manga)</option>
-                            <option value="zh">🇨🇳 Tiếng Trung (Manhua)</option>
-                            <option value="ko">🇰🇷 Tiếng Hàn (Manhwa)</option>
-                            <option value="en">🇬🇧 Tiếng Anh (Comic / Scanlation)</option>
-                            <option value="auto">🌐 Tự động nhận diện (Auto Detect)</option>
-                        </select>
-                    </div>
-
-                    <label class="flex items-start space-x-2 cursor-pointer">
-                        <input type="checkbox" id="preserve-names-chk" onchange="togglePreserveNames(this.checked)"
-                            checked class="mt-0.5 rounded border-slate-800 text-indigo-600 focus:ring-0">
-                        <div class="text-[11px]">
-                            <span class="font-semibold text-slate-200">Không dịch tên nhân vật</span>
-                            <p class="text-[10px] text-slate-500 mt-0.5">Giữ nguyên Romaji/English (vd: Luffy, Naruto,
-                                Sakura).</p>
-                        </div>
-                    </label>
-
-                    <div id="glossary-container" class="space-y-1">
-                        <label class="block text-[10px] font-semibold text-slate-400">Tên cần giữ nguyên (cách nhau bằng
-                            dấu phẩy):</label>
-                        <input type="text" id="glossary-input" oninput="updateGlossary(this.value)"
-                            placeholder="Ví dụ: Luffy, Zoro, Nami, Sakura"
-                            class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600">
-                    </div>
-
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <label class="block text-[10px] font-semibold text-slate-400">Ma trận xưng hô nhân vật (Pronoun Matrix):</label>
-                            <button onclick="loadSamplePronounMatrix()" class="text-[9px] text-indigo-400 hover:text-indigo-300 font-semibold">⚡ Nạp mẫu thử</button>
-                        </div>
-                        <textarea id="pronoun-matrix-input" oninput="updatePronounMatrix(this.value)"
-                            rows="3"
-                            placeholder="Cú pháp: NgườiNói -> NgườiNghe: TôiXưng - TôiGọiTarget&#10;Ví dụ: Luffy -> Zoro: tớ - cậu; Zoro -> Luffy: tôi - cậu; Nami -> Luffy: tôi - tên ngốc"
-                            class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600 resize-y"></textarea>
-                        <p class="text-[10px] text-slate-500 leading-relaxed">Cú pháp: <code class="text-indigo-300">TênA -> TênB: Xưng_A - Gọi_B</code>. AI sẽ phân tích đuôi thoại để gán đúng nhân vật nói.</p>
-                    </div>
-
-                    <label class="flex items-start space-x-2 cursor-pointer pt-1 border-t border-slate-800/70">
-                        <input type="checkbox" id="ocr-enhance-chk" onchange="toggleOcrEnhance(this.checked)"
-                            checked class="mt-0.5 rounded border-slate-800 text-indigo-600 focus:ring-0">
-                        <div class="text-[11px]">
-                            <span class="font-semibold text-slate-200"><i class="fa-solid fa-eye text-sky-400"></i> Tăng cường tương phản OCR</span>
-                            <p class="text-[10px] text-slate-500 mt-0.5">Tiền xử lý tăng độ nét & tương phản giúp AI nhận diện chuẩn chữ mờ, chữ SFX nhạt.</p>
-                        </div>
-                    </label>
-
-                    <div class="space-y-1">
-                        <label class="block text-[10px] font-semibold text-slate-400">Mẫu prompt theo thể loại:</label>
-                        <div id="genre-preset-container" class="grid grid-cols-2 gap-2 text-[11px] text-slate-200">
-                            <label
-                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox"
-                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
-                                    value="quality" checked>
-                                <span>Ưu tiên chất lượng cao nhất</span>
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox"
-                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
-                                    value="comedy">
-                                <span>Hài hước</span>
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox"
-                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
-                                    value="school">
-                                <span>Học đường</span>
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox"
-                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
-                                    value="shounen">
-                                <span>Shounen / hành động</span>
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox"
-                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
-                                    value="fantasy">
-                                <span>Fantasy / isekai</span>
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox"
-                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
-                                    value="drama">
-                                <span>Drama</span>
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox"
-                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
-                                    value="horror">
-                                <span>Horror / thriller</span>
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox"
-                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
-                                    value="polite">
-                                <span>Lịch sự / trang trọng</span>
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox"
-                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
-                                    value="dark">
-                                <span>U tối / nghiêm túc</span>
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox"
-                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
-                                    value="romance">
-                                <span>Lãng mạn</span>
-                            </label>
-                            <label
-                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox"
-                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
-                                    value="slice">
-                                <span>Slice of life</span>
-                            </label>
-                        </div>
-                        <p class="text-[10px] text-slate-500 leading-relaxed">Bạn có thể tick nhiều thể loại cùng lúc.
-                            AI sẽ ghép tất cả preset đã chọn vào một prompt chung.</p>
-                    </div>
-
-                    <div class="space-y-1">
-                        <label class="block text-[10px] font-semibold text-slate-400">Prompt ngữ cảnh dịch:</label>
-                        <textarea id="translation-context-prompt" oninput="updateTranslationContextPrompt(this.value)"
-                            rows="4"
-                            placeholder="Ví dụ: Truyện có giọng điệu hài hước, nhân vật nói chuyện thân mật kiểu học sinh cấp 3, ưu tiên dịch tự nhiên, giữ nguyên thuật ngữ kỹ năng và xưng hô theo ngữ cảnh."
-                            class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600 resize-y"></textarea>
-                        <p class="text-[10px] text-slate-500 leading-relaxed">Nội dung này sẽ được thêm vào prompt hệ
-                            thống để AI hiểu bối cảnh, văn phong và quy ước dịch của bạn.</p>
-                    </div>
-
-                    <!-- Chapter Story Memory Configuration -->
-                    <div class="pt-2 border-t border-slate-800/70 space-y-2">
-                        <div class="flex items-center justify-between">
-                            <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                                <i class="fa-solid fa-brain text-purple-400"></i> Bộ nhớ ngữ cảnh chương
-                            </h4>
-                            <span id="story-memory-badge" class="text-[9px] bg-purple-500/10 text-purple-300 font-semibold px-1.5 py-0.5 rounded">0 trang</span>
-                        </div>
-                        <label class="flex items-start space-x-2 cursor-pointer">
-                            <input type="checkbox" id="story-memory-chk" onchange="toggleStoryMemory(this.checked)" checked
-                                class="mt-0.5 rounded border-slate-800 text-purple-600 focus:ring-0">
-                            <div class="text-[11px]">
-                                <span class="font-semibold text-slate-200">Tự động nối ngữ cảnh các trang trước</span>
-                                <p class="text-[10px] text-slate-500 mt-0.5">Tích lũy tóm tắt xưng hô & cốt truyện từ trang 1 đến trang cuối để dịch nhất quán.</p>
-                            </div>
-                        </label>
-                        <div class="flex items-center justify-between text-[10px]">
-                            <button onclick="viewStoryMemoryModal()" class="text-indigo-400 hover:text-indigo-300 font-medium">Xem bộ nhớ...</button>
-                            <button onclick="clearStoryMemory()" class="text-red-400 hover:text-red-300 font-medium"><i class="fa-solid fa-trash-can text-[9px]"></i> Xóa bộ nhớ</button>
-                        </div>
-                    </div>
-                    <div class="pt-2 border-t border-slate-800/70 space-y-2">
-                        <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                            <i class="fa-solid fa-clock text-amber-500"></i> Giới hạn tần suất API (Tránh lỗi 429/503)
-                        </h4>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div class="space-y-1">
-                                <label class="block text-[10px] font-semibold text-slate-400">Giãn cách gửi (giây):</label>
-                                <input type="number" id="api-delay-input" onchange="updateApiDelay(this.value)" min="0" max="60"
-                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="block text-[10px] font-semibold text-slate-400">Số lần thử lại:</label>
-                                <input type="number" id="max-retries-input" onchange="updateMaxRetries(this.value)" min="1" max="10"
-                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
-                            </div>
-                        </div>
-                        <p class="text-[9px] text-slate-500 leading-relaxed">
-                            * Khuyến nghị: Giãn cách 8-12 giây và thử lại 5 lần khi dùng API miễn phí (Free Key) để hạn chế tối đa lỗi ngắt quãng.
-                        </p>
-                    </div>
-
-                    <div class="pt-1 border-t border-slate-800/70 space-y-2">
-                        <div class="flex items-center justify-between gap-2">
-                            <div>
-                                <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kiểm tra nhất
-                                    quán</h4>
-                                <p class="text-[10px] text-slate-500 mt-0.5">Quét các cụm lặp lại và danh sách tên cần
-                                    giữ nguyên để tìm chỗ dịch lệch.</p>
-                            </div>
-                            <button onclick="runConsistencyCheck()"
-                                class="shrink-0 h-8 px-2.5 rounded bg-sky-600/10 hover:bg-sky-600 border border-sky-500/30 hover:border-sky-500 text-sky-300 hover:text-white text-[11px] font-semibold flex items-center gap-1.5 transition-all">
-                                <i class="fa-solid fa-shield-halved"></i> Kiểm tra
-                            </button>
-                        </div>
-                        <div id="consistency-check-summary" class="text-[11px] text-slate-400"></div>
-                        <div id="consistency-check-results" class="space-y-2"></div>
-                    </div>
-                </div>
 
                 <!-- File Dropzone -->
                 <div id="dropzone"
@@ -462,12 +178,13 @@
                     </div>
                 </div>
 
-                <div id="pages-list" class="flex-1 overflow-y-auto p-2 space-y-1">
-                    <!-- Empty State for Pages -->
-                    <div id="pages-empty-state" class="text-center py-10 px-4 text-slate-600">
-                        <i class="fa-regular fa-folder-open text-3xl mb-2 block text-slate-700"></i>
-                        <p class="text-xs">Chưa có ảnh nào được tải lên</p>
-                    </div>
+                <!-- Empty State for Pages -->
+                <div id="pages-empty-state" class="text-center py-10 px-4 text-slate-600">
+                    <i class="fa-regular fa-folder-open text-3xl mb-2 block text-slate-700"></i>
+                    <p class="text-xs">Chưa có ảnh nào được tải lên</p>
+                </div>
+
+                <div id="pages-list" class="flex-1 overflow-y-auto p-2 space-y-1 hidden">
                 </div>
             </div>
         </aside>
@@ -504,23 +221,6 @@
                          </div>
                     </div>
 
-                    <!-- Eraser Tool Mode Selector (Paint vs Clone) -->
-                    <div class="flex items-center space-x-1 bg-slate-950 p-0.5 rounded border border-slate-800 shrink-0">
-                        <button id="btn-eraser-tool-paint" onclick="setEraserTool('paint')" class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-600 text-white transition-all">
-                            Cọ vẽ
-                        </button>
-                        <button id="btn-eraser-tool-clone" onclick="setEraserTool('clone')" class="px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider text-slate-400 hover:text-white transition-all">
-                            Sao chép
-                        </button>
-                    </div>
-
-                    <!-- Clone Stamp Settings (Visible in clone mode) -->
-                    <div id="clone-stamp-settings" class="hidden flex items-center space-x-2 shrink-0">
-                        <button id="btn-set-clone-source" onclick="activateCloneSourceSelector()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 transition-all border border-slate-700">
-                            <i class="fa-solid fa-crosshairs text-indigo-400"></i> Chọn tâm mẫu
-                        </button>
-                        <span id="lbl-clone-source-status" class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Chưa chọn tâm</span>
-                    </div>
                 </div>
                 
                 <div class="flex items-center space-x-2">
@@ -571,12 +271,7 @@
                     <img id="manga-bg-image" src="" alt="Manga Page" class="block h-full w-auto max-w-none select-none rounded"
                         pointer-events="none">
                     <canvas id="eraser-canvas" class="absolute inset-0 w-full h-full rounded pointer-events-none z-10"></canvas>
-                    
-                    <!-- Clone Stamp Source Marker -->
-                    <div id="clone-source-marker" class="hidden absolute border border-red-500 rounded-full pointer-events-none z-30 flex items-center justify-center bg-red-500/10" style="transform: translate(-50%, -50%); pointer-events: none;">
-                        <div class="w-1.5 h-px bg-red-500 absolute"></div>
-                        <div class="h-1.5 w-px bg-red-500 absolute"></div>
-                    </div>
+
 
                     <div id="manga-overlays-container" class="absolute inset-0 select-none overflow-hidden rounded z-20">
                         <!-- Dynamic translation overlays go here -->
@@ -738,29 +433,6 @@
                         </div>
                     </div>
 
-                    <!-- Character Speaker & Target Attribution -->
-                    <div class="p-2.5 bg-slate-950 rounded-lg border border-slate-800 space-y-2">
-                        <div class="flex items-center justify-between">
-                            <label class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1">
-                                <i class="fa-solid fa-users"></i> Nhân vật giao tiếp
-                            </label>
-                            <button onclick="applyPronounMatrixToActiveBlock()" class="text-[9px] bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white px-2 py-0.5 rounded font-semibold transition-all">
-                                ⚡ Ép xưng hô
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div class="space-y-1">
-                                <label class="block text-[9px] text-slate-400">Người nói (Speaker):</label>
-                                <input type="text" id="edit-block-speaker" oninput="updateActiveBlockCharacters()" placeholder="Luffy..."
-                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
-                            </div>
-                            <div class="space-y-1">
-                                <label class="block text-[9px] text-slate-400">Người nghe (Target):</label>
-                                <input type="text" id="edit-block-target" oninput="updateActiveBlockCharacters()" placeholder="Zoro..."
-                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
-                            </div>
-                        </div>
-                    </div>
 
                     <!-- Text Area Original JP -->
                     <div class="space-y-1.5">
@@ -1457,7 +1129,245 @@
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div id="settings-modal-body" class="p-4 space-y-3 max-h-[70vh] overflow-y-auto"></div>
+            <div id="settings-modal-body" class="p-4 space-y-3 max-h-[70vh] overflow-y-auto">
+                <!-- API Key & Multi-Provider Selection Input -->
+                <div id="api-settings-section" class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-3">
+                    <!-- Local Mode Indicator -->
+                    <div id="local-mode-indicator"
+                        class="hidden flex items-center space-x-2 bg-amber-500/10 border border-amber-500/30 px-2.5 py-1.5 rounded-lg text-amber-400 text-xs">
+                        <i class="fa-solid fa-triangle-exclamation animate-bounce"></i>
+                        <span>Chạy Cục Bộ (Yêu cầu API Key cá nhân)</span>
+                    </div>
+
+                    <!-- AI Provider Selector -->
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                            <span>Nhà cung cấp AI (Provider)</span>
+                            <span class="text-[9px] text-indigo-400 font-normal"><i class="fa-solid fa-microchip"></i> Đa mô hình</span>
+                        </label>
+                        <select id="ai-provider-select" onchange="updateAiProvider(this.value)"
+                            class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
+                            <option value="gemini" selected>Google Gemini API (Khuyên dùng)</option>
+                            <option value="claude">Anthropic Claude API</option>
+                            <option value="openai">OpenAI API (GPT-4o)</option>
+                            <option value="custom">Custom / Local LLM (Ollama, LM Studio)</option>
+                        </select>
+                    </div>
+
+                    <!-- API Endpoint Base URL (for Custom / Local LLM) -->
+                    <div id="api-endpoint-container" class="hidden space-y-1">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">API Endpoint Base URL</label>
+                        <input type="text" id="api-endpoint-input" onchange="updateApiEndpoint(this.value)"
+                            placeholder="http://localhost:11434/v1"
+                            class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
+                        <p class="text-[9px] text-slate-500 leading-relaxed">Ví dụ: Ollama: http://localhost:11434/v1 | LM Studio: http://localhost:1234/v1</p>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label id="api-key-label" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gemini API Key</label>
+                        <div class="relative">
+                            <input type="password" id="api-key-input" placeholder="Tự động sử dụng key của hệ thống..."
+                                class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors pr-8">
+                            <button id="api-key-eye" onclick="toggleApiKeyVisibility()"
+                                class="absolute right-2.5 top-2 text-slate-500 hover:text-slate-300">
+                                <i class="fa-solid fa-eye text-[11px]"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Model Selector with Smart Locking & New Generation Models -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center">
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mô hình AI (Model)</label>
+                            <span id="model-lock-badge"
+                                class="text-[9px] text-indigo-400 font-bold bg-indigo-500/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                <i class="fa-solid fa-lock"></i> Hệ thống
+                            </span>
+                        </div>
+                        <select id="model-select" onchange="updateSelectedModel(this.value)"
+                            class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                            <option value="gemini-3.5-flash">Gemini 3.5 Flash (Mới nhất)</option>
+                            <option value="gemini-3-flash-preview">Gemini 3 Flash Preview (mạnh, preview)</option>
+                            <option value="gemini-3.1-flash-lite" selected>Gemini 3.1 Flash-Lite (Khuyến nghị, nhanh/tiết kiệm)</option>
+                            <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview (chuyên sâu)</option>
+                            <option value="gemini-2.5-flash">Gemini 2.5 Flash (ổn định)</option>
+                            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (rẻ/nhanh)</option>
+                            <option value="gemini-2.5-pro">Gemini 2.5 Pro (chất lượng cao)</option>
+                            <option value="__custom__">Tự nhập model...</option>
+                        </select>
+                        <input id="custom-model-input" type="text" placeholder="gemini-3.5-flash-lite"
+                            class="hidden w-full mt-2 bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
+                        <p id="model-select-note" class="text-[9px] text-slate-500 leading-relaxed mt-1">
+                            * Mô hình được khóa cố định để đảm bảo chạy mượt mà bằng phím tự động của Sandbox Canvas.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Translation Settings -->
+                <div id="translation-settings-section"
+                    class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-3">
+                    <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-sliders text-indigo-400"></i> Cấu hình dịch thuật
+                    </h3>
+
+                    <!-- Source Language Selector -->
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ngôn ngữ nguồn (Source Lang)</label>
+                        <select id="source-lang-select" onchange="updateSourceLanguage(this.value)"
+                            class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
+                            <option value="ja" selected>🇯🇵 Tiếng Nhật (Manga)</option>
+                            <option value="zh">🇨🇳 Tiếng Trung (Manhua)</option>
+                            <option value="ko">🇰🇷 Tiếng Hàn (Manhwa)</option>
+                            <option value="en">🇬🇧 Tiếng Anh (Comic / Scanlation)</option>
+                            <option value="auto">🌐 Tự động nhận diện (Auto Detect)</option>
+                        </select>
+                    </div>
+
+                    <label class="flex items-start space-x-2 cursor-pointer">
+                        <input type="checkbox" id="preserve-names-chk" onchange="togglePreserveNames(this.checked)"
+                            checked class="mt-0.5 rounded border-slate-800 text-indigo-600 focus:ring-0">
+                        <div class="text-[11px]">
+                            <span class="font-semibold text-slate-200">Không dịch tên nhân vật</span>
+                            <p class="text-[10px] text-slate-500 mt-0.5">Giữ nguyên Romaji/English (vd: Luffy, Naruto, Sakura).</p>
+                        </div>
+                    </label>
+
+                    <div id="glossary-container" class="space-y-1">
+                        <label class="block text-[10px] font-semibold text-slate-400">Tên cần giữ nguyên (cách nhau bằng dấu phẩy):</label>
+                        <input type="text" id="glossary-input" oninput="updateGlossary(this.value)"
+                            placeholder="Ví dụ: Luffy, Zoro, Nami, Sakura"
+                            class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600">
+                    </div>
+
+
+
+                    <label class="flex items-start space-x-2 cursor-pointer pt-1 border-t border-slate-800/70">
+                        <input type="checkbox" id="ocr-enhance-chk" onchange="toggleOcrEnhance(this.checked)"
+                            checked class="mt-0.5 rounded border-slate-800 text-indigo-600 focus:ring-0">
+                        <div class="text-[11px]">
+                            <span class="font-semibold text-slate-200"><i class="fa-solid fa-eye text-sky-400"></i> Tăng cường tương phản OCR</span>
+                            <p class="text-[10px] text-slate-500 mt-0.5">Tiền xử lý tăng độ nét & tương phản giúp AI nhận diện chuẩn chữ mờ, chữ SFX nhạt.</p>
+                        </div>
+                    </label>
+
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-semibold text-slate-400">Mẫu prompt theo thể loại:</label>
+                        <div id="genre-preset-container" class="grid grid-cols-2 gap-2 text-[11px] text-slate-200">
+                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="quality" checked>
+                                <span>Ưu tiên chất lượng cao nhất</span>
+                            </label>
+                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="comedy">
+                                <span>Hài hước</span>
+                            </label>
+                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="school">
+                                <span>Học đường</span>
+                            </label>
+                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="shounen">
+                                <span>Shounen / hành động</span>
+                            </label>
+                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="fantasy">
+                                <span>Fantasy / isekai</span>
+                            </label>
+                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="drama">
+                                <span>Drama</span>
+                            </label>
+                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="horror">
+                                <span>Horror / thriller</span>
+                            </label>
+                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="polite">
+                                <span>Lịch sự / trang trọng</span>
+                            </label>
+                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="dark">
+                                <span>U tối / nghiêm túc</span>
+                            </label>
+                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="romance">
+                                <span>Lãng mạn</span>
+                            </label>
+                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="slice">
+                                <span>Slice of life</span>
+                            </label>
+                        </div>
+                        <p class="text-[10px] text-slate-500 leading-relaxed">Bạn có thể tick nhiều thể loại cùng lúc. AI sẽ ghép tất cả preset đã chọn vào một prompt chung.</p>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-semibold text-slate-400">Prompt ngữ cảnh dịch:</label>
+                        <textarea id="translation-context-prompt" oninput="updateTranslationContextPrompt(this.value)"
+                            rows="4"
+                            placeholder="Ví dụ: Truyện có giọng điệu hài hước, nhân vật nói chuyện thân mật kiểu học sinh cấp 3, ưu tiên dịch tự nhiên, giữ nguyên thuật ngữ kỹ năng và xưng hô theo ngữ cảnh."
+                            class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600 resize-y"></textarea>
+                        <p class="text-[10px] text-slate-500 leading-relaxed">Nội dung này sẽ được thêm vào prompt hệ thống để AI hiểu bối cảnh, văn phong và quy ước dịch của bạn.</p>
+                    </div>
+
+                    <!-- Chapter Story Memory Configuration -->
+                    <div class="pt-2 border-t border-slate-800/70 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-brain text-purple-400"></i> Bộ nhớ ngữ cảnh chương
+                            </h4>
+                            <span id="story-memory-badge" class="text-[9px] bg-purple-500/10 text-purple-300 font-semibold px-1.5 py-0.5 rounded">0 trang</span>
+                        </div>
+                        <label class="flex items-start space-x-2 cursor-pointer">
+                            <input type="checkbox" id="story-memory-chk" onchange="toggleStoryMemory(this.checked)" checked
+                                class="mt-0.5 rounded border-slate-800 text-purple-600 focus:ring-0">
+                            <div class="text-[11px]">
+                                <span class="font-semibold text-slate-200">Tự động nối ngữ cảnh các trang trước</span>
+                                <p class="text-[10px] text-slate-500 mt-0.5">Tích lũy tóm tắt xưng hô & cốt truyện từ trang 1 đến trang cuối để dịch nhất quán.</p>
+                            </div>
+                        </label>
+                        <div class="flex items-center justify-between text-[10px]">
+                            <button onclick="viewStoryMemoryModal()" class="text-indigo-400 hover:text-indigo-300 font-medium">Xem bộ nhớ...</button>
+                            <button onclick="clearStoryMemory()" class="text-red-400 hover:text-red-300 font-medium"><i class="fa-solid fa-trash-can text-[9px]"></i> Xóa bộ nhớ</button>
+                        </div>
+                    </div>
+                    <div class="pt-2 border-t border-slate-800/70 space-y-2">
+                        <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-clock text-amber-500"></i> Giới hạn tần suất API (Tránh lỗi 429/503)
+                        </h4>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="space-y-1">
+                                <label class="block text-[10px] font-semibold text-slate-400">Giãn cách gửi (giây):</label>
+                                <input type="number" id="api-delay-input" onchange="updateApiDelay(this.value)" min="0" max="60"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-[10px] font-semibold text-slate-400">Số lần thử lại:</label>
+                                <input type="number" id="max-retries-input" onchange="updateMaxRetries(this.value)" min="1" max="10"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
+                            </div>
+                        </div>
+                        <p class="text-[9px] text-slate-500 leading-relaxed">
+                            * Khuyến nghị: Giãn cách 8-12 giây và thử lại 5 lần khi dùng API miễn phí (Free Key) để hạn chế tối đa lỗi ngắt quãng.
+                        </p>
+                    </div>
+
+                    <div class="pt-1 border-t border-slate-800/70 space-y-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <div>
+                                <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kiểm tra nhất quán</h4>
+                                <p class="text-[10px] text-slate-500 mt-0.5">Quét các cụm lặp lại và danh sách tên cần giữ nguyên để tìm chỗ dịch lệch.</p>
+                            </div>
+                            <button onclick="runConsistencyCheck()"
+                                class="shrink-0 h-8 px-2.5 rounded bg-sky-600/10 hover:bg-sky-600 border border-sky-500/30 hover:border-sky-500 text-sky-300 hover:text-white text-[11px] font-semibold flex items-center gap-1.5 transition-all">
+                                <i class="fa-solid fa-shield-halved"></i> Kiểm tra
+                            </button>
+                        </div>
+                        <div id="consistency-check-summary" class="text-[11px] text-slate-400"></div>
+                        <div id="consistency-check-results" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
             <div class="p-4 border-t border-slate-800 flex justify-end bg-slate-900/70">
                 <button onclick="closeSettingsModal()"
                     class="px-4 py-2 text-xs font-semibold rounded bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">Xong</button>
@@ -1465,7 +1375,7 @@
         </div>
     </div>
 
-    <div id="bg-task-panel"
+    <div id="background-task-bar"
         class="hidden fixed bottom-6 left-6 bg-slate-900/95 border border-slate-800 rounded-xl p-4 shadow-2xl z-50 w-80 backdrop-blur-md space-y-3 pointer-events-auto">
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-2">
@@ -1474,7 +1384,7 @@
                         class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
                 </div>
-                <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Tiến trình dịch ngầm</span>
+                <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Tiến trình dịch ngầm (<span id="bg-task-percentage" class="font-mono">0%</span>)</span>
             </div>
             <button onclick="cancelBatchTranslation()"
                 class="text-[10px] text-red-400 hover:text-red-300 font-bold px-2 py-1 rounded bg-red-500/10 hover:bg-red-500/20 border border-red-500/10 hover:border-red-500/20 transition-all flex items-center gap-1">
@@ -1486,7 +1396,7 @@
             <p id="bg-task-subtitle" class="text-[10px] text-slate-500 truncate leading-normal">Vui lòng đợi...</p>
         </div>
         <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden">
-            <div id="bg-task-bar" class="bg-indigo-500 h-full w-0 transition-all duration-300"></div>
+            <div id="bg-task-progress-bar" class="bg-indigo-500 h-full w-0 transition-all duration-300"></div>
         </div>
     </div>
 
@@ -1569,7 +1479,7 @@
     <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- JAVASCRIPT CODE IMPLEMENTATION -->
-    <script src="app.js"></script>
+    <script type="module" src="js/main.js"></script>
 </body>
 
 </html>

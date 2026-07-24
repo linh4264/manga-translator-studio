@@ -16,19 +16,17 @@
   - Tự động nối kết quả xưng hô & tóm tắt diễn biến giữa các trang liền kề giúp AI dịch nhất quán giọng văn từ trang 1 đến hết chương.
 - 🧹 **Tự động Xóa chữ AI (Auto Clean Text & Inpainting)**:
   - Nút **🧹 Xóa chữ AI** tự động phủ nền bong bóng thoại mượt mà mà không làm mất viền contour hay họa tiết gốc.
-- 💥 **Bộ công cụ SFX chuyên sâu (Sound Effects & Curved Text)**:
-  - Phân loại khung thoại (`Lời thoại` / `💥 SFX Hiệu ứng`), chỉnh góc xoay (`Rotation Slider: -180° đến 180°`), uốn cong chữ (`Arc Text Angle`) và hiệu ứng viền/bóng chữ.
+- 💥 **Bộ công cụ SFX chuyên sâu (Sound Effects & Rotated Text)**:
+  - Phân loại khung thoại (`Lời thoại` / `💥 SFX Hiệu ứng`), chỉnh góc xoay (`Rotation Slider: -180° đến 180°`), góc uốn cong (`Arc Slider`) và hiệu ứng viền/bóng chữ.
 - 🎨 **Bộ công cụ Typeset & Canvas chuyên sâu**:
   - Tự động canh chỉnh kích thước phông chữ (Auto-fit font size) vừa khít khung thoại.
   - Hỗ trợ viết chữ ngang và chữ dọc (Vertical Text) cho manga truyền thống.
   - Đầy đủ font chữ truyện tranh độc quyền: *Be Vietnam Pro, Bangers, Comic Neue, Caveat, Chakra Petch, Permanent Marker, Bungee, Saira Condensed, Nunito, Inter*.
   - Tùy chỉnh màu chữ, màu viền (Stroke), màu nền (Background opacity), căn lề, khoảng cách dòng/chữ.
-- 🧹 **Cọ tẩy chữ mạnh mẽ (Eraser & Clone Stamp Tool)**:
+- 🧹 **Cọ tẩy chữ mạnh mẽ (Eraser Tool)**:
   - Tẩy sạch chữ gốc trong bong bóng thoại bằng màu tự chọn (Trắng/Đen/Màu tự do).
-  - Công cụ **Clone Stamp** sao chép họa tiết/nền truyện để xóa chữ trên nền phức tạp.
 - 🧠 **Cấu hình dịch thuật nâng cao (Advanced Translation Controls)**:
-  - **Ma trận xưng hô (Pronoun Matrix)**: Quy định chính xác cặp từ xưng hô giữa từng nhân vật (vd: *Luffy -> Zoro: cậu - tớ*).
-  - **Glossary & Giữ tên nhân vật**: Không dịch tên riêng hoặc danh từ đặc biệt (vd: *Luffy, Zoro, Nami*).
+  - **Glossary & Giữ tên nhân vật**: Không dịch tên riêng hoặc danh từ đặc biệt (vd: *Luffy, Zoro, Nami, Sakura*).
   - **Mẫu Prompt theo thể loại (Genre Presets)**: Hài hước, Học đường, Shounen, Fantasy/Isekai, Horror, Drama, Romance...
   - **Tăng cường tương phản OCR**: Tiền xử lý ảnh giúp AI nhận diện chuẩn chữ mờ, SFX nhạt.
 - 📦 **Quản lý danh sách & Xuất file đa dạng**:
@@ -63,22 +61,41 @@ Nhấn nút **"Copy"** để sao chép chuỗi mã API Key (có dạng bắt đ�
 
 ---
 
-## 🚀 Hướng dẫn cài đặt & Chạy ứng dụng
+## 🚀 Hướng dẫn chạy ứng dụng
 
-Manga Translator Studio là ứng dụng thuần Web (Client-side HTML5/JavaScript), không cần cài đặt backend phức tạp!
+> [!IMPORTANT]
+> **Lưu ý về ES Modules**: Vì ứng dụng sử dụng cấu trúc mã nguồn dạng mô-đun hiện đại (ES Modules `import`/`export`), trình duyệt sẽ chặn tải file nếu mở trực tiếp bằng giao thức `file://` (Double-click vào `index.html` sẽ gặp lỗi CORS). **Bạn bắt buộc phải chạy ứng dụng thông qua một máy chủ Web cục bộ (Local Web Server).**
 
-### Cách 1: Mở trực tiếp bằng trình duyệt (Nhanh nhất)
-1. Tải toàn bộ thư mục mã nguồn về máy.
-2. Nhấp kép chuột (Double click) vào file `index.html` để mở trực tiếp trên trình duyệt Chrome, Edge, Firefox, Brave...
+Dưới đây là các cách cực kỳ đơn giản để khởi chạy:
 
-### Cách 2: Chạy qua Local Web Server
-Bạn có thể sử dụng các extension hoặc công cụ server tĩnh:
-- **VS Code Live Server**: Mở thư mục dự án trong VS Code, nhấn chuột phải vào `index.html` -> chọn **"Open with Live Server"**.
-- **Node.js `serve`**:
+### Cách 1: Sử dụng VS Code Live Server (Khuyên dùng cho lập trình viên)
+1. Mở thư mục dự án trong phần mềm **VS Code**.
+2. Cài đặt extension **Live Server** (của nhà phát triển *Ritwick Dey*).
+3. Nhấp chuột phải vào file [index.html](file:///d:/manga/manga_translator_studio/index.html) -> chọn **"Open with Live Server"** (hoặc bấm nút **"Go Live"** ở góc dưới cùng bên phải VS Code).
+
+### Cách 2: Sử dụng Node.js (Nhanh nhất nếu đã cài Node)
+Mở cửa sổ Command Prompt / Terminal tại thư mục dự án và chạy dòng lệnh:
+```bash
+npx serve .
+```
+Sau đó, truy cập đường dẫn: **`http://localhost:3000`** (hoặc cổng được hiển thị trên terminal).
+
+### Cách 3: Sử dụng Python (Nếu máy có cài Python)
+Mở Terminal tại thư mục dự án và chạy lệnh:
+* Với Python 3:
   ```bash
-  npx serve .
+  python -m http.server 8000
   ```
-  Sau đó truy cập `http://localhost:3000`.
+* Với Python 2:
+  ```bash
+  python -m SimpleHTTPServer 8000
+  ```
+Sau đó, mở trình duyệt truy cập: **`http://localhost:8000`**.
+
+### Cách 4: Sử dụng tiện ích mở rộng Chrome Extension (Không cần gõ dòng lệnh)
+1. Cài đặt extension **Web Server for Chrome** từ Chrome Web Store.
+2. Mở extension lên, nhấn nút **"Choose Folder"** và chọn thư mục của dự án này.
+3. Bật nút công tắc **"Web Server: Started"** và nhấp vào đường link URL được cung cấp (thường là `http://127.0.0.1:8887`).
 
 ---
 
@@ -102,10 +119,8 @@ Bạn có thể sử dụng các extension hoặc công cụ server tĩnh:
 - **Chỉnh sửa văn bản**: Click vào khung thoại trên ảnh để chỉnh sửa nội dung dịch, đổi phông chữ, cỡ chữ, màu sắc, viền chữ...
 - **Thêm khung thoại mới**: Bấm **"Thêm khung thoại"** nếu AI bỏ sót văn bản.
 - **Dùng Cọ tẩy chữ (Eraser)**: Bật chế độ cọ vẽ để tô đè xóa các chữ thừa ngoài lề hoặc chữ hiệu ứng (SFX).
-- **Sao chép họa tiết nền (Clone Stamp)**: Giữ phím `Alt` để chọn vùng mẫu nền, sau đó di chuột tô lên vùng có chữ để xóa chữ mà vẫn giữ nguyên vân nền truyện.
 
-### 4. Thiết lập quy tắc xưng hô & Từ vựng
-- **Ma trận xưng hô (Pronoun Matrix)**: Điền vào ô quy tắc dạng: `Luffy -> Zoro: cậu - tớ; Zoro -> Nami: cô - tôi`.
+### 4. Thiết lập từ vựng & Giữ nguyên tên
 - **Danh sách giữ tên**: Nhập các tên riêng cần giữ nguyên như `Luffy, Zoro, Nami, Konoha`.
 - **Giới hạn tần suất (Rate Limiting)**: Nếu dùng API Key miễn phí, hãy để **Giãn cách gửi: 8-12 giây** và **Số lần thử lại: 5** để tránh bị lỗi 429 (Too Many Requests).
 

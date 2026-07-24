@@ -1,3 +1,7 @@
+:root {
+    color-scheme: light !important;
+}
+
 /* Custom Scrollbar for sleek dark look */
 ::-webkit-scrollbar {
     width: 6px;
@@ -90,7 +94,7 @@
     /* Kích hoạt tăng tốc đồ họa phần cứng GPU */
 }
 
-/* Chống xuống hàng trong 1 chữ (Prevent breaking inside single words) */
+/* Chống xuống hàng trong 1 chữ và chặn trình duyệt tự động đảo màu ở chế độ tối */
 .bubble-overlay,
 .bubble-overlay * {
     word-break: keep-all !important;
@@ -98,6 +102,9 @@
     word-wrap: normal !important;
     hyphens: none !important;
     -webkit-hyphens: none !important;
+    forced-color-adjust: none !important;
+    -webkit-forced-color-adjust: none !important;
+    color-scheme: light !important;
 }
 
 .bubble-overlay:hover {
