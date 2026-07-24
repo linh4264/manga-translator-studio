@@ -4,6 +4,10 @@
 ![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)
 ![AI Powered](https://img.shields.io/badge/AI-Google%20Gemini%203.1-orange?style=for-the-badge&logo=google)
 
+### 📸 Kết quả dịch mẫu (Translation Preview)
+
+![Manga Translation Demo](file:///C:/Users/Acer/.gemini/antigravity-ide/brain/1adcb06b-239d-4ff3-bb9e-58bb7f9417b3/media__1784912414198.jpg)
+
 **Manga Translator Studio** là ứng dụng web chuyên nghiệp hỗ trợ dịch thuật tự động và typeset (trình bày chữ) cho truyện tranh (*Manga, Manhua, Manhwa, Comic, Scanlation*). Tích hợp công nghệ AI đa phương thức hàng đầu của **Google Gemini** (Gemini 3.1 Flash-Lite, Gemini 3.5 Flash, Gemini Pro...), công cụ giúp tự động nhận diện bong bóng thoại (OCR), dịch sang tiếng Việt tự nhiên chuẩn văn phong comic, và tự động điền chữ (Typeset) vừa vặn vào khung thoại.
 
 ---
