@@ -17,12 +17,14 @@ import {
 import { elements } from './core/elements.js';
 
 import { showToast } from './core/utils.js';
+import { registerAction, initEventDelegation } from './core/events.js';
 
 import './features/ocr.js';
 import './features/ai.js';
 import { updateToeicNotebookUI } from './features/toeic.js';
 import './features/inpainting.js';
-import './features/canvas.js';
+import { toggleEraserMode } from './features/inpainting.js';
+import { copyBlockStyle, pasteBlockStyle } from './features/canvas.js';
 import './features/io.js';
 
 import {
@@ -42,10 +44,20 @@ import {
     updateSplitView,
     setRightTab,
     populateCustomFontsDropdown,
-    updateUndoRedoUI
+    updateUndoRedoUI,
+    openSettingsModal,
+    closeSettingsModal
 } from './ui/ui.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Register actions for global event delegation router
+    registerAction('openSettingsModal', openSettingsModal);
+    registerAction('closeSettingsModal', closeSettingsModal);
+    registerAction('toggleEraserMode', toggleEraserMode);
+    registerAction('copyBlockStyle', copyBlockStyle);
+    registerAction('pasteBlockStyle', pasteBlockStyle);
+    initEventDelegation();
+
     // Register UI bridge so ai.js and canvas.js can call UI functions without circular imports
     registerUIBridge({ updatePageListUI, updateProcessingOverlay, updateBackgroundTaskOverlay, updateActiveBlockEditor, updateSplitView, setRightTab });
     registerStateCallbacks({

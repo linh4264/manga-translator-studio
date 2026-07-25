@@ -80,7 +80,7 @@
                             title="Đóng menu">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
-                        <button onclick="openSettingsModal()"
+                        <button data-action="openSettingsModal"
                             class="shrink-0 h-8 px-2.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 text-slate-300 hover:text-white text-[11px] font-semibold flex items-center gap-1.5 transition-colors"
                             title="Cài đặt dịch thuật">
                             <i class="fa-solid fa-gear text-indigo-400"></i>
@@ -175,6 +175,15 @@
                             title="Giải phóng bộ nhớ RAM đệm Canvas">
                             <i class="fa-solid fa-broom text-amber-400"></i> Dọn RAM
                         </button>
+                    </div>
+                </div>
+
+                <!-- Page Filter Search Input -->
+                <div id="pages-search-container" class="px-3 pb-2 hidden">
+                    <div class="relative">
+                        <input type="text" id="pages-search-input" oninput="filterPagesList(this.value)" placeholder="Tìm kiếm trang theo tên..."
+                            class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500/50 rounded px-2.5 py-1 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none pl-7 transition-all">
+                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-[10px]"></i>
                     </div>
                 </div>
 
@@ -278,19 +287,19 @@
                     </div>
 
                     <!-- Canvas Floating Quick Toolbar for Active Block -->
-                    <div id="canvas-floating-toolbar" class="hidden absolute z-40 bg-slate-900/95 border border-indigo-500/40 rounded-lg shadow-2xl p-1 flex items-center gap-1 backdrop-blur-md transition-all duration-150 transform -translate-x-1/2">
-                        <button onclick="copyBlockStyle()" class="px-2 py-1 hover:bg-slate-800 rounded text-[11px] text-slate-300 hover:text-white flex items-center gap-1" title="Sao chép định dạng (Ctrl+Shift+C)">
-                            <i class="fa-solid fa-paintbrush text-indigo-400"></i> Style
+                    <div id="canvas-floating-toolbar" class="hidden absolute z-40 bg-slate-900/95 border border-indigo-500/40 rounded-lg shadow-2xl p-1 flex items-center gap-0.5 backdrop-blur-md transform -translate-x-1/2">
+                        <button data-action="copyBlockStyle" class="w-7 h-7 hover:bg-slate-800 rounded text-slate-300 hover:text-white flex items-center justify-center" title="Sao chép định dạng (Ctrl+Shift+C)">
+                            <i class="fa-solid fa-paintbrush text-indigo-400 text-xs"></i>
                         </button>
-                        <button onclick="duplicateActiveBlock()" class="px-2 py-1 hover:bg-slate-800 rounded text-[11px] text-slate-300 hover:text-white flex items-center gap-1" title="Nhân đôi ô thoại (Ctrl+D)">
-                            <i class="fa-solid fa-copy text-sky-400"></i> Nhân đôi
+                        <button data-action="pasteBlockStyle" class="w-7 h-7 hover:bg-slate-800 rounded text-slate-300 hover:text-white flex items-center justify-center" title="Dán định dạng đã sao chép (Ctrl+Shift+V)">
+                            <i class="fa-solid fa-paste text-amber-400 text-xs"></i>
                         </button>
-                        <button onclick="toggleActiveBlockOrientation()" class="px-2 py-1 hover:bg-slate-800 rounded text-[11px] text-slate-300 hover:text-white flex items-center gap-1" title="Đổi hướng Ngang/Dọc">
-                            <i class="fa-solid fa-arrows-rotate text-amber-400"></i> <span id="lbl-floating-dir">Dọc</span>
+                        <button onclick="duplicateActiveBlock()" class="w-7 h-7 hover:bg-slate-800 rounded text-slate-300 hover:text-white flex items-center justify-center" title="Nhân đôi ô thoại (Ctrl+D)">
+                            <i class="fa-solid fa-copy text-sky-400 text-xs"></i>
                         </button>
-                        <div class="h-3 w-px bg-slate-800 my-auto"></div>
-                        <button onclick="deleteActiveBlock()" class="px-2 py-1 hover:bg-red-950 text-red-400 hover:text-red-300 rounded text-[11px] flex items-center gap-1" title="Xóa ô thoại (Delete)">
-                            <i class="fa-solid fa-trash-can"></i> Xóa
+                        <div class="h-3 w-px bg-slate-800 my-auto mx-1"></div>
+                        <button onclick="deleteActiveBlock()" class="w-7 h-7 hover:bg-red-950 text-red-400 hover:text-red-300 rounded flex items-center justify-center" title="Xóa ô thoại (Delete)">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
                         </button>
                     </div>
                 </div>
@@ -401,7 +410,7 @@
                         <button id="btn-export-page" onclick="exportActivePage()" disabled class="py-2 px-3 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 transition-all text-xs font-bold shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none">
                             <i class="fa-solid fa-download"></i> Xuất ảnh
                         </button>
-                        <button id="btn-eraser-mode" onclick="toggleEraserMode()" disabled class="py-2 px-3 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-all text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none" title="Bật/Tắt chế độ cọ vẽ để tẩy chữ thô trực tiếp trên ảnh">
+                        <button id="btn-eraser-mode" data-action="toggleEraserMode" disabled class="py-2 px-3 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-all text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none" title="Bật/Tắt chế độ cọ vẽ để tẩy chữ thô trực tiếp trên ảnh">
                             <i class="fa-solid fa-eraser"></i> Cọ tẩy
                         </button>
                     </div>
@@ -1124,7 +1133,7 @@
                         <p class="text-[10px] text-slate-500">API key, model và quy tắc giữ tên</p>
                     </div>
                 </div>
-                <button onclick="closeSettingsModal()"
+                <button data-action="closeSettingsModal"
                     class="w-8 h-8 rounded hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-slate-100">
                     <i class="fa-solid fa-xmark"></i>
                 </button>

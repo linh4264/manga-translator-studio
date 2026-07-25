@@ -773,9 +773,15 @@ export function updateActiveBlockEditor() {
 
 // 12. Cập nhật sidebar danh sách trang
 export function updatePageListUI() {
+    const searchContainer = document.getElementById('pages-search-container');
+    const searchInput = document.getElementById('pages-search-input');
+    const filterQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
     if (globalState.pages.length === 0) {
         elements.pagesEmptyState.classList.remove('hidden');
         elements.pagesList.classList.add('hidden');
+        if (searchContainer) searchContainer.classList.add('hidden');
+        if (searchInput) searchInput.value = '';
         elements.pageCountBadge.innerText = '0';
         elements.btnBatchTranslate.disabled = true;
         elements.btnBatchExport.disabled = true;
@@ -789,6 +795,7 @@ export function updatePageListUI() {
 
     elements.pagesEmptyState.classList.add('hidden');
     elements.pagesList.classList.remove('hidden');
+    if (searchContainer) searchContainer.classList.remove('hidden');
     elements.pageCountBadge.innerText = globalState.pages.length;
     elements.btnBatchTranslate.disabled = false;
     elements.btnBatchExport.disabled = false;
@@ -800,6 +807,11 @@ export function updatePageListUI() {
 
     elements.pagesList.innerHTML = '';
     globalState.pages.forEach((page, index) => {
+        // Áp dụng bộ lọc tìm kiếm nhanh theo tên tệp
+        if (filterQuery && !page.name.toLowerCase().includes(filterQuery)) {
+            return;
+        }
+
         const isActive = index === globalState.activePageIndex;
         const safePageName = escapeHTML(page.name);
 
@@ -1278,4 +1290,9 @@ window.syncTextColorHex = syncTextColorHex;
 window.syncBgColorHex = syncBgColorHex;
 window.syncStrokeColorHex = syncStrokeColorHex;
 window.syncShadowColorHex = syncShadowColorHex;
+
+export function filterPagesList() {
+    updatePageListUI();
+}
+window.filterPagesList = filterPagesList;
 

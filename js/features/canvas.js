@@ -828,6 +828,8 @@ export function startBlockDrag(e, block) {
             blockElem.style.left = `${block.box.x}%`;
             blockElem.style.top = `${block.box.y}%`;
         }
+
+        updateFloatingToolbarPosition();
     }
 
     function onDragEnd() {
@@ -913,6 +915,8 @@ export function startBlockResize(e, block, handleDir) {
             blockElem.style.top = `${block.box.y}%`;
             blockElem.style.width = `${block.box.w}%`;
             blockElem.style.height = `${block.box.h}%`;
+
+            updateFloatingToolbarPosition();
 
             if (globalState.autoFitEnabled) {
                 if (!resizeRafId) {
