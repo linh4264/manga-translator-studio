@@ -24,6 +24,22 @@ import { refineAiBlockBox } from './ocr.js';
 import { requestOverlayRender } from './canvas.js';
 import { compilePronounMatrixPrompt } from './pronoun.js';
 
+export const TARGET_LANG_MAP = {
+    'vi': 'Vietnamese',
+    'en': 'English',
+    'es': 'Spanish',
+    'fr': 'French',
+    'pt': 'Portuguese',
+    'de': 'German',
+    'it': 'Italian',
+    'ru': 'Russian',
+    'id': 'Indonesian',
+    'th': 'Thai',
+    'ko': 'Korean',
+    'ja': 'Japanese',
+    'zh': 'Chinese'
+};
+
 export let cancelTranslationFlag = false;
 export let isBatchTranslating = false;
 
@@ -46,13 +62,17 @@ export function normalizeModelId(modelId) {
 
 export function getModelTranslationProfile(modelId) {
     const normalized = normalizeModelId(modelId);
+    const targetLang = globalState.targetLanguage || 'vi';
+    const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
+    const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
+    const pronounSimple = targetLang === 'vi' ? 'xưng hô (pronouns)' : 'pronouns';
 
     if (normalized === 'gemini-3.1-flash-lite') {
         return [
             '- MODEL PROFILE: Gemini 3.1 Flash-Lite.',
-            '- MODEL RULE: You must check the provided previous page dialogues context and strictly reuse the exact same pronouns (xưng hô) and tone for the same characters.',
-            '- MODEL RULE: Keep the xưng hô (pronouns) simple, conversational, and highly consistent across all bubbles on the page.',
-            '- MODEL RULE: Translate to natural, everyday Vietnamese manga speech. Avoid overly formal, literal, or robotic wording.',
+            `- MODEL RULE: You must check the provided previous page dialogues context and strictly reuse the exact same ${pronounTerm} and tone for the same characters.`,
+            `- MODEL RULE: Keep the ${pronounSimple} simple, conversational, and highly consistent across all bubbles on the page.`,
+            `- MODEL RULE: Translate to natural, everyday ${targetLangName} manga speech. Avoid overly formal, literal, or robotic wording.`,
             '- MODEL RULE: Keep translations short and compact so they fit inside speech bubbles easily.'
         ];
     }
@@ -60,8 +80,8 @@ export function getModelTranslationProfile(modelId) {
     if (normalized.includes('flash-lite')) {
         return [
             '- MODEL PROFILE: Flash-Lite.',
-            '- MODEL RULE: Prioritize short, natural, high-confidence Vietnamese. Prefer simple xưng hô and avoid ornate wording.',
-            '- MODEL RULE: If speaker relationship is unclear, use the safest neutral Vietnamese pronoun pair that still sounds natural in manga dialogue.',
+            `- MODEL RULE: Prioritize short, natural, high-confidence ${targetLangName}. Prefer simple pronouns and avoid ornate wording.`,
+            `- MODEL RULE: If speaker relationship is unclear, use the safest neutral ${targetLangName} pronoun pair that still sounds natural in manga dialogue.`,
             '- MODEL RULE: Preserve consistency across repeated lines, even if a later line is slightly more literal.'
         ];
     }
@@ -69,23 +89,23 @@ export function getModelTranslationProfile(modelId) {
     if (normalized.includes('flash')) {
         return [
             '- MODEL PROFILE: Flash.',
-            '- MODEL RULE: Balance naturalness, brevity, and context. Keep tone faithful and xưng hô consistent across nearby bubbles.',
-            '- MODEL RULE: Prefer conversational Vietnamese that sounds like real manga dialogue instead of literal sentence-by-sentence translation.'
+            `- MODEL RULE: Balance naturalness, brevity, and context. Keep tone faithful and pronouns consistent across nearby bubbles.`,
+            `- MODEL RULE: Prefer conversational ${targetLangName} that sounds like real manga dialogue instead of literal sentence-by-sentence translation.`
         ];
     }
 
     if (normalized.includes('pro')) {
         return [
             '- MODEL PROFILE: Pro.',
-            '- MODEL RULE: Use the deepest available context to infer relationships, subtext, emotional tone, and honorific intent.',
-            '- MODEL RULE: Preserve nuanced xưng hô, implied sarcasm, formality shifts, and character voice. Choose the most context-appropriate Vietnamese phrasing, not the most literal one.',
+            `- MODEL RULE: Use the deepest available context to infer relationships, subtext, emotional tone, and honorific intent.`,
+            `- MODEL RULE: Preserve nuanced pronouns, implied sarcasm, formality shifts, and character voice. Choose the most context-appropriate ${targetLangName} phrasing, not the most literal one.`,
             '- MODEL RULE: When dialogue is ambiguous, keep the scene coherent and prioritize consistent character speech patterns over isolated word-level accuracy.'
         ];
     }
 
     return [
         '- MODEL PROFILE: Balanced.',
-        '- MODEL RULE: Keep the translation natural, concise, and faithful to context. Use consistent xưng hô and tone across the page.'
+        `- MODEL RULE: Keep the translation natural, concise, and faithful to context. Use consistent pronouns and tone across the page.`
     ];
 }
 
@@ -149,26 +169,34 @@ export function getTranslationGuidancePrompt() {
     const guidanceParts = [];
     const customContextPrompt = globalState.translationContextPrompt.trim();
     const currentModelId = globalState.selectedModel || DEFAULT_MODEL;
+    const targetLang = globalState.targetLanguage || 'vi';
+    const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
+    const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
 
     // 1. Source Language Rule
     const srcLang = globalState.sourceLanguage || 'ja';
     if (srcLang === 'ja') {
         guidanceParts.push('- SOURCE LANGUAGE: Japanese Manga. Pay special attention to vertical writing, reading order (right-to-left), Japanese honorifics (-san, -kun, -chan, -sama), and SFX sound effects.');
     } else if (srcLang === 'zh') {
-        guidanceParts.push('- SOURCE LANGUAGE: Chinese Manhua. Translate idiom phrases (thành ngữ) naturally into Vietnamese, keep cultivation/wuxia/fantasy terms consistent.');
+        guidanceParts.push(`- SOURCE LANGUAGE: Chinese Manhua. Translate idiom phrases naturally into ${targetLangName}, keep cultivation/wuxia/fantasy terms consistent.`);
     } else if (srcLang === 'ko') {
-        guidanceParts.push('- SOURCE LANGUAGE: Korean Manhwa. Handle Korean webtoon speech levels (jondaetmal/banmal) and sound effects smoothly in natural Vietnamese.');
+        guidanceParts.push(`- SOURCE LANGUAGE: Korean Manhwa. Handle Korean webtoon speech levels (jondaetmal/banmal) and sound effects smoothly in natural ${targetLangName}.`);
     } else if (srcLang === 'en') {
-        guidanceParts.push('- SOURCE LANGUAGE: English Comic/Scanlation. Translate natural conversational English into idiomatic Vietnamese, preserve comic jokes and slang.');
+        guidanceParts.push(`- SOURCE LANGUAGE: English Comic/Scanlation. Translate natural conversational English into idiomatic ${targetLangName}, preserve comic jokes and slang.`);
     } else if (srcLang === 'auto') {
         guidanceParts.push('- SOURCE LANGUAGE: Auto-detect source language from image text.');
     }
 
-
     const genrePresets = globalState.translationGenrePresets.length ? globalState.translationGenrePresets : ['quality'];
     genrePresets.forEach((presetKey) => {
-        const presetPrompt = TRANSLATION_GENRE_PRESETS[presetKey] || '';
+        let presetPrompt = TRANSLATION_GENRE_PRESETS[presetKey] || '';
         if (presetPrompt) {
+            if (targetLang !== 'vi') {
+                presetPrompt = presetPrompt
+                    .replace(/Vietnamese/g, targetLangName)
+                    .replace(/xưng hô/g, 'pronouns')
+                    .replace(/Sino-Vietnamese \(Hán-Việt\)/g, 'appropriate historical/cultural');
+            }
             guidanceParts.push(presetPrompt);
         }
     });
@@ -182,7 +210,7 @@ export function getTranslationGuidancePrompt() {
 
     if (globalState.enableStoryMemory && (globalState.chapterStoryMemory || []).length > 0) {
         const memoryText = globalState.chapterStoryMemory.map(m => `Trang ${m.pageIndex}: ${m.excerpt}`).join('; ');
-        guidanceParts.push(`- CHAPTER STORY MEMORY (PREVIOUS PAGES CONTEXT): Here is the recent dialogue history from earlier pages in this chapter: ${memoryText}. Reuse the exact same character pronouns (xưng hô), names, and overall tone to ensure continuity.`);
+        guidanceParts.push(`- CHAPTER STORY MEMORY (PREVIOUS PAGES CONTEXT): Here is the recent dialogue history from earlier pages in this chapter: ${memoryText}. Reuse the exact same character ${pronounTerm}, names, and overall tone to ensure continuity.`);
     }
 
     const pronounPrompt = compilePronounMatrixPrompt();
@@ -190,37 +218,41 @@ export function getTranslationGuidancePrompt() {
         guidanceParts.push(pronounPrompt);
     }
 
+    const dialogueRule = targetLang === 'vi' 
+        ? '- DIALOGUE RULE: Choose Vietnamese xưng hô from the relationship and scene, not from the surface grammar. Keep xưng hô consistent across the page unless the relationship or mood changes.'
+        : `- DIALOGUE RULE: Choose ${targetLangName} pronouns and forms of address from the relationship and scene, not from the surface grammar. Keep pronouns, address forms, and honorifics consistent across the page unless the relationship or mood changes.`;
+
     guidanceParts.push(
-        '- TRANSLATION RULES: Keep Vietnamese natural and idiomatic. Prefer meaning over literal wording. Preserve character voice, emotions, jokes, pacing, and subtext.',
-        '- DIALOGUE RULE: Choose Vietnamese xưng hô from the relationship and scene, not from the surface grammar. Keep xưng hô consistent across the page unless the relationship or mood changes.',
+        `- TRANSLATION RULES: Keep ${targetLangName} natural and idiomatic. Prefer meaning over literal wording. Preserve character voice, emotions, jokes, pacing, and subtext.`,
+        dialogueRule,
         '- CONTEXT RULE: Use neighboring bubbles to infer who is speaking, who is being addressed, and whether the line is polite, teasing, angry, shy, or formal.',
         '- BUBBLE RULE: If a box is uncertain, prefer the full bubble region over the exact glyph bounds so the text can be placed cleanly later.',
-        '- CONSISTENCY RULE: Reuse the same Vietnamese translation for repeated names, terms, attacks, titles, and catchphrases within the same page or scene.',
+        `- CONSISTENCY RULE: Reuse the same ${targetLangName} translation for repeated names, terms, attacks, titles, and catchphrases within the same page or scene.`,
         '- STYLE RULE: Keep manga-friendly phrasing short and punchy. Do not overexplain. Preserve punctuation-driven emotion and broken-line rhythm.',
-        '- SAFETY RULE: If a pronoun is ambiguous, choose the most neutral natural Vietnamese option that preserves the scene and stays consistent.'
+        `- SAFETY RULE: If a pronoun is ambiguous, choose the most neutral natural ${targetLangName} option that preserves the scene and stays consistent.`
     );
 
     if (currentModelId === 'gemini-3.1-flash-lite') {
         guidanceParts.push(
-            '- 3.1 FLASH-LITE ADDITION: You must read the dialogues of the previous page if provided. Use the exact same pronouns (xưng hô) and tone for the characters to keep the story consistent.',
-            '- 3.1 FLASH-LITE ADDITION: Keep translations compact, natural, and character-faithful. Do not force literary Vietnamese.',
+            `- 3.1 FLASH-LITE ADDITION: You must read the dialogues of the previous page if provided. Use the exact same ${pronounTerm} and tone for the characters to keep the story consistent.`,
+            `- 3.1 FLASH-LITE ADDITION: Keep translations compact, natural, and character-faithful. Do not force overly literary ${targetLangName}.`,
             '- 3.1 FLASH-LITE ADDITION: Treat bubble fit as a placement helper, not a proof of exact glyph boundaries.'
         );
     }
 
     if (currentModelId.includes('pro')) {
         guidanceParts.push(
-            '- PRO ADDITION: Preserve subtle honorific intent, indirect speech, implied hierarchy, and sarcasm. Use richer context when selecting xưng hô.',
+            `- PRO ADDITION: Preserve subtle honorific intent, indirect speech, implied hierarchy, and sarcasm. Use richer context when selecting ${pronounTerm}.`,
             '- PRO ADDITION: Narration should be polished and readable; dialogue should sound like a native comic translation, not like literary prose.'
         );
     } else if (currentModelId.includes('flash-lite')) {
         guidanceParts.push(
-            '- FLASH-LITE ADDITION: Be concise but do not flatten personality. Keep the shortest natural Vietnamese that still preserves tone and xưng hô.',
-            '- FLASH-LITE ADDITION: Prefer stable, low-risk pronouns when the relationship is not explicit.'
+            `- FLASH-LITE ADDITION: Be concise but do not flatten personality. Keep the shortest natural ${targetLangName} that still preserves tone and character relationships.`,
+            `- FLASH-LITE ADDITION: Prefer stable, low-risk pronouns when the relationship is not explicit.`
         );
     } else if (currentModelId.includes('flash')) {
         guidanceParts.push(
-            '- FLASH ADDITION: Keep translations compact and natural. Maintain a good balance between speed, context, and nuance.'
+            `- FLASH ADDITION: Keep translations compact and natural. Maintain a good balance between speed, context, and nuance.`
         );
     }
 
@@ -376,6 +408,9 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
 
             const glossaryNames = globalState.preserveNames ? globalState.glossaryNames.trim() : "";
             const weakModel = isWeakTranslationModel(globalState.selectedModel);
+            const targetLang = globalState.targetLanguage || 'vi';
+            const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
+            const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
 
             // Xây dựng ngữ cảnh dịch thuật dựa trên trang dịch liền kề trước đó
             let prevPageContext = "";
@@ -387,7 +422,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                         .map((b, idx) => `Bubble #${idx + 1} (${b.type || 'dialogue'}): "${b.original || ''}" -> "${b.translated}"`)
                         .join("\n");
                     if (prevDialogues) {
-                        prevPageContext = `[PREVIOUS PAGE DIALOGUE HISTORY FOR CONSISTENCY]\n${prevDialogues}\n\nStrict Rule: Use the same character pronouns (xưng hô) and names as shown in the translation list above if the speakers are the same characters.`;
+                        prevPageContext = `[PREVIOUS PAGE DIALOGUE HISTORY FOR CONSISTENCY]\n${prevDialogues}\n\nStrict Rule: Use the same character ${pronounTerm} and names as shown in the translation list above if the speakers are the same characters.`;
                     }
                 }
             }
@@ -403,9 +438,9 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                     "Do not split lines of text inside the SAME single bubble lobe into separate blocks. Only split when bubbles are connected/chained across separate lobes or tails.",
                     "Set positionKnown=true whenever text is visible and can be localized.",
                     "Set positionKnown=false only when text location cannot be localized.",
-                    "Translate text to short, conversational, and natural Vietnamese manga dialogue. Keep narrations smooth.",
+                    `Translate text to short, conversational, and natural ${targetLangName} manga dialogue. Keep narrations smooth.`,
                     "Classify block.type accurately: 'dialogue' for speech bubbles, 'narration' for caption boxes, 'sfx' for sound effects, 'other' for signs/labels.",
-                    "Ensure pronouns (xưng hô) are highly consistent across nearby bubbles and match the previous page history.",
+                    `Ensure ${pronounTerm} are highly consistent across nearby bubbles and match the previous page history.`,
                     globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
                     glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
                     getTranslationGuidancePrompt().trim()
@@ -420,9 +455,9 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                     "Do not center by default.",
                     "Set positionKnown=true whenever the text region is visible enough to place a box.",
                     "Set positionKnown=false only when the text location is truly unreadable or cannot be localized.",
-                    "Translate to short, natural Vietnamese that matches the scene, speaker relationship, and block type.",
+                    `Translate to short, natural ${targetLangName} that matches the scene, speaker relationship, and block type.`,
                     "Use block.type to guide style: dialogue should sound conversational, narration should be neutral and smooth, SFX should be short and expressive, labels/signs should be clear and concise.",
-                    "Preserve the same Vietnamese xưng hô and terminology within the page whenever the relationship stays the same.",
+                    `Preserve the same ${targetLangName} ${targetLang === 'vi' ? 'xưng hô' : 'pronouns'} and terminology within the page whenever the relationship stays the same.`,
                     "Keep line breaks and pacing natural for manga dialogue. Do not over-literalize Japanese sentence order.",
                     globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
                     glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
@@ -431,7 +466,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
             }
 
             const contentsParts = [
-                { text: "Detect all speech bubbles, narration boxes, SFX sound effects, and signs/labels. Translate their contents into Vietnamese using the strict schema. Return only valid JSON that matches the schema." }
+                { text: `Detect all speech bubbles, narration boxes, SFX sound effects, and signs/labels. Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` }
             ];
             if (prevPageContext) {
                 contentsParts.push({ text: prevPageContext });

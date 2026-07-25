@@ -19,6 +19,7 @@ import {
     updateActiveBlockEditor,
     updateSplitView,
     updateSourceLanguage,
+    updateTargetLanguage,
     updatePronounMatrix,
     updateGlossary,
     setViewMode,
@@ -704,6 +705,7 @@ export async function exportProjectBackup() {
             version: '2.0',
             exportedAt: new Date().toISOString(),
             sourceLanguage: globalState.sourceLanguage,
+            targetLanguage: globalState.targetLanguage,
             pronounMatrix: globalState.pronounMatrix,
             preserveNames: globalState.preserveNames,
             glossaryNames: globalState.glossaryNames,
@@ -764,6 +766,7 @@ export async function importProjectBackup(files) {
             globalState.pages = data.pages;
             globalState.activePageIndex = data.pages.length > 0 ? 0 : -1;
             if (data.sourceLanguage) updateSourceLanguage(data.sourceLanguage);
+            if (data.targetLanguage) updateTargetLanguage(data.targetLanguage);
             if (data.pronounMatrix) updatePronounMatrix(data.pronounMatrix);
             if (data.glossaryNames) updateGlossary(data.glossaryNames);
             if (data.preserveNames !== undefined) togglePreserveNames(!!data.preserveNames);

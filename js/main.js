@@ -152,11 +152,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (contextPromptInp) contextPromptInp.value = savedTranslationContextPrompt;
     }
 
-    // Tải cấu hình Ngôn ngữ nguồn, Ma trận xưng hô và Tăng cường OCR
+    // Tải cấu hình Ngôn ngữ nguồn, Ngôn ngữ đích, Ma trận xưng hô và Tăng cường OCR
     const savedSourceLang = localStorage.getItem('gemini_manga_source_lang');
     if (savedSourceLang) {
         globalState.sourceLanguage = savedSourceLang;
         if (elements.sourceLangSelect) elements.sourceLangSelect.value = savedSourceLang;
+    }
+
+    const savedTargetLang = localStorage.getItem('gemini_manga_target_lang');
+    if (savedTargetLang) {
+        globalState.targetLanguage = savedTargetLang;
+        if (elements.targetLangSelect) elements.targetLangSelect.value = savedTargetLang;
     }
 
     const savedPronounMatrix = localStorage.getItem('gemini_manga_pronoun_matrix');

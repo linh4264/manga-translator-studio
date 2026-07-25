@@ -400,6 +400,12 @@ export function updateSourceLanguage(value) {
     localStorage.setItem('gemini_manga_source_lang', value);
 }
 
+export function updateTargetLanguage(value) {
+    globalState.targetLanguage = value;
+    if (elements.targetLangSelect) elements.targetLangSelect.value = value;
+    localStorage.setItem('gemini_manga_target_lang', value);
+}
+
 export function updatePronounMatrix(value) {
     globalState.pronounMatrix = value;
     if (elements.pronounMatrixInput) elements.pronounMatrixInput.value = value;
@@ -1262,6 +1268,7 @@ window.updateSelectedModel = updateSelectedModel;
 window.openSettingsModal = openSettingsModal;
 window.closeSettingsModal = closeSettingsModal;
 window.updateSourceLanguage = updateSourceLanguage;
+window.updateTargetLanguage = updateTargetLanguage;
 window.updatePronounMatrix = updatePronounMatrix;
 window.updateGlossary = updateGlossary;
 window.toggleStoryMemory = toggleStoryMemory;

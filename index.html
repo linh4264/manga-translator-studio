@@ -1253,6 +1253,27 @@
                         </select>
                     </div>
 
+                    <!-- Target Language Selector -->
+                    <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ngôn ngữ đích (Target Lang)</label>
+                        <select id="target-lang-select" onchange="updateTargetLanguage(this.value)"
+                            class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
+                            <option value="vi" selected>🇻🇳 Tiếng Việt (Vietnamese)</option>
+                            <option value="en">🇬🇧 Tiếng Anh (English)</option>
+                            <option value="es">🇪🇸 Tiếng Tây Ban Nha (Spanish)</option>
+                            <option value="fr">🇫🇷 Tiếng Pháp (French)</option>
+                            <option value="pt">🇵🇹 Tiếng Bồ Đào Nha (Portuguese)</option>
+                            <option value="de">🇩🇪 Tiếng Đức (German)</option>
+                            <option value="it">🇮🇹 Tiếng Ý (Italian)</option>
+                            <option value="ru">🇷🇺 Tiếng Nga (Russian)</option>
+                            <option value="id">🇮🇩 Tiếng Indonesia (Indonesian)</option>
+                            <option value="th">🇹🇭 Tiếng Thái (Thai)</option>
+                            <option value="ko">🇰🇷 Tiếng Hàn (Korean)</option>
+                            <option value="ja">🇯🇵 Tiếng Nhật (Japanese)</option>
+                            <option value="zh">🇨🇳 Tiếng Trung (Chinese)</option>
+                        </select>
+                    </div>
+
                     <label class="flex items-start space-x-2 cursor-pointer">
                         <input type="checkbox" id="preserve-names-chk" onchange="togglePreserveNames(this.checked)"
                             checked class="mt-0.5 rounded border-slate-800 text-indigo-600 focus:ring-0">
