@@ -5,6 +5,16 @@ echo   Manga Translator Studio - Khoi dong may chu Cuc bo
 echo =======================================================
 echo.
 
+where git >nul 2>nul
+if %errorlevel%==0 (
+    echo [Git] Dang tu dong cap nhat ma nguon tu kho Git...
+    git pull
+    echo.
+) else (
+    echo [Goi y] Khong tim thay Git tren he thong. Bo qua cap nhat.
+    echo.
+)
+
 where node >nul 2>nul
 if %errorlevel%==0 (
     echo [OK] Phat hien Node.js. Dang chay server.js...

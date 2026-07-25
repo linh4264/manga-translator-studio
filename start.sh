@@ -7,6 +7,16 @@ echo "  Manga Translator Studio - Khởi động máy chủ Cục bộ"
 echo "======================================================="
 echo ""
 
+# Check if git command exists
+if command -v git >/dev/null 2>&1; then
+    echo "[Git] Đang tự động cập nhật mã nguồn từ kho Git..."
+    git pull
+    echo ""
+else
+    echo "[Gợi ý] Không tìm thấy Git trên hệ thống. Bỏ qua cập nhật."
+    echo ""
+fi
+
 # Function to open browser
 open_browser() {
     local url=$1
