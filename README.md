@@ -1,19 +1,27 @@
 # 📚 Manga Translator Studio - AI Translation & Typesetting Tool
 
+[![Vietnamese](https://img.shields.io/badge/Language-Tiếng%20Việt-red)](#)
+[![English](https://img.shields.io/badge/Language-English-blue)](README_EN.md)
+
 ![Manga Translator Studio Banner](https://img.shields.io/badge/Manga%20Translator-Studio-indigo?style=for-the-badge&logo=google-gemini)
 ![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)
 ![AI Powered](https://img.shields.io/badge/AI-Google%20Gemini%203.1-orange?style=for-the-badge&logo=google)
+
+> [!NOTE]
+> **English Version**: [README_EN.md](README_EN.md) is now available for English-speaking users.
 
 ### 📸 Kết quả dịch mẫu (Translation Preview)
 
 ![Manga Translation Demo](demo.jpg)
 
-**Manga Translator Studio** là ứng dụng web chuyên nghiệp hỗ trợ dịch thuật tự động và typeset (trình bày chữ) cho truyện tranh (*Manga, Manhua, Manhwa, Comic, Scanlation*). Tích hợp công nghệ AI đa phương thức hàng đầu của **Google Gemini** (Gemini 3.1 Flash-Lite, Gemini 3.5 Flash, Gemini Pro...), công cụ giúp tự động nhận diện bong bóng thoại (OCR), dịch sang tiếng Việt tự nhiên chuẩn văn phong comic, và tự động điền chữ (Typeset) vừa vặn vào khung thoại.
+**Manga Translator Studio** là ứng dụng web chuyên nghiệp hỗ trợ dịch thuật tự động và typeset (trình bày chữ) cho truyện tranh (*Manga, Manhua, Manhwa, Comic, Scanlation*). Tích hợp công nghệ AI đa phương thức hàng đầu của **Google Gemini** (Gemini 3.1 Flash-Lite, Gemini 3.5 Flash, Gemini Pro...), công cụ giúp tự động nhận diện bong bóng thoại (OCR), dịch sang tiếng Việt (hoặc các ngôn ngữ khác) tự nhiên chuẩn văn phong comic, và tự động điền chữ (Typeset) vừa vặn vào khung thoại.
 
 ---
 
 ## ✨ Tính năng nổi bật
 
+- 🌐 **Hỗ trợ Giao diện Đa Ngôn ngữ (Simple UI i18n)**:
+  - Tích hợp cơ chế dịch thuật giao diện tĩnh giúp chuyển đổi ngôn ngữ hiển thị của Studio giữa **Tiếng Việt** và **Tiếng Anh** chỉ với 1 cú click trong Cài đặt.
 - 🤖 **Hỗ trợ Đa Nhà Cung Cấp AI (Multi-Provider AI & Local LLM)**:
   - Tích hợp **Google Gemini**, **Anthropic Claude** (Claude 3.7/3.5 Sonnet), **OpenAI** (GPT-4o), và **Custom Local LLM** (Ollama: `http://localhost:11434/v1`, LM Studio: `http://localhost:1234/v1`).
 - 🧠 **Bộ nhớ ngữ cảnh chương (Chapter Story Memory)**:
@@ -24,7 +32,7 @@
   - Phân loại khung thoại (`Lời thoại` / `💥 SFX Hiệu ứng`), chỉnh góc xoay (`Rotation Slider: -180° đến 180°`), góc uốn cong (`Arc Slider`) và hiệu ứng viền/bóng chữ.
 - 🎨 **Bộ công cụ Typeset & Canvas chuyên sâu**:
   - Tự động canh chỉnh kích thước phông chữ (Auto-fit font size) vừa khít khung thoại.
-  - Hỗ trợ viết chữ ngang và chữ dọc (Vertical Text) cho manga truyền thống.
+  - Hỗ trợ viết chữ ngang và chữ dọc (Vertical Text) cho manga truyền thống: tự động căn giữa ngang và ngắt cột dọc thông minh chuẩn manga chuyên nghiệp.
   - Đầy đủ font chữ truyện tranh độc quyền: *Be Vietnam Pro, Bangers, Comic Neue, Caveat, Chakra Petch, Permanent Marker, Bungee, Saira Condensed, Nunito, Inter*.
   - Tùy chỉnh màu chữ, màu viền (Stroke), màu nền (Background opacity), căn lề, khoảng cách dòng/chữ.
 - 🧹 **Cọ tẩy chữ mạnh mẽ (Eraser Tool)**:
