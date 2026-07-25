@@ -74,6 +74,7 @@ export const elements = {
     get exportModal() { return document.getElementById('export-modal'); },
     get settingsModal() { return document.getElementById('settings-modal'); },
     get settingsModalBody() { return document.getElementById('settings-modal-body'); },
+    get uiLangSelect() { return document.getElementById('ui-lang-select'); },
     get exportPreviewImg() { return document.getElementById('export-preview-img'); },
     get lnkExportDirectDownload() { return document.getElementById('lnk-export-direct-download'); },
     get apiKeyInput() { return document.getElementById('api-key-input'); },

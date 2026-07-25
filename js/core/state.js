@@ -111,6 +111,7 @@ export const globalState = {
     glossaryNames: '',   // Danh sách tên riêng cụ thể giữ nguyên
     sourceLanguage: 'auto', // Ngôn ngữ nguồn ('ja' | 'zh' | 'ko' | 'en' | 'auto')
     targetLanguage: 'vi', // Ngôn ngữ đích mặc định ('vi' | 'en' | 'es' | ...)
+    uiLanguage: 'vi',     // Ngôn ngữ giao diện ('vi' | 'en')
     pronounMatrix: '',   // Ma trận xưng hô 2 chiều giữa các nhân vật
     ocrEnhanceEnabled: true, // Tiền xử lý tương phản ảnh trước khi gửi OCR
     translationGenrePresets: ['quality'], // Mẫu prompt theo thể loại

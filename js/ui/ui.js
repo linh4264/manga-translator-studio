@@ -381,6 +381,9 @@ export function openSettingsModal() {
     if (modal) {
         modal.classList.remove('hidden');
     }
+    if (elements.uiLangSelect) {
+        elements.uiLangSelect.value = globalState.uiLanguage || 'vi';
+    }
     if (elements.apiKeyInput) {
         setTimeout(() => elements.apiKeyInput.focus(), 50);
     }

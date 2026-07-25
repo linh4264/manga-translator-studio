@@ -23,10 +23,10 @@ import { renderPronounMatrixTable } from './features/pronoun.js';
 import './features/ocr.js';
 import './features/ai.js';
 import { updateToeicNotebookUI } from './features/toeic.js';
-import './features/inpainting.js';
 import { toggleEraserMode } from './features/inpainting.js';
 import { copyBlockStyle, pasteBlockStyle, applyStylePreset } from './features/canvas.js';
 import './features/io.js';
+import { initI18n, changeUILanguage } from './core/i18n.js';
 
 import {
     mountSettingsModal,
@@ -51,6 +51,10 @@ import {
 } from './ui/ui.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize UI language translation (i18n)
+    initI18n();
+    window.changeUILanguage = changeUILanguage;
+
     // Register actions for global event delegation router
     registerAction('openSettingsModal', openSettingsModal);
     registerAction('closeSettingsModal', closeSettingsModal);
