@@ -734,6 +734,9 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
         ruler.style.height = 'auto';
     }
 
+    // Set the multiline text ONCE before the binary search loop to avoid repeated DOM mutations
+    setMultilineText(ruler, block.translated);
+
     let minSize = 8;
     let maxSize = Math.min(72, Math.floor(targetHeight * 0.85));
     if (maxSize < minSize) maxSize = minSize;
@@ -742,7 +745,6 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
     while (minSize <= maxSize) {
         const mid = Math.floor((minSize + maxSize) / 2);
         ruler.style.fontSize = `${mid}px`;
-        setMultilineText(ruler, block.translated);
 
         const contentWidth = ruler.scrollWidth;
         const contentHeight = ruler.scrollHeight;
@@ -760,7 +762,6 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
     let probeSize = optimalSize;
     for (let i = 0; i < 2; i++) {
         ruler.style.fontSize = `${probeSize}px`;
-        setMultilineText(ruler, block.translated);
         if (ruler.scrollWidth <= (targetWidth * fitMargin) + 1 && ruler.scrollHeight <= (targetHeight * fitMargin) + 1) break;
         probeSize = Math.max(8, probeSize - 1);
     }
@@ -865,6 +866,8 @@ export function startBlockResize(e, block, handleDir) {
     const containerWidth = elements.mangaCanvasContainer.clientWidth;
     const containerHeight = elements.mangaCanvasContainer.clientHeight;
 
+    let resizeRafId = null;
+
     function onResizing(moveEvent) {
         const curTouch = moveEvent.type.startsWith('touch');
         const curX = curTouch ? moveEvent.touches[0].clientX : moveEvent.clientX;
@@ -912,19 +915,28 @@ export function startBlockResize(e, block, handleDir) {
             blockElem.style.height = `${block.box.h}%`;
 
             if (globalState.autoFitEnabled) {
-                block.autoFitCache = null;
-                autoFitBlock(block);
-                const maskElem = blockElem.firstElementChild;
-                if (maskElem) {
-                    maskElem.style.fontSize = `${block.style.fontSize}px`;
+                if (!resizeRafId) {
+                    resizeRafId = requestAnimationFrame(() => {
+                        resizeRafId = null;
+                        block.autoFitCache = null;
+                        autoFitBlock(block);
+                        const maskElem = blockElem.firstElementChild;
+                        if (maskElem) {
+                            maskElem.style.fontSize = `${block.style.fontSize}px`;
+                        }
+                        if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px`;
+                        if (elements.styleFontSize) elements.styleFontSize.value = block.style.fontSize;
+                    });
                 }
-                if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px`;
-                if (elements.styleFontSize) elements.styleFontSize.value = block.style.fontSize;
             }
         }
     }
 
     function onResizeEnd() {
+        if (resizeRafId) {
+            cancelAnimationFrame(resizeRafId);
+            resizeRafId = null;
+        }
         document.removeEventListener('mousemove', onResizing);
         document.removeEventListener('mouseup', onResizeEnd);
         document.removeEventListener('touchmove', onResizing);
