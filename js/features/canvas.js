@@ -124,8 +124,7 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
             if (block.style.vertical) {
                 // In vertical-rl: horizontal is cross-axis (alignItems), vertical is main-axis (justifyContent)
                 maskContent.style.justifyContent = 'center'; // Center vertically
-                maskContent.style.alignItems = !block.style.align || block.style.align === 'center' ? 'center' :
-                                               block.style.align === 'right' ? 'flex-start' : 'flex-end';
+                maskContent.style.alignItems = 'center';     // Vertical text is always centered horizontally
             } else {
                 // In horizontal LTR: horizontal is main-axis (justifyContent), vertical is cross-axis (alignItems)
                 maskContent.style.alignItems = 'center'; // Center vertically
@@ -238,7 +237,7 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
             innerTextDiv.style.writingMode = 'vertical-rl';
             innerTextDiv.style.textOrientation = 'upright';
             // In vertical-rl: flex-row flows vertically (main axis), stacks columns horizontally (cross axis)
-            innerTextDiv.className = `h-full flex flex-row justify-center ${isCenterAlign ? 'items-center' : block.style.align === 'right' ? 'items-start' : 'items-end'}`;
+            innerTextDiv.className = `h-full flex flex-row justify-center items-center`;
         } else {
             innerTextDiv.className = `w-full flex flex-col ${isCenterAlign ? 'items-center justify-center' : block.style.align === 'right' ? 'items-end' : 'items-start'}`;
         }
@@ -1305,12 +1304,8 @@ export async function renderPageToCanvas2D(page) {
                 const colStep = fontSizePx * 1.12;
                 const charStep = fontSizePx * 1.12;
 
+                // Vertical text is always centered horizontally to match the editor and standard manga typesetting rules
                 let rightX = bx + bw / 2 + totalTextWidth / 2 - colStep / 2;
-                if (block.style.align === 'left') {
-                    rightX = bx + paddingPx + totalTextWidth - colStep / 2;
-                } else if (block.style.align === 'right') {
-                    rightX = bx + bw - paddingPx - colStep / 2;
-                }
 
                 for (let j = 0; j < columns.length; j++) {
                     const colChars = columns[j];
