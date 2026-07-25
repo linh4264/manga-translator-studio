@@ -104,13 +104,13 @@ export const globalState = {
     autoFitEnabled: true, // Auto-scale font size to perfectly fit bubbles (Default enabled)
     preserveNames: true, // Không dịch tên riêng / nhân vật
     glossaryNames: '',   // Danh sách tên riêng cụ thể giữ nguyên
-    sourceLanguage: 'ja', // Ngôn ngữ nguồn ('ja' | 'zh' | 'ko' | 'en' | 'auto')
+    sourceLanguage: 'auto', // Ngôn ngữ nguồn ('ja' | 'zh' | 'ko' | 'en' | 'auto')
     pronounMatrix: '',   // Ma trận xưng hô 2 chiều giữa các nhân vật
     ocrEnhanceEnabled: true, // Tiền xử lý tương phản ảnh trước khi gửi OCR
     translationGenrePresets: ['quality'], // Mẫu prompt theo thể loại
     translationContextPrompt: '', // Prompt ngữ cảnh bổ sung cho dịch thuật
-    apiDelay: 8,       // Giãn cách gửi yêu cầu API (giây) tránh lỗi 429
-    maxRetries: 5,     // Số lần thử lại tối đa khi gặp lỗi API tạm thời
+    apiDelay: 2,       // Giãn cách gửi yêu cầu API (giây) tránh lỗi 429
+    maxRetries: 3,     // Số lần thử lại tối đa khi gặp lỗi API tạm thời
     // Global style presets for new/default blocks
     globalStyle: {
         fontFamily: 'font-comic',
