@@ -40,8 +40,13 @@ export const TRANSLATION_GENRE_PRESETS = {
     drama: '- GENRE PRESET: Drama manga. Keep emotions subtle, restrained, and natural. Preserve tension and character nuance.',
     horror: '- GENRE PRESET: Horror/thriller manga. Keep the wording tense, cold, and unsettling. Do not soften fear or suspense.',
     polite: '- GENRE PRESET: Polite/formal dialogue. Use respectful Vietnamese, balanced xưng hô, and avoid slang unless the original is casual.',
+    dark: '- GENRE PRESET: Dark/psychological manga. Keep the tone heavy, serious, mature, and grim. Preserve dark humor and intense character psychology without softening.',
     romance: '- GENRE PRESET: Romance manga. Use warm, delicate Vietnamese. Keep emotional beats soft and natural.',
-    slice: '- GENRE PRESET: Slice-of-life manga. Use everyday Vietnamese, relaxed pacing, and simple, believable wording.'
+    slice: '- GENRE PRESET: Slice-of-life manga. Use everyday Vietnamese, relaxed pacing, and simple, believable wording.',
+    martial: '- GENRE PRESET: Martial arts/Wuxia/Xianxia. Use traditional martial arts vocabulary and Sino-Vietnamese (Hán-Việt) terms for techniques, sect rankings, and polite forms.',
+    scifi: '- GENRE PRESET: Sci-fi/Mecha/Cyberpunk manga. Keep futuristic concepts, technical jargon, and mechanical names consistent and professional.',
+    gag: '- GENRE PRESET: Gag comedy manga. Feel free to use localized Vietnamese internet slang, memes, and humorous adaptations to maximize comedic timing.',
+    historical: '- GENRE PRESET: Historical/Period manga. Use formal, archaic Sino-Vietnamese (Hán-Việt) honorifics, courtly address forms, and expressions suitable for historical settings.'
 };
 
 export let undoStack = [];

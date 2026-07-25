@@ -1269,6 +1269,30 @@
                             class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600">
                     </div>
 
+                    <!-- Interactive Pronoun Matrix Section -->
+                    <div id="pronoun-matrix-container" class="space-y-2 border-t border-slate-800/70 pt-2 pb-1">
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                            <span>Ma trận xưng hô nhân vật</span>
+                            <span class="text-[9px] text-indigo-400 font-normal"><i class="fa-solid fa-users"></i> AI xưng hô chuẩn</span>
+                        </label>
+                        <p class="text-[9px] text-slate-500 leading-normal">Khai báo các nhân vật chính và cách họ xưng hô chéo với nhau để bản dịch tiếng Việt luôn tự nhiên, nhất quán.</p>
+                        
+                        <!-- Character Input Box -->
+                        <div class="flex gap-1.5">
+                            <input type="text" id="pronoun-char-name-input" placeholder="Tên nhân vật (vd: Luffy)"
+                                class="flex-1 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 placeholder:text-slate-600">
+                            <button onclick="addCharacterToMatrix()" type="button"
+                                class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-xs text-white font-bold transition-all hover:scale-105 active:scale-95">
+                                + Thêm
+                            </button>
+                        </div>
+
+                        <!-- Dynamic Matrix Table Wrapper -->
+                        <div id="pronoun-matrix-table-wrapper" class="overflow-x-auto border border-slate-800 rounded max-h-[180px] overflow-y-auto hidden">
+                            <!-- Table will be rendered dynamically by pronoun.js -->
+                        </div>
+                    </div>
+
 
 
                     <label class="flex items-start space-x-2 cursor-pointer pt-1 border-t border-slate-800/70">
@@ -1326,6 +1350,22 @@
                             <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
                                 <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="slice">
                                 <span>Slice of life</span>
+                            </label>
+                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="martial">
+                                <span>Kiếm hiệp / Tiên hiệp</span>
+                            </label>
+                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="scifi">
+                                <span>Viễn tưởng / Robot</span>
+                            </label>
+                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="gag">
+                                <span>Hài bựa / Slang mạng</span>
+                            </label>
+                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="historical">
+                                <span>Cổ trang / Lịch sử</span>
                             </label>
                         </div>
                         <p class="text-[10px] text-slate-500 leading-relaxed">Bạn có thể tick nhiều thể loại cùng lúc. AI sẽ ghép tất cả preset đã chọn vào một prompt chung.</p>

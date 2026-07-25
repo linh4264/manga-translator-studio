@@ -22,6 +22,7 @@ import { elements } from '../core/elements.js';
 import { showToast, parseGeminiJsonText } from '../core/utils.js';
 import { refineAiBlockBox } from './ocr.js';
 import { requestOverlayRender } from './canvas.js';
+import { compilePronounMatrixPrompt } from './pronoun.js';
 
 export let cancelTranslationFlag = false;
 export let isBatchTranslating = false;
@@ -182,6 +183,11 @@ export function getTranslationGuidancePrompt() {
     if (globalState.enableStoryMemory && (globalState.chapterStoryMemory || []).length > 0) {
         const memoryText = globalState.chapterStoryMemory.map(m => `Trang ${m.pageIndex}: ${m.excerpt}`).join('; ');
         guidanceParts.push(`- CHAPTER STORY MEMORY (PREVIOUS PAGES CONTEXT): Here is the recent dialogue history from earlier pages in this chapter: ${memoryText}. Reuse the exact same character pronouns (xưng hô), names, and overall tone to ensure continuity.`);
+    }
+
+    const pronounPrompt = compilePronounMatrixPrompt();
+    if (pronounPrompt) {
+        guidanceParts.push(pronounPrompt);
     }
 
     guidanceParts.push(

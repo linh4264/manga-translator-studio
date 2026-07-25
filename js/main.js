@@ -18,6 +18,7 @@ import { elements } from './core/elements.js';
 
 import { showToast } from './core/utils.js';
 import { registerAction, initEventDelegation } from './core/events.js';
+import { renderPronounMatrixTable } from './features/pronoun.js';
 
 import './features/ocr.js';
 import './features/ai.js';
@@ -161,7 +162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const savedPronounMatrix = localStorage.getItem('gemini_manga_pronoun_matrix');
     if (savedPronounMatrix !== null) {
         globalState.pronounMatrix = savedPronounMatrix;
-        if (elements.pronounMatrixInput) elements.pronounMatrixInput.value = savedPronounMatrix;
+        renderPronounMatrixTable();
     }
 
     const savedOcrEnhance = localStorage.getItem('gemini_manga_ocr_enhance');
