@@ -3,6 +3,7 @@ import { globalState, pushStateToHistory, savePageToDB } from '../core/state.js'
 import { elements } from '../core/elements.js';
 import { showToast } from '../core/utils.js';
 import { requestOverlayRender } from './canvas.js';
+import { computeBubbleMask } from './ocr.js';
 
 export let isEraserModeActive = false;
 export let isDrawingOnEraser = false;
@@ -30,12 +31,44 @@ export function autoCleanBubbleBackground(page, block) {
     const bw = Math.round((block.box.w / 100) * canvas.width);
     const bh = Math.round((block.box.h / 100) * canvas.height);
 
-    ctx.save();
-    ctx.fillStyle = block.style?.bgColor || '#ffffff';
-    ctx.beginPath();
-    ctx.ellipse(bx + bw / 2, by + bh / 2, bw / 2, bh / 2, 0, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.restore();
+    // Thử lấy dữ liệu ảnh để chạy thuật toán Flood Fill tạo mask chính xác
+    let activeImageData = page.imageDataCache || null;
+    const imgElement = elements.mangaBgImage;
+    if (!activeImageData && imgElement && imgElement.naturalWidth > 0 && imgElement.naturalHeight > 0) {
+        try {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = imgElement.naturalWidth;
+            tempCanvas.height = imgElement.naturalHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(imgElement, 0, 0);
+            activeImageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            page.imageDataCache = activeImageData;
+        } catch (e) {
+            console.error("Không thể lấy dữ liệu ảnh để chạy inpainting mask:", e);
+        }
+    }
+
+    let maskDrawn = false;
+    if (activeImageData) {
+        const maskCanvas = computeBubbleMask(page, block, activeImageData);
+        if (maskCanvas && block.maskCache) {
+            const { finalBx, finalBy } = block.maskCache;
+            ctx.save();
+            ctx.drawImage(maskCanvas, bx + finalBx, by + finalBy);
+            ctx.restore();
+            maskDrawn = true;
+        }
+    }
+
+    // Fallback vẽ hình ellipse mặc định nếu thuật toán Flood Fill không nhận diện được bong bóng thoại
+    if (!maskDrawn) {
+        ctx.save();
+        ctx.fillStyle = block.style?.bgColor || '#ffffff';
+        ctx.beginPath();
+        ctx.ellipse(bx + bw / 2, by + bh / 2, bw / 2, bh / 2, 0, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.restore();
+    }
 
     return true;
 }
@@ -53,6 +86,7 @@ export function autoCleanActiveBlock() {
         block.style.maskSize = 'full';
         block.style.bgOpacity = 100;
         autoCleanBubbleBackground(activePage, block);
+        saveEraserDrawingToPage();
         requestOverlayRender();
         showToast(`🧹 Đã tự động phủ xóa chữ cũ cho khung thoại #${block.id.slice(-4)}`, 'success');
     }
