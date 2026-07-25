@@ -72,34 +72,25 @@ Nhấn nút **"Copy"** để sao chép chuỗi mã API Key (có dạng bắt đ�
 
 Dưới đây là các cách cực kỳ đơn giản để khởi chạy:
 
-### Cách 1: Sử dụng VS Code Live Server (Khuyên dùng cho lập trình viên)
+### Cách 1: Khởi chạy nhanh một-click (Khuyên dùng)
+*   **Trên Windows:** Nhấp đúp chuột vào tệp [start.bat](file:///d:/manga/manga_translator_studio/start.bat) ở thư mục gốc. Hệ thống sẽ tự động khởi chạy máy chủ web Node.js thuần (hoặc Python) và mở trình duyệt tại địa chỉ `http://localhost:3000`.
+*   **Trên macOS/Linux:** Mở Terminal tại thư mục dự án, chạy lệnh cấp quyền `chmod +x start.sh` (chỉ cần chạy một lần duy nhất), sau đó nhấp đúp hoặc chạy `./start.sh` để mở máy chủ.
+
+### Cách 2: Chạy trực tiếp qua Node.js (server.js có sẵn)
+Mở cửa sổ Command Prompt / Terminal tại thư mục dự án và chạy:
+```bash
+node server.js
+```
+Máy chủ tĩnh zero-dependency sẽ khởi chạy và tự động mở trình duyệt web.
+
+### Cách 3: Sử dụng VS Code Live Server (Cho lập trình viên)
 1. Mở thư mục dự án trong phần mềm **VS Code**.
 2. Cài đặt extension **Live Server** (của nhà phát triển *Ritwick Dey*).
 3. Nhấp chuột phải vào file [index.html](file:///d:/manga/manga_translator_studio/index.html) -> chọn **"Open with Live Server"** (hoặc bấm nút **"Go Live"** ở góc dưới cùng bên phải VS Code).
 
-### Cách 2: Sử dụng Node.js (Nhanh nhất nếu đã cài Node)
-Mở cửa sổ Command Prompt / Terminal tại thư mục dự án và chạy dòng lệnh:
-```bash
-npx serve .
-```
-Sau đó, truy cập đường dẫn: **`http://localhost:3000`** (hoặc cổng được hiển thị trên terminal).
-
-### Cách 3: Sử dụng Python (Nếu máy có cài Python)
-Mở Terminal tại thư mục dự án và chạy lệnh:
-* Với Python 3:
-  ```bash
-  python -m http.server 8000
-  ```
-* Với Python 2:
-  ```bash
-  python -m SimpleHTTPServer 8000
-  ```
-Sau đó, mở trình duyệt truy cập: **`http://localhost:8000`**.
-
-### Cách 4: Sử dụng tiện ích mở rộng Chrome Extension (Không cần gõ dòng lệnh)
-1. Cài đặt extension **Web Server for Chrome** từ Chrome Web Store.
-2. Mở extension lên, nhấn nút **"Choose Folder"** và chọn thư mục của dự án này.
-3. Bật nút công tắc **"Web Server: Started"** và nhấp vào đường link URL được cung cấp (thường là `http://127.0.0.1:8887`).
+### Cách 4: Sử dụng CLI npx serve hoặc Python
+*   **Dùng Node npx:** Chạy lệnh `npx serve .` và truy cập `http://localhost:3000`.
+*   **Dùng Python:** Chạy lệnh `python -m http.server 3000` và truy cập `http://localhost:3000`.
 
 ---
 

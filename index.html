@@ -1479,6 +1479,63 @@
     <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- JAVASCRIPT CODE IMPLEMENTATION -->
+    <!-- CORS Warning check for file:// protocol -->
+    <script>
+        if (window.location.protocol === 'file:') {
+            document.addEventListener('DOMContentLoaded', function() {
+                const overlay = document.createElement('div');
+                overlay.style.position = 'fixed';
+                overlay.style.top = '0';
+                overlay.style.left = '0';
+                overlay.style.width = '100vw';
+                overlay.style.height = '100vh';
+                overlay.style.backgroundColor = 'rgba(2, 6, 23, 0.96)';
+                overlay.style.zIndex = '99999';
+                overlay.style.display = 'flex';
+                overlay.style.flexDirection = 'column';
+                overlay.style.alignItems = 'center';
+                overlay.style.justifyContent = 'center';
+                overlay.style.color = '#f8fafc';
+                overlay.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+                overlay.style.padding = '20px';
+                overlay.style.textAlign = 'center';
+                overlay.style.backdropFilter = 'blur(12px)';
+
+                overlay.innerHTML = `
+                    <div style="max-width: 600px; background: #0f172a; padding: 40px; border-radius: 24px; border: 1px solid #1e293b; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); display: flex; flex-direction: column; align-items: center;">
+                        <div style="font-size: 56px; margin-bottom: 20px; animation: pulse 2s infinite;">⚠️</div>
+                        <h2 style="font-size: 24px; font-weight: 800; color: #f43f5e; margin: 0 0 16px 0; letter-spacing: -0.025em;">Cảnh Báo Bảo Mật CORS</h2>
+                        <p style="font-size: 14px; color: #94a3b8; line-height: 1.6; margin: 0 0 24px 0;">
+                            Bạn đang mở trực tiếp file HTML (giao thức <code style="background: #1e293b; padding: 2px 6px; border-radius: 4px; color: #f43f5e; font-family: monospace;">file://</code>). 
+                            Trình duyệt chặn việc tải các tệp JavaScript (ES Modules) từ ổ đĩa vì lý do bảo mật.
+                        </p>
+                        
+                        <div style="width: 100%; text-align: left; background: #020617; padding: 20px; border-radius: 12px; border: 1px solid #1e293b; font-family: monospace; font-size: 13px; color: #38bdf8; margin-bottom: 24px; overflow-x: auto; box-sizing: border-box;">
+                            <span style="color: #64748b;"># Cách 1: Khởi chạy nhanh một-click (Khuyên dùng)</span><br>
+                            <span style="color: #10b981;">Double-click vào file <b style="color: #38bdf8;">start.bat</b> trong thư mục dự án.</span><br><br>
+                            
+                            <span style="color: #64748b;"># Cách 2: Chạy thủ công với Node.js</span><br>
+                            node server.js<br><br>
+                            
+                            <span style="color: #64748b;"># Cách 3: Chạy thủ công với Python</span><br>
+                            python -m http.server 8000
+                        </div>
+                        
+                        <p style="font-size: 12px; color: #64748b; margin: 0; line-height: 1.5;">
+                            Sau khi khởi chạy máy chủ cục bộ, hãy mở trình duyệt và truy cập vào đường link tương ứng (ví dụ: <a href="http://localhost:3000" style="color: #6366f1; text-decoration: none; font-weight: 600;">http://localhost:3000</a>).
+                        </p>
+                    </div>
+                    <style>
+                        @keyframes pulse {
+                            0%, 100% { transform: scale(1); opacity: 1; }
+                            50% { transform: scale(1.05); opacity: 0.8; }
+                        }
+                    </style>
+                `;
+                document.body.appendChild(overlay);
+            });
+        }
+    </script>
     <script type="module" src="js/main.js"></script>
 </body>
 
