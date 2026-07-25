@@ -404,6 +404,12 @@ export function updateTargetLanguage(value) {
     globalState.targetLanguage = value;
     if (elements.targetLangSelect) elements.targetLangSelect.value = value;
     localStorage.setItem('gemini_manga_target_lang', value);
+
+    // Dynamic vertical writing mode default for target language
+    const isVerticalTarget = ['ja', 'zh', 'ko'].includes(value);
+    if (globalState.globalStyle) {
+        globalState.globalStyle.vertical = isVerticalTarget;
+    }
 }
 
 export function updatePronounMatrix(value) {

@@ -13,12 +13,22 @@ export function escapeHTML(value) {
 export function setMultilineText(target, value) {
     if (!target) return;
     target.textContent = '';
+    const isVertical = target.style.writingMode === 'vertical-rl';
     String(value ?? '').split('\n').forEach((line) => {
         const lineDiv = document.createElement('div');
-        lineDiv.style.width = '100%';
+        if (isVertical) {
+            lineDiv.style.height = '100%';
+            lineDiv.style.width = 'auto';
+            lineDiv.style.minWidth = '1.1em'; // Keep column width if empty
+            lineDiv.style.minHeight = 'auto';
+        } else {
+            lineDiv.style.width = '100%';
+            lineDiv.style.height = 'auto';
+            lineDiv.style.minHeight = '1em'; // Giữ chiều cao nếu dòng trống
+            lineDiv.style.minWidth = 'auto';
+        }
         lineDiv.style.margin = '0';
         lineDiv.style.padding = '0';
-        lineDiv.style.minHeight = '1em'; // Giữ chiều cao nếu dòng trống
         lineDiv.style.wordBreak = 'keep-all';
         lineDiv.style.overflowWrap = 'normal';
         lineDiv.style.hyphens = 'none';

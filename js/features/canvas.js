@@ -121,8 +121,16 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
             maskContent.style.width = '100%';
             maskContent.style.height = '100%';
             maskContent.style.display = 'flex';
-            maskContent.style.alignItems = 'center';
-            maskContent.style.justifyContent = block.style.align === 'left' ? 'flex-start' : block.style.align === 'right' ? 'flex-end' : 'center';
+            if (block.style.vertical) {
+                // In vertical-rl: horizontal is cross-axis (alignItems), vertical is main-axis (justifyContent)
+                maskContent.style.justifyContent = 'center'; // Center vertically
+                maskContent.style.alignItems = !block.style.align || block.style.align === 'center' ? 'center' :
+                                               block.style.align === 'right' ? 'flex-start' : 'flex-end';
+            } else {
+                // In horizontal LTR: horizontal is main-axis (justifyContent), vertical is cross-axis (alignItems)
+                maskContent.style.alignItems = 'center'; // Center vertically
+                maskContent.style.justifyContent = block.style.align === 'left' ? 'flex-start' : block.style.align === 'right' ? 'flex-end' : 'center';
+            }
             maskContent.className = `${block.style.fontFamily} pointer-events-none`;
         } else {
             // Chỉ che vừa khít bao quanh chữ Việt (Snug)
@@ -226,7 +234,14 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
         // Khối văn bản dịch bên trong
         const innerTextDiv = document.createElement('div');
         const isCenterAlign = !block.style.align || block.style.align === 'center';
-        innerTextDiv.className = `w-full flex flex-col ${isCenterAlign ? 'items-center justify-center' : block.style.align === 'right' ? 'items-end' : 'items-start'}`;
+        if (block.style.vertical) {
+            innerTextDiv.style.writingMode = 'vertical-rl';
+            innerTextDiv.style.textOrientation = 'upright';
+            // In vertical-rl: flex-row flows vertically (main axis), stacks columns horizontally (cross axis)
+            innerTextDiv.className = `h-full flex flex-row justify-center ${isCenterAlign ? 'items-center' : block.style.align === 'right' ? 'items-start' : 'items-end'}`;
+        } else {
+            innerTextDiv.className = `w-full flex flex-col ${isCenterAlign ? 'items-center justify-center' : block.style.align === 'right' ? 'items-end' : 'items-start'}`;
+        }
         innerTextDiv.style.margin = '0';
         innerTextDiv.style.padding = '0';
         innerTextDiv.style.lineHeight = block.style.vertical ? '1.12' : '1.18';
