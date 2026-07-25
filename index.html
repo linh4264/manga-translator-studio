@@ -524,23 +524,45 @@
             <!-- Tab: STYLE CONTAINER -->
             <div id="panel-tab-style" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
 
-                <!-- Preset Typesetting Styles -->
+                <!-- Typesetting Style Presets -->
                 <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                        <span><i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> Presets Mẫu Định Dạng</span>
-                    </label>
-                    <div class="grid grid-cols-2 gap-1.5 text-[11px]">
-                        <button onclick="applyStylePreset('manga-std')" class="px-2 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 text-left font-semibold flex items-center gap-1.5 transition-colors">
-                            <span class="w-2 h-2 rounded-full bg-indigo-400"></span> Thoại Chuẩn
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mẫu chữ nhanh (Presets)</label>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <button data-action="applyStylePreset" data-preset="dialogue"
+                            class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded text-left flex items-center gap-1.5 transition-colors group"
+                            title="Kiểu bong bóng thoại chuẩn, font Manga đậm">
+                            <span class="text-sm">💬</span>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">Thoại thường</p>
+                                <p class="text-[8px] text-slate-500">Manga / Patrick Hand</p>
+                            </div>
                         </button>
-                        <button onclick="applyStylePreset('shout-sfx')" class="px-2 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-amber-400 text-left font-bold flex items-center gap-1.5 transition-colors">
-                            <span class="w-2 h-2 rounded-full bg-amber-400"></span> Gào Thét SFX
+                        <button data-action="applyStylePreset" data-preset="scream"
+                            class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded text-left flex items-center gap-1.5 transition-colors group"
+                            title="Kiểu hét lớn hoặc SFX, chữ trắng có viền đen dày nổi bật">
+                            <span class="text-sm">💥</span>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">Hét lớn / SFX</p>
+                                <p class="text-[8px] text-slate-500">Viền đen dày / Bangers</p>
+                            </div>
                         </button>
-                        <button onclick="applyStylePreset('horror')" class="px-2 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-red-400 text-left font-semibold flex items-center gap-1.5 transition-colors">
-                            <span class="w-2 h-2 rounded-full bg-red-500"></span> Kinh Dị / SFX
+                        <button data-action="applyStylePreset" data-preset="whisper"
+                            class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded text-left flex items-center gap-1.5 transition-colors group"
+                            title="Kiểu nói thầm, font chữ viết tay nhỏ, mờ nhẹ">
+                            <span class="text-sm">💭</span>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">Thầm thì</p>
+                                <p class="text-[8px] text-slate-500">Nghiêng / Xám nhạt</p>
+                            </div>
                         </button>
-                        <button onclick="applyStylePreset('whisper')" class="px-2 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-sky-300 text-left italic flex items-center gap-1.5 transition-colors">
-                            <span class="w-2 h-2 rounded-full bg-sky-400"></span> Chú Thích Nhẹ
+                        <button data-action="applyStylePreset" data-preset="narration"
+                            class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded text-left flex items-center gap-1.5 transition-colors group"
+                            title="Hộp dẫn truyện, chữ nhật thẳng đứng, căn lề trái">
+                            <span class="text-sm">📜</span>
+                            <div>
+                                <p class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">Dẫn truyện</p>
+                                <p class="text-[8px] text-slate-500">Hộp chữ / Nền che 95%</p>
+                            </div>
                         </button>
                     </div>
                 </div>
@@ -556,8 +578,7 @@
                             </div>
                         </label>
                     </div>
-                    <p class="text-[10px] text-slate-500 leading-normal">Tự động điều chỉnh cỡ chữ lớn nhất có thể để
-                        điền đầy bong bóng thoại khi bạn kéo dãn.</p>
+                    <p class="text-[10px] text-slate-500 leading-normal">Tự động điều chỉnh cỡ chữ lớn nhất có thể để điền đầy bong bóng thoại khi bạn kéo dãn.</p>
                 </div>
 
                 <!-- Font Typography Customizers -->

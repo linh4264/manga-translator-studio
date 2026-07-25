@@ -24,7 +24,7 @@ import './features/ai.js';
 import { updateToeicNotebookUI } from './features/toeic.js';
 import './features/inpainting.js';
 import { toggleEraserMode } from './features/inpainting.js';
-import { copyBlockStyle, pasteBlockStyle } from './features/canvas.js';
+import { copyBlockStyle, pasteBlockStyle, applyStylePreset } from './features/canvas.js';
 import './features/io.js';
 
 import {
@@ -56,6 +56,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     registerAction('toggleEraserMode', toggleEraserMode);
     registerAction('copyBlockStyle', copyBlockStyle);
     registerAction('pasteBlockStyle', pasteBlockStyle);
+    registerAction('applyStylePreset', (target) => {
+        const preset = target.getAttribute('data-preset');
+        applyStylePreset(preset);
+    });
     initEventDelegation();
 
     // Register UI bridge so ai.js and canvas.js can call UI functions without circular imports

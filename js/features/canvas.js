@@ -408,46 +408,70 @@ export function applyStylePreset(presetKey) {
     pushStateToHistory();
 
     const presets = {
-        'manga-std': {
-            fontFamily: 'font-comic',
-            bold: false,
+        dialogue: {
+            fontFamily: 'font-manga',
+            bold: true,
             textColor: '#000000',
             bgColor: '#ffffff',
             bgOpacity: 100,
             strokeWidth: 0,
-            shadowBlur: 0
+            shadowBlur: 0,
+            maskShape: 'bubble-fit',
+            align: 'center'
         },
-        'shout-sfx': {
+        scream: {
             fontFamily: 'font-impact',
             bold: true,
-            textColor: '#000000',
+            textColor: '#ffffff',
             bgColor: '#ffffff',
-            bgOpacity: 100,
-            strokeColor: '#ffffff',
-            strokeWidth: 0,
-            shadowColor: '#ffffff',
-            shadowBlur: 0
+            bgOpacity: 0,
+            strokeColor: '#000000',
+            strokeWidth: 4,
+            shadowColor: '#000000',
+            shadowBlur: 2,
+            maskShape: 'none',
+            align: 'center'
         },
-        'horror': {
-            fontFamily: 'font-marker',
+        whisper: {
+            fontFamily: 'font-caveat',
+            bold: false,
+            textColor: '#555555',
+            bgColor: '#ffffff',
+            bgOpacity: 60,
+            strokeWidth: 0,
+            shadowBlur: 0,
+            maskShape: 'ellipse',
+            align: 'center'
+        },
+        narration: {
+            fontFamily: 'font-vietnamese',
             bold: true,
             textColor: '#000000',
             bgColor: '#ffffff',
-            bgOpacity: 100,
-            strokeColor: '#ffffff',
+            bgOpacity: 95,
             strokeWidth: 0,
-            shadowColor: '#ffffff',
-            shadowBlur: 0
-        },
-        'whisper': {
-            fontFamily: 'font-caveat',
-            bold: false,
-            textColor: '#000000',
-            bgColor: '#ffffff',
-            bgOpacity: 100,
-            strokeWidth: 0,
-            shadowBlur: 0
+            shadowBlur: 0,
+            maskShape: 'rect',
+            align: 'left'
         }
+    };
+
+    // Map old keys for backwards compatibility
+    presets['manga-std'] = presets.dialogue;
+    presets['shout-sfx'] = presets.scream;
+    presets['whisper-old'] = presets.whisper;
+    presets['horror'] = {
+        fontFamily: 'font-marker',
+        bold: true,
+        textColor: '#ffffff',
+        bgColor: '#000000',
+        bgOpacity: 0,
+        strokeColor: '#ff0000',
+        strokeWidth: 2,
+        shadowColor: '#000000',
+        shadowBlur: 3,
+        maskShape: 'none',
+        align: 'center'
     };
 
     const targetPreset = presets[presetKey];
@@ -460,7 +484,12 @@ export function applyStylePreset(presetKey) {
     uiUpdateActiveBlockEditor();
     updateFloatingToolbarPosition();
     savePageToDB(page);
-    showToast("Đã áp dụng preset định dạng mẫu!", "success");
+
+    const label = presetKey === 'dialogue' || presetKey === 'manga-std' ? 'Thoại thường' :
+                  presetKey === 'scream' || presetKey === 'shout-sfx' ? 'Hét lớn / SFX' :
+                  presetKey === 'whisper' ? 'Thầm thì' :
+                  presetKey === 'narration' ? 'Dẫn truyện' : 'Preset';
+    showToast(`💥 Đã áp dụng mẫu chữ "${label}"`, "success");
 }
 
 // Add a completely new custom manual block overlay
@@ -1694,6 +1723,7 @@ window.applyDiamondFormat = applyDiamondFormat;
 window.batchDiamondBalanceAllPages = batchDiamondBalanceAllPages;
 window.selectBlock = selectBlock;
 window.syncActiveBlockStyle = syncActiveBlockStyle;
+
 window.syncActiveBlockTranslation = syncActiveBlockTranslation;
 window.copyBlockStyle = copyBlockStyle;
 window.pasteBlockStyle = pasteBlockStyle;
