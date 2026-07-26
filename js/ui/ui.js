@@ -540,6 +540,23 @@ export function updateTargetLanguage(value) {
     if (globalState.globalStyle) {
         globalState.globalStyle.vertical = isVerticalTarget;
     }
+
+    // Auto-normalize existing blocks on active page when switching to horizontal target language
+    if (!isVerticalTarget && globalState.pages && globalState.activePageIndex >= 0) {
+        const page = globalState.pages[globalState.activePageIndex];
+        if (page && page.blocks) {
+            let modified = false;
+            page.blocks.forEach(b => {
+                if (b.style && b.style.vertical) {
+                    b.style.vertical = false;
+                    modified = true;
+                }
+            });
+            if (modified) {
+                selectPage(globalState.activePageIndex);
+            }
+        }
+    }
 }
 
 export function updatePronounMatrix(value) {

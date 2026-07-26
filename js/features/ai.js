@@ -223,6 +223,8 @@ export function getTranslationGuidancePrompt() {
     // 2. Writing Direction Rule
     if (['ja', 'zh', 'ko'].includes(targetLang)) {
         guidanceParts.push(`- WRITING DIRECTION RULE: The target language (${targetLangName}) is traditionally written vertically in manga/comics. Ensure that you set style.vertical = true in the JSON properties for each translated text block.`);
+    } else {
+        guidanceParts.push(`- WRITING DIRECTION RULE: The target language (${targetLangName}) is written HORIZONTALLY (left-to-right). You MUST set style.vertical = false for ALL translated text blocks without exception.`);
     }
 
     const genrePresets = globalState.translationGenrePresets.length ? globalState.translationGenrePresets : ['quality'];
@@ -663,11 +665,12 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                     ? { ...DEFAULT_AI_BLOCK_BOX }
                     : refineAiBlockBox(b.box, pageImageData, globalState.selectedModel);
 
-                // Default to vertical layout if target language is ja, zh, or ko and not overridden by AI
+                // Default to vertical layout ONLY if target language is ja, zh, or ko.
+                // If target language is horizontal (e.g. Vietnamese), FORCE vertical = false.
                 const isVerticalTarget = ['ja', 'zh', 'ko'].includes(targetLang);
-                const blockVertical = (b.style && typeof b.style.vertical === 'boolean')
-                    ? b.style.vertical
-                    : isVerticalTarget;
+                const blockVertical = isVerticalTarget
+                    ? ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true)
+                    : false;
 
                 return {
                     id: b.id || `block_${Date.now()}_${idx}`,

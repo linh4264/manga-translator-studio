@@ -423,6 +423,33 @@ export function toggleActiveBlockOrientation() {
     showToast(nextVertical ? "Đã chuyển sang viết chữ Dọc" : "Đã chuyển sang viết chữ Ngang", "info");
 }
 
+// Chuyển toàn bộ ô thoại trên trang hiện tại thành chữ viết Ngang
+export function normalizeAllBlocksToHorizontal() {
+    if (globalState.activePageIndex === -1) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    if (!page || !page.blocks || page.blocks.length === 0) return;
+
+    let count = 0;
+    page.blocks.forEach(b => {
+        if (b.style && b.style.vertical) {
+            b.style.vertical = false;
+            count++;
+        }
+    });
+
+    if (count > 0) {
+        pushStateToHistory();
+        if (typeof window.selectPage === 'function') {
+            window.selectPage(globalState.activePageIndex);
+        }
+        showToast(`✅ Đã chuyển ${count} ô thoại thành chữ viết Ngang!`, "success");
+    } else {
+        showToast("Tất cả ô thoại đã là chữ viết Ngang.", "info");
+    }
+}
+
+window.normalizeAllBlocksToHorizontal = normalizeAllBlocksToHorizontal;
+
 // Áp dụng Preset mẫu định dạng nhanh cho ô thoại
 export function applyStylePreset(presetKey) {
     if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) {
