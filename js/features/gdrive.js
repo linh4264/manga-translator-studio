@@ -298,6 +298,65 @@ function _dataURLtoBlob(dataURL) {
     return fetch(dataURL).then(res => res.blob());
 }
 
+let tokenClient = null;
+let googleClientId = localStorage.getItem('gdrive_client_id') || '';
+
+export function initGoogleGISClient(customClientId = '') {
+    const idToUse = customClientId || googleClientId || localStorage.getItem('gdrive_client_id');
+    if (!idToUse) return false;
+
+    if (window.google?.accounts?.oauth2) {
+        try {
+            googleClientId = idToUse;
+            localStorage.setItem('gdrive_client_id', idToUse);
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: idToUse,
+                scope: 'https://www.googleapis.com/auth/drive.file',
+                callback: (tokenResponse) => {
+                    if (tokenResponse && tokenResponse.access_token) {
+                        setGDriveAccessToken(tokenResponse.access_token);
+                        const tokenInput = document.getElementById('gdrive-token-input');
+                        if (tokenInput) tokenInput.value = tokenResponse.access_token;
+                        showToast("🎉 Đã tự động nhận Token từ Google (1-Click)! Đồng bộ đã sẵn sàng.", "success");
+                        loadGDriveProjectList();
+                    } else if (tokenResponse.error) {
+                        showToast(`Lỗi đăng nhập Google: ${tokenResponse.error}`, "error");
+                    }
+                }
+            });
+            return true;
+        } catch (e) {
+            console.warn("GIS Client init error:", e);
+        }
+    }
+    return false;
+}
+
+export function loginWithGoogleOAuth() {
+    if (!googleClientId) {
+        const inputId = prompt(
+            "Để bật Tự Động 1-Click Đăng Nhập Google:\nNhập Google OAuth Client ID của dự án (x.apps.googleusercontent.com):\n(Để trống nếu muốn mở OAuth Playground thủ công 30s)",
+            googleClientId
+        );
+        if (inputId && inputId.trim()) {
+            googleClientId = inputId.trim();
+            localStorage.setItem('gdrive_client_id', googleClientId);
+        }
+    }
+
+    if (googleClientId) {
+        const initialized = initGoogleGISClient(googleClientId);
+        if (initialized && tokenClient) {
+            tokenClient.requestAccessToken({ prompt: '' });
+            return;
+        }
+    }
+
+    // Fallback nếu không có Client ID riêng: mở OAuth Playground
+    window.open('https://developers.google.com/oauthplayground/', '_blank');
+    showToast("🌐 Đã mở OAuth Playground — chọn Drive API v3 (drive.file) để lấy Access Token!", "info");
+}
+
 export function openGDriveModal() {
     const modal = document.getElementById('gdrive-modal');
     if (modal) {
@@ -305,6 +364,9 @@ export function openGDriveModal() {
         const tokenInput = document.getElementById('gdrive-token-input');
         if (tokenInput) {
             tokenInput.value = getGDriveAccessToken();
+        }
+        if (googleClientId && !tokenClient) {
+            initGoogleGISClient(googleClientId);
         }
         loadGDriveProjectList();
     }
@@ -329,11 +391,6 @@ export function saveGDriveTokenFromUI() {
             showToast("Đã xóa Access Token.", "info");
         }
     }
-}
-
-export function loginWithGoogleOAuth() {
-    window.open('https://developers.google.com/oauthplayground/', '_blank');
-    showToast("🌐 Đã mở OAuth Playground — chọn Drive API v3 (drive.file) để lấy Access Token!", "info");
 }
 
 // Global window bindings
