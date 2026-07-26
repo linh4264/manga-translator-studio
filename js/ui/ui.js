@@ -668,7 +668,7 @@ export function openPreviewMode() {
         return;
     }
 
-    previewCurrentPage = Math.max(0, globalState.activePageIndex);
+    previewCurrentPage = globalState.activePageIndex >= 0 ? globalState.activePageIndex : 0;
     elements.previewModal.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
 
@@ -712,11 +712,21 @@ export function previewNextPage() {
 }
 
 export function renderPreviewPage() {
+    if (previewCurrentPage < 0 || previewCurrentPage >= globalState.pages.length) return;
+
     const page = globalState.pages[previewCurrentPage];
     if (!page) return;
 
+    // Ensure valid image src blob url
+    if (!page.src && (page.originalFile || page.file)) {
+        const fileObj = page.originalFile || page.file;
+        if (fileObj instanceof Blob) {
+            page.src = URL.createObjectURL(fileObj);
+        }
+    }
+
     activatePage(page);
-    garbageCollectPageCaches();
+    garbageCollectPageCaches(previewCurrentPage);
 
     elements.previewPageIndicator.textContent = `Trang ${previewCurrentPage + 1}/${globalState.pages.length}`;
     elements.previewBody.innerHTML = '';
@@ -741,7 +751,7 @@ export function renderPreviewPage() {
 
     elements.previewBody.appendChild(pageContainer);
 
-    bgImg.onload = async () => {
+    const onImageLoaded = async () => {
         await waitForNextPaint();
 
         let displayW = bgImg.clientWidth;
@@ -776,6 +786,12 @@ export function renderPreviewPage() {
 
         renderOverlays(overlaysContainer, page, bgImg);
     };
+
+    if (bgImg.complete && bgImg.naturalWidth > 0) {
+        onImageLoaded();
+    } else {
+        bgImg.onload = onImageLoaded;
+    }
 
     bgImg.src = page.src;
     elements.previewBody.scrollTop = 0;

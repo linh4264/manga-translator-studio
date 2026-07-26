@@ -51,13 +51,21 @@ import {
     closeSettingsModal,
     fetchGeminiModels,
     setBilingualMode,
-    setActiveBlockGender
+    setActiveBlockGender,
+    openPreviewMode,
+    closePreviewMode,
+    previewPrevPage,
+    previewNextPage
 } from './ui/ui.js';
 
 window.setBilingualMode = setBilingualMode;
 window.setActiveBlockGender = setActiveBlockGender;
 window.openAudioSettingsModal = openAudioSettingsModal;
 window.closeAudioSettingsModal = closeAudioSettingsModal;
+window.openPreviewMode = openPreviewMode;
+window.closePreviewMode = closePreviewMode;
+window.previewPrevPage = previewPrevPage;
+window.previewNextPage = previewNextPage;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Initialize UI language translation (i18n)
@@ -69,6 +77,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     registerAction('closeSettingsModal', closeSettingsModal);
     registerAction('openAudioSettingsModal', openAudioSettingsModal);
     registerAction('closeAudioSettingsModal', closeAudioSettingsModal);
+    registerAction('openPreviewMode', openPreviewMode);
+    registerAction('closePreviewMode', closePreviewMode);
+    registerAction('previewPrevPage', previewPrevPage);
+    registerAction('previewNextPage', previewNextPage);
     registerAction('setBilingualOff', () => setBilingualMode('off'));
     registerAction('setBilingualSub', () => setBilingualMode('sub'));
     registerAction('setBilingualMode', (target) => {

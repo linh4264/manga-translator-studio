@@ -1988,6 +1988,14 @@
             const modal = document.getElementById('audio-settings-modal');
             if (modal) modal.classList.add('hidden');
         };
+        window.openPreviewMode = window.openPreviewMode || function() {
+            const modal = document.getElementById('preview-modal');
+            if (modal) modal.classList.remove('hidden');
+        };
+        window.closePreviewMode = window.closePreviewMode || function() {
+            const modal = document.getElementById('preview-modal');
+            if (modal) modal.classList.add('hidden');
+        };
     </script>
     <script type="module" src="js/main.js"></script>
 </body>
