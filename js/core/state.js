@@ -101,6 +101,8 @@ export const globalState = {
     viewMode: 'overlay', // 'overlay' | 'split' | 'original'
     zoom: 100,
     activeTab: 'edit', // 'edit' | 'style'
+    characterDossier: [], // [{ id, originalName, translatedName, gender, pronounSelf, pronounTarget, personality, notes }]
+    lorebook: [],         // [{ id, originalTerm, translatedTerm, category, note }]
     toeicSavedWords: [],
     activeBlockToeicAnalysis: null,
     toeicMode: 'learn', // 'learn' | 'recall'
@@ -376,7 +378,12 @@ export function saveProjectMeta(pageIds, activePageIndex) {
     return new Promise((resolve, reject) => {
         const transaction = dbInstance.transaction([STORE_META], 'readwrite');
         const store = transaction.objectStore(STORE_META);
-        const request = store.put({ pageIds, activePageIndex }, 'project_meta');
+        const request = store.put({
+            pageIds,
+            activePageIndex,
+            characterDossier: globalState.characterDossier || [],
+            lorebook: globalState.lorebook || []
+        }, 'project_meta');
         request.onsuccess = () => resolve();
         request.onerror = (e) => reject(e.target.error);
     });
@@ -396,6 +403,9 @@ export function loadProjectFromDB() {
                 resolve(null);
                 return;
             }
+
+            if (meta.characterDossier) globalState.characterDossier = meta.characterDossier;
+            if (meta.lorebook) globalState.lorebook = meta.lorebook;
 
             let pagesRequest = pagesStore.getAll();
             pagesRequest.onsuccess = (ev) => {

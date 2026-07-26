@@ -168,6 +168,36 @@ export function cancelBatchTranslation() {
     showToast("Đang dừng tiến trình dịch thuật ngầm theo yêu cầu...", "warn");
 }
 
+export function buildLorebookPromptContext() {
+    const parts = [];
+
+    // Character Dossier
+    if (globalState.characterDossier && globalState.characterDossier.length > 0) {
+        const charLines = globalState.characterDossier.map(c => {
+            let info = `${c.originalName || ''} -> ${c.translatedName || ''}`;
+            if (c.gender) info += ` (${c.gender === 'male' ? 'Nam' : c.gender === 'female' ? 'Nữ' : 'Khác'})`;
+            if (c.pronounSelf || c.pronounTarget) info += ` [Xưng hô: ${c.pronounSelf || 'tôi'} - ${c.pronounTarget || 'cậu'}]`;
+            if (c.personality) info += ` - Tính cách: ${c.personality}`;
+            if (c.notes) info += ` (${c.notes})`;
+            return info;
+        }).join('; ');
+        parts.push(`- CHARACTER DOSSIER (STRICT NAMES & PRONOUNS): Enforce the following character names, gender, pronouns, and speech tone strictly across all pages: ${charLines}`);
+    }
+
+    // Lorebook Terms
+    if (globalState.lorebook && globalState.lorebook.length > 0) {
+        const loreLines = globalState.lorebook.map(l => {
+            let info = `${l.originalTerm || ''} -> ${l.translatedTerm || ''}`;
+            if (l.category) info += ` [Thể loại: ${l.category}]`;
+            if (l.note) info += ` (Ghi chú: ${l.note})`;
+            return info;
+        }).join('; ');
+        parts.push(`- LOREBOOK & WORLD TERMINOLOGY: Strictly use these exact translations for world-building terms, skills, locations, and items: ${loreLines}`);
+    }
+
+    return parts.join('\n');
+}
+
 export function getTranslationGuidancePrompt() {
     const guidanceParts = [];
     const customContextPrompt = globalState.translationContextPrompt.trim();
@@ -214,6 +244,11 @@ export function getTranslationGuidancePrompt() {
     }
     if (customContextPrompt) {
         guidanceParts.push(`- USER CONTEXT / TRANSLATION GUIDANCE: ${customContextPrompt}`);
+    }
+
+    const lorebookPrompt = buildLorebookPromptContext();
+    if (lorebookPrompt) {
+        guidanceParts.push(lorebookPrompt);
     }
 
     if (globalState.enableStoryMemory && (globalState.chapterStoryMemory || []).length > 0) {

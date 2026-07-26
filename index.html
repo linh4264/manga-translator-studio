@@ -82,6 +82,12 @@
                             title="Đóng menu">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
+                        <button onclick="openLorebookModal()"
+                            class="shrink-0 h-8 px-2.5 rounded bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-500/40 text-indigo-200 hover:text-white text-[11px] font-semibold flex items-center gap-1.5 transition-colors"
+                            title="Quản lý hồ sơ nhân vật và bảng từ vựng chuyên sâu">
+                            <i class="fa-solid fa-address-card text-emerald-400"></i>
+                            <span>Lorebook & Nhân vật</span>
+                        </button>
                         <button data-action="openSettingsModal"
                             class="shrink-0 h-8 px-2.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 text-slate-300 hover:text-white text-[11px] font-semibold flex items-center gap-1.5 transition-colors"
                             title="Cài đặt dịch thuật">
@@ -1647,6 +1653,174 @@
             });
         }
     </script>
+    <!-- LOREBOOK & CHARACTER DOSSIER MODAL -->
+    <div id="lorebook-dossier-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            
+            <!-- Modal Header -->
+            <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                        <i class="fa-solid fa-address-card text-sm"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-100">Quản Lý Hồ Sơ Nhân Vật & Lorebook Từ Vựng</h3>
+                        <p class="text-[11px] text-slate-400">Đảm bảo AI giữ 100% đúng tên nhân vật, cách xưng hô và thuật ngữ qua các tập truyện</p>
+                    </div>
+                </div>
+                <button onclick="closeLorebookModal()" class="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Modal Tabs Header -->
+            <div class="flex border-b border-slate-800 bg-slate-950/50 px-5 gap-4">
+                <button id="tab-btn-dossier" onclick="switchLorebookTab('dossier')"
+                    class="py-2.5 text-xs font-bold border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-1.5 transition-all">
+                    <i class="fa-solid fa-users"></i> Hồ Sơ Nhân Vật (<span id="dossier-count">0</span>)
+                </button>
+                <button id="tab-btn-lorebook" onclick="switchLorebookTab('lorebook')"
+                    class="py-2.5 text-xs font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-1.5 transition-all">
+                    <i class="fa-solid fa-book-bookmark"></i> Bảng Từ Vựng Lorebook (<span id="lorebook-count">0</span>)
+                </button>
+            </div>
+
+            <!-- Modal Content Container -->
+            <div class="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar">
+
+                <!-- TAB 1: CHARACTER DOSSIER -->
+                <div id="lorebook-tab-dossier" class="space-y-4">
+                    <!-- Add New Character Form -->
+                    <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5 space-y-3">
+                        <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider block">Thêm Hồ Sơ Nhân Vật Mới</span>
+                        <div class="grid grid-cols-3 gap-2.5">
+                            <div>
+                                <label class="text-[10px] text-slate-400 block mb-1">Tên Gốc (Tiếng Nhật/Anh)</label>
+                                <input type="text" id="dossier-input-orig" placeholder="ルフィ / Luffy"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400 block mb-1">Tên Dịch (Tiếng Việt)</label>
+                                <input type="text" id="dossier-input-trans" placeholder="Luffy"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400 block mb-1">Giới Tính</label>
+                                <select id="dossier-input-gender" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+                                    <option value="male">Nam</option>
+                                    <option value="female">Nữ</option>
+                                    <option value="other">Khác / Ẩn</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="text-[10px] text-slate-400 block mb-1">Xưng Tự Nhận (Tôi/Ta/Mình...)</label>
+                                <input type="text" id="dossier-input-self" placeholder="tôi"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400 block mb-1">Xưng Với Người Khác (Cậu/Ngươi/Anh...)</label>
+                                <input type="text" id="dossier-input-target" placeholder="cậu"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-slate-400 block mb-1">Ghi Chú Tính Cách & Giọng Nói AI</label>
+                            <input type="text" id="dossier-input-personality" placeholder="Thuyền trưởng, nói chuyện hồn nhiên, cộc lốc"
+                                class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+                        </div>
+                        <div class="flex justify-end">
+                            <button onclick="addCharacterDossierEntry()"
+                                class="py-1.5 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md">
+                                <i class="fa-solid fa-user-plus"></i> Thêm Nhân Vật
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Characters List Table -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Danh Sách Nhân Vật Đã Lưu</span>
+                        </div>
+                        <div id="dossier-items-list" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                            <!-- Dynamic Character Items -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: LOREBOOK TERMS -->
+                <div id="lorebook-tab-lorebook" class="hidden space-y-4">
+                    <!-- Add New Lorebook Term Form -->
+                    <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5 space-y-3">
+                        <span class="text-xs font-bold text-purple-400 uppercase tracking-wider block">Thêm Thuật Ngữ Lorebook Mới</span>
+                        <div class="grid grid-cols-3 gap-2.5">
+                            <div>
+                                <label class="text-[10px] text-slate-400 block mb-1">Từ Gốc (Gốc)</label>
+                                <input type="text" id="lore-input-orig" placeholder="悪魔の実"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400 block mb-1">Bản Dịch Chuẩn</label>
+                                <input type="text" id="lore-input-trans" placeholder="Trái Ác Ma"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400 block mb-1">Phân Loại</label>
+                                <select id="lore-input-category" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+                                    <option value="Chiêu thức / Kỹ năng">Chiêu thức / Kỹ năng</option>
+                                    <option value="Vật phẩm / Đồ vật">Vật phẩm / Đồ vật</option>
+                                    <option value="Địa danh / Thế giới">Địa danh / Thế giới</option>
+                                    <option value="Băng nhóm / Tổ chức">Băng nhóm / Tổ chức</option>
+                                    <option value="Khác">Khác</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-slate-400 block mb-1">Ghi Chú Cho AI Dịch</label>
+                            <input type="text" id="lore-input-note" placeholder="Tuyệt đối không dịch là Quả quỷ"
+                                class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+                        </div>
+                        <div class="flex justify-end">
+                            <button onclick="addLorebookTermEntry()"
+                                class="py-1.5 px-4 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-md">
+                                <i class="fa-solid fa-plus"></i> Thêm Thuật Ngữ
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lorebook Items List Table -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Danh Sách Thuật Ngữ Đã Lưu</span>
+                        </div>
+                        <div id="lorebook-items-list" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                            <!-- Dynamic Lorebook Term Items -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer (Import/Export Backup) -->
+            <div class="px-5 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <button onclick="exportLorebookJSON()" class="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-[11px] font-semibold flex items-center gap-1 transition-all">
+                        <i class="fa-solid fa-download text-indigo-400"></i> Xuất File Backup (JSON)
+                    </button>
+                    <button onclick="document.getElementById('file-lorebook-import').click()" class="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-[11px] font-semibold flex items-center gap-1 transition-all">
+                        <i class="fa-solid fa-upload text-emerald-400"></i> Nhập File (JSON)
+                    </button>
+                    <input type="file" id="file-lorebook-import" accept=".json" class="hidden" onchange="importLorebookJSON(event)">
+                </div>
+                <button onclick="closeLorebookModal()" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all">
+                    Đóng
+                </button>
+            </div>
+
+        </div>
+    </div>
+
     <script type="module" src="js/main.js"></script>
 </body>
 
