@@ -1677,7 +1677,22 @@ window.switchLorebookTab = switchLorebookTab;
 window.addCharacterDossierEntry = addCharacterDossierEntry;
 window.removeCharacterDossierEntry = removeCharacterDossierEntry;
 window.addLorebookTermEntry = addLorebookTermEntry;
-window.removeLorebookTermEntry = removeLorebookTermEntry;
-window.exportLorebookJSON = exportLorebookJSON;
-window.importLorebookJSON = importLorebookJSON;
+export function setBilingualMode(mode) {
+    globalState.bilingualMode = mode;
+    const btnSub = document.getElementById('btn-bilingual-sub');
+    const btnOff = document.getElementById('btn-bilingual-off');
+
+    if (mode === 'sub') {
+        if (btnSub) btnSub.className = "px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-bold transition-all shadow";
+        if (btnOff) btnOff.className = "px-2 py-0.5 rounded bg-transparent text-slate-400 text-[10px] font-semibold hover:text-white transition-all";
+        showToast("Đã bật Chế độ Song Ngữ (Hiển thị Tiếng Việt + Tiếng Nhật/Anh)", "success");
+    } else {
+        if (btnOff) btnOff.className = "px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-bold transition-all shadow";
+        if (btnSub) btnSub.className = "px-2 py-0.5 rounded bg-transparent text-slate-400 text-[10px] font-semibold hover:text-white transition-all";
+        showToast("Đã chuyển về Chế độ Đơn ngữ chuẩn", "info");
+    }
+    requestOverlayRender();
+}
+
+window.setBilingualMode = setBilingualMode;
 

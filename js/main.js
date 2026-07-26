@@ -48,8 +48,11 @@ import {
     updateUndoRedoUI,
     openSettingsModal,
     closeSettingsModal,
-    fetchGeminiModels
+    fetchGeminiModels,
+    setBilingualMode
 } from './ui/ui.js';
+
+window.setBilingualMode = setBilingualMode;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Initialize UI language translation (i18n)
@@ -59,6 +62,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Register actions for global event delegation router
     registerAction('openSettingsModal', openSettingsModal);
     registerAction('closeSettingsModal', closeSettingsModal);
+    registerAction('setBilingualOff', () => setBilingualMode('off'));
+    registerAction('setBilingualSub', () => setBilingualMode('sub'));
+    registerAction('setBilingualMode', (target) => {
+        const mode = target.getAttribute('data-mode') || 'off';
+        setBilingualMode(mode);
+    });
     registerAction('toggleEraserMode', toggleEraserMode);
     registerAction('autoMatchActiveBlockStyle', () => import('./features/canvas.js').then(m => m.autoMatchActiveBlockStyle()));
     registerAction('copyBlockStyle', copyBlockStyle);
@@ -78,6 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     mountSettingsModal();
     initEventListeners();
+    import('./features/canvas.js').then(m => m.initBilingualTooltipEvents?.());
     syncMobileToolbarState();
     syncMobileMenuState();
 

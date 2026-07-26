@@ -101,6 +101,8 @@ export const globalState = {
     viewMode: 'overlay', // 'overlay' | 'split' | 'original'
     zoom: 100,
     activeTab: 'edit', // 'edit' | 'style'
+    bilingualMode: 'off', // 'off' | 'sub'
+    enableHoverTooltip: true, // Show hover tooltip with raw original text
     characterDossier: [], // [{ id, originalName, translatedName, gender, pronounSelf, pronounTarget, personality, notes }]
     lorebook: [],         // [{ id, originalTerm, translatedTerm, category, note }]
     toeicSavedWords: [],

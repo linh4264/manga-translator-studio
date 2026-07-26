@@ -71,29 +71,38 @@
         <aside id="left-panel" class="w-80 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 min-h-0">
             <!-- Section: Controls & Batch Config -->
             <div class="p-4 border-b border-slate-800 space-y-4 overflow-y-auto max-h-[55vh] shrink-0 custom-scrollbar">
-                <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center justify-between gap-2">
                     <div class="min-w-0">
                         <p data-i18n="image-source" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nguồn ảnh</p>
-                        <p data-i18n="image-source-sub" class="text-[10px] text-slate-500 truncate">Tải truyện và quản lý trang bên dưới</p>
+                        <p data-i18n="image-source-sub" class="text-[10px] text-slate-500 truncate">Tải truyện và quản lý trang</p>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1.5 shrink-0">
                         <button onclick="closeMobileMenus()"
                             class="md:hidden shrink-0 h-8 w-8 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-[11px] font-semibold flex items-center justify-center transition-colors"
                             title="Đóng menu">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
                         <button onclick="openLorebookModal()"
-                            class="shrink-0 h-8 px-2.5 rounded bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-500/40 text-indigo-200 hover:text-white text-[11px] font-semibold flex items-center gap-1.5 transition-colors"
-                            title="Quản lý hồ sơ nhân vật và bảng từ vựng chuyên sâu">
+                            class="shrink-0 h-7 px-2 rounded bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-500/40 text-indigo-200 hover:text-white text-[11px] font-semibold flex items-center gap-1 transition-colors"
+                            title="Quản lý hồ sơ nhân vật & Lorebook từ vựng">
                             <i class="fa-solid fa-address-card text-emerald-400"></i>
-                            <span>Lorebook & Nhân vật</span>
+                            <span>Lorebook</span>
                         </button>
                         <button data-action="openSettingsModal"
-                            class="shrink-0 h-8 px-2.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 text-slate-300 hover:text-white text-[11px] font-semibold flex items-center gap-1.5 transition-colors"
+                            class="shrink-0 h-7 px-2 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 text-slate-300 hover:text-white text-[11px] font-semibold flex items-center gap-1 transition-colors"
                             title="Cài đặt dịch thuật">
                             <i class="fa-solid fa-gear text-indigo-400"></i>
                             <span data-i18n="settings-btn">Cài đặt</span>
                         </button>
+                    </div>
+                </div>
+
+                <!-- Bilingual Mode Segmented Toggle Bar -->
+                <div class="flex items-center justify-between p-1.5 bg-slate-950 rounded-lg border border-slate-800">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Hiển thị:</span>
+                    <div class="flex items-center bg-slate-900 p-0.5 rounded-md border border-slate-800">
+                        <button id="btn-bilingual-off" data-action="setBilingualOff" onclick="setBilingualMode('off')" class="px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-bold transition-all shadow" title="Hiển thị duy nhất Tiếng Việt">Đơn ngữ</button>
+                        <button id="btn-bilingual-sub" data-action="setBilingualSub" onclick="setBilingualMode('sub')" class="px-2 py-0.5 rounded bg-transparent text-slate-400 text-[10px] font-semibold hover:text-white transition-all" title="Hiển thị song song Tiếng Việt + Tiếng Nhật/Anh gốc">🌐 Song ngữ</button>
                     </div>
                 </div>
 
@@ -1821,6 +1830,29 @@
         </div>
     </div>
 
+    <!-- BILINGUAL HOVER TOOLTIP -->
+    <div id="bilingual-hover-tooltip" class="hidden fixed z-50 pointer-events-none bg-slate-900/95 border border-indigo-500/40 rounded-xl p-3 shadow-2xl backdrop-blur-md max-w-xs space-y-1.5 transition-opacity">
+        <div class="flex items-center gap-1.5 text-[10px] font-bold text-indigo-400 uppercase tracking-wider">
+            <i class="fa-solid fa-language"></i> Văn Bản Gốc
+        </div>
+        <div id="bilingual-tooltip-orig" class="text-xs text-slate-100 font-semibold leading-relaxed"></div>
+        <div id="bilingual-tooltip-trans" class="text-[11px] text-indigo-300 italic border-t border-slate-800/80 pt-1"></div>
+    </div>
+
+    <script>
+        // Instant Window Function Stubs (Guarantees zero ReferenceErrors even before module JS loads)
+        window.openLorebookModal = window.openLorebookModal || function() {
+            const modal = document.getElementById('lorebook-dossier-modal');
+            if (modal) modal.classList.remove('hidden');
+        };
+        window.closeLorebookModal = window.closeLorebookModal || function() {
+            const modal = document.getElementById('lorebook-dossier-modal');
+            if (modal) modal.classList.add('hidden');
+        };
+        window.setBilingualMode = window.setBilingualMode || function(mode) {
+            if (window.globalState) window.globalState.bilingualMode = mode;
+        };
+    </script>
     <script type="module" src="js/main.js"></script>
 </body>
 

@@ -250,10 +250,21 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
 
         setMultilineText(innerTextDiv, block.translated);
 
+        if ((globalState.bilingualMode === 'sub' || block.style.bilingualSub) && block.original && block.original.trim()) {
+            const origSub = document.createElement('div');
+            origSub.className = 'text-[0.7em] opacity-75 font-sans tracking-normal mt-0.5 select-none pointer-events-none';
+            origSub.style.color = 'inherit';
+            origSub.style.lineHeight = '1.1';
+            setMultilineText(origSub, block.original);
+            innerTextDiv.appendChild(origSub);
+        }
+
         innerTextDiv.style.position = 'relative';
         innerTextDiv.style.zIndex = '1';
         maskContent.appendChild(innerTextDiv);
 
+        bubble.setAttribute('data-original', block.original || '');
+        bubble.setAttribute('data-translated', block.translated || '');
         bubble.appendChild(maskContent);
 
         // Add Drag-and-Resize handles (only for primary non-mirrored interactive canvas)
@@ -1835,6 +1846,44 @@ export function autoMatchActiveBlockStyle() {
     }
 }
 
+export function initBilingualTooltipEvents() {
+    const tooltip = document.getElementById('bilingual-hover-tooltip');
+    const container = elements.mangaOverlaysContainer;
+    if (!tooltip || !container) return;
+
+    container.addEventListener('mousemove', (e) => {
+        if (!globalState.enableHoverTooltip) {
+            tooltip.classList.add('hidden');
+            return;
+        }
+
+        const overlay = e.target.closest('.bubble-overlay');
+        if (overlay) {
+            const orig = overlay.getAttribute('data-original');
+            const trans = overlay.getAttribute('data-translated');
+            if (orig && orig.trim()) {
+                const origEl = document.getElementById('bilingual-tooltip-orig');
+                const transEl = document.getElementById('bilingual-tooltip-trans');
+                if (origEl) origEl.textContent = orig;
+                if (transEl) transEl.textContent = trans || '';
+
+                tooltip.classList.remove('hidden');
+
+                const mouseX = e.clientX;
+                const mouseY = e.clientY;
+                tooltip.style.left = `${mouseX + 15}px`;
+                tooltip.style.top = `${mouseY + 15}px`;
+                return;
+            }
+        }
+        tooltip.classList.add('hidden');
+    });
+
+    container.addEventListener('mouseleave', () => {
+        if (tooltip) tooltip.classList.add('hidden');
+    });
+}
+
 window.updateSfxRotate = updateSfxRotate;
 window.updateSfxArc = updateSfxArc;
 window.resetSfxAngleControls = resetSfxAngleControls;
@@ -1857,4 +1906,5 @@ window.pasteBlockStyle = pasteBlockStyle;
 window.navigateBlocks = navigateBlocks;
 window.autoMatchActiveBlockStyle = autoMatchActiveBlockStyle;
 window.autoMatchBlockStyle = autoMatchBlockStyle;
+window.initBilingualTooltipEvents = initBilingualTooltipEvents;
 
