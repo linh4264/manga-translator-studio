@@ -1,6 +1,24 @@
 // Central Declarative Event Delegation & Router for Manga Translator Studio
 // Decouples HTML from global window scope and provides safe action routing.
 
+export class EventEmitter {
+    constructor() {
+        this.listeners = {};
+    }
+
+    subscribe(event, callback) {
+        if (!this.listeners[event]) this.listeners[event] = [];
+        this.listeners[event].push(callback);
+    }
+
+    publish(event, data) {
+        if (!this.listeners[event]) return;
+        this.listeners[event].forEach(callback => callback(data));
+    }
+}
+
+export const globalBus = new EventEmitter();
+
 const actionRegistry = new Map();
 
 /**

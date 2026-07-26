@@ -1,4 +1,5 @@
 // State & Database Management for Manga Translator Studio
+import { globalBus } from './events.js';
 export const DEFAULT_MODEL = "gemini-3.1-flash-lite";
 export const CUSTOM_MODEL_VALUE = "__custom__";
 export const VALID_MODEL_IDS = [
