@@ -148,6 +148,53 @@ export const globalState = {
     }
 };
 
+export function initializeStateFromStorage() {
+    const keysToLoad = {
+        'gemini_manga_api_key': 'apiKey',
+        'gemini_manga_model': 'selectedModel',
+        'gemini_manga_autofit_enabled': 'autoFitEnabled',
+        'gemini_manga_preserve_names': 'preserveNames',
+        'gemini_manga_glossary': 'glossaryNames',
+        'gemini_manga_translation_context_prompt': 'translationContextPrompt',
+        'gemini_manga_source_lang': 'sourceLanguage',
+        'gemini_manga_target_lang': 'targetLanguage',
+        'gemini_manga_pronoun_matrix': 'pronounMatrix',
+        'gemini_manga_ocr_enhance': 'ocrEnhanceEnabled',
+        'gemini_manga_api_delay': 'apiDelay',
+        'gemini_manga_max_retries': 'maxRetries'
+    };
+
+    Object.entries(keysToLoad).forEach(([storageKey, stateKey]) => {
+        const val = localStorage.getItem(storageKey);
+        if (val !== null) {
+            if (stateKey === 'autoFitEnabled' || stateKey === 'preserveNames') {
+                globalState[stateKey] = val === 'true';
+            } else if (stateKey === 'apiDelay' || stateKey === 'maxRetries') {
+                globalState[stateKey] = parseInt(val, 10);
+            } else if (stateKey === 'ocrEnhanceEnabled') {
+                try { globalState[stateKey] = JSON.parse(val); } catch (e) { globalState[stateKey] = true; }
+            } else {
+                globalState[stateKey] = val;
+            }
+        }
+    });
+
+    const savedGenrePreset = localStorage.getItem('gemini_manga_translation_genre_preset');
+    if (savedGenrePreset !== null) {
+        try {
+            const savedPresets = savedGenrePreset.startsWith('[')
+                ? JSON.parse(savedGenrePreset)
+                : savedGenrePreset.split(',').map(item => item.trim()).filter(Boolean);
+            const validPresets = savedPresets.filter(item => TRANSLATION_GENRE_PRESETS[item] !== undefined);
+            if (validPresets.length > 0) {
+                globalState.translationGenrePresets = validPresets;
+            }
+        } catch (error) {
+            console.warn('Không thể đọc preset thể loại đã lưu:', error);
+        }
+    }
+}
+
 // --- UNDO / REDO CONTROLLERS ---
 export function pushStateToHistory() {
     const currentState = globalState.pages.map(page => ({

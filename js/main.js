@@ -12,7 +12,8 @@ import {
     apiKey,
     TRANSLATION_GENRE_PRESETS,
     registerUIBridge,
-    registerStateCallbacks
+    registerStateCallbacks,
+    initializeStateFromStorage // Added
 } from './core/state.js';
 import { elements } from './core/elements.js';
 
@@ -115,131 +116,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     syncMobileToolbarState();
     syncMobileMenuState();
 
-    // Tải API key đã lưu nếu có
-    const savedKey = localStorage.getItem('gemini_manga_api_key');
-    if (savedKey) {
-        globalState.apiKey = savedKey;
-        if (elements.apiKeyInput) {
-            elements.apiKeyInput.value = savedKey;
-        }
-        fetchGeminiModels();
-    }
+    // Centralized state initialization
+    initializeStateFromStorage();
+    
+    // UI synchronization based on initialized state
+    if (elements.apiKeyInput) elements.apiKeyInput.value = globalState.apiKey;
+    if (globalState.apiKey) fetchGeminiModels();
 
-    // Load saved model if available
-    const savedModel = localStorage.getItem('gemini_manga_model');
-    if (savedModel) {
-        const modelSelect = document.getElementById('model-select');
-        if (VALID_MODEL_IDS.includes(savedModel)) {
-            globalState.selectedModel = savedModel;
-            localStorage.setItem('gemini_manga_model', savedModel);
-            if (modelSelect) modelSelect.value = savedModel;
+    const modelSelect = document.getElementById('model-select');
+    if (modelSelect) {
+        if (VALID_MODEL_IDS.includes(globalState.selectedModel)) {
+            modelSelect.value = globalState.selectedModel;
         } else {
-            globalState.selectedModel = savedModel;
-            if (modelSelect) modelSelect.value = CUSTOM_MODEL_VALUE;
-            if (elements.customModelInput) {
-                elements.customModelInput.value = savedModel;
-            }
+            modelSelect.value = CUSTOM_MODEL_VALUE;
+            if (elements.customModelInput) elements.customModelInput.value = globalState.selectedModel;
         }
     }
 
-    // Kiểm tra và khóa mô hình dựa trên trạng thái API Key khi khởi chạy
     updateModelLockingUI();
-
-    const savedAutoFit = localStorage.getItem('gemini_manga_autofit_enabled');
-    if (savedAutoFit !== null) {
-        globalState.autoFitEnabled = savedAutoFit === 'true';
-    }
-    if (elements.styleAutoFit) {
-        elements.styleAutoFit.checked = globalState.autoFitEnabled;
-    }
-
-    const savedPreserve = localStorage.getItem('gemini_manga_preserve_names');
-    if (savedPreserve !== null) {
-        globalState.preserveNames = savedPreserve === 'true';
-        const preserveChk = document.getElementById('preserve-names-chk');
-        if (preserveChk) preserveChk.checked = globalState.preserveNames;
+    if (elements.styleAutoFit) elements.styleAutoFit.checked = globalState.autoFitEnabled;
+    const preserveChk = document.getElementById('preserve-names-chk');
+    if (preserveChk) {
+        preserveChk.checked = globalState.preserveNames;
         togglePreserveNames(globalState.preserveNames);
     }
-
-    const savedGlossary = localStorage.getItem('gemini_manga_glossary');
-    if (savedGlossary !== null) {
-        globalState.glossaryNames = savedGlossary;
-        const glossaryInp = document.getElementById('glossary-input');
-        if (glossaryInp) glossaryInp.value = savedGlossary;
-    }
-
-    const savedGenrePreset = localStorage.getItem('gemini_manga_translation_genre_preset');
-    if (savedGenrePreset !== null) {
-        try {
-            const savedPresets = savedGenrePreset.startsWith('[')
-                ? JSON.parse(savedGenrePreset)
-                : savedGenrePreset.split(',').map(item => item.trim()).filter(Boolean);
-            const validPresets = savedPresets.filter(item => TRANSLATION_GENRE_PRESETS[item] !== undefined);
-            if (validPresets.length > 0) {
-                globalState.translationGenrePresets = validPresets;
-            }
-        } catch (error) {
-            console.warn('Không thể đọc preset thể loại đã lưu:', error);
-        }
-    }
+    if (elements.glossaryInput) elements.glossaryInput.value = globalState.glossaryNames;
 
     syncGenrePresetCheckboxes();
     saveTranslationGenrePresets();
-
-    const savedTranslationContextPrompt = localStorage.getItem('gemini_manga_translation_context_prompt');
-    if (savedTranslationContextPrompt !== null) {
-        globalState.translationContextPrompt = savedTranslationContextPrompt;
-        const contextPromptInp = document.getElementById('translation-context-prompt');
-        if (contextPromptInp) contextPromptInp.value = savedTranslationContextPrompt;
-    }
-
-    // Tải cấu hình Ngôn ngữ nguồn, Ngôn ngữ đích, Ma trận xưng hô và Tăng cường OCR
-    const savedSourceLang = localStorage.getItem('gemini_manga_source_lang');
-    if (savedSourceLang) {
-        globalState.sourceLanguage = savedSourceLang;
-        if (elements.sourceLangSelect) elements.sourceLangSelect.value = savedSourceLang;
-    }
-
-    const savedTargetLang = localStorage.getItem('gemini_manga_target_lang');
-    if (savedTargetLang) {
-        globalState.targetLanguage = savedTargetLang;
-        if (elements.targetLangSelect) elements.targetLangSelect.value = savedTargetLang;
-    }
-
-    const savedPronounMatrix = localStorage.getItem('gemini_manga_pronoun_matrix');
-    if (savedPronounMatrix !== null) {
-        globalState.pronounMatrix = savedPronounMatrix;
-        renderPronounMatrixTable();
-    }
-
-    const savedOcrEnhance = localStorage.getItem('gemini_manga_ocr_enhance');
-    if (savedOcrEnhance !== null) {
-        try {
-            globalState.ocrEnhanceEnabled = JSON.parse(savedOcrEnhance);
-        } catch (e) {
-            globalState.ocrEnhanceEnabled = true;
-        }
-        if (elements.ocrEnhanceChk) elements.ocrEnhanceChk.checked = globalState.ocrEnhanceEnabled;
-    }
-
-    // Tải cấu hình apiDelay và maxRetries đã lưu nếu có
-    const savedApiDelay = localStorage.getItem('gemini_manga_api_delay');
-    if (savedApiDelay !== null) {
-        globalState.apiDelay = parseInt(savedApiDelay, 10);
-    } else {
-        globalState.apiDelay = 8;
-    }
-    const apiDelayInp = document.getElementById('api-delay-input');
-    if (apiDelayInp) apiDelayInp.value = globalState.apiDelay;
-
-    const savedMaxRetries = localStorage.getItem('gemini_manga_max_retries');
-    if (savedMaxRetries !== null) {
-        globalState.maxRetries = parseInt(savedMaxRetries, 10);
-    } else {
-        globalState.maxRetries = 5;
-    }
-    const maxRetriesInp = document.getElementById('max-retries-input');
-    if (maxRetriesInp) maxRetriesInp.value = globalState.maxRetries;
+    if (elements.contextPromptInput) elements.contextPromptInput.value = globalState.translationContextPrompt;
+    if (elements.sourceLangSelect) elements.sourceLangSelect.value = globalState.sourceLanguage;
+    if (elements.targetLangSelect) elements.targetLangSelect.value = globalState.targetLanguage;
+    if (globalState.pronounMatrix) renderPronounMatrixTable();
+    if (elements.ocrEnhanceChk) elements.ocrEnhanceChk.checked = globalState.ocrEnhanceEnabled;
+    if (elements.apiDelayInput) elements.apiDelayInput.value = globalState.apiDelay;
+    if (elements.maxRetriesInput) elements.maxRetriesInput.value = globalState.maxRetries;
 
     const isLocal = window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     if (isLocal) {
