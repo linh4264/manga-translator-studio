@@ -548,14 +548,119 @@ export async function createThumbnail(file, maxDim = 120) {
     });
 }
 
-export function activatePage(page) {
+export async function activatePage(page) {
     if (!page) return;
-    if (!page.src && page.originalFile) {
-        page.src = URL.createObjectURL(page.originalFile);
+    if (!page.src) {
+        if (page.originalFile) {
+            page.src = URL.createObjectURL(page.originalFile);
+        } else if (page.file) {
+            page.src = URL.createObjectURL(page.file);
+        } else if (page.id) {
+            try {
+                const dbPage = await _loadPageBlobFromDB(page.id);
+                if (dbPage) {
+                    if (dbPage.originalFile) {
+                        page.originalFile = dbPage.originalFile;
+                        page.src = URL.createObjectURL(dbPage.originalFile);
+                    } else if (dbPage.file) {
+                        page.file = dbPage.file;
+                        page.src = URL.createObjectURL(dbPage.file);
+                    }
+                }
+            } catch (err) {
+                console.warn("activatePage DB load error:", err);
+            }
+        }
     }
-    if (!page.apiSrc && page.file) {
-        page.apiSrc = URL.createObjectURL(page.file);
+    if (!page.apiSrc) {
+        if (page.file) {
+            page.apiSrc = URL.createObjectURL(page.file);
+        } else if (page.originalFile) {
+            page.apiSrc = URL.createObjectURL(page.originalFile);
+        }
     }
+}
+
+// Helper: Load page blob from IndexedDB by ID
+export function _loadPageBlobFromDB(pageId) {
+    if (dbInstance) {
+        return new Promise((resolve) => {
+            try {
+                const tx = dbInstance.transaction([STORE_PAGES], 'readonly');
+                const store = tx.objectStore(STORE_PAGES);
+                const req = store.get(pageId);
+                req.onsuccess = (e) => resolve(e.target.result || null);
+                req.onerror = () => resolve(null);
+            } catch {
+                resolve(null);
+            }
+        });
+    }
+    return new Promise((resolve) => {
+        try {
+            const req = indexedDB.open('MangaTranslatorDB');
+            req.onsuccess = (e) => {
+                const db = e.target.result;
+                const tx = db.transaction(['pages'], 'readonly');
+                const store = tx.objectStore('pages');
+                const getReq = store.get(pageId);
+                getReq.onsuccess = (ev) => resolve(ev.target.result || null);
+                getReq.onerror = () => resolve(null);
+            };
+            req.onerror = () => resolve(null);
+        } catch {
+            resolve(null);
+        }
+    });
+}
+
+// Lấy base64 Data URL của trang (dành cho xuất dự án, hoạt động với cả trang active & inactive)
+export async function getPageDataURL(page) {
+    if (!page) return null;
+
+    let blob = page.originalFile || page.file;
+    if (!blob && page.id) {
+        try {
+            const dbPage = await _loadPageBlobFromDB(page.id);
+            if (dbPage) {
+                blob = dbPage.originalFile || dbPage.file;
+                if (dbPage.originalFile) page.originalFile = dbPage.originalFile;
+                if (dbPage.file) page.file = dbPage.file;
+            }
+        } catch (err) {
+            console.warn("getPageDataURL DB load error:", err);
+        }
+    }
+
+    if (blob && blob instanceof Blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    if (page.src && page.src.startsWith('data:')) {
+        return page.src;
+    }
+
+    if (page.src && page.src.startsWith('blob:')) {
+        try {
+            const resp = await fetch(page.src);
+            const b = await resp.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(b);
+            });
+        } catch (err) {
+            console.warn("getPageDataURL fetch blob error:", err);
+        }
+    }
+
+    return null;
 }
 
 export function deactivatePage(page) {

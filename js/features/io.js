@@ -9,7 +9,8 @@ import {
     clearHistory,
     garbageCollectPageCaches,
     activatePage,
-    createThumbnail
+    createThumbnail,
+    getPageDataURL
 } from '../core/state.js';
 import { elements } from '../core/elements.js';
 import { showToast, getCleanFileBaseName, waitForNextPaint, escapeHTML, waitForImageReady } from '../core/utils.js';
@@ -702,7 +703,28 @@ export async function exportProjectBackup() {
         return;
     }
     try {
-        showToast("Đang đóng gói file dự án (.manga)...", "info");
+        showToast("Đang đóng gói file dự án (.manga)... Vui lòng chờ.", "info");
+
+        // Lấy Data URL base64 cho mỗi trang (cả trang active và inactive)
+        const pagesData = [];
+        for (const page of globalState.pages) {
+            const imgDataURL = await getPageDataURL(page);
+            pagesData.push({
+                id: page.id,
+                name: page.name,
+                status: page.status,
+                src: imgDataURL,
+                blocks: (page.blocks || []).map(b => ({
+                    id: b.id,
+                    type: b.type,
+                    original: b.original,
+                    translated: b.translated,
+                    box: { ...b.box },
+                    style: { ...b.style }
+                }))
+            });
+        }
+
         const backupData = {
             version: '2.0',
             exportedAt: new Date().toISOString(),
@@ -711,23 +733,12 @@ export async function exportProjectBackup() {
             pronounMatrix: globalState.pronounMatrix,
             preserveNames: globalState.preserveNames,
             glossaryNames: globalState.glossaryNames,
-            pages: globalState.pages.map(page => ({
-                id: page.id,
-                name: page.name,
-                status: page.status,
-                src: page.src,
-                blocks: page.blocks.map(b => ({
-                    id: b.id,
-                    type: b.type,
-                    original: b.original,
-                    translated: b.translated,
-                    box: { ...b.box },
-                    style: { ...b.style }
-                }))
-            }))
+            characterDossier: globalState.characterDossier || [],
+            lorebook: globalState.lorebook || [],
+            pages: pagesData
         };
 
-        const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify(backupData)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -736,7 +747,7 @@ export async function exportProjectBackup() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        showToast("Đã xuất file sao lưu dự án (.manga) thành công!", "success");
+        showToast(`Đã xuất file sao lưu dự án (.manga) thành công! (${pagesData.length} trang)`, "success");
     } catch (e) {
         console.error("Lỗi sao lưu dự án:", e);
         showToast("Không thể xuất file sao lưu dự án.", "error");
@@ -758,13 +769,25 @@ export async function importProjectBackup(files) {
 
         if (confirm(`Khôi phục dự án chứa ${data.pages.length} trang truyện? Thao tác này sẽ thay thế dự án hiện tại.`)) {
             pushStateToHistory();
-            data.pages.forEach(p => {
+
+            // Chuyển data URL base64 → Blob cho mỗi trang
+            for (const p of data.pages) {
                 if (p.blocks) {
-                    p.blocks.forEach(block => {
-                        delete block.maskCache;
-                    });
+                    p.blocks.forEach(block => { delete block.maskCache; });
                 }
-            });
+                if (p.src && p.src.startsWith('data:')) {
+                    try {
+                        const blob = await dataURLtoBlob(p.src);
+                        p.originalFile = blob;
+                        p.file = blob;
+                        p.src = URL.createObjectURL(blob);
+                        p.thumbnailSrc = URL.createObjectURL(blob);
+                    } catch (err) {
+                        console.warn("Không thể chuyển data URL thành Blob cho trang:", p.name, err);
+                    }
+                }
+            }
+
             globalState.pages = data.pages;
             globalState.activePageIndex = data.pages.length > 0 ? 0 : -1;
             if (data.sourceLanguage) updateSourceLanguage(data.sourceLanguage);
@@ -772,6 +795,9 @@ export async function importProjectBackup(files) {
             if (data.pronounMatrix) updatePronounMatrix(data.pronounMatrix);
             if (data.glossaryNames) updateGlossary(data.glossaryNames);
             if (data.preserveNames !== undefined) togglePreserveNames(!!data.preserveNames);
+
+            if (data.characterDossier) globalState.characterDossier = data.characterDossier;
+            if (data.lorebook) globalState.lorebook = data.lorebook;
 
             for (const page of globalState.pages) {
                 await savePageToDB(page);
@@ -791,6 +817,11 @@ export async function importProjectBackup(files) {
         const inp = document.getElementById('import-project-input');
         if (inp) inp.value = '';
     }
+}
+
+// Helper: Chuyển data URL base64 thành Blob
+function dataURLtoBlob(dataURL) {
+    return fetch(dataURL).then(res => res.blob());
 }
 
 // Giải phóng đệm Canvas & RAM Cache
