@@ -30,6 +30,46 @@ import {
     togglePreserveNames
 } from '../ui/ui.js';
 
+// --- SHARED EXPORT HELPERS ---
+
+// Xác định MIME type và đuôi file tốt nhất cho xuất ảnh dựa trên file gốc
+export function getPageExportMimeType(page) {
+    let mimeType = 'image/png';
+    let quality = undefined;
+    let ext = 'png';
+
+    if (page.originalFile && page.originalFile.type) {
+        const origType = page.originalFile.type;
+        if (origType === 'image/jpeg' || origType === 'image/jpg') {
+            mimeType = 'image/jpeg';
+            quality = 0.95;
+            ext = 'jpg';
+        } else if (origType === 'image/webp') {
+            mimeType = 'image/webp';
+            quality = 0.95;
+            ext = 'webp';
+        }
+    } else if (page.name) {
+        const nameLower = page.name.toLowerCase();
+        if (nameLower.endsWith('.jpg') || nameLower.endsWith('.jpeg')) {
+            mimeType = 'image/jpeg';
+            quality = 0.95;
+            ext = 'jpg';
+        } else if (nameLower.endsWith('.webp')) {
+            mimeType = 'image/webp';
+            quality = 0.95;
+            ext = 'webp';
+        }
+    }
+
+    return { mimeType, quality, ext };
+}
+
+// Chuyển data URL base64 thành Blob (shared helper)
+export function dataURLtoBlob(dataURL) {
+    return fetch(dataURL).then(res => res.blob());
+}
+
 let exportPreviewObjectUrl = null;
 
 // Tự động nén và co dãn hình ảnh để tránh quá tải bộ nhớ
@@ -220,33 +260,7 @@ export async function exportActivePage() {
         await waitForNextPaint();
         await document.fonts.ready;
 
-        let mimeType = 'image/png';
-        let quality = undefined;
-        let ext = 'png';
-
-        if (page.originalFile && page.originalFile.type) {
-            const origType = page.originalFile.type;
-            if (origType === 'image/jpeg' || origType === 'image/jpg') {
-                mimeType = 'image/jpeg';
-                quality = 0.95;
-                ext = 'jpg';
-            } else if (origType === 'image/webp') {
-                mimeType = 'image/webp';
-                quality = 0.95;
-                ext = 'webp';
-            }
-        } else if (page.name) {
-            const nameLower = page.name.toLowerCase();
-            if (nameLower.endsWith('.jpg') || nameLower.endsWith('.jpeg')) {
-                mimeType = 'image/jpeg';
-                quality = 0.95;
-                ext = 'jpg';
-            } else if (nameLower.endsWith('.webp')) {
-                mimeType = 'image/webp';
-                quality = 0.95;
-                ext = 'webp';
-            }
-        }
+        const { mimeType, quality, ext } = getPageExportMimeType(page);
 
         let canvas;
         try {
@@ -352,33 +366,7 @@ export async function runBatchExport() {
             await document.fonts.ready;
 
             try {
-                let mimeType = 'image/png';
-                let quality = undefined;
-                let ext = 'png';
-
-                if (page.originalFile && page.originalFile.type) {
-                    const origType = page.originalFile.type;
-                    if (origType === 'image/jpeg' || origType === 'image/jpg') {
-                        mimeType = 'image/jpeg';
-                        quality = 0.95;
-                        ext = 'jpg';
-                    } else if (origType === 'image/webp') {
-                        mimeType = 'image/webp';
-                        quality = 0.95;
-                        ext = 'webp';
-                    }
-                } else if (page.name) {
-                    const nameLower = page.name.toLowerCase();
-                    if (nameLower.endsWith('.jpg') || nameLower.endsWith('.jpeg')) {
-                        mimeType = 'image/jpeg';
-                        quality = 0.95;
-                        ext = 'jpg';
-                    } else if (nameLower.endsWith('.webp')) {
-                        mimeType = 'image/webp';
-                        quality = 0.95;
-                        ext = 'webp';
-                    }
-                }
+                const { mimeType, quality, ext } = getPageExportMimeType(page);
 
                 let canvas;
                 try {
@@ -831,11 +819,6 @@ export async function importProjectBackup(files) {
         const inp = document.getElementById('import-project-input');
         if (inp) inp.value = '';
     }
-}
-
-// Helper: Chuyển data URL base64 thành Blob
-function dataURLtoBlob(dataURL) {
-    return fetch(dataURL).then(res => res.blob());
 }
 
 // Giải phóng đệm Canvas & RAM Cache

@@ -572,26 +572,16 @@ export function updateGlossary(value) {
     localStorage.setItem('gemini_manga_glossary', value);
 }
 
-export function toggleStoryMemory(enabled) {
-    globalState.storyMemoryEnabled = !!enabled;
-    const chk = document.getElementById('story-memory-chk');
-    if (chk) chk.checked = globalState.storyMemoryEnabled;
-    localStorage.setItem('gemini_manga_story_memory_enabled', globalState.storyMemoryEnabled);
-    updateStoryMemoryBadge();
-    showToast(globalState.storyMemoryEnabled ? "🧠 Đã kích hoạt Trí nhớ cốt truyện dài hạn." : "🧠 Đã tắt Trí nhớ cốt truyện.", "info");
+// Delegate story memory to ai.js (source of truth) to avoid state shadowing
+// These functions re-import from ai.js to ensure consistency
+export async function toggleStoryMemory(enabled) {
+    const ai = await import('../features/ai.js');
+    ai.toggleStoryMemory(enabled);
 }
 
-export function updateStoryMemoryBadge() {
-    const badge = document.getElementById('story-memory-badge');
-    if (!badge) return;
-    if (globalState.storyMemoryEnabled) {
-        const count = Object.keys(globalState.storyMemoryContext || {}).length;
-        badge.textContent = `${count} dữ kiện`;
-        badge.className = 'px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[9px] font-bold';
-    } else {
-        badge.textContent = 'Đã tắt';
-        badge.className = 'px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-500 text-[9px] font-bold';
-    }
+export async function updateStoryMemoryBadge() {
+    const ai = await import('../features/ai.js');
+    ai.updateStoryMemoryBadge();
 }
 
 export function togglePreserveNames(enabled) {

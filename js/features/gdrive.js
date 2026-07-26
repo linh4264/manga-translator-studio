@@ -1,6 +1,7 @@
 // Google Drive Cloud Sync & Team Collaboration Module
 import { globalState, pushStateToHistory, savePageToDB, saveProjectMeta, getPageDataURL } from '../core/state.js';
 import { showToast, escapeHTML, getCleanFileBaseName } from '../core/utils.js';
+import { dataURLtoBlob } from './io.js';
 import { updatePageListUI, selectPage, updateSourceLanguage, updateTargetLanguage, updatePronounMatrix, updateGlossary, togglePreserveNames } from '../ui/ui.js';
 
 let gdriveAccessToken = localStorage.getItem('gdrive_access_token') || '';
@@ -471,7 +472,7 @@ export async function importProjectFromGDrive(fileId) {
                 }
                 if (p.src && p.src.startsWith('data:')) {
                     try {
-                        const blob = await _dataURLtoBlob(p.src);
+                        const blob = await dataURLtoBlob(p.src);
                         p.originalFile = blob;
                         p.file = blob;
                         p.src = URL.createObjectURL(blob);
@@ -510,11 +511,6 @@ export async function importProjectFromGDrive(fileId) {
         console.error("GDrive Import Error:", e);
         showToast(`Không thể nạp tệp từ Drive: ${e.message}`, "error");
     }
-}
-
-// Helper: Chuyển data URL base64 thành Blob
-function _dataURLtoBlob(dataURL) {
-    return fetch(dataURL).then(res => res.blob());
 }
 
 let tokenClient = null;
