@@ -133,6 +133,10 @@ export function selectPage(index) {
             requestOverlayRender();
         } else {
             elements.mangaBgImage.onload = () => {
+                // Đảm bảo trang hiện tại vẫn là trang được chọn khi hình ảnh tải xong
+                const currentPage = globalState.pages[globalState.activePageIndex];
+                if (!currentPage || currentPage.id !== page.id) return;
+
                 elements.mangaBgImage.dataset.loadedSrc = page.src;
                 restorePageEraserDrawing(page);
                 requestOverlayRender();

@@ -1,6 +1,7 @@
 // AI Translation & Story Memory Management
 import {
     globalState,
+    pushStateToHistory,
     VALID_MODEL_IDS,
     DEFAULT_MODEL,
     DEFAULT_AI_BLOCK_BOX,
@@ -619,8 +620,8 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 }
             }
 
-            // Gọi pushStateToHistory từ state/main
-            import('../core/state.js').then(m => m.pushStateToHistory());
+            // Lưu trạng thái trước khi thay đổi ô thoại
+            pushStateToHistory();
 
             page.blocks = (data.blocks || []).map((b, idx) => {
                 const normalisedBox = b.positionKnown === false

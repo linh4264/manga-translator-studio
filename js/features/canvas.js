@@ -46,6 +46,8 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
         return;
     }
 
+    const fragment = document.createDocumentFragment();
+
     // Run Auto-fit automatically before drawing if enabled
     if (globalState.autoFitEnabled) {
         autoFitAllBlocksOnPage(page, customImgElement, forceExportScale);
@@ -290,8 +292,10 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
             bubble.appendChild(handleNE);
         }
 
-        container.appendChild(bubble);
+        fragment.appendChild(bubble);
     });
+
+    container.appendChild(fragment);
 }
 
 // Helper: Convert Hex color scheme to RGBA equivalents
