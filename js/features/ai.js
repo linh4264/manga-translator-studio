@@ -661,6 +661,15 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 };
             });
 
+            // Tự động phân tích ảnh gốc và khớp Font & Màu sắc cho từng ô thoại
+            const imgEl = elements.mangaBgImage;
+            if (imgEl && imgEl.naturalWidth) {
+                try {
+                    const { autoMatchBlockStyle } = await import('./canvas.js');
+                    page.blocks.forEach(b => autoMatchBlockStyle(b, imgEl));
+                } catch (e) { }
+            }
+
             page.status = 'done';
             recordPageToStoryMemory(pageIndex, page.blocks);
             uiUpdatePageListUI();

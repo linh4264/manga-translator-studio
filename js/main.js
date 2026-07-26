@@ -60,6 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     registerAction('openSettingsModal', openSettingsModal);
     registerAction('closeSettingsModal', closeSettingsModal);
     registerAction('toggleEraserMode', toggleEraserMode);
+    registerAction('autoMatchActiveBlockStyle', () => import('./features/canvas.js').then(m => m.autoMatchActiveBlockStyle()));
     registerAction('copyBlockStyle', copyBlockStyle);
     registerAction('pasteBlockStyle', pasteBlockStyle);
     registerAction('applyStylePreset', (target) => {

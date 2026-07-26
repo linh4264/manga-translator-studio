@@ -1722,6 +1722,119 @@ export function resetSfxAngleControls() {
     if (aSlider) aSlider.value = 0;
 }
 
+// Tự động phân tích ảnh gốc và khớp Font & Màu sắc cho ô thoại
+export function autoMatchBlockStyle(block, imgElement) {
+    if (!block || !imgElement || !imgElement.naturalWidth || !imgElement.naturalHeight) return;
+
+    const W = imgElement.naturalWidth;
+    const H = imgElement.naturalHeight;
+
+    const cropX = Math.max(0, Math.round((block.box.x / 100) * W));
+    const cropY = Math.max(0, Math.round((block.box.y / 100) * H));
+    const cropW = Math.min(W - cropX, Math.round((block.box.w / 100) * W));
+    const cropH = Math.min(H - cropY, Math.round((block.box.h / 100) * H));
+
+    if (cropW <= 0 || cropH <= 0) return;
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = cropW;
+    tempCanvas.height = cropH;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(imgElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+    const imgData = tempCtx.getImageData(0, 0, cropW, cropH);
+    const data = imgData.data;
+
+    let rimLumSum = 0, rimCount = 0;
+    let centerLumSum = 0, centerCount = 0;
+
+    const borderMarginX = Math.max(1, Math.floor(cropW * 0.15));
+    const borderMarginY = Math.max(1, Math.floor(cropH * 0.15));
+
+    for (let y = 0; y < cropH; y++) {
+        for (let x = 0; x < cropW; x++) {
+            const idx = (y * cropW + x) * 4;
+            const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+            const isRim = (x < borderMarginX || x >= cropW - borderMarginX || y < borderMarginY || y >= cropH - borderMarginY);
+            if (isRim) {
+                rimLumSum += lum;
+                rimCount++;
+            } else {
+                centerLumSum += lum;
+                centerCount++;
+            }
+        }
+    }
+
+    const avgRimLum = rimCount > 0 ? (rimLumSum / rimCount) : 255;
+    const avgCenterLum = centerCount > 0 ? (centerLumSum / centerCount) : 128;
+
+    if (block.type === 'sfx') {
+        block.style.fontFamily = 'font-impact';
+        block.style.bold = true;
+        block.style.align = 'center';
+        block.style.strokeColor = '#000000';
+        block.style.strokeWidth = 2;
+        block.style.shadowColor = '#000000';
+        block.style.shadowBlur = 3;
+    } else if (block.type === 'narration') {
+        block.style.fontFamily = 'font-vietnamese';
+        block.style.bold = false;
+        block.style.align = 'left';
+        block.style.maskShape = 'rect';
+        block.style.maskSize = 'full';
+        block.style.bgColor = '#ffffff';
+        block.style.bgOpacity = 95;
+    } else {
+        block.style.fontFamily = 'font-comic';
+        block.style.align = 'center';
+    }
+
+    if (avgRimLum < 140) {
+        if (avgCenterLum > avgRimLum + 30) {
+            block.style.textColor = '#ffffff';
+            block.style.strokeColor = '#000000';
+            block.style.strokeWidth = 2;
+            block.style.shadowColor = '#000000';
+            block.style.shadowBlur = 4;
+            block.style.bgColor = '#ffffff';
+            block.style.bgOpacity = 0;
+        } else {
+            block.style.textColor = '#000000';
+            block.style.bgColor = '#ffffff';
+            block.style.bgOpacity = 100;
+            block.style.maskShape = 'bubble-fit';
+        }
+    } else {
+        block.style.textColor = '#000000';
+        block.style.bgColor = '#ffffff';
+        block.style.bgOpacity = 100;
+        block.style.maskShape = 'bubble-fit';
+        block.style.strokeWidth = 0;
+    }
+
+    block.maskCache = null;
+    block.autoFitCache = null;
+}
+
+export function autoMatchActiveBlockStyle() {
+    if (globalState.activePageIndex === -1 || !globalState.selectedBlockId) {
+        showToast("Vui lòng chọn một ô thoại để tự động khớp phong cách chữ.", "warn");
+        return;
+    }
+    const page = globalState.pages[globalState.activePageIndex];
+    const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
+    const imgElement = elements.mangaBgImage;
+    if (block && imgElement) {
+        pushStateToHistory();
+        autoMatchBlockStyle(block, imgElement);
+        requestOverlayRender();
+        uiUpdateActiveBlockEditor();
+        savePageToDB(page);
+        showToast("✨ Đã tự động khớp phông chữ và màu sắc cho ô thoại!", "success");
+    }
+}
+
 window.updateSfxRotate = updateSfxRotate;
 window.updateSfxArc = updateSfxArc;
 window.resetSfxAngleControls = resetSfxAngleControls;
@@ -1742,4 +1855,6 @@ window.syncActiveBlockTranslation = syncActiveBlockTranslation;
 window.copyBlockStyle = copyBlockStyle;
 window.pasteBlockStyle = pasteBlockStyle;
 window.navigateBlocks = navigateBlocks;
+window.autoMatchActiveBlockStyle = autoMatchActiveBlockStyle;
+window.autoMatchBlockStyle = autoMatchBlockStyle;
 
