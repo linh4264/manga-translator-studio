@@ -1,6 +1,6 @@
 // Google Drive Cloud Sync & Team Collaboration Module
 import { globalState, pushStateToHistory, savePageToDB, saveProjectMeta, getPageDataURL } from '../core/state.js';
-import { showToast, escapeHTML } from '../core/utils.js';
+import { showToast, escapeHTML, getCleanFileBaseName } from '../core/utils.js';
 import { updatePageListUI, selectPage, updateSourceLanguage, updateTargetLanguage, updatePronounMatrix, updateGlossary, togglePreserveNames } from '../ui/ui.js';
 
 let gdriveAccessToken = localStorage.getItem('gdrive_access_token') || '';
@@ -87,17 +87,37 @@ export async function uploadProjectToGDrive(customName = '') {
         return;
     }
 
-    showToast("☁️ Đang đóng gói ảnh dự án... Vui lòng chờ.", "info");
-    const backupObj = await getProjectBackupJSON();
-    if (!backupObj) {
+    if (globalState.pages.length === 0) {
         showToast("Chưa có dữ liệu trang truyện nào để xuất lên Drive!", "warn");
         return;
     }
 
+    let defaultName = `Manga_Project_${new Date().toISOString().slice(0, 10)}`;
+    if (globalState.pages[0]?.name) {
+        defaultName = getCleanFileBaseName(globalState.pages[0].name) + "_Drive";
+    }
+
+    let fileName = (customName || '').trim();
+    if (!fileName) {
+        const inputName = prompt("Nhập tên tệp dự án để lưu lên Google Drive:", defaultName);
+        if (inputName === null) return; // Người dùng bấm Hủy
+        fileName = inputName.trim() || defaultName;
+    }
+
+    if (!fileName.toLowerCase().endsWith('.manga')) {
+        fileName += '.manga';
+    }
+
+    showToast("☁️ Đang đóng gói ảnh dự án... Vui lòng chờ.", "info");
+    const backupObj = await getProjectBackupJSON();
+    if (!backupObj) {
+        showToast("Không thể tạo dữ liệu dự án!", "error");
+        return;
+    }
+
     try {
-        showToast("☁️ Đang tải tệp dự án lên Google Drive...", "info");
+        showToast(`☁️ Đang tải tệp "${fileName}" lên Google Drive...`, "info");
         const jsonString = JSON.stringify(backupObj);
-        const fileName = (customName.trim() || `Manga_Project_${Date.now()}`) + '.manga';
 
         const metadata = {
             name: fileName,

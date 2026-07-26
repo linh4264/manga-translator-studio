@@ -702,6 +702,20 @@ export async function exportProjectBackup() {
         showToast("Không có dự án nào để sao lưu.", "warn");
         return;
     }
+
+    let defaultName = `Manga_Project_${new Date().toISOString().slice(0, 10)}`;
+    if (globalState.pages[0]?.name) {
+        defaultName = getCleanFileBaseName(globalState.pages[0].name) + "_Backup";
+    }
+
+    const inputName = prompt("Nhập tên tệp sao lưu dự án (.manga):", defaultName);
+    if (inputName === null) return; // Hủy xuất file
+
+    let fileName = inputName.trim() || defaultName;
+    if (!fileName.toLowerCase().endsWith('.manga')) {
+        fileName += '.manga';
+    }
+
     try {
         showToast("Đang đóng gói file dự án (.manga)... Vui lòng chờ.", "info");
 
@@ -742,12 +756,12 @@ export async function exportProjectBackup() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Manga_Project_Backup_${Date.now()}.manga`;
+        a.download = fileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        showToast(`Đã xuất file sao lưu dự án (.manga) thành công! (${pagesData.length} trang)`, "success");
+        showToast(`Đã xuất file sao lưu dự án (${fileName}) thành công! (${pagesData.length} trang)`, "success");
     } catch (e) {
         console.error("Lỗi sao lưu dự án:", e);
         showToast("Không thể xuất file sao lưu dự án.", "error");

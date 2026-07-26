@@ -2020,14 +2020,17 @@
             </div>
 
             <!-- Export & Link Import Actions -->
-            <div class="grid grid-cols-2 gap-2">
-                <button onclick="uploadProjectToGDrive()" class="p-3 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg flex items-center justify-center gap-2 transition-all">
-                    <i class="fa-solid fa-cloud-arrow-up text-sm"></i> Lưu Dự Án Lên Drive
-                </button>
-                <div class="flex gap-1">
-                    <input type="text" id="gdrive-import-link-input" placeholder="Dán ID/Link Google Drive..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-                    <button onclick="importProjectFromGDrive(document.getElementById('gdrive-import-link-input').value)" class="px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shrink-0 transition-all">
-                        Nạp
+            <div class="space-y-2">
+                <div class="flex gap-1.5">
+                    <input type="text" id="gdrive-export-name-input" placeholder="Tên tệp lưu lên Drive (mặc định: tự động)..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500 placeholder:text-slate-600 font-sans">
+                    <button onclick="uploadProjectToGDrive(document.getElementById('gdrive-export-name-input').value)" class="px-3.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shrink-0 flex items-center gap-1.5 transition-all">
+                        <i class="fa-solid fa-cloud-arrow-up text-xs"></i> Tải Lên Drive
+                    </button>
+                </div>
+                <div class="flex gap-1.5">
+                    <input type="text" id="gdrive-import-link-input" placeholder="Dán ID hoặc Đường dẫn chia sẻ Google Drive..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 placeholder:text-slate-600 font-sans">
+                    <button onclick="importProjectFromGDrive(document.getElementById('gdrive-import-link-input').value)" class="px-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shrink-0 flex items-center gap-1 transition-all">
+                        <i class="fa-solid fa-download text-xs"></i> Nạp
                     </button>
                 </div>
             </div>
