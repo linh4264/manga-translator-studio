@@ -302,12 +302,133 @@ export function updateSelectedModel(val) {
             customModelInput.classList.add('hidden');
             customModelInput.disabled = true;
         }
-        if (VALID_MODEL_IDS.includes(val)) {
+        if (val && val !== CUSTOM_MODEL_VALUE) {
             globalState.selectedModel = val;
             localStorage.setItem('gemini_manga_model', val);
         }
     }
     updateModelLockingUI();
+}
+
+export function updateModelDropdown(fetchedModels) {
+    const modelSelect = document.getElementById('model-select');
+    if (!modelSelect) return;
+
+    const currentSelection = globalState.selectedModel || DEFAULT_MODEL;
+
+    // Create a Set of all valid model IDs (hardcoded + fetched)
+    const allModels = new Set([...VALID_MODEL_IDS, ...fetchedModels]);
+
+    // Helper to extract version score (e.g. gemini-3.5-flash -> 35, gemini-3-flash -> 30)
+    const getModelVersion = (id) => {
+        const match = id.match(/gemini-(\d+)(?:\.(\d+))?-/);
+        if (match) {
+            const major = parseInt(match[1]);
+            const minor = match[2] ? parseInt(match[2]) : 0;
+            return major * 10 + minor;
+        }
+        return 0;
+    };
+
+    // Sort models by version descending, then alphabetically ascending
+    const sortedModels = Array.from(allModels).sort((a, b) => {
+        const verA = getModelVersion(a);
+        const verB = getModelVersion(b);
+        if (verA !== verB) {
+            return verB - verA;
+        }
+        return a.localeCompare(b);
+    });
+
+    // Predefined friendly display names
+    const getFriendlyName = (id) => {
+        switch (id) {
+            case "gemini-3.5-flash": return "Gemini 3.5 Flash (Mới nhất)";
+            case "gemini-3-flash-preview": return "Gemini 3 Flash Preview (mạnh, preview)";
+            case "gemini-3.1-flash-lite": return "Gemini 3.1 Flash-Lite (Khuyến nghị)";
+            case "gemini-3.1-pro-preview": return "Gemini 3.1 Pro Preview (chuyên sâu)";
+            case "gemini-2.5-flash": return "Gemini 2.5 Flash (ổn định)";
+            case "gemini-2.5-flash-lite": return "Gemini 2.5 Flash-Lite (rẻ/nhanh)";
+            case "gemini-2.5-pro": return "Gemini 2.5 Pro (chất lượng cao)";
+            default: {
+                // Format name nicely, e.g. gemini-2.0-flash-exp -> Gemini 2.0 Flash Exp (Online)
+                return id.split('-')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ') + ' (Online)';
+            }
+        }
+    };
+
+    // Save current selection or build
+    modelSelect.innerHTML = "";
+
+    sortedModels.forEach(modelId => {
+        const opt = document.createElement('option');
+        opt.value = modelId;
+        opt.textContent = getFriendlyName(modelId);
+        modelSelect.appendChild(opt);
+    });
+
+    const customOpt = document.createElement('option');
+    customOpt.value = CUSTOM_MODEL_VALUE;
+    customOpt.textContent = (globalState.uiLanguage === 'en') ? "Enter custom model..." : "Tự nhập model...";
+    modelSelect.appendChild(customOpt);
+
+    // Restore selected value
+    if (allModels.has(currentSelection)) {
+        modelSelect.value = currentSelection;
+    } else {
+        modelSelect.value = CUSTOM_MODEL_VALUE;
+        if (elements.customModelInput) {
+            elements.customModelInput.value = currentSelection;
+        }
+    }
+}
+
+export async function fetchGeminiModels() {
+    const keyToUse = (elements.apiKeyInput?.value || globalState.apiKey || "").trim();
+    if (!keyToUse) return;
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${keyToUse}`);
+        if (!response.ok) return;
+        const data = await response.json();
+
+        if (data.models && Array.isArray(data.models)) {
+            // Filter models that support generateContent and are Gemini models
+            const geminiModels = data.models
+                .filter(m => {
+                    const id = m.name ? m.name.replace('models/', '') : '';
+                    if (!id) return false;
+                    
+                    const supportsGen = m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent');
+                    if (!supportsGen) return false;
+                    
+                    // Ignore legacy 1.0 models (lacking vision/JSON support)
+                    if (id.includes('gemini-1.0')) return false;
+                    
+                    // Ignore thinking models (does not support structured outputs yet)
+                    if (id.includes('-thinking')) return false;
+                    
+                    // Ignore embedding/tuning/moderation/sentiment models
+                    if (id.includes('embedding') || id.includes('bison') || id.includes('tunedModels/')) return false;
+                    
+                    // Ignore pinned checkpoint snapshots (e.g. -001, -002) to avoid duplicates
+                    if (/-\d{3}$/.test(id)) return false;
+                    
+                    // Allow Gemini 1.5, 2.0, 2.5, 3.x, etc. (with vision/JSON support)
+                    const isGeminiV15OrNewer = /gemini-(1\.5|2\.\d+|3\.\d+|4\.\d+|[5-9]\.\d+|[2-9]|\d{2,})-/.test(id);
+                    return isGeminiV15OrNewer;
+                })
+                .map(m => m.name.replace('models/', ''));
+
+            if (geminiModels.length > 0) {
+                updateModelDropdown(geminiModels);
+            }
+        }
+    } catch (e) {
+        console.warn("Could not auto-fetch Gemini models list:", e);
+    }
 }
 
 export function updateModelLockingUI() {
@@ -384,6 +505,8 @@ export function openSettingsModal() {
     if (elements.uiLangSelect) {
         elements.uiLangSelect.value = globalState.uiLanguage || 'vi';
     }
+    // Fetch online models from Gemini API dynamically
+    fetchGeminiModels();
     if (elements.apiKeyInput) {
         setTimeout(() => elements.apiKeyInput.focus(), 50);
     }
@@ -1026,6 +1149,9 @@ export function initEventListeners() {
             globalState.apiKey = key;
             localStorage.setItem('gemini_manga_api_key', key);
             updateModelLockingUI();
+            if (key.startsWith('AIzaSy') && key.length >= 35) {
+                fetchGeminiModels();
+            }
         });
     }
 

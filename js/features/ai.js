@@ -57,6 +57,8 @@ export function getGeminiApiKey() {
 }
 
 export function normalizeModelId(modelId) {
+    if (!modelId) return DEFAULT_MODEL;
+    if (modelId.startsWith('gemini-')) return modelId;
     return VALID_MODEL_IDS.includes(modelId) ? modelId : DEFAULT_MODEL;
 }
 

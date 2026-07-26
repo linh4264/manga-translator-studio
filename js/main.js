@@ -47,7 +47,8 @@ import {
     populateCustomFontsDropdown,
     updateUndoRedoUI,
     openSettingsModal,
-    closeSettingsModal
+    closeSettingsModal,
+    fetchGeminiModels
 } from './ui/ui.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -86,6 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (elements.apiKeyInput) {
             elements.apiKeyInput.value = savedKey;
         }
+        fetchGeminiModels();
     }
 
     // Load saved model if available
