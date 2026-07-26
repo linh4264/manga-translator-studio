@@ -120,6 +120,30 @@
                     </button>
                 </div>
 
+                <!-- Audio Drama Reader Bar -->
+                <div class="flex items-center justify-between p-2 bg-slate-950 rounded-lg border border-slate-800">
+                    <div class="flex items-center gap-1.5 text-[10px] font-bold text-slate-300">
+                        <i class="fa-solid fa-headphones text-indigo-400"></i> Audio Drama
+                        <button onclick="openAudioSettingsModal()" data-action="openAudioSettingsModal" class="text-xs text-indigo-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Cài đặt chọn giọng đọc Nam/Nữ & Tốc độ phát âm">
+                            <i class="fa-solid fa-sliders"></i>
+                        </button>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button id="btn-audio-play" data-action="playPageAudioDrama" onclick="playPageAudioDrama()"
+                            class="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold flex items-center gap-1 transition-all shadow" title="Phát kịch truyền thanh Audio Drama cho toàn bộ trang">
+                            <i class="fa-solid fa-play"></i> Phát Audio
+                        </button>
+                        <button id="btn-audio-pause" data-action="pauseAudioDrama" onclick="pauseAudioDrama()"
+                            class="hidden px-2 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-bold flex items-center gap-1 transition-all shadow" title="Tạm dừng">
+                            <i class="fa-solid fa-pause"></i> Tạm dừng
+                        </button>
+                        <button id="btn-audio-stop" data-action="stopAudioDrama" onclick="stopAudioDrama()"
+                            class="hidden px-2 py-1 rounded bg-red-600/80 hover:bg-red-600 text-white text-[10px] font-bold flex items-center gap-1 transition-all shadow" title="Dừng phát">
+                            <i class="fa-solid fa-square"></i> Dừng
+                        </button>
+                    </div>
+                </div>
+
 
 
                 <!-- File Dropzone -->
@@ -462,6 +486,25 @@
                         </div>
                     </div>
 
+                    <!-- Voice Gender Assignment for Block -->
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Giọng đọc Audio Drama</label>
+                        <div class="grid grid-cols-3 gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                            <button id="btn-block-gender-male" onclick="setActiveBlockGender('male')"
+                                class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center gap-1 transition-all" title="Gán giọng Nam cho ô thoại này">
+                                👨 Nam
+                            </button>
+                            <button id="btn-block-gender-female" onclick="setActiveBlockGender('female')"
+                                class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center gap-1 transition-all" title="Gán giọng Nữ cho ô thoại này">
+                                👩 Nữ
+                            </button>
+                            <button id="btn-block-gender-neutral" onclick="setActiveBlockGender('neutral')"
+                                class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center gap-1 transition-all" title="Gán giọng Dẫn chuyện">
+                                🎙️ Dẫn chuyện
+                            </button>
+                        </div>
+                    </div>
+
 
                     <!-- Text Area Original JP -->
                     <div class="space-y-1.5">
@@ -494,6 +537,11 @@
                             <button onclick="autoCleanActiveBlock()"
                                 class="text-[10px] bg-emerald-600/20 hover:bg-emerald-600 border border-emerald-500/30 text-emerald-300 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1.5" title="Tự động xóa vết chữ gốc bằng thuật toán AI Edge Fill">
                                 <i class="fa-solid fa-wand-magic-sparkles"></i> 🧹 Xóa chữ AI
+                            </button>
+                            <!-- Speak Active Block Button -->
+                            <button data-action="speakActiveBlock" onclick="speakActiveBlock()"
+                                class="text-[10px] bg-sky-600/20 hover:bg-sky-600 border border-sky-500/30 text-sky-300 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1.5" title="Phát âm câu thoại này bằng AI Speech">
+                                <i class="fa-solid fa-volume-high"></i> 🔊 Nghe câu này
                             </button>
                             <!-- TOEIC analysis quick button -->
                             <button onclick="quickOpenToeicAnalysis()"
@@ -1839,6 +1887,86 @@
         <div id="bilingual-tooltip-trans" class="text-[11px] text-indigo-300 italic border-t border-slate-800/80 pt-1"></div>
     </div>
 
+    <!-- AUDIO DRAMA SETTINGS MODAL -->
+    <div id="audio-settings-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-indigo-400"></i>
+                    <h3 class="text-sm font-bold text-slate-100 uppercase tracking-wider">Cài Đặt Giọng Đọc Audio Drama</h3>
+                </div>
+                <button onclick="closeAudioSettingsModal()" class="w-7 h-7 hover:bg-slate-800 rounded flex items-center justify-center text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3.5">
+                <!-- Male Voice Select -->
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-mars text-sky-400"></i> Giọng Nam (Male Voice):</span>
+                        <button onclick="testVoice('male')" class="text-[10px] text-sky-400 hover:underline">🔊 Nghe thử</button>
+                    </div>
+                    <select id="voice-select-male" onchange="updateAudioSettingsFromUI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </select>
+                </div>
+
+                <!-- Female Voice Select -->
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-venus text-pink-400"></i> Giọng Nữ (Female Voice):</span>
+                        <button onclick="testVoice('female')" class="text-[10px] text-pink-400 hover:underline">🔊 Nghe thử</button>
+                    </div>
+                    <select id="voice-select-female" onchange="updateAudioSettingsFromUI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </select>
+                </div>
+
+                <!-- Narrator Voice Select -->
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-microphone text-purple-400"></i> Giọng Dẫn Chuyện (Narrator):</span>
+                        <button onclick="testVoice('neutral')" class="text-[10px] text-purple-400 hover:underline">🔊 Nghe thử</button>
+                    </div>
+                    <select id="voice-select-narrator" onchange="updateAudioSettingsFromUI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </select>
+                </div>
+
+                <!-- Pitch Adjustment Sliders -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="space-y-1 bg-slate-950 p-2 rounded-lg border border-slate-800/80">
+                        <div class="flex items-center justify-between text-[11px] font-semibold text-sky-300">
+                            <span>👨 Pitch Nam:</span>
+                            <span id="audio-male-pitch-val" class="font-bold text-sky-400">0.92</span>
+                        </div>
+                        <input type="range" id="audio-male-pitch-input" min="0.7" max="1.3" step="0.05" value="0.92" oninput="document.getElementById('audio-male-pitch-val').textContent = this.value; updateAudioSettingsFromUI();" class="w-full accent-sky-500">
+                    </div>
+                    <div class="space-y-1 bg-slate-950 p-2 rounded-lg border border-slate-800/80">
+                        <div class="flex items-center justify-between text-[11px] font-semibold text-pink-300">
+                            <span>👩 Pitch Nữ:</span>
+                            <span id="audio-female-pitch-val" class="font-bold text-pink-400">1.08</span>
+                        </div>
+                        <input type="range" id="audio-female-pitch-input" min="0.8" max="1.4" step="0.05" value="1.08" oninput="document.getElementById('audio-female-pitch-val').textContent = this.value; updateAudioSettingsFromUI();" class="w-full accent-pink-500">
+                    </div>
+                </div>
+
+                <!-- Speed Rate Slider -->
+                <div class="space-y-1">
+                    <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
+                        <span>⚡ Tốc độ phát âm (Rate):</span>
+                        <span id="audio-rate-val" class="text-[11px] text-indigo-400 font-bold">1.0x</span>
+                    </div>
+                    <input type="range" id="audio-rate-input" min="0.7" max="1.6" step="0.1" value="1.0" oninput="document.getElementById('audio-rate-val').textContent = this.value + 'x'; updateAudioSettingsFromUI();" class="w-full accent-indigo-500">
+                </div>
+            </div>
+
+            <div class="flex justify-end border-t border-slate-800 pt-3">
+                <button onclick="closeAudioSettingsModal()" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow">
+                    Hoàn tất
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Instant Window Function Stubs (Guarantees zero ReferenceErrors even before module JS loads)
         window.openLorebookModal = window.openLorebookModal || function() {
@@ -1851,6 +1979,14 @@
         };
         window.setBilingualMode = window.setBilingualMode || function(mode) {
             if (window.globalState) window.globalState.bilingualMode = mode;
+        };
+        window.openAudioSettingsModal = window.openAudioSettingsModal || function() {
+            const modal = document.getElementById('audio-settings-modal');
+            if (modal) modal.classList.remove('hidden');
+        };
+        window.closeAudioSettingsModal = window.closeAudioSettingsModal || function() {
+            const modal = document.getElementById('audio-settings-modal');
+            if (modal) modal.classList.add('hidden');
         };
     </script>
     <script type="module" src="js/main.js"></script>

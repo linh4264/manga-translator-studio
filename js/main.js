@@ -26,6 +26,7 @@ import { updateToeicNotebookUI } from './features/toeic.js';
 import { toggleEraserMode, aiSmartInpaintBlock } from './features/inpainting.js';
 import { copyBlockStyle, pasteBlockStyle, applyStylePreset } from './features/canvas.js';
 import './features/io.js';
+import { playPageAudioDrama, pauseAudioDrama, stopAudioDrama, speakActiveBlock, openAudioSettingsModal, closeAudioSettingsModal } from './features/audio.js';
 import { initI18n, changeUILanguage } from './core/i18n.js';
 
 import {
@@ -49,10 +50,14 @@ import {
     openSettingsModal,
     closeSettingsModal,
     fetchGeminiModels,
-    setBilingualMode
+    setBilingualMode,
+    setActiveBlockGender
 } from './ui/ui.js';
 
 window.setBilingualMode = setBilingualMode;
+window.setActiveBlockGender = setActiveBlockGender;
+window.openAudioSettingsModal = openAudioSettingsModal;
+window.closeAudioSettingsModal = closeAudioSettingsModal;
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Initialize UI language translation (i18n)
@@ -62,12 +67,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Register actions for global event delegation router
     registerAction('openSettingsModal', openSettingsModal);
     registerAction('closeSettingsModal', closeSettingsModal);
+    registerAction('openAudioSettingsModal', openAudioSettingsModal);
+    registerAction('closeAudioSettingsModal', closeAudioSettingsModal);
     registerAction('setBilingualOff', () => setBilingualMode('off'));
     registerAction('setBilingualSub', () => setBilingualMode('sub'));
     registerAction('setBilingualMode', (target) => {
         const mode = target.getAttribute('data-mode') || 'off';
         setBilingualMode(mode);
     });
+    registerAction('playPageAudioDrama', playPageAudioDrama);
+    registerAction('pauseAudioDrama', pauseAudioDrama);
+    registerAction('stopAudioDrama', stopAudioDrama);
+    registerAction('speakActiveBlock', speakActiveBlock);
     registerAction('toggleEraserMode', toggleEraserMode);
     registerAction('autoMatchActiveBlockStyle', () => import('./features/canvas.js').then(m => m.autoMatchActiveBlockStyle()));
     registerAction('copyBlockStyle', copyBlockStyle);

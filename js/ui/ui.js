@@ -843,6 +843,17 @@ export function updateActiveBlockEditor() {
         }
     }
 
+    const btnMale = document.getElementById('btn-block-gender-male');
+    const btnFemale = document.getElementById('btn-block-gender-female');
+    const btnNeutral = document.getElementById('btn-block-gender-neutral');
+    const currentGender = block.style?.gender || 'auto';
+
+    if (btnMale && btnFemale && btnNeutral) {
+        btnMale.className = currentGender === 'male' ? 'py-1 px-1.5 text-[10px] font-bold rounded bg-sky-600 text-white shadow transition-all' : 'py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white transition-all';
+        btnFemale.className = currentGender === 'female' ? 'py-1 px-1.5 text-[10px] font-bold rounded bg-pink-600 text-white shadow transition-all' : 'py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white transition-all';
+        btnNeutral.className = (currentGender === 'neutral' || currentGender === 'auto') ? 'py-1 px-1.5 text-[10px] font-bold rounded bg-purple-600 text-white shadow transition-all' : 'py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white transition-all';
+    }
+
     const sfxRotateSlider = document.getElementById('slider-sfx-rotate');
     const sfxRotateLbl = document.getElementById('lbl-sfx-rotate');
     const sfxArcSlider = document.getElementById('slider-sfx-arc');
@@ -1694,5 +1705,21 @@ export function setBilingualMode(mode) {
     requestOverlayRender();
 }
 
+export function setActiveBlockGender(gender) {
+    if (globalState.activePageIndex === -1) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    if (!page || !globalState.selectedBlockId) return;
+
+    const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (block) {
+        if (!block.style) block.style = {};
+        block.style.gender = gender;
+        savePageToDB(page);
+        updateActiveBlockEditor();
+        showToast(`Đã gán giọng đọc ${gender === 'female' ? 'Nữ 👩' : (gender === 'male' ? 'Nam 👨' : 'Dẫn chuyện 🎙️')} cho ô thoại này!`, 'info');
+    }
+}
+
 window.setBilingualMode = setBilingualMode;
+window.setActiveBlockGender = setActiveBlockGender;
 
