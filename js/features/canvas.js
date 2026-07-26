@@ -1807,8 +1807,9 @@ export function autoMatchBlockStyle(block, imgElement) {
     const avgRimLum = rimCount > 0 ? (rimLumSum / rimCount) : 255;
     const avgCenterLum = centerCount > 0 ? (centerLumSum / centerCount) : 128;
 
+    // Use user-configured default fonts from globalState instead of hardcoded values
     if (block.type === 'sfx') {
-        block.style.fontFamily = 'font-impact';
+        block.style.fontFamily = globalState.defaultSfxFont || 'font-impact';
         block.style.bold = true;
         block.style.align = 'center';
         block.style.strokeColor = '#000000';
@@ -1816,7 +1817,7 @@ export function autoMatchBlockStyle(block, imgElement) {
         block.style.shadowColor = '#000000';
         block.style.shadowBlur = 3;
     } else if (block.type === 'narration') {
-        block.style.fontFamily = 'font-vietnamese';
+        block.style.fontFamily = globalState.defaultNarrationFont || 'font-vietnamese';
         block.style.bold = false;
         block.style.align = 'left';
         block.style.maskShape = 'rect';
@@ -1824,7 +1825,7 @@ export function autoMatchBlockStyle(block, imgElement) {
         block.style.bgColor = '#ffffff';
         block.style.bgOpacity = 95;
     } else {
-        block.style.fontFamily = 'font-comic';
+        block.style.fontFamily = globalState.defaultDialogueFont || 'font-comic';
         block.style.align = 'center';
     }
 

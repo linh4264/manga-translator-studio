@@ -524,6 +524,48 @@ export function closeSettingsModal() {
 }
 
 
+// Default font family accessor helper
+function getDefaultFontForType(type) {
+    const map = {
+        dialogue: 'defaultDialogueFont',
+        sfx: 'defaultSfxFont',
+        narration: 'defaultNarrationFont'
+    };
+    const key = map[type];
+    if (key && globalState[key]) return globalState[key];
+    return 'font-comic'; // fallback
+}
+
+// Update the default font for dialogue blocks
+export function updateDefaultDialogueFont(value) {
+    globalState.defaultDialogueFont = value;
+    if (document.getElementById('default-dialogue-font')) {
+        document.getElementById('default-dialogue-font').value = value;
+    }
+    localStorage.setItem('manga_default_dialogue_font', value);
+    showToast('Đã cập nhật font mặc định cho Lời thoại', 'info');
+}
+
+// Update the default font for SFX blocks
+export function updateDefaultSfxFont(value) {
+    globalState.defaultSfxFont = value;
+    if (document.getElementById('default-sfx-font')) {
+        document.getElementById('default-sfx-font').value = value;
+    }
+    localStorage.setItem('manga_default_sfx_font', value);
+    showToast('Đã cập nhật font mặc định cho SFX', 'info');
+}
+
+// Update the default font for narration blocks
+export function updateDefaultNarrationFont(value) {
+    globalState.defaultNarrationFont = value;
+    if (document.getElementById('default-narration-font')) {
+        document.getElementById('default-narration-font').value = value;
+    }
+    localStorage.setItem('manga_default_narration_font', value);
+    showToast('Đã cập nhật font mặc định cho Dẫn truyện', 'info');
+}
+
 export function updateSourceLanguage(value) {
     globalState.sourceLanguage = value;
     if (elements.sourceLangSelect) elements.sourceLangSelect.value = value;
@@ -1451,6 +1493,9 @@ window.updateTranslationContextPrompt = updateTranslationContextPrompt;
 window.updateApiDelay = updateApiDelay;
 window.updateMaxRetries = updateMaxRetries;
 window.updateAiProvider = updateAiProvider;
+window.updateDefaultDialogueFont = updateDefaultDialogueFont;
+window.updateDefaultSfxFont = updateDefaultSfxFont;
+window.updateDefaultNarrationFont = updateDefaultNarrationFont;
 window.updateApiEndpoint = updateApiEndpoint;
 window.toggleSidebarToolsMenu = toggleSidebarToolsMenu;
 window.toggleMobileSidebar = toggleMobileSidebar;

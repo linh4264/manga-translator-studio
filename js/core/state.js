@@ -95,6 +95,10 @@ export const globalState = {
     chapterStoryMemory: [], // Multi-page dialogue and character tone memory
     enableStoryMemory: true, // Toggle story context accumulation
     selectedModel: DEFAULT_MODEL,
+    // Default fonts for AI translation / auto-match (configurable via settings)
+    defaultDialogueFont: localStorage.getItem('manga_default_dialogue_font') || 'font-comic',
+    defaultSfxFont: localStorage.getItem('manga_default_sfx_font') || 'font-impact',
+    defaultNarrationFont: localStorage.getItem('manga_default_narration_font') || 'font-vietnamese',
     pages: [],
     activePageIndex: -1,
     selectedBlockId: null,
