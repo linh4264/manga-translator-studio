@@ -995,7 +995,7 @@ export function startBlockResize(e, block, handleDir) {
 
         block.maskCache = null;
         requestOverlayRender();
-        updateActiveBlockEditor();
+        uiUpdateActiveBlockEditor();
 
         const activePage = globalState.pages[globalState.activePageIndex];
         if (activePage) savePageToDB(activePage);
