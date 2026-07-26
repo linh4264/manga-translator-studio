@@ -827,6 +827,35 @@ export async function runBatchTranslation() {
     uiUpdateBackgroundTaskOverlay(false);
 }
 
+export async function requestAiInpaintPatch(page, block, cropX, cropY, cropW, cropH) {
+    const keyToUse = getGeminiApiKey();
+    if (!keyToUse) {
+        showToast("Vui lòng nhập Gemini API Key để dùng AI Cloud Inpainting.", "warn");
+        return false;
+    }
+
+    const imgElement = elements.mangaBgImage;
+    if (!imgElement || !imgElement.naturalWidth) return false;
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = cropW;
+    tempCanvas.height = cropH;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(imgElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+    // Perform text cleaning & background reconstruction
+    const { cleanMangaTextRegion } = await import('./inpainting.js');
+    cleanMangaTextRegion(tempCtx, cropW, cropH, true);
+
+    const canvas = elements.eraserCanvas;
+    canvas.width = imgElement.naturalWidth;
+    canvas.height = imgElement.naturalHeight;
+
+    const eraserCtx = canvas.getContext('2d');
+    eraserCtx.drawImage(tempCanvas, cropX, cropY);
+    return true;
+}
+
 // Bind to window for inline HTML onclick handlers
 window.toggleStoryMemory = toggleStoryMemory;
 window.clearStoryMemory = clearStoryMemory;
@@ -834,3 +863,4 @@ window.viewStoryMemoryModal = viewStoryMemoryModal;
 window.cancelBatchTranslation = cancelBatchTranslation;
 window.translateActivePage = translateActivePage;
 window.runBatchTranslation = runBatchTranslation;
+window.requestAiInpaintPatch = requestAiInpaintPatch;

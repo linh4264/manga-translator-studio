@@ -23,7 +23,7 @@ import { renderPronounMatrixTable } from './features/pronoun.js';
 import './features/ocr.js';
 import './features/ai.js';
 import { updateToeicNotebookUI } from './features/toeic.js';
-import { toggleEraserMode } from './features/inpainting.js';
+import { toggleEraserMode, aiSmartInpaintBlock } from './features/inpainting.js';
 import { copyBlockStyle, pasteBlockStyle, applyStylePreset } from './features/canvas.js';
 import './features/io.js';
 import { initI18n, changeUILanguage } from './core/i18n.js';

@@ -5,6 +5,8 @@ import {
     savePageToDB,
     saveProjectMeta,
     deletePageFromDB,
+    clearProjectDB,
+    clearHistory,
     garbageCollectPageCaches,
     activatePage,
     createThumbnail
@@ -816,28 +818,54 @@ export function clearCurrentProject() {
     }
     if (!confirm('Bạn có chắc muốn xóa toàn bộ dự án hiện tại? Tất cả trang và bản dịch sẽ bị mất!')) return;
 
-    // Clear all pages from DB
+    // Thu hồi các Object URL để giải phóng bộ nhớ RAM
     globalState.pages.forEach(page => {
-        try {
-            if (page && page.id) {
-                import('../core/state.js').then(m => m.deletePageFromDB(page.id));
-            }
-        } catch (e) { }
+        if (page?.apiSrc?.startsWith('blob:')) URL.revokeObjectURL(page.apiSrc);
+        if (page?.src?.startsWith('blob:')) URL.revokeObjectURL(page.src);
+        if (page?.thumbnailSrc?.startsWith('blob:')) URL.revokeObjectURL(page.thumbnailSrc);
     });
+
+    // Xóa sạch cơ sở dữ liệu IndexedDB & Lịch sử Undo/Redo
+    clearProjectDB();
+    clearHistory();
 
     globalState.pages = [];
     globalState.activePageIndex = -1;
     globalState.selectedBlockId = null;
 
-    const elements = document.getElementById('pages-list') || document.getElementById('left-panel');
+    saveProjectMeta([], -1);
+    garbageCollectPageCaches();
+
+    // Dọn dẹp vùng hiển thị Canvas & Overlays
+    if (elements.mangaOverlaysContainer) {
+        elements.mangaOverlaysContainer.innerHTML = '';
+    }
+    if (elements.mangaBgImage) {
+        elements.mangaBgImage.removeAttribute('src');
+        elements.mangaBgImage.dataset.loadedSrc = '';
+    }
+    if (elements.eraserCanvas) {
+        const ctx = elements.eraserCanvas.getContext('2d');
+        ctx.clearRect(0, 0, elements.eraserCanvas.width, elements.eraserCanvas.height);
+    }
+
+    // Ẩn vùng canvas & Hiển thị lại giao diện màn hình trống (Empty Dropzone)
+    if (elements.mangaCanvasContainer) elements.mangaCanvasContainer.classList.add('hidden');
+    if (elements.workspaceSplitWrapper) elements.workspaceSplitWrapper.classList.add('hidden');
+    if (elements.workspaceEmptyState) elements.workspaceEmptyState.classList.remove('hidden');
+
+    // Vô hiệu hóa các nút bấm khi chưa có trang
+    if (elements.btnActiveTranslate) elements.btnActiveTranslate.disabled = true;
+    if (elements.btnExportPage) elements.btnExportPage.disabled = true;
+    if (elements.btnEraserMode) elements.btnEraserMode.disabled = true;
+
+    const btnBatchTranslate = document.getElementById('btn-batch-translate');
+    const btnBatchExport = document.getElementById('btn-batch-export');
+    if (btnBatchTranslate) btnBatchTranslate.disabled = true;
+    if (btnBatchExport) btnBatchExport.disabled = true;
+
     updatePageListUI();
     updateActiveBlockEditor();
-
-    // Clear canvas
-    const bgImg = document.getElementById('manga-bg-image');
-    const overlay = document.getElementById('canvas-overlay');
-    if (bgImg) bgImg.src = '';
-    if (overlay) overlay.innerHTML = '';
 
     showToast('Đã xóa toàn bộ dự án. Sẵn sàng tạo dự án mới!', 'success');
 }
