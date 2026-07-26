@@ -26,6 +26,7 @@ import { updateToeicNotebookUI } from './features/toeic.js';
 import { toggleEraserMode, aiSmartInpaintBlock } from './features/inpainting.js';
 import { copyBlockStyle, pasteBlockStyle, applyStylePreset } from './features/canvas.js';
 import './features/io.js';
+import './features/gdrive.js';
 import { playPageAudioDrama, pauseAudioDrama, stopAudioDrama, speakActiveBlock, openAudioSettingsModal, closeAudioSettingsModal } from './features/audio.js';
 import { initI18n, changeUILanguage } from './core/i18n.js';
 
