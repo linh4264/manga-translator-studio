@@ -28,7 +28,7 @@ import {
     setViewMode,
     updateProcessingOverlay,
     togglePreserveNames
-} from '../ui/ui.js';
+} from '../ui/index.js';
 
 // --- SHARED EXPORT HELPERS ---
 

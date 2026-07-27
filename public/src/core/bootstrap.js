@@ -20,7 +20,7 @@ import {
     closePreviewMode,
     previewPrevPage,
     previewNextPage
-} from '../ui/ui.js';
+} from '../ui/index.js';
 import { elements } from './elements.js';
 import { globalState, initDB, loadAndRegisterCustomFonts, initializeStateFromStorage, loadProjectFromDB, loadToeicWordsFromDB } from './state.js';
 import { VALID_MODEL_IDS, CUSTOM_MODEL_VALUE } from '../config/constants.js';
@@ -134,7 +134,7 @@ export async function initApplication() {
 
             showToast("Đã khôi phục phiên làm việc trước đó!", "success");
         }
-        
+
         // Register Undo/Redo UI update callback
         import('./state.js').then(state => {
             state.registerStateCallbacks({

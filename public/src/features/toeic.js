@@ -210,7 +210,7 @@ export async function analyzeBlockForToeic() {
     const keyToUse = getGeminiApiKey();
     if (!keyToUse) {
         showToast("Vui lòng nhập Gemini API Key trong phần Cài đặt trước khi phân tích.", "error");
-        import('../ui/ui.js').then(ui => ui.openSettingsModal());
+        import('../ui/index.js').then(ui => ui.openSettingsModal());
         return;
     }
 

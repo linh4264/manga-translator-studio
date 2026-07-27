@@ -1,9 +1,9 @@
 // State & Database Management for Manga Translator Studio
 import { globalBus } from './events.js';
-import { 
-    DEFAULT_MODEL, 
-    DEFAULT_AI_BLOCK_BOX, 
-    DEFAULT_VERTICAL_WRITING_MODE, 
+import {
+    DEFAULT_MODEL,
+    DEFAULT_AI_BLOCK_BOX,
+    DEFAULT_VERTICAL_WRITING_MODE,
     MAX_HISTORY_LIMIT,
     TRANSLATION_GENRE_PRESETS
 } from '../config/constants.js';
@@ -226,7 +226,7 @@ export function applyStateFromSnapshot(snapshot) {
 
     if (onUndoRedoChange) onUndoRedoChange();
 
-    import('../ui/ui.js').then(ui => {
+    import('../ui/index.js').then(ui => {
         ui.updatePageListUI();
         if (globalState.activePageIndex !== -1) {
             ui.selectPage(globalState.activePageIndex);
