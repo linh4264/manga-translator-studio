@@ -1778,7 +1778,18 @@ export function importLorebookJSON(event) {
 }
 
 export function filterPagesList() {
-    updatePageListUI();
+    const searchInput = document.getElementById('pages-search-input');
+    const filterQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
+    const pageItems = elements.pagesList.querySelectorAll('[data-page-index]');
+
+    pageItems.forEach((item) => {
+        const index = Number(item.dataset.pageIndex);
+        const page = globalState.pages[index];
+        if (!page) return;
+
+        const matches = !filterQuery || page.name.toLowerCase().includes(filterQuery);
+        item.classList.toggle('hidden', !matches);
+    });
 }
 window.filterPagesList = filterPagesList;
 
