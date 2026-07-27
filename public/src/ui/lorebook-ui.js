@@ -59,11 +59,18 @@ export function renderCharacterDossierUI() {
                     ${item.personality ? `<span class="truncate">🎭 ${escapeHTML(item.personality)}</span>` : ''}
                 </div>
             </div>
-            <button onclick="removeCharacterDossierEntry('${item.id}')" class="w-7 h-7 hover:bg-red-950 text-red-400 rounded flex items-center justify-center transition-colors" title="Xóa nhân vật">
+            <button data-action="remove-dossier" data-id="${item.id}" class="w-7 h-7 hover:bg-red-950 text-red-400 rounded flex items-center justify-center transition-colors" title="Xóa nhân vật">
                 <i class="fa-solid fa-trash-can text-xs"></i>
             </button>
         </div>
     `).join('');
+
+    container.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action="remove-dossier"]');
+        if (btn?.dataset.id) {
+            removeCharacterDossierEntry(btn.dataset.id);
+        }
+    });
 }
 
 export function addCharacterDossierEntry() {
@@ -138,11 +145,19 @@ export function renderLorebookUI() {
                 </div>
                 ${item.note ? `<div class="text-[11px] text-slate-400 truncate">💡 Ghi chú AI: ${escapeHTML(item.note)}</div>` : ''}
             </div>
-            <button onclick="removeLorebookTermEntry('${item.id}')" class="w-7 h-7 hover:bg-red-950 text-red-400 rounded flex items-center justify-center transition-colors" title="Xóa thuật ngữ">
+            <button data-action="remove-lorebook" data-id="${item.id}" class="w-7 h-7 hover:bg-red-950 text-red-400 rounded flex items-center justify-center transition-colors" title="Xóa thuật ngữ">
                 <i class="fa-solid fa-trash-can text-xs"></i>
             </button>
         </div>
     `).join('');
+    
+    container.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action="remove-lorebook"]');
+        if (btn?.dataset.id) {
+            removeLorebookTermEntry(btn.dataset.id);
+        }
+    });
+
 }
 
 export function addLorebookTermEntry() {
