@@ -29,7 +29,8 @@ import {
     copyBlockStyle,
     pasteBlockStyle,
     navigateBlocks,
-    autoFitBlock
+    autoFitBlock,
+    syncActiveBlockStyle
 } from '../features/canvas/canvas-service.js';
 import { restorePageEraserDrawing, saveEraserDrawingToPage } from '../features/inpainting.js';
 import { updateToeicTabUI, updateToeicNotebookUI, displayToeicAnalysis, resetToeicAnalysisUI } from '../features/toeic.js';
@@ -1156,44 +1157,30 @@ export function restoreOriginalBackground() {
     restoreBackgroundForBlock(globalState.selectedBlockId);
 }
 
-export function syncTextColorHex(val) {
+function applyColorSync(val, styleProperty, inputEl, hexInputEl) {
     let color = val;
     if (color && !color.startsWith('#') && color.length <= 6) {
         color = '#' + color;
     }
-    if (elements.styleTextColor) elements.styleTextColor.value = color;
-    if (elements.styleTextColorHex) elements.styleTextColorHex.value = color.toUpperCase();
-    import('../features/canvas/canvas-service.js').then(canvas => canvas.syncActiveBlockStyle('textColor', color));
+    if (inputEl) inputEl.value = color;
+    if (hexInputEl) hexInputEl.value = color.toUpperCase();
+    syncActiveBlockStyle(styleProperty, color);
+}
+
+export function syncTextColorHex(val) {
+    applyColorSync(val, 'textColor', elements.styleTextColor, elements.styleTextColorHex);
 }
 
 export function syncBgColorHex(val) {
-    let color = val;
-    if (color && !color.startsWith('#') && color.length <= 6) {
-        color = '#' + color;
-    }
-    if (elements.styleBgColor) elements.styleBgColor.value = color;
-    if (elements.styleBgColorHex) elements.styleBgColorHex.value = color.toUpperCase();
-    import('../features/canvas/canvas-service.js').then(canvas => canvas.syncActiveBlockStyle('bgColor', color));
+    applyColorSync(val, 'bgColor', elements.styleBgColor, elements.styleBgColorHex);
 }
 
 export function syncStrokeColorHex(val) {
-    let color = val;
-    if (color && !color.startsWith('#') && color.length <= 6) {
-        color = '#' + color;
-    }
-    if (elements.styleStrokeColor) elements.styleStrokeColor.value = color;
-    if (elements.styleStrokeColorHex) elements.styleStrokeColorHex.value = color.toUpperCase();
-    import('../features/canvas/canvas-service.js').then(canvas => canvas.syncActiveBlockStyle('strokeColor', color));
+    applyColorSync(val, 'strokeColor', elements.styleStrokeColor, elements.styleStrokeColorHex);
 }
 
 export function syncShadowColorHex(val) {
-    let color = val;
-    if (color && !color.startsWith('#') && color.length <= 6) {
-        color = '#' + color;
-    }
-    if (elements.styleShadowColor) elements.styleShadowColor.value = color;
-    if (elements.styleShadowColorHex) elements.styleShadowColorHex.value = color.toUpperCase();
-    import('../features/canvas/canvas-service.js').then(canvas => canvas.syncActiveBlockStyle('shadowColor', color));
+    applyColorSync(val, 'shadowColor', elements.styleShadowColor, elements.styleShadowColorHex);
 }
 
 // 14. Thiết lập sự kiện lắng nghe sự kiện DOM toàn cục
