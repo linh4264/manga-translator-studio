@@ -12,7 +12,7 @@
 
 ### 📸 Translation Preview
 
-![Manga Translation Demo](demo.jpg)
+![Manga Translation Demo](public/demo.jpg)
 
 **Manga Translator Studio** is a professional web application designed for automatic translation and typesetting of comic books (*Manga, Manhua, Manhwa, Comic, Scanlation*). Leveraging Google's state-of-the-art multimodal AI **Google Gemini** (Gemini 3.1 Flash-Lite, Gemini 3.5 Flash, Gemini Pro...), this tool automatically detects speech bubbles (OCR), translates them into natural target languages while preserving comic writing styles, and automatically typesets the translated text to fit perfectly inside the bubbles.
 

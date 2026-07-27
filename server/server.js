@@ -49,12 +49,13 @@ const server = http.createServer((req, res) => {
 
     // Extract path name without query strings
     const urlPath = decodedUrl.split('?')[0];
-    let filePath = path.join(__dirname, urlPath === '/' ? 'index.html' : urlPath);
+    const rootPath = path.join(__dirname, '..', 'public');
+    let filePath = path.join(rootPath, urlPath === '/' ? 'index.html' : urlPath);
 
     // Security check to prevent directory traversal
-    const relative = path.relative(__dirname, filePath);
+    const relative = path.relative(rootPath, filePath);
     const isSafe = relative && !relative.startsWith('..') && !path.isAbsolute(relative);
-    if (!isSafe && filePath !== __dirname) {
+    if (!isSafe && filePath !== rootPath) {
         res.statusCode = 403;
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.end('403 Cấm truy cập: Yêu cầu ngoài phạm vi thư mục dự án.');
