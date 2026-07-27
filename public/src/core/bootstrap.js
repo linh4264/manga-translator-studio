@@ -1,26 +1,30 @@
 import * as io from '../features/io.js';
 import { registerAction, initEventDelegation } from './events.js';
 import {
-    mountSettingsModal,
     initEventListeners,
     syncMobileToolbarState,
     syncMobileMenuState,
+    updateUndoRedoUI
+} from '../ui/index.js';
+import {
+    mountSettingsModal,
     updateModelLockingUI,
     togglePreserveNames,
     syncGenrePresetCheckboxes,
     saveTranslationGenrePresets,
-    selectPage,
-    updatePageListUI,
-    populateCustomFontsDropdown,
     openSettingsModal,
     closeSettingsModal,
-    fetchGeminiModels,
-    setBilingualMode,
+    fetchGeminiModels
+} from '../ui/settings-ui.js';
+import { selectPage, updatePageListUI } from '../ui/pages-ui.js';
+import { populateCustomFontsDropdown } from '../ui/font-ui.js';
+import { setBilingualMode } from '../ui/block-editor-ui.js';
+import {
     openPreviewMode,
     closePreviewMode,
     previewPrevPage,
     previewNextPage
-} from '../ui/index.js';
+} from '../ui/preview-ui.js';
 import { elements } from './elements.js';
 import { globalState, initDB, loadAndRegisterCustomFonts, initializeStateFromStorage, loadProjectFromDB, loadToeicWordsFromDB } from './state.js';
 import { VALID_MODEL_IDS, CUSTOM_MODEL_VALUE } from '../config/constants.js';
