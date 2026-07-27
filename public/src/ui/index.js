@@ -1,6 +1,7 @@
 // ============================================================================
 // 1. IMPORTS TỪ CÁC SUB-MODULES VÀO SCOPE NỘI BỘ
 // ============================================================================
+import { debounceSavePage } from '../core/state.js';
 import {
     setRightTab, updateProcessingOverlay, updateBackgroundTaskOverlay,
     setViewMode, updateSplitView, changeZoom, resetZoom,
@@ -88,10 +89,6 @@ export async function updateUndoRedoUI() {
     const { undoStack, redoStack } = await import('../core/state.js');
     if (elements.btnUndo) elements.btnUndo.disabled = undoStack.length === 0;
     if (elements.btnRedo) elements.btnRedo.disabled = redoStack.length === 0;
-}
-
-function debounceSavePage(page) {
-    import('../core/state.js').then(state => state.debounceSavePage(page));
 }
 
 // ============================================================================
