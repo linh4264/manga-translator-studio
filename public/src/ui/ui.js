@@ -1835,4 +1835,9 @@ export function setActiveBlockGender(gender) {
 
 window.setBilingualMode = setBilingualMode;
 window.setActiveBlockGender = setActiveBlockGender;
+window.toggleLeftSidebar = toggleLeftSidebar;
+window.toggleRightSidebar = toggleRightSidebar;
+window.updateUndoRedoUI = updateUndoRedoUI;
+window.executeUndo = executeUndo;
+window.executeRedo = executeRedo;
 
