@@ -859,6 +859,11 @@ export async function renderPreviewPage() {
         if (page.eraserLayerBlob) {
             const eraserImg = document.createElement('img');
             const eraserUrl = URL.createObjectURL(page.eraserLayerBlob);
+
+            const cleanupBlob = () => URL.revokeObjectURL(eraserUrl);
+            eraserImg.onload = cleanupBlob;
+            eraserImg.onerror = cleanupBlob;
+
             eraserImg.src = eraserUrl;
             eraserImg.style.position = 'absolute';
             eraserImg.style.top = '0';
@@ -867,7 +872,7 @@ export async function renderPreviewPage() {
             eraserImg.style.height = '100%';
             eraserImg.style.pointerEvents = 'none';
             eraserImg.style.zIndex = '10';
-            eraserImg.onload = () => URL.revokeObjectURL(eraserUrl);
+
             pageContainer.appendChild(eraserImg);
         }
 
