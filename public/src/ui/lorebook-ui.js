@@ -7,6 +7,7 @@ export function openLorebookModal() {
         modal.classList.remove('hidden');
         renderCharacterDossierUI();
         renderLorebookUI();
+        initLorebookDelegationOnce(); 
     }
 }
 
@@ -31,6 +32,34 @@ export function switchLorebookTab(tab) {
         if (panelLorebook) panelLorebook.classList.remove('hidden');
         if (panelDossier) panelDossier.classList.add('hidden');
     }
+}
+
+// Bắt sự kiện xóa chung 1 lần duy nhất
+let isListenerInitialized = false;
+function initLorebookDelegationOnce() {
+    if (isListenerInitialized) return;
+
+    const dossierContainer = document.getElementById('dossier-items-list');
+    if (dossierContainer) {
+        dossierContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-action="remove-dossier"]');
+            if (btn?.dataset.id) {
+                removeCharacterDossierEntry(btn.dataset.id);
+            }
+        });
+    }
+
+    const lorebookContainer = document.getElementById('lorebook-items-list');
+    if (lorebookContainer) {
+        lorebookContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-action="remove-lorebook"]');
+            if (btn?.dataset.id) {
+                removeLorebookTermEntry(btn.dataset.id);
+            }
+        });
+    }
+
+    isListenerInitialized = true;
 }
 
 export function renderCharacterDossierUI() {
@@ -64,13 +93,6 @@ export function renderCharacterDossierUI() {
             </button>
         </div>
     `).join('');
-
-    container.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-action="remove-dossier"]');
-        if (btn?.dataset.id) {
-            removeCharacterDossierEntry(btn.dataset.id);
-        }
-    });
 }
 
 export function addCharacterDossierEntry() {
@@ -150,14 +172,6 @@ export function renderLorebookUI() {
             </button>
         </div>
     `).join('');
-    
-    container.addEventListener('click', (e) => {
-        const btn = e.target.closest('[data-action="remove-lorebook"]');
-        if (btn?.dataset.id) {
-            removeLorebookTermEntry(btn.dataset.id);
-        }
-    });
-
 }
 
 export function addLorebookTermEntry() {
