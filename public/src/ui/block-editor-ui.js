@@ -6,56 +6,41 @@ import { saveEraserDrawingToPage } from '../features/inpainting.js';
 import { displayToeicAnalysis, resetToeicAnalysisUI } from '../features/toeic.js';
 
 export function updateActiveBlockEditor() {
-    if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) {
-        elements.noBlockSelectedState.classList.remove('hidden');
-        elements.blockEditorContainer.classList.add('hidden');
-
-        if (elements.toeicNoBlockSelectedState) elements.toeicNoBlockSelectedState.classList.remove('hidden');
-        if (elements.toeicAnalysisContainer) elements.toeicAnalysisContainer.classList.add('hidden');
-        globalState.activeBlockToeicAnalysis = null;
-        return;
-    }
-
-    const page = globalState.pages[globalState.activePageIndex];
-    const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
-
-    if (!block) {
-        globalState.selectedBlockId = null;
-        elements.noBlockSelectedState.classList.remove('hidden');
-        elements.blockEditorContainer.classList.add('hidden');
-
-        if (elements.toeicNoBlockSelectedState) elements.toeicNoBlockSelectedState.classList.remove('hidden');
-        if (elements.toeicAnalysisContainer) elements.toeicAnalysisContainer.classList.add('hidden');
-        globalState.activeBlockToeicAnalysis = null;
+    const activeBlock = getActiveBlock();
+    if (!activeBlock) {
+        resetBlockEditorUI();
         return;
     }
 
     elements.noBlockSelectedState.classList.add('hidden');
     elements.blockEditorContainer.classList.remove('hidden');
 
-    if (elements.toeicNoBlockSelectedState) elements.toeicNoBlockSelectedState.classList.add('hidden');
-    if (elements.toeicAnalysisContainer) {
-        elements.toeicAnalysisContainer.classList.remove('hidden');
+    syncBlockTextInputs(activeBlock);
+    syncBlockTypeUI(activeBlock);
+    syncBlockGenderUI(activeBlock);
+    syncBlockStyleInputs(activeBlock);
+}
 
-        if (globalState.activeBlockToeicAnalysis && globalState.activeBlockToeicAnalysis.blockId === block.id) {
-            displayToeicAnalysis(globalState.activeBlockToeicAnalysis.analysis);
-        } else {
-            resetToeicAnalysisUI();
-        }
-    }
+function getActiveBlock() {
+    if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) return null;
+    const page = globalState.pages[globalState.activePageIndex];
+    return page?.blocks?.find(b => b.id === globalState.selectedBlockId) || null;
+}
 
+function syncBlockTextInputs(block) {
     elements.editOriginalText.value = block.original;
     elements.editTranslatedText.value = block.translated;
     elements.lblBlockId.innerText = block.id;
-
     const speakerInput = document.getElementById('edit-block-speaker');
     const targetInput = document.getElementById('edit-block-target');
     if (speakerInput) speakerInput.value = block.speaker || '';
     if (targetInput) targetInput.value = block.target || '';
+}
 
+function syncBlockTypeUI(block) {
+    const blockType = block.type || 'dialogue';
     const btnDialogue = document.getElementById('btn-block-type-dialogue');
     const btnSfx = document.getElementById('btn-block-type-sfx');
-    const blockType = block.type || 'dialogue';
     if (btnDialogue && btnSfx) {
         if (blockType === 'sfx') {
             btnSfx.className = 'py-1.5 px-2 text-[11px] font-semibold rounded bg-amber-600 text-white flex items-center justify-center gap-1.5 transition-all';
@@ -65,77 +50,88 @@ export function updateActiveBlockEditor() {
             btnSfx.className = 'py-1.5 px-2 text-[11px] font-semibold rounded text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5 transition-all';
         }
     }
+}
 
+function syncBlockGenderUI(block) {
+    const currentGender = block.style?.gender || 'auto';
     const btnMale = document.getElementById('btn-block-gender-male');
     const btnFemale = document.getElementById('btn-block-gender-female');
     const btnNeutral = document.getElementById('btn-block-gender-neutral');
-    const currentGender = block.style?.gender || 'auto';
-
     if (btnMale && btnFemale && btnNeutral) {
         btnMale.className = currentGender === 'male' ? 'py-1 px-1.5 text-[10px] font-bold rounded bg-sky-600 text-white shadow transition-all' : 'py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white transition-all';
         btnFemale.className = currentGender === 'female' ? 'py-1 px-1.5 text-[10px] font-bold rounded bg-pink-600 text-white shadow transition-all' : 'py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white transition-all';
         btnNeutral.className = (currentGender === 'neutral' || currentGender === 'auto') ? 'py-1 px-1.5 text-[10px] font-bold rounded bg-purple-600 text-white shadow transition-all' : 'py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white transition-all';
     }
+}
 
+function syncBlockStyleInputs(block) {
+    // SFX Specific Sliders (if needed, otherwise this can be moved to syncSFXStyle)
+    const currentRotate = block.style.rotate || 0;
+    const currentArc = block.style.arcAngle || 0;
     const sfxRotateSlider = document.getElementById('slider-sfx-rotate');
     const sfxRotateLbl = document.getElementById('lbl-sfx-rotate');
     const sfxArcSlider = document.getElementById('slider-sfx-arc');
     const sfxArcLbl = document.getElementById('lbl-sfx-arc');
-
-    const currentRotate = block.style.rotate || 0;
-    const currentArc = block.style.arcAngle || 0;
-
     if (sfxRotateSlider) sfxRotateSlider.value = currentRotate;
     if (sfxRotateLbl) sfxRotateLbl.textContent = `${currentRotate}°`;
     if (sfxArcSlider) sfxArcSlider.value = currentArc;
     if (sfxArcLbl) sfxArcLbl.textContent = `${currentArc}°`;
-
     const btnSfxRestore = document.getElementById('btn-sfx-restore');
-    if (btnSfxRestore) {
-        btnSfxRestore.classList.toggle('hidden', !block.originalBackgroundBackup);
-    }
+    if (btnSfxRestore) btnSfxRestore.classList.toggle('hidden', !block.originalBackgroundBackup);
 
+    // General Style
     if (elements.styleAutoFit) elements.styleAutoFit.checked = !!globalState.autoFitEnabled;
     elements.styleFont.value = block.style.fontFamily;
     elements.styleFontSize.value = block.style.fontSize;
-    elements.lblFontSize.innerText = `${block.style.fontSize}px`;
+    const fontSizeLbl = document.getElementById('lbl-font-size') || elements.lblFontSize;
+    if (fontSizeLbl) fontSizeLbl.innerText = `${block.style.fontSize}px`;
     elements.styleAlign.value = block.style.align;
 
-    elements.styleBold.checked = block.style.bold;
+    if (elements.styleBold) elements.styleBold.checked = block.style.bold;
+    // Other style properties (textColor, bgColor, etc.) could be synced here or in a dedicated function
+    syncColorAndOpacityInputs(block);
+}
 
-    elements.styleTextColor.value = block.style.textColor;
-    elements.styleTextColorHex.value = block.style.textColor.toUpperCase();
-    elements.styleBgColor.value = block.style.bgColor;
-    elements.styleBgColorHex.value = block.style.bgColor.toUpperCase();
+function syncColorAndOpacityInputs(block) {
+    // Ensure style object exists
+    if (!block.style) block.style = {};
 
-    elements.styleBgOpacity.value = block.style.bgOpacity;
-    elements.lblBgOpacity.innerText = `${block.style.bgOpacity}%`;
+    const textColor = block.style.textColor || '#ffffff';
+    const bgColor = block.style.bgColor || '#000000';
+    const strokeColor = block.style.strokeColor || '#ffffff';
+    const shadowColor = block.style.shadowColor || '#000000';
 
-    elements.stylePadding.value = block.style.padding;
-    elements.lblPadding.innerText = `${block.style.padding}px`;
+    const textColorHex = block.style.textColorHex || textColor.toUpperCase();
+    const bgColorHex = block.style.bgColorHex || bgColor.toUpperCase();
+    const strokeColorHex = block.style.strokeColorHex || strokeColor.toUpperCase();
+    const shadowColorHex = block.style.shadowColorHex || shadowColor.toUpperCase();
 
-    if (elements.styleRotate) elements.styleRotate.value = block.style.rotate || 0;
-    if (elements.lblRotate) elements.lblRotate.innerText = `${block.style.rotate || 0}°`;
+    const bgOpacity = block.style.bgOpacity || 0;
+    const padding = block.style.padding || 0;
 
-    if (elements.styleStrokeColor) elements.styleStrokeColor.value = block.style.strokeColor || '#ffffff';
-    if (elements.styleStrokeColorHex) elements.styleStrokeColorHex.value = (block.style.strokeColor || '#ffffff').toUpperCase();
-    if (elements.styleStrokeWidth) elements.styleStrokeWidth.value = block.style.strokeWidth || 0;
-    if (elements.lblStrokeWidth) elements.lblStrokeWidth.innerText = `${block.style.strokeWidth || 0}px`;
+    // Set Inputs
+    if (elements.styleTextColor) elements.styleTextColor.value = textColor;
+    if (elements.styleTextColorHex) elements.styleTextColorHex.value = textColorHex;
 
-    if (elements.styleShadowColor) elements.styleShadowColor.value = block.style.shadowColor || '#000000';
-    if (elements.styleShadowColorHex) elements.styleShadowColorHex.value = (block.style.shadowColor || '#000000').toUpperCase();
-    if (elements.styleShadowBlur) elements.styleShadowBlur.value = block.style.shadowBlur || 0;
-    if (elements.lblShadowBlur) elements.lblShadowBlur.innerText = `${block.style.shadowBlur || 0}px`;
+    if (elements.styleBgColor) elements.styleBgColor.value = bgColor;
+    if (elements.styleBgColorHex) elements.styleBgColorHex.value = bgColorHex;
 
-    elements.styleMaskShape.value = block.style.maskShape || 'bubble-fit';
-    elements.styleMaskSize.value = block.style.maskSize || 'full';
+    if (elements.styleStrokeColor) elements.styleStrokeColor.value = strokeColor;
+    if (elements.styleStrokeColorHex) elements.styleStrokeColorHex.value = strokeColorHex;
 
-    if (block.style.vertical) {
-        elements.btnStyleVert.className = "py-1 text-xs rounded bg-indigo-600 text-white font-semibold";
-        elements.btnStyleHoriz.className = "py-1 text-xs rounded bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 font-semibold";
-    } else {
-        elements.btnStyleHoriz.className = "py-1 text-xs rounded bg-indigo-600 text-white font-semibold";
-        elements.btnStyleVert.className = "py-1 text-xs rounded bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 font-semibold";
+    if (elements.styleShadowColor) elements.styleShadowColor.value = shadowColor;
+    if (elements.styleShadowColorHex) elements.styleShadowColorHex.value = shadowColorHex;
+
+    if (elements.styleBgOpacity) {
+        elements.styleBgOpacity.value = bgOpacity;
+        const lblBgOpacity = document.getElementById('lbl-bg-opacity') || elements.lblBgOpacity;
+        if (lblBgOpacity) lblBgOpacity.innerText = `${bgOpacity}%`;
+    }
+
+    if (elements.stylePadding) {
+        elements.stylePadding.value = padding;
+        const lblPadding = document.getElementById('lbl-padding') || elements.lblPadding;
+        if (lblPadding) lblPadding.innerText = `${padding}px`;
     }
 }
 
