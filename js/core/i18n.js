@@ -236,7 +236,7 @@ export function changeUILanguage(lang) {
     applyTranslations();
 
     // Redraw canvas overlay if needed
-    import('../features/canvas.js').then(canvas => {
+    import('../features/canvas/canvas-service.js').then(canvas => {
         if (typeof canvas.requestOverlayRender === 'function') {
             canvas.requestOverlayRender();
         }

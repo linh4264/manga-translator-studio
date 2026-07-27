@@ -14,7 +14,7 @@ import {
 } from '../core/state.js';
 import { elements } from '../core/elements.js';
 import { showToast, getCleanFileBaseName, waitForNextPaint, escapeHTML, waitForImageReady } from '../core/utils.js';
-import { renderPageToCanvas2D, renderOverlays, selectBlock } from './canvas.js';
+import { renderPageToCanvas2D, renderOverlays, selectBlock } from './canvas/canvas-service.js';
 import { restorePageEraserDrawing } from './inpainting.js';
 import {
     updatePageListUI,
@@ -839,7 +839,7 @@ export function clearMemoryCache() {
 
 
 // Xóa toàn bộ dự án hiện tại
-export function clearCurrentProject() {
+export async function clearCurrentProject() {
     if (globalState.pages.length === 0) {
         showToast('Không có dự án nào để xóa.', 'warn');
         return;
@@ -853,16 +853,17 @@ export function clearCurrentProject() {
         if (page?.thumbnailSrc?.startsWith('blob:')) URL.revokeObjectURL(page.thumbnailSrc);
     });
 
-    // Xóa sạch cơ sở dữ liệu IndexedDB & Lịch sử Undo/Redo
-    clearProjectDB();
+    // Xóa sạch cơ sở dữ liệu IndexedDB trước, sau đó lưu meta trống
+    await clearProjectDB();
     clearHistory();
 
     globalState.pages = [];
     globalState.activePageIndex = -1;
     globalState.selectedBlockId = null;
 
-    saveProjectMeta([], -1);
+    await saveProjectMeta([], -1);
     garbageCollectPageCaches();
+
 
     // Dọn dẹp vùng hiển thị Canvas & Overlays
     if (elements.mangaOverlaysContainer) {

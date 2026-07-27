@@ -2,44 +2,32 @@
 import {
     globalState,
     pushStateToHistory,
-    VALID_MODEL_IDS,
-    DEFAULT_MODEL,
-    DEFAULT_AI_BLOCK_BOX,
-    DEFAULT_VERTICAL_WRITING_MODE,
     savePageToDB,
     activatePage,
     deactivatePage,
     garbageCollectPageCaches,
     apiKey,
-    TRANSLATION_GENRE_PRESETS,
     uiUpdatePageListUI,
     uiUpdateProcessingOverlay,
     uiUpdateBackgroundTaskOverlay,
     uiUpdateActiveBlockEditor,
     isWeakTranslationModel,
     isFlash31LiteModel
-} from '../core/state.js';
-import { elements } from '../core/elements.js';
-import { showToast, parseGeminiJsonText } from '../core/utils.js';
-import { refineAiBlockBox } from './ocr.js';
-import { requestOverlayRender } from './canvas.js';
-import { compilePronounMatrixPrompt } from './pronoun.js';
-
-export const TARGET_LANG_MAP = {
-    'vi': 'Vietnamese',
-    'en': 'English',
-    'es': 'Spanish',
-    'fr': 'French',
-    'pt': 'Portuguese',
-    'de': 'German',
-    'it': 'Italian',
-    'ru': 'Russian',
-    'id': 'Indonesian',
-    'th': 'Thai',
-    'ko': 'Korean',
-    'ja': 'Japanese',
-    'zh': 'Chinese'
-};
+} from '../../core/state.js';
+import {
+    VALID_MODEL_IDS,
+    DEFAULT_MODEL,
+    DEFAULT_AI_BLOCK_BOX,
+    DEFAULT_VERTICAL_WRITING_MODE,
+    TRANSLATION_GENRE_PRESETS,
+    TARGET_LANG_MAP
+} from '../../config/constants.js';
+import { elements } from '../../core/elements.js';
+import { showToast } from '../../core/utils/dom.js';
+import { parseGeminiJsonText } from '../../core/utils/json.js';
+import { refineAiBlockBox } from '../ocr/ocr-service.js';
+import { requestOverlayRender } from '../canvas/canvas-service.js';
+import { compilePronounMatrixPrompt } from '../pronoun.js';
 
 export let cancelTranslationFlag = false;
 export let isBatchTranslating = false;
@@ -400,7 +388,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
     const page = globalState.pages[pageIndex];
 
     // Đảm bảo trang được dịch có đầy đủ tài nguyên ảnh gốc hoạt động
-    activatePage(page);
+    await activatePage(page);
 
     // Check for API key (use global or custom)
     const keyToUse = getGeminiApiKey();

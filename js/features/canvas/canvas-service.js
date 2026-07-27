@@ -4,16 +4,18 @@ import {
     pushStateToHistory,
     savePageToDB,
     debounceSavePage,
-    DEFAULT_VERTICAL_WRITING_MODE,
-    DEFAULT_AI_BLOCK_BOX,
     uiUpdateActiveBlockEditor,
     uiUpdateSplitView,
     uiSetRightTab,
     uiUpdatePageListUI
-} from '../core/state.js';
-import { elements } from '../core/elements.js';
-import { showToast, setMultilineText, escapeHTML, waitForNextPaint } from '../core/utils.js';
-import { computeBubbleMask } from './ocr.js';
+} from '../../core/state.js';
+import {
+    DEFAULT_VERTICAL_WRITING_MODE,
+    DEFAULT_AI_BLOCK_BOX
+} from '../../config/constants.js';
+import { elements } from '../../core/elements.js';
+import { showToast, setMultilineText, escapeHTML, waitForNextPaint } from '../../core/utils/dom.js';
+import { computeBubbleMask } from '../ocr/ocr-service.js';
 
 
 export let overlayRenderRafId = null;
@@ -376,7 +378,7 @@ export function updateFloatingToolbarPosition() {
     elements.canvasFloatingToolbar.classList.remove('hidden');
 }
 
-import { duplicateActiveBlock as duplicateActiveBlockLogic } from './canvas/canvas-actions.js';
+import { duplicateActiveBlock as duplicateActiveBlockLogic } from './canvas-actions.js';
 
 export function duplicateActiveBlock() {
     return duplicateActiveBlockLogic();

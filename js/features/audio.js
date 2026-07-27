@@ -398,6 +398,10 @@ export function testVoice(gender = 'neutral') {
     synthesis.speak(utterance);
 }
 
+export function saveAudioSettings() {
+    localStorage.setItem('gemini_manga_audio_settings', JSON.stringify(globalState.audioSettings));
+}
+
 export function updateAudioSettingsFromUI() {
     const maleSelect = document.getElementById('voice-select-male');
     const femaleSelect = document.getElementById('voice-select-female');
@@ -412,6 +416,8 @@ export function updateAudioSettingsFromUI() {
     if (rateInput) globalState.audioSettings.rate = parseFloat(rateInput.value) || 1.0;
     if (malePitchInput) globalState.audioSettings.malePitch = parseFloat(malePitchInput.value) || 0.92;
     if (femalePitchInput) globalState.audioSettings.femalePitch = parseFloat(femalePitchInput.value) || 1.08;
+    
+    saveAudioSettings();
 }
 
 export function openAudioSettingsModal() {

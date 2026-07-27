@@ -2,7 +2,7 @@
 import { globalState, loadToeicWordsFromDB, saveToeicWordsToDB, uiSetRightTab, DEFAULT_MODEL } from '../core/state.js';
 import { elements } from '../core/elements.js';
 import { showToast, escapeHTML, parseGeminiJsonText } from '../core/utils.js';
-import { getGeminiApiKey } from './ai.js';
+import { getGeminiApiKey } from './ai/ai-service.js';
 
 let srsReviewQueue = [];
 let srsCurrentIndex = 0;

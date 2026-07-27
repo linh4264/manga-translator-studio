@@ -1,5 +1,6 @@
 // OCR Processing & Bubble Snap to Contours
-import { DEFAULT_AI_BLOCK_BOX, isWeakTranslationModel, isFlash31LiteModel } from '../core/state.js';
+import { isWeakTranslationModel, isFlash31LiteModel } from '../../core/state.js';
+import { DEFAULT_AI_BLOCK_BOX } from '../../config/constants.js';
 
 const AI_EDGE_SAFETY_MARGIN = 4;
 

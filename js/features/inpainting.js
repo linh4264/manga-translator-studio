@@ -2,8 +2,8 @@
 import { globalState, pushStateToHistory, savePageToDB, uiUpdateActiveBlockEditor } from '../core/state.js';
 import { elements } from '../core/elements.js';
 import { showToast } from '../core/utils.js';
-import { requestOverlayRender } from './canvas.js';
-import { computeBubbleMask } from './ocr.js';
+import { requestOverlayRender } from './canvas/canvas-service.js';
+import { computeBubbleMask } from './ocr/ocr-service.js';
 
 export let isEraserModeActive = false;
 export let isDrawingOnEraser = false;

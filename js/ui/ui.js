@@ -1,6 +1,7 @@
 // UI Controller & Event Handlers
 import {
     globalState,
+    apiKey,
     pushStateToHistory,
     savePageToDB,
     saveProjectMeta,
@@ -8,12 +9,15 @@ import {
     garbageCollectPageCaches,
     activatePage,
     deactivatePage,
+    stateEvents
+} from '../core/state.js';
+import {
     VALID_MODEL_IDS,
     CUSTOM_MODEL_VALUE,
     DEFAULT_MODEL,
-    apiKey,
     TRANSLATION_GENRE_PRESETS
-} from '../core/state.js';
+} from '../config/constants.js';
+import { globalBus } from '../core/events.js';
 import { elements } from '../core/elements.js';
 import { showToast, escapeHTML, waitForNextPaint, waitForImageReady } from '../core/utils.js';
 import {
@@ -26,7 +30,7 @@ import {
     pasteBlockStyle,
     navigateBlocks,
     autoFitBlock
-} from '../features/canvas.js';
+} from '../features/canvas/canvas-service.js';
 import { restorePageEraserDrawing, saveEraserDrawingToPage } from '../features/inpainting.js';
 import { updateToeicTabUI, updateToeicNotebookUI, displayToeicAnalysis, resetToeicAnalysisUI } from '../features/toeic.js';
 
@@ -99,7 +103,7 @@ export function updateBackgroundTaskOverlay(show, title = "", subtitle = "", pro
 }
 
 // 4. Chọn trang hoạt động trong Workspace
-export function selectPage(index) {
+export async function selectPage(index) {
     if (index < 0 || index >= globalState.pages.length) return;
 
     globalState.activePageIndex = index;
@@ -108,7 +112,7 @@ export function selectPage(index) {
     saveProjectMeta(globalState.pages.map(p => p.id), globalState.activePageIndex);
 
     const page = globalState.pages[index];
-    activatePage(page);
+    await activatePage(page);
     garbageCollectPageCaches();
 
     updatePageListUI();
@@ -147,8 +151,9 @@ export function selectPage(index) {
     updateActiveBlockEditor();
 }
 
+
 // 5. Xóa một trang khỏi danh sách và DB
-export function removePage(index) {
+export async function removePage(index) {
     pushStateToHistory();
     const removedPage = globalState.pages[index];
     if (removedPage?.apiSrc?.startsWith('blob:')) {
@@ -182,13 +187,14 @@ export function removePage(index) {
     saveProjectMeta(globalState.pages.map(p => p.id), globalState.activePageIndex);
 
     if (globalState.activePageIndex !== -1) {
-        activatePage(globalState.pages[globalState.activePageIndex]);
+        await activatePage(globalState.pages[globalState.activePageIndex]);
     }
     garbageCollectPageCaches();
 
     updatePageListUI();
     showToast('Đã xóa trang truyện', 'info');
 }
+
 
 // 6. Cập nhật chế độ hiển thị Workspace
 export function setViewMode(mode) {
@@ -298,20 +304,25 @@ export function updateSelectedModel(val) {
             customModelInput.classList.remove('hidden');
             customModelInput.disabled = false;
             const customVal = customModelInput.value.trim();
-            globalState.selectedModel = customVal || DEFAULT_MODEL;
-            localStorage.setItem('gemini_manga_model', customVal || DEFAULT_MODEL);
+            if (customVal) {
+                globalState.selectedModel = customVal;
+                localStorage.setItem('gemini_manga_model', customVal);
+            }
         }
     } else {
         if (customModelInput) {
             customModelInput.classList.add('hidden');
             customModelInput.disabled = true;
         }
-        if (val && val !== CUSTOM_MODEL_VALUE) {
+        if (val) {
             globalState.selectedModel = val;
             localStorage.setItem('gemini_manga_model', val);
         }
     }
     updateModelLockingUI();
+    if (globalState.selectedModel) {
+        showToast(`Đã chọn mô hình: ${globalState.selectedModel}`, "info");
+    }
 }
 
 export function updateModelDropdown(fetchedModels) {
@@ -322,6 +333,9 @@ export function updateModelDropdown(fetchedModels) {
 
     // Create a Set of all valid model IDs (hardcoded + fetched)
     const allModels = new Set([...VALID_MODEL_IDS, ...fetchedModels]);
+    if (currentSelection && currentSelection !== CUSTOM_MODEL_VALUE) {
+        allModels.add(currentSelection);
+    }
 
     // Helper to extract version score (e.g. gemini-3.5-flash -> 35, gemini-3-flash -> 30)
     const getModelVersion = (id) => {
@@ -404,22 +418,22 @@ export async function fetchGeminiModels() {
                 .filter(m => {
                     const id = m.name ? m.name.replace('models/', '') : '';
                     if (!id) return false;
-                    
+
                     const supportsGen = m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent');
                     if (!supportsGen) return false;
-                    
+
                     // Ignore legacy 1.0 models (lacking vision/JSON support)
                     if (id.includes('gemini-1.0')) return false;
-                    
+
                     // Ignore thinking models (does not support structured outputs yet)
                     if (id.includes('-thinking')) return false;
-                    
+
                     // Ignore embedding/tuning/moderation/sentiment models
                     if (id.includes('embedding') || id.includes('bison') || id.includes('tunedModels/')) return false;
-                    
+
                     // Ignore pinned checkpoint snapshots (e.g. -001, -002) to avoid duplicates
                     if (/-\d{3}$/.test(id)) return false;
-                    
+
                     // Allow Gemini 1.5, 2.0, 2.5, 3.x, etc. (with vision/JSON support)
                     const isGeminiV15OrNewer = /gemini-(1\.5|2\.\d+|3\.\d+|4\.\d+|[5-9]\.\d+|[2-9]|\d{2,})-/.test(id);
                     return isGeminiV15OrNewer;
@@ -436,64 +450,51 @@ export async function fetchGeminiModels() {
 }
 
 export function updateModelLockingUI() {
-    const hasCustomKey = elements.apiKeyInput ? (elements.apiKeyInput.value || "").trim() !== "" : false;
-    const hasSystemKey = apiKey ? apiKey.trim() !== "" : false;
+    const keyToUse = ((elements.apiKeyInput ? elements.apiKeyInput.value : "") || globalState.apiKey || "").trim();
+    const hasKey = keyToUse.length > 0;
     const modelSelect = document.getElementById('model-select');
     const lockBadge = document.getElementById('model-lock-badge');
     const selectNote = document.getElementById('model-select-note');
     const customModelInput = elements.customModelInput;
-    const syncCustomModelVisibility = () => {
-        if (!customModelInput) return;
-        const isCustomSelected = modelSelect && modelSelect.value === CUSTOM_MODEL_VALUE;
-        customModelInput.classList.toggle('hidden', !isCustomSelected || modelSelect.disabled);
-        customModelInput.disabled = modelSelect.disabled || !isCustomSelected;
-    };
 
-    if (!modelSelect || !lockBadge || !selectNote) return;
+    if (!modelSelect) return;
 
-    if (!hasCustomKey && hasSystemKey) {
-        modelSelect.value = DEFAULT_MODEL;
-        globalState.selectedModel = DEFAULT_MODEL;
-        modelSelect.disabled = true;
-        modelSelect.className = 'w-full text-xs font-semibold rounded-lg bg-slate-950/80 border border-slate-800 text-slate-400 p-2.5 outline-none opacity-60 cursor-not-allowed';
-        if (customModelInput) {
-            customModelInput.classList.add('hidden');
-            customModelInput.disabled = true;
-        }
+    modelSelect.disabled = false;
+    modelSelect.className = 'w-full text-xs font-semibold rounded-lg bg-slate-950 border border-slate-800 text-slate-200 p-2.5 outline-none cursor-pointer';
 
-        lockBadge.innerHTML = '<i class="fa-solid fa-lock"></i> Đã Khóa';
-        lockBadge.className = "text-[9px] text-indigo-400 font-bold bg-indigo-500/10 px-1.5 py-0.5 rounded flex items-center gap-1";
-        selectNote.innerText = "* Mô hình được khóa cố định để đảm bảo chạy mượt mà bằng phím tự động của Sandbox Canvas.";
-    } else if (!hasCustomKey) {
-        modelSelect.value = DEFAULT_MODEL;
-        globalState.selectedModel = DEFAULT_MODEL;
-        modelSelect.disabled = true;
-        modelSelect.className = 'w-full text-xs font-semibold rounded-lg bg-slate-950/80 border border-slate-800 text-slate-400 p-2.5 outline-none opacity-60 cursor-not-allowed';
-        if (customModelInput) {
-            customModelInput.classList.add('hidden');
-            customModelInput.disabled = true;
-        }
-
-        lockBadge.innerHTML = '<i class="fa-solid fa-key text-amber-400"></i> Cần Key';
-        lockBadge.className = "text-[9px] text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded flex items-center gap-1";
-        selectNote.innerText = "* Vui lòng nhập Gemini API Key cá nhân trước khi dịch.";
-    } else {
-        modelSelect.disabled = false;
-        modelSelect.className = 'w-full text-xs font-semibold rounded-lg bg-slate-950 border border-slate-800 text-slate-200 p-2.5 outline-none cursor-pointer';
-
-        lockBadge.innerHTML = '<i class="fa-solid fa-lock-open text-emerald-400"></i> Tự chọn';
-        lockBadge.className = "text-[9px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded flex items-center gap-1";
-        selectNote.innerText = "* Bạn có thể chọn model có sẵn hoặc tự nhập model khác nếu tài khoản Google của bạn hỗ trợ.";
-
-        if (modelSelect.value === CUSTOM_MODEL_VALUE) {
-            const customModel = customModelInput?.value.trim() || DEFAULT_MODEL;
-            globalState.selectedModel = customModel;
+    if (lockBadge && selectNote) {
+        if (hasKey) {
+            lockBadge.innerHTML = '<i class="fa-solid fa-lock-open text-emerald-400"></i> Tự chọn';
+            lockBadge.className = "text-[9px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded flex items-center gap-1";
+            selectNote.innerText = "* Bạn có thể chọn model có sẵn hoặc tự nhập model khác.";
         } else {
-            globalState.selectedModel = modelSelect.value;
+            lockBadge.innerHTML = '<i class="fa-solid fa-key text-amber-400"></i> Cần Key';
+            lockBadge.className = "text-[9px] text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded flex items-center gap-1";
+            selectNote.innerText = "* Vui lòng nhập Gemini API Key cá nhân để mở đầy đủ tính năng.";
         }
     }
 
-    syncCustomModelVisibility();
+    const currentModel = globalState.selectedModel || DEFAULT_MODEL;
+    if (modelSelect.value === CUSTOM_MODEL_VALUE) {
+        if (customModelInput) {
+            const customVal = customModelInput.value.trim();
+            if (customVal) {
+                globalState.selectedModel = customVal;
+                localStorage.setItem('gemini_manga_model', customVal);
+            }
+        }
+    } else if (modelSelect.value && modelSelect.value !== CUSTOM_MODEL_VALUE) {
+        globalState.selectedModel = modelSelect.value;
+        localStorage.setItem('gemini_manga_model', modelSelect.value);
+    } else {
+        modelSelect.value = currentModel;
+    }
+
+    if (customModelInput) {
+        const isCustomSelected = modelSelect.value === CUSTOM_MODEL_VALUE;
+        customModelInput.classList.toggle('hidden', !isCustomSelected);
+        customModelInput.disabled = !isCustomSelected;
+    }
 }
 
 export function mountSettingsModal() {
@@ -506,11 +507,47 @@ export function openSettingsModal() {
     if (modal) {
         modal.classList.remove('hidden');
     }
+
+    // Populate settings fields from globalState
     if (elements.uiLangSelect) {
         elements.uiLangSelect.value = globalState.uiLanguage || 'vi';
     }
-    // Fetch online models from Gemini API dynamically
+    if (elements.apiKeyInput) {
+        elements.apiKeyInput.value = globalState.apiKey || '';
+    }
+
+    const modelSelect = document.getElementById('model-select');
+    if (modelSelect && globalState.selectedModel) {
+        if (Array.from(modelSelect.options).some(opt => opt.value === globalState.selectedModel)) {
+            modelSelect.value = globalState.selectedModel;
+        } else {
+            modelSelect.value = CUSTOM_MODEL_VALUE;
+            if (elements.customModelInput) {
+                elements.customModelInput.value = globalState.selectedModel;
+            }
+        }
+    }
+
+    // Font settings
+    const dialogueFont = document.getElementById('default-dialogue-font');
+    if (dialogueFont) dialogueFont.value = globalState.defaultDialogueFont;
+
+    const sfxFont = document.getElementById('default-sfx-font');
+    if (sfxFont) sfxFont.value = globalState.defaultSfxFont;
+
+    const narrationFont = document.getElementById('default-narration-font');
+    if (narrationFont) narrationFont.value = globalState.defaultNarrationFont;
+
+    // API settings
+    const apiDelay = document.getElementById('api-delay-input');
+    if (apiDelay) apiDelay.value = globalState.apiDelay || 2;
+
+    const maxRetries = document.getElementById('max-retries-input');
+    if (maxRetries) maxRetries.value = globalState.maxRetries || 3;
+
     fetchGeminiModels();
+    updateModelLockingUI();
+
     if (elements.apiKeyInput) {
         setTimeout(() => elements.apiKeyInput.focus(), 50);
     }
@@ -617,12 +654,12 @@ export function updateGlossary(value) {
 // Delegate story memory to ai.js (source of truth) to avoid state shadowing
 // These functions re-import from ai.js to ensure consistency
 export async function toggleStoryMemory(enabled) {
-    const ai = await import('../features/ai.js');
+    const ai = await import('../features/ai/ai-service.js');
     ai.toggleStoryMemory(enabled);
 }
 
 export async function updateStoryMemoryBadge() {
-    const ai = await import('../features/ai.js');
+    const ai = await import('../features/ai/ai-service.js');
     ai.updateStoryMemoryBadge();
 }
 
@@ -760,7 +797,7 @@ export function previewNextPage() {
     }
 }
 
-export function renderPreviewPage() {
+export async function renderPreviewPage() {
     if (previewCurrentPage < 0 || previewCurrentPage >= globalState.pages.length) return;
 
     const page = globalState.pages[previewCurrentPage];
@@ -774,7 +811,7 @@ export function renderPreviewPage() {
         }
     }
 
-    activatePage(page);
+    await activatePage(page);
     garbageCollectPageCaches(previewCurrentPage);
 
     elements.previewPageIndicator.textContent = `Trang ${previewCurrentPage + 1}/${globalState.pages.length}`;
@@ -1126,7 +1163,7 @@ export function syncTextColorHex(val) {
     }
     if (elements.styleTextColor) elements.styleTextColor.value = color;
     if (elements.styleTextColorHex) elements.styleTextColorHex.value = color.toUpperCase();
-    import('../features/canvas.js').then(canvas => canvas.syncActiveBlockStyle('textColor', color));
+    import('../features/canvas/canvas-service.js').then(canvas => canvas.syncActiveBlockStyle('textColor', color));
 }
 
 export function syncBgColorHex(val) {
@@ -1136,7 +1173,7 @@ export function syncBgColorHex(val) {
     }
     if (elements.styleBgColor) elements.styleBgColor.value = color;
     if (elements.styleBgColorHex) elements.styleBgColorHex.value = color.toUpperCase();
-    import('../features/canvas.js').then(canvas => canvas.syncActiveBlockStyle('bgColor', color));
+    import('../features/canvas/canvas-service.js').then(canvas => canvas.syncActiveBlockStyle('bgColor', color));
 }
 
 export function syncStrokeColorHex(val) {
@@ -1146,7 +1183,7 @@ export function syncStrokeColorHex(val) {
     }
     if (elements.styleStrokeColor) elements.styleStrokeColor.value = color;
     if (elements.styleStrokeColorHex) elements.styleStrokeColorHex.value = color.toUpperCase();
-    import('../features/canvas.js').then(canvas => canvas.syncActiveBlockStyle('strokeColor', color));
+    import('../features/canvas/canvas-service.js').then(canvas => canvas.syncActiveBlockStyle('strokeColor', color));
 }
 
 export function syncShadowColorHex(val) {
@@ -1156,11 +1193,19 @@ export function syncShadowColorHex(val) {
     }
     if (elements.styleShadowColor) elements.styleShadowColor.value = color;
     if (elements.styleShadowColorHex) elements.styleShadowColorHex.value = color.toUpperCase();
-    import('../features/canvas.js').then(canvas => canvas.syncActiveBlockStyle('shadowColor', color));
+    import('../features/canvas/canvas-service.js').then(canvas => canvas.syncActiveBlockStyle('shadowColor', color));
 }
 
 // 14. Thiết lập sự kiện lắng nghe sự kiện DOM toàn cục
 export function initEventListeners() {
+    // Đăng ký các sự kiện từ State thông qua Global Event Bus
+    globalBus.subscribe(stateEvents.PAGE_LIST_UPDATED, () => updatePageListUI());
+    globalBus.subscribe(stateEvents.PROCESSING_OVERLAY, (data) => updateProcessingOverlay(data.show, data.message));
+    globalBus.subscribe(stateEvents.BACKGROUND_TASK_OVERLAY, (data) => updateBackgroundTaskOverlay(data.show, data.message, data.progress));
+    globalBus.subscribe(stateEvents.ACTIVE_BLOCK_EDITOR_UPDATED, () => updateActiveBlockEditor());
+    globalBus.subscribe(stateEvents.SPLIT_VIEW_UPDATED, () => updateSplitView());
+    globalBus.subscribe(stateEvents.RIGHT_TAB_CHANGED, (tab) => setRightTab(tab));
+
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('file-input');
 
@@ -1198,8 +1243,8 @@ export function initEventListeners() {
                 e.stopPropagation();
                 const index = Number(translateBtn.dataset.index);
                 if (Number.isInteger(index)) {
-                        import('../features/ai.js').then(ai => ai.translateSinglePageInBatch(index));
-                    }
+                    import('../features/ai/ai-service.js').then(ai => ai.translateSinglePageInBatch(index));
+                }
                 return;
             }
 
@@ -1275,14 +1320,14 @@ export function initEventListeners() {
             if (e.key === '[') {
                 e.preventDefault();
                 const newSize = Math.max(8, block.style.fontSize - 1);
-                import('../features/canvas.js').then(canvas => canvas.syncActiveBlockStyle('fontSize', newSize));
+                import('../features/canvas/canvas-service.js').then(canvas => canvas.syncActiveBlockStyle('fontSize', newSize));
             } else if (e.key === ']') {
                 e.preventDefault();
                 const newSize = Math.min(100, block.style.fontSize + 1);
-                import('../features/canvas.js').then(canvas => canvas.syncActiveBlockStyle('fontSize', newSize));
+                import('../features/canvas/canvas-service.js').then(canvas => canvas.syncActiveBlockStyle('fontSize', newSize));
             } else if (e.key === 'Delete' || e.key === 'Backspace') {
                 e.preventDefault();
-                import('../features/canvas.js').then(canvas => canvas.deleteActiveBlock());
+                import('../features/canvas/canvas-service.js').then(canvas => canvas.deleteActiveBlock());
             }
         }
 
@@ -1382,7 +1427,7 @@ export async function populateCustomFontsDropdown() {
     try {
         const { getAllFontsFromDB } = await import('../core/state.js');
         const fonts = await getAllFontsFromDB();
-        
+
         const customOptions = fontSelect.querySelectorAll('option[data-custom="true"]');
         customOptions.forEach(opt => opt.remove());
 
@@ -1437,7 +1482,7 @@ export async function uploadCustomFonts(files) {
     showToast("Đang nạp phông chữ tùy chỉnh...", "info");
 
     const { saveFontToDB } = await import('../core/state.js');
-    const { requestOverlayRender } = await import('../features/canvas.js');
+    const { requestOverlayRender } = await import('../features/canvas/canvas-service.js');
 
     let loadedCount = 0;
     for (let i = 0; i < files.length; i++) {

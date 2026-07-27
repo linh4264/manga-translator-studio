@@ -4,28 +4,27 @@ import {
     globalState,
     initDB,
     loadAndRegisterCustomFonts,
+    initializeStateFromStorage,
     loadProjectFromDB,
-    loadToeicWordsFromDB,
+    loadToeicWordsFromDB
+} from './core/state.js';
+import {
     VALID_MODEL_IDS,
     CUSTOM_MODEL_VALUE,
     DEFAULT_MODEL,
-    apiKey,
-    TRANSLATION_GENRE_PRESETS,
-    registerUIBridge,
-    registerStateCallbacks,
-    initializeStateFromStorage // Added
-} from './core/state.js';
+    TRANSLATION_GENRE_PRESETS
+} from './config/constants.js';
 import { elements } from './core/elements.js';
 
-import { showToast } from './core/utils.js';
+import { showToast } from './core/utils/dom.js';
 import { registerAction, initEventDelegation } from './core/events.js';
 import { renderPronounMatrixTable } from './features/pronoun.js';
 
-import './features/ocr.js';
-import './features/ai.js';
+import './features/ocr/ocr-service.js';
+import './features/ai/ai-service.js';
 import { updateToeicNotebookUI } from './features/toeic.js';
 import { toggleEraserMode, aiSmartInpaintBlock } from './features/inpainting.js';
-import { copyBlockStyle, pasteBlockStyle, applyStylePreset } from './features/canvas.js';
+import { copyBlockStyle, pasteBlockStyle, applyStylePreset } from './features/canvas/canvas-service.js';
 import './features/io.js';
 import './features/gdrive.js';
 import { playPageAudioDrama, pauseAudioDrama, stopAudioDrama, speakActiveBlock, openAudioSettingsModal, closeAudioSettingsModal } from './features/audio.js';
@@ -94,7 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     registerAction('stopAudioDrama', stopAudioDrama);
     registerAction('speakActiveBlock', speakActiveBlock);
     registerAction('toggleEraserMode', toggleEraserMode);
-    registerAction('autoMatchActiveBlockStyle', () => import('./features/canvas.js').then(m => m.autoMatchActiveBlockStyle()));
+    registerAction('autoMatchActiveBlockStyle', () => import('./features/canvas/canvas-service.js').then(m => m.autoMatchActiveBlockStyle()));
     registerAction('copyBlockStyle', copyBlockStyle);
     registerAction('pasteBlockStyle', pasteBlockStyle);
     registerAction('applyStylePreset', (target) => {
@@ -103,16 +102,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     initEventDelegation();
 
-    // Register UI bridge so ai.js and canvas.js can call UI functions without circular imports
-    registerUIBridge({ updatePageListUI, updateProcessingOverlay, updateBackgroundTaskOverlay, updateActiveBlockEditor, updateSplitView, setRightTab });
-    registerStateCallbacks({
-        onUndoRedoChange: updateUndoRedoUI,
-        onPageListChange: updatePageListUI
-    });
-
     mountSettingsModal();
     initEventListeners();
-    import('./features/canvas.js').then(m => m.initBilingualTooltipEvents?.());
+    import('./features/canvas/canvas-service.js').then(m => m.initBilingualTooltipEvents?.());
     syncMobileToolbarState();
     syncMobileMenuState();
 
@@ -164,17 +156,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         await loadAndRegisterCustomFonts();
         await populateCustomFontsDropdown();
         const project = await loadProjectFromDB();
-        if (project) {
+        console.log("Project loaded from DB:", project);
+        if (project && project.pages && project.pages.length > 0) {
             globalState.pages = project.pages;
-            globalState.activePageIndex = project.activePageIndex;
+            globalState.activePageIndex = (typeof project.activePageIndex === 'number' && project.activePageIndex >= 0 && project.activePageIndex < project.pages.length) ? project.activePageIndex : 0;
 
             updatePageListUI();
-            if (globalState.activePageIndex !== -1 && globalState.pages.length > 0) {
-                if (globalState.activePageIndex >= globalState.pages.length) {
-                    globalState.activePageIndex = 0;
-                }
-                selectPage(globalState.activePageIndex);
-            }
+            await selectPage(globalState.activePageIndex);
+
             // Khôi phục từ vựng TOEIC đã lưu
             globalState.toeicSavedWords = await loadToeicWordsFromDB();
             updateToeicNotebookUI();

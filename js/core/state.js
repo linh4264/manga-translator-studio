@@ -1,16 +1,14 @@
 // State & Database Management for Manga Translator Studio
 import { globalBus } from './events.js';
-export const DEFAULT_MODEL = "gemini-3.1-flash-lite";
-export const CUSTOM_MODEL_VALUE = "__custom__";
-export const VALID_MODEL_IDS = [
-    "gemini-3.5-flash",
-    "gemini-3-flash-preview",
-    "gemini-3.1-flash-lite",
-    "gemini-3.1-pro-preview",
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
-    "gemini-2.5-pro"
-];
+import { 
+    DEFAULT_MODEL, 
+    DEFAULT_AI_BLOCK_BOX, 
+    DEFAULT_VERTICAL_WRITING_MODE, 
+    MAX_HISTORY_LIMIT,
+    TRANSLATION_GENRE_PRESETS
+} from '../config/constants.js';
+
+export { DEFAULT_MODEL, CUSTOM_MODEL_VALUE, VALID_MODEL_IDS } from '../config/constants.js';
 
 export function isWeakTranslationModel(modelId) {
     return String(modelId || '').includes('flash-lite');
@@ -20,35 +18,7 @@ export function isFlash31LiteModel(modelId) {
     return String(modelId || '') === 'gemini-3.1-flash-lite';
 }
 
-export const DEFAULT_VERTICAL_WRITING_MODE = false;
-export const DEFAULT_AI_BLOCK_BOX = {
-    x: 37.5,
-    y: 37.5,
-    w: 25,
-    h: 25
-};
-
-export const MAX_HISTORY_LIMIT = 30;
 export const apiKey = "";
-
-export const TRANSLATION_GENRE_PRESETS = {
-    custom: '',
-    quality: '- GENRE PRESET: Best-quality scanlation. Keep meaning, tone, subtext, and character voice. Prefer natural Vietnamese over literal wording. Preserve honorifics and xưng hô when important.',
-    comedy: '- GENRE PRESET: Comedy manga. Keep timing sharp, wording natural, and punchlines intact. Preserve exaggeration and rhythm.',
-    school: '- GENRE PRESET: School-life manga. Use casual, youthful Vietnamese. Keep conversations believable, light, and natural.',
-    shounen: '- GENRE PRESET: Shounen/action manga. Use short, punchy, energetic Vietnamese. Keep momentum, hype, and battle intensity.',
-    fantasy: '- GENRE PRESET: Fantasy/isekai manga. Keep terms consistent, worldbuilding clear, and dialogue readable. Do not over-literalize titles or skill names.',
-    drama: '- GENRE PRESET: Drama manga. Keep emotions subtle, restrained, and natural. Preserve tension and character nuance.',
-    horror: '- GENRE PRESET: Horror/thriller manga. Keep the wording tense, cold, and unsettling. Do not soften fear or suspense.',
-    polite: '- GENRE PRESET: Polite/formal dialogue. Use respectful Vietnamese, balanced xưng hô, and avoid slang unless the original is casual.',
-    dark: '- GENRE PRESET: Dark/psychological manga. Keep the tone heavy, serious, mature, and grim. Preserve dark humor and intense character psychology without softening.',
-    romance: '- GENRE PRESET: Romance manga. Use warm, delicate Vietnamese. Keep emotional beats soft and natural.',
-    slice: '- GENRE PRESET: Slice-of-life manga. Use everyday Vietnamese, relaxed pacing, and simple, believable wording.',
-    martial: '- GENRE PRESET: Martial arts/Wuxia/Xianxia. Use traditional martial arts vocabulary and Sino-Vietnamese (Hán-Việt) terms for techniques, sect rankings, and polite forms.',
-    scifi: '- GENRE PRESET: Sci-fi/Mecha/Cyberpunk manga. Keep futuristic concepts, technical jargon, and mechanical names consistent and professional.',
-    gag: '- GENRE PRESET: Gag comedy manga. Feel free to use localized Vietnamese internet slang, memes, and humorous adaptations to maximize comedic timing.',
-    historical: '- GENRE PRESET: Historical/Period manga. Use formal, archaic Sino-Vietnamese (Hán-Việt) honorifics, courtly address forms, and expressions suitable for historical settings.'
-};
 
 export let undoStack = [];
 export let redoStack = [];
@@ -57,31 +27,25 @@ export let redoStack = [];
 let onUndoRedoChange = null;
 let onPageListChange = null;
 
-// UI Bridge: allows ai.js / canvas.js to call UI functions without circular imports
-const _uiBridge = {
-    updatePageListUI: null,
-    updateProcessingOverlay: null,
-    updateBackgroundTaskOverlay: null,
-    updateActiveBlockEditor: null,
-    updateSplitView: null,
-    setRightTab: null,
+/**
+ * UI Event Dispatchers
+ * Thay thế cho UI Bridge cũ để tránh circular imports.
+ */
+export const stateEvents = {
+    PAGE_LIST_UPDATED: 'ui:update-page-list',
+    PROCESSING_OVERLAY: 'ui:update-processing-overlay',
+    BACKGROUND_TASK_OVERLAY: 'ui:update-background-overlay',
+    ACTIVE_BLOCK_EDITOR_UPDATED: 'ui:update-block-editor',
+    SPLIT_VIEW_UPDATED: 'ui:update-split-view',
+    RIGHT_TAB_CHANGED: 'ui:set-right-tab'
 };
 
-export function registerUIBridge(fns) {
-    if (fns.updatePageListUI) _uiBridge.updatePageListUI = fns.updatePageListUI;
-    if (fns.updateProcessingOverlay) _uiBridge.updateProcessingOverlay = fns.updateProcessingOverlay;
-    if (fns.updateBackgroundTaskOverlay) _uiBridge.updateBackgroundTaskOverlay = fns.updateBackgroundTaskOverlay;
-    if (fns.updateActiveBlockEditor) _uiBridge.updateActiveBlockEditor = fns.updateActiveBlockEditor;
-    if (fns.updateSplitView) _uiBridge.updateSplitView = fns.updateSplitView;
-    if (fns.setRightTab) _uiBridge.setRightTab = fns.setRightTab;
-}
-
-export function uiUpdatePageListUI() { _uiBridge.updatePageListUI?.(); }
-export function uiUpdateProcessingOverlay(...args) { _uiBridge.updateProcessingOverlay?.(...args); }
-export function uiUpdateBackgroundTaskOverlay(...args) { _uiBridge.updateBackgroundTaskOverlay?.(...args); }
-export function uiUpdateActiveBlockEditor() { _uiBridge.updateActiveBlockEditor?.(); }
-export function uiUpdateSplitView() { _uiBridge.updateSplitView?.(); }
-export function uiSetRightTab(tab) { _uiBridge.setRightTab?.(tab); }
+export function uiUpdatePageListUI() { globalBus.publish(stateEvents.PAGE_LIST_UPDATED); }
+export function uiUpdateProcessingOverlay(show, message) { globalBus.publish(stateEvents.PROCESSING_OVERLAY, { show, message }); }
+export function uiUpdateBackgroundTaskOverlay(show, message, progress) { globalBus.publish(stateEvents.BACKGROUND_TASK_OVERLAY, { show, message, progress }); }
+export function uiUpdateActiveBlockEditor() { globalBus.publish(stateEvents.ACTIVE_BLOCK_EDITOR_UPDATED); }
+export function uiUpdateSplitView() { globalBus.publish(stateEvents.SPLIT_VIEW_UPDATED); }
+export function uiSetRightTab(tab) { globalBus.publish(stateEvents.RIGHT_TAB_CHANGED, tab); }
 
 
 export function registerStateCallbacks(callbacks) {
@@ -161,7 +125,11 @@ export function initializeStateFromStorage() {
         'gemini_manga_pronoun_matrix': 'pronounMatrix',
         'gemini_manga_ocr_enhance': 'ocrEnhanceEnabled',
         'gemini_manga_api_delay': 'apiDelay',
-        'gemini_manga_max_retries': 'maxRetries'
+        'gemini_manga_max_retries': 'maxRetries',
+        'manga_default_dialogue_font': 'defaultDialogueFont',
+        'manga_default_sfx_font': 'defaultSfxFont',
+        'manga_default_narration_font': 'defaultNarrationFont',
+        'gemini_manga_audio_settings': 'audioSettings'
     };
 
     Object.entries(keysToLoad).forEach(([storageKey, stateKey]) => {
@@ -173,6 +141,8 @@ export function initializeStateFromStorage() {
                 globalState[stateKey] = parseInt(val, 10);
             } else if (stateKey === 'ocrEnhanceEnabled') {
                 try { globalState[stateKey] = JSON.parse(val); } catch (e) { globalState[stateKey] = true; }
+            } else if (stateKey === 'audioSettings') {
+                try { globalState[stateKey] = JSON.parse(val); } catch (e) { console.error("Lỗi parse audioSettings:", e); }
             } else {
                 globalState[stateKey] = val;
             }
@@ -270,7 +240,7 @@ export function applyStateFromSnapshot(snapshot) {
         }
         ui.updateActiveBlockEditor();
     });
-    import('../features/canvas.js').then(canvas => {
+    import('../features/canvas/canvas-service.js').then(canvas => {
         canvas.requestOverlayRender();
     });
 }
@@ -328,7 +298,6 @@ export function executeRedo() {
 window.executeUndo = executeUndo;
 window.executeRedo = executeRedo;
 
-
 // --- INDEXEDDB PERSISTENCE MANAGER FOR AUTO-SAVE & RESTORE ---
 const DB_NAME = 'MangaTranslatorDB';
 const DB_VERSION = 2; // Nâng cấp lên v2 để hỗ trợ lưu phông chữ cá nhân
@@ -337,6 +306,20 @@ const STORE_META = 'meta';
 const STORE_FONTS = 'fonts'; // Bảng lưu phông chữ nhị phân
 let dbInstance = null;
 let savePageDebounceTimer = null;
+
+export function getSafeMediaUrl(item) {
+    if (!item) return null;
+    if (typeof item === 'string') return item;
+    if (item instanceof Blob) {
+        try {
+            return URL.createObjectURL(item);
+        } catch (e) {
+            console.error("getSafeMediaUrl failed:", e);
+            return null;
+        }
+    }
+    return null;
+}
 
 export function initDB() {
     return new Promise((resolve, reject) => {
@@ -364,47 +347,57 @@ export function initDB() {
 }
 
 export function savePageToDB(page) {
-    if (!dbInstance) return Promise.resolve();
+    if (!dbInstance || !page || !page.id) return Promise.resolve();
     return new Promise((resolve, reject) => {
-        const transaction = dbInstance.transaction([STORE_PAGES], 'readwrite');
-        const store = transaction.objectStore(STORE_PAGES);
+        try {
+            const transaction = dbInstance.transaction([STORE_PAGES], 'readwrite');
+            const store = transaction.objectStore(STORE_PAGES);
 
-        // Dọn dẹp các khối blocks để loại bỏ các thuộc tính DOM không thể clone (như HTMLCanvasElement trong maskCache)
-        const cleanBlocks = (page.blocks || []).map(block => {
-            const cleanBlock = {
-                id: block.id,
-                type: block.type,
-                original: block.original,
-                translated: block.translated,
-                box: { ...block.box },
-                style: { ...block.style }
+            // Dọn dẹp các khối blocks để loại bỏ các thuộc tính DOM không thể clone (như HTMLCanvasElement trong maskCache)
+            const cleanBlocks = (page.blocks || []).map(block => {
+                const cleanBlock = {
+                    id: block.id,
+                    type: block.type || 'dialogue',
+                    original: block.original || '',
+                    translated: block.translated || '',
+                    box: block.box ? { ...block.box } : { x: 0, y: 0, w: 10, h: 10 },
+                    style: block.style ? { ...block.style } : {}
+                };
+                if (block.speaker !== undefined) cleanBlock.speaker = block.speaker;
+                if (block.target !== undefined) cleanBlock.target = block.target;
+                if (block.textWidth !== undefined) cleanBlock.textWidth = block.textWidth;
+                if (block.textHeight !== undefined) cleanBlock.textHeight = block.textHeight;
+                cleanBlock.maskCache = null;
+                cleanBlock.autoFitCache = null;
+                return cleanBlock;
+            });
+
+            // Clone dữ liệu trang nhưng bỏ qua các blob URL tạm thời sẽ bị hỏng khi reload
+            const pageToSave = {
+                id: page.id,
+                name: page.name || 'Page',
+                width: page.width || 800,
+                height: page.height || 1200,
+                apiWidth: page.apiWidth || page.width || 800,
+                apiHeight: page.apiHeight || page.height || 1200,
+                status: page.status || 'draft',
+                blocks: cleanBlocks,
+                file: (page.file instanceof Blob) ? page.file : null,
+                originalFile: (page.originalFile instanceof Blob) ? page.originalFile : null,
+                eraserLayerBlob: (page.eraserLayerBlob instanceof Blob) ? page.eraserLayerBlob : null,
+                thumbnailBlob: (page.thumbnailBlob instanceof Blob) ? page.thumbnailBlob : null
             };
-            if (block.textWidth !== undefined) cleanBlock.textWidth = block.textWidth;
-            if (block.textHeight !== undefined) cleanBlock.textHeight = block.textHeight;
-            cleanBlock.maskCache = null;
-            cleanBlock.autoFitCache = null;
-            return cleanBlock;
-        });
 
-        // Clone dữ liệu trang nhưng bỏ qua các blob URL tạm thời sẽ bị hỏng khi reload
-        const pageToSave = {
-            id: page.id,
-            name: page.name,
-            width: page.width,
-            height: page.height,
-            apiWidth: page.apiWidth,
-            apiHeight: page.apiHeight,
-            status: page.status,
-            blocks: cleanBlocks,
-            file: page.file,
-            originalFile: page.originalFile,
-            eraserLayerBlob: page.eraserLayerBlob,
-            thumbnailBlob: page.thumbnailBlob
-        };
-
-        const request = store.put(pageToSave);
-        request.onsuccess = () => resolve();
-        request.onerror = (e) => reject(e.target.error);
+            const request = store.put(pageToSave);
+            request.onsuccess = () => resolve();
+            request.onerror = (e) => {
+                console.error(`Lỗi DB store.put cho trang ${page.id}:`, e.target.error);
+                reject(e.target.error);
+            };
+        } catch (err) {
+            console.error(`Ngoại lệ savePageToDB cho trang ${page?.id}:`, err);
+            reject(err);
+        }
     });
 }
 
@@ -430,77 +423,119 @@ export function deletePageFromDB(pageId) {
 export function saveProjectMeta(pageIds, activePageIndex) {
     if (!dbInstance) return Promise.resolve();
     return new Promise((resolve, reject) => {
-        const transaction = dbInstance.transaction([STORE_META], 'readwrite');
-        const store = transaction.objectStore(STORE_META);
-        const request = store.put({
-            pageIds,
-            activePageIndex,
-            characterDossier: globalState.characterDossier || [],
-            lorebook: globalState.lorebook || []
-        }, 'project_meta');
-        request.onsuccess = () => resolve();
-        request.onerror = (e) => reject(e.target.error);
+        try {
+            const transaction = dbInstance.transaction([STORE_META], 'readwrite');
+            const store = transaction.objectStore(STORE_META);
+            const request = store.put({
+                pageIds: Array.isArray(pageIds) ? pageIds : [],
+                activePageIndex: typeof activePageIndex === 'number' ? activePageIndex : 0,
+                characterDossier: globalState.characterDossier || [],
+                lorebook: globalState.lorebook || []
+            }, 'project_meta');
+            request.onsuccess = () => resolve();
+            request.onerror = (e) => {
+                console.error("Lỗi lưu metadata dự án:", e.target.error);
+                reject(e.target.error);
+            };
+        } catch (err) {
+            console.error("Lỗi ngoại lệ khi lưu metadata dự án:", err);
+            reject(err);
+        }
     });
 }
 
-export function loadProjectFromDB() {
-    if (!dbInstance) return Promise.resolve(null);
-    return new Promise((resolve, reject) => {
-        const transaction = dbInstance.transaction([STORE_PAGES, STORE_META], 'readonly');
-        const metaStore = transaction.objectStore(STORE_META);
-        const pagesStore = transaction.objectStore(STORE_PAGES);
+export async function loadProjectFromDB() {
+    if (!dbInstance) return null;
 
-        let metaRequest = metaStore.get('project_meta');
-        metaRequest.onsuccess = (e) => {
-            const meta = e.target.result;
-            if (!meta || !meta.pageIds || meta.pageIds.length === 0) {
-                resolve(null);
-                return;
+    // Transaction 1: Đọc metadata
+    let meta = null;
+    try {
+        meta = await new Promise((resolve) => {
+            const tx = dbInstance.transaction([STORE_META], 'readonly');
+            const store = tx.objectStore(STORE_META);
+            const req = store.get('project_meta');
+            req.onsuccess = (e) => resolve(e.target.result || null);
+            req.onerror = () => resolve(null);
+        });
+    } catch (err) {
+        console.error('loadProjectFromDB: Lỗi đọc metadata:', err);
+    }
+
+    if (meta) {
+        if (meta.characterDossier) globalState.characterDossier = meta.characterDossier;
+        if (meta.lorebook) globalState.lorebook = meta.lorebook;
+    }
+
+    // Transaction 2: Đọc tất cả các trang đã lưu
+    let rawPages = [];
+    try {
+        rawPages = await new Promise((resolve) => {
+            const tx = dbInstance.transaction([STORE_PAGES], 'readonly');
+            const store = tx.objectStore(STORE_PAGES);
+            const req = store.getAll();
+            req.onsuccess = (e) => resolve(e.target.result || []);
+            req.onerror = () => resolve([]);
+        });
+    } catch (err) {
+        console.error('loadProjectFromDB: Lỗi đọc rawPages:', err);
+    }
+
+    if (!rawPages || rawPages.length === 0) {
+        return null;
+    }
+
+    const pagesMap = new Map(rawPages.map(p => [p.id, p]));
+    const pages = [];
+
+    // Lần lượt đọc theo thứ tự meta.pageIds nếu có
+    if (meta && Array.isArray(meta.pageIds) && meta.pageIds.length > 0) {
+        for (const id of meta.pageIds) {
+            const p = pagesMap.get(id);
+            if (p) {
+                pages.push(p);
+                pagesMap.delete(id);
             }
+        }
+    }
 
-            if (meta.characterDossier) globalState.characterDossier = meta.characterDossier;
-            if (meta.lorebook) globalState.lorebook = meta.lorebook;
+    // Nếu còn trang nào trong IndexedDB chưa có trong pageIds thì giữ lại nốt (tránh mất dữ liệu)
+    for (const p of pagesMap.values()) {
+        pages.push(p);
+    }
 
-            let pagesRequest = pagesStore.getAll();
-            pagesRequest.onsuccess = (ev) => {
-                const rawPages = ev.target.result;
-                const pagesMap = new Map(rawPages.map(p => [p.id, p]));
+    if (pages.length === 0) {
+        return null;
+    }
 
-                const pages = [];
-                meta.pageIds.forEach(id => {
-                    const p = pagesMap.get(id);
-                    if (p) {
-                        // Thiết lập null ban đầu để tiết kiệm RAM, sẽ kích hoạt động khi hiển thị
-                        p.src = null;
-                        p.apiSrc = null;
+    for (const p of pages) {
+        p.src = null;
+        p.apiSrc = null;
 
-                        // Tạo thumbnailSrc từ thumbnailBlob đã lưu trữ
-                        if (p.thumbnailBlob) {
-                            p.thumbnailSrc = URL.createObjectURL(p.thumbnailBlob);
-                        } else {
-                            // Tương thích ngược: sử dụng tạm ảnh file và chạy nền tạo thumbnail cho lần sau
-                            p.thumbnailSrc = URL.createObjectURL(p.file || p.originalFile);
-                            setTimeout(() => generateAndSaveThumbnailForPage(p), 100);
-                        }
+        if (p.thumbnailBlob && (p.thumbnailBlob instanceof Blob)) {
+            p.thumbnailSrc = getSafeMediaUrl(p.thumbnailBlob);
+        } else if (p.file || p.originalFile) {
+            const fileToUse = (p.file instanceof Blob) ? p.file : ((p.originalFile instanceof Blob) ? p.originalFile : null);
+            p.thumbnailSrc = getSafeMediaUrl(fileToUse);
+            if (fileToUse) {
+                setTimeout(() => generateAndSaveThumbnailForPage(p), 100);
+            }
+        } else {
+            p.thumbnailSrc = null;
+        }
 
-                        if (p.blocks) {
-                            p.blocks.forEach(block => {
-                                delete block.maskCache;
-                            });
-                        }
-                        pages.push(p);
-                    }
-                });
+        if (p.blocks) {
+            p.blocks.forEach(block => {
+                delete block.maskCache;
+                delete block.autoFitCache;
+            });
+        }
+    }
 
-                resolve({
-                    pages,
-                    activePageIndex: meta.activePageIndex
-                });
-            };
-            pagesRequest.onerror = (ev) => reject(ev.target.error);
-        };
-        metaRequest.onerror = (e) => reject(e.target.error);
-    });
+    const activePageIndex = meta && typeof meta.activePageIndex === 'number' && meta.activePageIndex >= 0 && meta.activePageIndex < pages.length
+        ? meta.activePageIndex
+        : 0;
+
+    return { pages, activePageIndex };
 }
 
 export function clearProjectDB() {
@@ -569,7 +604,11 @@ export function saveToeicWordsToDB(words) {
 export async function createThumbnail(file, maxDim = 120) {
     return new Promise((resolve) => {
         const img = new Image();
-        const url = URL.createObjectURL(file);
+        const url = getSafeMediaUrl(file);
+        if (!url) {
+            resolve(null);
+            return;
+        }
         img.onload = () => {
             URL.revokeObjectURL(url);
             const canvas = document.createElement('canvas');
@@ -602,34 +641,26 @@ export async function createThumbnail(file, maxDim = 120) {
 
 export async function activatePage(page) {
     if (!page) return;
+
     if (!page.src) {
-        if (page.originalFile) {
-            page.src = URL.createObjectURL(page.originalFile);
-        } else if (page.file) {
-            page.src = URL.createObjectURL(page.file);
-        } else if (page.id) {
+        page.src = getSafeMediaUrl(page.originalFile) || getSafeMediaUrl(page.file);
+
+        if (!page.src && page.id) {
             try {
                 const dbPage = await _loadPageBlobFromDB(page.id);
                 if (dbPage) {
-                    if (dbPage.originalFile) {
-                        page.originalFile = dbPage.originalFile;
-                        page.src = URL.createObjectURL(dbPage.originalFile);
-                    } else if (dbPage.file) {
-                        page.file = dbPage.file;
-                        page.src = URL.createObjectURL(dbPage.file);
-                    }
+                    if (dbPage.originalFile) page.originalFile = dbPage.originalFile;
+                    if (dbPage.file) page.file = dbPage.file;
+                    page.src = getSafeMediaUrl(page.originalFile) || getSafeMediaUrl(page.file);
                 }
             } catch (err) {
                 console.warn("activatePage DB load error:", err);
             }
         }
     }
+
     if (!page.apiSrc) {
-        if (page.file) {
-            page.apiSrc = URL.createObjectURL(page.file);
-        } else if (page.originalFile) {
-            page.apiSrc = URL.createObjectURL(page.originalFile);
-        }
+        page.apiSrc = getSafeMediaUrl(page.file) || getSafeMediaUrl(page.originalFile) || page.src;
     }
 }
 

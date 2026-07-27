@@ -1,7 +1,7 @@
 
 import { globalState, pushStateToHistory, savePageToDB } from '../../core/state.js';
-import { showToast } from '../../core/utils.js';
-import { selectBlock, requestOverlayRender } from '../canvas.js';
+import { showToast } from '../../core/utils/dom.js';
+import { selectBlock, requestOverlayRender } from './canvas-service.js';
 
 export function duplicateActiveBlock() {
     if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) return;
