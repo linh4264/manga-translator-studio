@@ -168,34 +168,18 @@ export function closeMobileMenus() {
     document.getElementById('right-panel')?.classList.remove('mobile-open');
 }
 
-export function toggleLeftSidebar() {
-    const leftPanel = document.getElementById('left-panel');
-    const toggleBtn = document.getElementById('left-sidebar-toggle-handle');
-    if (leftPanel) {
-        leftPanel.classList.toggle('hidden');
-        if (toggleBtn) {
-            const icon = toggleBtn.querySelector('i');
-            if (icon) {
-                icon.className = leftPanel.classList.contains('hidden')
-                    ? 'fa-solid fa-chevron-right text-[10px] group-hover:scale-110 transition-transform'
-                    : 'fa-solid fa-chevron-left text-[10px] group-hover:scale-110 transition-transform';
-            }
-        }
+function toggleSidebar(panelId, handleId, openIconClass, closeIconClass) {
+    const panel = document.getElementById(panelId);
+    const toggleBtn = document.getElementById(handleId);
+    if (!panel) return;
+
+    panel.classList.toggle('hidden');
+    const icon = toggleBtn?.querySelector('i');
+    if (icon) {
+        const isHidden = panel.classList.contains('hidden');
+        icon.className = `${isHidden ? openIconClass : closeIconClass} text-[10px] group-hover:scale-110 transition-transform`;
     }
 }
 
-export function toggleRightSidebar() {
-    const rightPanel = document.getElementById('right-panel');
-    const toggleBtn = document.getElementById('right-sidebar-toggle-handle');
-    if (rightPanel) {
-        rightPanel.classList.toggle('hidden');
-        if (toggleBtn) {
-            const icon = toggleBtn.querySelector('i');
-            if (icon) {
-                icon.className = rightPanel.classList.contains('hidden')
-                    ? 'fa-solid fa-chevron-left text-[10px] group-hover:scale-110 transition-transform'
-                    : 'fa-solid fa-chevron-right text-[10px] group-hover:scale-110 transition-transform';
-            }
-        }
-    }
-}
+export const toggleLeftSidebar = () => toggleSidebar('left-panel', 'left-sidebar-toggle-handle', 'fa-solid fa-chevron-right', 'fa-solid fa-chevron-left');
+export const toggleRightSidebar = () => toggleSidebar('right-panel', 'right-sidebar-toggle-handle', 'fa-solid fa-chevron-left', 'fa-solid fa-chevron-right');
