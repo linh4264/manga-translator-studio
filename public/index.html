@@ -10,7 +10,8 @@
         content="default-src 'self' data: blob: https:; img-src 'self' data: blob: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; connect-src 'self' data: blob: https: https://generativelanguage.googleapis.com https://www.googleapis.com https://accounts.google.com https://apis.google.com https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; frame-src 'self' data: blob: https://accounts.google.com; child-src 'self' data: blob: https://accounts.google.com; object-src 'none'; base-uri 'self';">
     <title>Manga Translator Studio - AI Translation & Typesetting Tool</title>
     <!-- Favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📖</text></svg>">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📖</text></svg>">
     <!-- Google Identity Services SDK for 1-Click Google Drive Auth -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Tailwind CSS -->
@@ -75,8 +76,10 @@
             <div class="p-4 border-b border-slate-800 space-y-4 overflow-y-auto max-h-[55vh] shrink-0 custom-scrollbar">
                 <div class="flex items-center justify-between gap-2">
                     <div class="min-w-0">
-                        <p data-i18n="image-source" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nguồn ảnh</p>
-                        <p data-i18n="image-source-sub" class="text-[10px] text-slate-500 truncate">Tải truyện và quản lý trang</p>
+                        <p data-i18n="image-source"
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nguồn ảnh</p>
+                        <p data-i18n="image-source-sub" class="text-[10px] text-slate-500 truncate">Tải truyện và quản
+                            lý trang</p>
                     </div>
                     <div class="flex items-center gap-1.5 shrink-0">
                         <button onclick="closeMobileMenus()"
@@ -109,8 +112,12 @@
                 <div class="flex items-center justify-between p-1.5 bg-slate-950 rounded-lg border border-slate-800">
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Hiển thị:</span>
                     <div class="flex items-center bg-slate-900 p-0.5 rounded-md border border-slate-800">
-                        <button id="btn-bilingual-off" data-action="setBilingualOff" onclick="setBilingualMode('off')" class="px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-bold transition-all shadow" title="Hiển thị duy nhất Tiếng Việt">Đơn ngữ</button>
-                        <button id="btn-bilingual-sub" data-action="setBilingualSub" onclick="setBilingualMode('sub')" class="px-2 py-0.5 rounded bg-transparent text-slate-400 text-[10px] font-semibold hover:text-white transition-all" title="Hiển thị song song Tiếng Việt + Tiếng Nhật/Anh gốc">🌐 Song ngữ</button>
+                        <button id="btn-bilingual-off" data-action="setBilingualOff" onclick="setBilingualMode('off')"
+                            class="px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-bold transition-all shadow"
+                            title="Hiển thị duy nhất Tiếng Việt">Đơn ngữ</button>
+                        <button id="btn-bilingual-sub" data-action="setBilingualSub" onclick="setBilingualMode('sub')"
+                            class="px-2 py-0.5 rounded bg-transparent text-slate-400 text-[10px] font-semibold hover:text-white transition-all"
+                            title="Hiển thị song song Tiếng Việt + Tiếng Nhật/Anh gốc">🌐 Song ngữ</button>
                     </div>
                 </div>
 
@@ -132,21 +139,26 @@
                 <div class="flex items-center justify-between p-2 bg-slate-950 rounded-lg border border-slate-800">
                     <div class="flex items-center gap-1.5 text-[10px] font-bold text-slate-300">
                         <i class="fa-solid fa-headphones text-indigo-400"></i> Audio Drama
-                        <button onclick="openAudioSettingsModal()" data-action="openAudioSettingsModal" class="text-xs text-indigo-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Cài đặt chọn giọng đọc Nam/Nữ & Tốc độ phát âm">
+                        <button onclick="openAudioSettingsModal()" data-action="openAudioSettingsModal"
+                            class="text-xs text-indigo-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors"
+                            title="Cài đặt chọn giọng đọc Nam/Nữ & Tốc độ phát âm">
                             <i class="fa-solid fa-sliders"></i>
                         </button>
                     </div>
                     <div class="flex items-center gap-1">
                         <button id="btn-audio-play" data-action="playPageAudioDrama" onclick="playPageAudioDrama()"
-                            class="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold flex items-center gap-1 transition-all shadow" title="Phát kịch truyền thanh Audio Drama cho toàn bộ trang">
+                            class="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold flex items-center gap-1 transition-all shadow"
+                            title="Phát kịch truyền thanh Audio Drama cho toàn bộ trang">
                             <i class="fa-solid fa-play"></i> Phát Audio
                         </button>
                         <button id="btn-audio-pause" data-action="pauseAudioDrama" onclick="pauseAudioDrama()"
-                            class="hidden px-2 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-bold flex items-center gap-1 transition-all shadow" title="Tạm dừng">
+                            class="hidden px-2 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-bold flex items-center gap-1 transition-all shadow"
+                            title="Tạm dừng">
                             <i class="fa-solid fa-pause"></i> Tạm dừng
                         </button>
                         <button id="btn-audio-stop" data-action="stopAudioDrama" onclick="stopAudioDrama()"
-                            class="hidden px-2 py-1 rounded bg-red-600/80 hover:bg-red-600 text-white text-[10px] font-bold flex items-center gap-1 transition-all shadow" title="Dừng phát">
+                            class="hidden px-2 py-1 rounded bg-red-600/80 hover:bg-red-600 text-white text-[10px] font-bold flex items-center gap-1 transition-all shadow"
+                            title="Dừng phát">
                             <i class="fa-solid fa-square"></i> Dừng
                         </button>
                     </div>
@@ -162,7 +174,8 @@
                     <i
                         class="fa-solid fa-images text-slate-500 group-hover:text-indigo-400 text-xl mb-1.5 transition-colors"></i>
                     <p data-i18n="upload-title" class="text-xs font-semibold text-slate-300">Tải ảnh Manga lên</p>
-                    <p data-i18n="upload-sub" class="text-[10px] text-slate-500 mt-0.5">Hỗ trợ chọn hoặc thả nhiều ảnh cùng lúc</p>
+                    <p data-i18n="upload-sub" class="text-[10px] text-slate-500 mt-0.5">Hỗ trợ chọn hoặc thả nhiều ảnh
+                        cùng lúc</p>
                 </div>
             </div>
 
@@ -170,7 +183,8 @@
             <div class="flex-1 flex flex-col min-h-0">
                 <div class="p-3 bg-slate-900/50 border-b border-slate-800 flex flex-col gap-2 shrink-0">
                     <div class="flex justify-between items-center">
-                        <span class="text-xs font-bold text-slate-400 tracking-wider uppercase"><span data-i18n="page-list-label">Danh sách trang</span> (<span
+                        <span class="text-xs font-bold text-slate-400 tracking-wider uppercase"><span
+                                data-i18n="page-list-label">Danh sách trang</span> (<span
                                 id="page-count-badge">0</span>)</span>
                         <div class="flex items-center gap-2">
                             <!-- Sort Button -->
@@ -188,7 +202,8 @@
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-1.5">
-                        <button id="btn-batch-translate" onclick="runBatchTranslation()" disabled data-i18n="translate-all-btn"
+                        <button id="btn-batch-translate" onclick="runBatchTranslation()" disabled
+                            data-i18n="translate-all-btn"
                             class="py-1.5 px-2 rounded bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white text-indigo-400 text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all">
                             <i class="fa-solid fa-microchip"></i> Dịch tất cả
                         </button>
@@ -201,24 +216,29 @@
                             title="Xuất chương truyện thành file PDF đọc trên Tablet/Kindle">
                             <i class="fa-solid fa-file-pdf"></i> Xuất PDF
                         </button>
-                        <button id="btn-preview-mode" onclick="openPreviewMode()" disabled data-i18n="reader-preview-btn"
+                        <button id="btn-preview-mode" onclick="openPreviewMode()" disabled
+                            data-i18n="reader-preview-btn"
                             class="py-1.5 px-2 rounded bg-violet-600/10 border border-violet-500/30 hover:bg-violet-600 hover:text-white text-violet-400 text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:pointer-events-none"
                             title="Xem trước toàn bộ chương truyện đã dịch">
                             <i class="fa-solid fa-book-open"></i> Xem trước
                         </button>
                     </div>
                     <div class="grid grid-cols-3 gap-1.5 mt-1.5">
-                        <button id="btn-export-project" onclick="exportProjectBackup()" disabled data-i18n="export-manga-btn"
+                        <button id="btn-export-project" onclick="exportProjectBackup()" disabled
+                            data-i18n="export-manga-btn"
                             class="py-1.5 px-1 rounded bg-sky-600/10 border border-sky-500/30 hover:bg-sky-600 hover:text-white text-sky-400 text-[10px] font-semibold flex items-center justify-center gap-1 transition-all disabled:opacity-40 disabled:pointer-events-none"
                             title="Sao lưu toàn bộ dự án thành file .manga">
                             <i class="fa-solid fa-floppy-disk"></i> Sao lưu
                         </button>
-                        <button id="btn-import-project" onclick="document.getElementById('import-project-input').click()" data-i18n="import-manga-btn"
+                        <button id="btn-import-project"
+                            onclick="document.getElementById('import-project-input').click()"
+                            data-i18n="import-manga-btn"
                             class="py-1.5 px-1 rounded bg-amber-600/10 border border-amber-500/30 hover:bg-amber-600 hover:text-white text-amber-400 text-[10px] font-semibold flex items-center justify-center gap-1 transition-all"
                             title="Khôi phục dự án từ file .manga / .json">
                             <i class="fa-solid fa-file-import"></i> Khôi phục
                         </button>
-                        <input type="file" id="import-project-input" accept=".manga,.json" class="hidden" onchange="importProjectBackup(this.files)">
+                        <input type="file" id="import-project-input" accept=".manga,.json" class="hidden"
+                            onchange="importProjectBackup(this.files)">
                         <button id="btn-clear-memory" onclick="clearMemoryCache()" data-i18n="clear-ram-btn"
                             class="py-1.5 px-1 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold flex items-center justify-center gap-1 transition-all"
                             title="Giải phóng bộ nhớ RAM đệm Canvas">
@@ -230,9 +250,11 @@
                 <!-- Page Filter Search Input -->
                 <div id="pages-search-container" class="px-3 pb-2 hidden">
                     <div class="relative">
-                        <input type="text" id="pages-search-input" oninput="filterPagesList(this.value)" placeholder="Tìm kiếm trang theo tên..."
+                        <input type="text" id="pages-search-input" oninput="filterPagesList(this.value)"
+                            placeholder="Tìm kiếm trang theo tên..."
                             class="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500/50 rounded px-2.5 py-1 text-[11px] text-slate-200 placeholder-slate-500 focus:outline-none pl-7 transition-all">
-                        <i class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-[10px]"></i>
+                        <i
+                            class="fa-solid fa-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-[10px]"></i>
                     </div>
                 </div>
 
@@ -253,34 +275,39 @@
 
 
             <!-- Eraser Brush Settings Panel -->
-            <div id="eraser-settings-panel" class="hidden bg-slate-900 border-b border-slate-800 px-6 py-2 flex items-center justify-between gap-4 shrink-0 transition-all">
+            <div id="eraser-settings-panel"
+                class="hidden bg-slate-900 border-b border-slate-800 px-6 py-2 flex items-center justify-between gap-4 shrink-0 transition-all">
                 <div class="flex items-center space-x-4">
                     <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
                         <i class="fa-solid fa-paintbrush text-indigo-400"></i> Chế độ cọ tẩy chữ
                     </span>
-                    
+
                     <!-- Brush Size Slider -->
                     <div class="flex items-center space-x-2">
-                         <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Cỡ cọ</span>
-                         <input type="range" id="eraser-brush-size" min="3" max="80" value="15"
-                             oninput="updateEraserBrushSize(this.value)"
-                             class="h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 w-24">
-                         <span id="lbl-eraser-brush-size" class="text-xs text-slate-400 font-mono w-8">15px</span>
+                        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Cỡ cọ</span>
+                        <input type="range" id="eraser-brush-size" min="3" max="80" value="15"
+                            oninput="updateEraserBrushSize(this.value)"
+                            class="h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 w-24">
+                        <span id="lbl-eraser-brush-size" class="text-xs text-slate-400 font-mono w-8">15px</span>
                     </div>
 
                     <!-- Brush Color Presets -->
                     <div class="flex items-center space-x-2">
-                         <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Màu tẩy</span>
-                         <div class="flex items-center space-x-1 flex items-center">
-                             <button onclick="setEraserColor('#ffffff')" class="w-5 h-5 rounded border border-slate-700 bg-white" title="Trắng (Bong bóng thoại)"></button>
-                             <button onclick="setEraserColor('#000000')" class="w-5 h-5 rounded border border-slate-700 bg-black" title="Đen"></button>
-                             <input type="color" id="eraser-color-custom" oninput="setEraserColor(this.value)"
-                                 class="w-6 h-5 p-0 bg-transparent border-0 cursor-pointer rounded overflow-hidden" title="Chọn màu tự do">
-                         </div>
+                        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Màu tẩy</span>
+                        <div class="flex items-center space-x-1 flex items-center">
+                            <button onclick="setEraserColor('#ffffff')"
+                                class="w-5 h-5 rounded border border-slate-700 bg-white"
+                                title="Trắng (Bong bóng thoại)"></button>
+                            <button onclick="setEraserColor('#000000')"
+                                class="w-5 h-5 rounded border border-slate-700 bg-black" title="Đen"></button>
+                            <input type="color" id="eraser-color-custom" oninput="setEraserColor(this.value)"
+                                class="w-6 h-5 p-0 bg-transparent border-0 cursor-pointer rounded overflow-hidden"
+                                title="Chọn màu tự do">
+                        </div>
                     </div>
 
                 </div>
-                
+
                 <div class="flex items-center space-x-2">
                     <button onclick="clearEraserDrawing()"
                         class="px-2.5 py-1 rounded bg-red-950/40 border border-red-500/30 hover:bg-red-950 text-red-300 text-xs font-semibold flex items-center gap-1 transition-all">
@@ -309,12 +336,15 @@
                 </div>
 
                 <!-- Active Image View Container (Split Mode View Side-by-Side wrapper) -->
-                <div id="workspace-split-wrapper" class="hidden flex items-stretch justify-center gap-6 h-full max-h-full">
+                <div id="workspace-split-wrapper"
+                    class="hidden flex items-stretch justify-center gap-6 h-full max-h-full">
                     <!-- Left: Original Copy for Split Mode -->
                     <div class="flex flex-col items-center h-full min-h-0">
-                        <span class="text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest shrink-0">Ảnh Gốc</span>
+                        <span class="text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest shrink-0">Ảnh
+                            Gốc</span>
                         <img id="split-original-img" src=""
-                            class="block border border-slate-800 rounded shadow-2xl h-[calc(100%-1.5rem)] w-auto max-w-none select-none" alt="Original Original">
+                            class="block border border-slate-800 rounded shadow-2xl h-[calc(100%-1.5rem)] w-auto max-w-none select-none"
+                            alt="Original Original">
                     </div>
                     <!-- Right: Editor (Active canvas) -->
                     <div class="flex flex-col items-center h-full min-h-0">
@@ -326,31 +356,44 @@
 
                 <!-- Main Work Canvas Container (For Overlay or standard view) -->
                 <div id="manga-canvas-container" class="manga-container hidden m-auto">
-                    <img id="manga-bg-image" src="" alt="Manga Page" class="block h-full w-auto max-w-none select-none rounded"
-                        pointer-events="none">
-                    <canvas id="eraser-canvas" class="absolute inset-0 w-full h-full rounded pointer-events-none z-10"></canvas>
+                    <img id="manga-bg-image" src="" alt="Manga Page"
+                        class="block h-full w-auto max-w-none select-none rounded" pointer-events="none">
+                    <canvas id="eraser-canvas"
+                        class="absolute inset-0 w-full h-full rounded pointer-events-none z-10"></canvas>
 
 
-                    <div id="manga-overlays-container" class="absolute inset-0 select-none overflow-hidden rounded z-20">
+                    <div id="manga-overlays-container"
+                        class="absolute inset-0 select-none overflow-hidden rounded z-20">
                         <!-- Dynamic translation overlays go here -->
                     </div>
 
                     <!-- Canvas Floating Quick Toolbar for Active Block -->
-                    <div id="canvas-floating-toolbar" class="hidden absolute z-40 bg-slate-900/95 border border-indigo-500/40 rounded-lg shadow-2xl p-1 flex items-center gap-0.5 backdrop-blur-md transform -translate-x-1/2">
-                        <button onclick="autoMatchActiveBlockStyle()" class="w-7 h-7 hover:bg-indigo-900/50 rounded text-slate-300 hover:text-white flex items-center justify-center" title="Tự động trích xuất & khớp phông chữ/màu sắc từ ảnh gốc">
+                    <div id="canvas-floating-toolbar"
+                        class="hidden absolute z-40 bg-slate-900/95 border border-indigo-500/40 rounded-lg shadow-2xl p-1 flex items-center gap-0.5 backdrop-blur-md transform -translate-x-1/2">
+                        <button onclick="autoMatchActiveBlockStyle()"
+                            class="w-7 h-7 hover:bg-indigo-900/50 rounded text-slate-300 hover:text-white flex items-center justify-center"
+                            title="Tự động trích xuất & khớp phông chữ/màu sắc từ ảnh gốc">
                             <i class="fa-solid fa-wand-magic-sparkles text-emerald-400 text-xs"></i>
                         </button>
-                        <button data-action="copyBlockStyle" class="w-7 h-7 hover:bg-slate-800 rounded text-slate-300 hover:text-white flex items-center justify-center" title="Sao chép định dạng (Ctrl+Shift+C)">
+                        <button data-action="copyBlockStyle"
+                            class="w-7 h-7 hover:bg-slate-800 rounded text-slate-300 hover:text-white flex items-center justify-center"
+                            title="Sao chép định dạng (Ctrl+Shift+C)">
                             <i class="fa-solid fa-paintbrush text-indigo-400 text-xs"></i>
                         </button>
-                        <button data-action="pasteBlockStyle" class="w-7 h-7 hover:bg-slate-800 rounded text-slate-300 hover:text-white flex items-center justify-center" title="Dán định dạng đã sao chép (Ctrl+Shift+V)">
+                        <button data-action="pasteBlockStyle"
+                            class="w-7 h-7 hover:bg-slate-800 rounded text-slate-300 hover:text-white flex items-center justify-center"
+                            title="Dán định dạng đã sao chép (Ctrl+Shift+V)">
                             <i class="fa-solid fa-paste text-amber-400 text-xs"></i>
                         </button>
-                        <button onclick="duplicateActiveBlock()" class="w-7 h-7 hover:bg-slate-800 rounded text-slate-300 hover:text-white flex items-center justify-center" title="Nhân đôi ô thoại (Ctrl+D)">
+                        <button onclick="duplicateActiveBlock()"
+                            class="w-7 h-7 hover:bg-slate-800 rounded text-slate-300 hover:text-white flex items-center justify-center"
+                            title="Nhân đôi ô thoại (Ctrl+D)">
                             <i class="fa-solid fa-copy text-sky-400 text-xs"></i>
                         </button>
                         <div class="h-3 w-px bg-slate-800 my-auto mx-1"></div>
-                        <button onclick="deleteActiveBlock()" class="w-7 h-7 hover:bg-red-950 text-red-400 hover:text-red-300 rounded flex items-center justify-center" title="Xóa ô thoại (Delete)">
+                        <button onclick="deleteActiveBlock()"
+                            class="w-7 h-7 hover:bg-red-950 text-red-400 hover:text-red-300 rounded flex items-center justify-center"
+                            title="Xóa ô thoại (Delete)">
                             <i class="fa-solid fa-trash-can text-xs"></i>
                         </button>
                     </div>
@@ -363,7 +406,7 @@
                 title="Ẩn/Hiện thanh bên trái">
                 <i class="fa-solid fa-chevron-left text-[10px] group-hover:scale-110 transition-transform"></i>
             </button>
-            
+
             <!-- Right Sidebar Toggle Handle (Desktop & Mobile) -->
             <button id="right-sidebar-toggle-handle" onclick="toggleRightSidebar()"
                 class="absolute right-0 top-1/2 -translate-y-1/2 z-50 w-5 h-16 bg-slate-900/80 hover:bg-indigo-600/90 border-y border-l border-slate-800 hover:border-indigo-500 rounded-l-lg flex items-center justify-center text-slate-400 hover:text-white transition-all shadow-md group pointer-events-auto"
@@ -404,29 +447,40 @@
             </div>
 
             <!-- Collapsible Tools Menu Panel -->
-            <div id="sidebar-tools-menu" class="hidden bg-slate-950 border-b border-slate-800 p-4 space-y-4 shrink-0 transition-all">
+            <div id="sidebar-tools-menu"
+                class="hidden bg-slate-950 border-b border-slate-800 p-4 space-y-4 shrink-0 transition-all">
 
 
                 <!-- UNDO / REDO / COPY / PASTE -->
                 <div class="grid grid-cols-2 gap-2">
                     <div class="space-y-1">
                         <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lịch sử</label>
-                        <div class="flex items-center space-x-1 bg-slate-900 rounded-lg p-1 border border-slate-800 justify-around">
-                            <button id="btn-undo" onclick="executeUndo()" disabled class="w-8 h-8 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none" title="Hoàn tác (Ctrl+Z)">
+                        <div
+                            class="flex items-center space-x-1 bg-slate-900 rounded-lg p-1 border border-slate-800 justify-around">
+                            <button id="btn-undo" onclick="executeUndo()" disabled
+                                class="w-8 h-8 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                title="Hoàn tác (Ctrl+Z)">
                                 <i class="fa-solid fa-rotate-left text-xs"></i>
                             </button>
-                            <button id="btn-redo" onclick="executeRedo()" disabled class="w-8 h-8 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none" title="Làm lại (Ctrl+Y)">
+                            <button id="btn-redo" onclick="executeRedo()" disabled
+                                class="w-8 h-8 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                title="Làm lại (Ctrl+Y)">
                                 <i class="fa-solid fa-rotate-right text-xs"></i>
                             </button>
                         </div>
                     </div>
                     <div class="space-y-1">
                         <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Định dạng ô</label>
-                        <div class="flex items-center space-x-1 bg-slate-900 rounded-lg p-1 border border-slate-800 justify-around">
-                            <button id="btn-copy-style" onclick="copyBlockStyle()" disabled class="w-8 h-8 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none" title="Sao chép định dạng ô đang chọn (Ctrl+Shift+C)">
+                        <div
+                            class="flex items-center space-x-1 bg-slate-900 rounded-lg p-1 border border-slate-800 justify-around">
+                            <button id="btn-copy-style" onclick="copyBlockStyle()" disabled
+                                class="w-8 h-8 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                title="Sao chép định dạng ô đang chọn (Ctrl+Shift+C)">
                                 <i class="fa-solid fa-paintbrush text-xs"></i>
                             </button>
-                            <button id="btn-paste-style" onclick="pasteBlockStyle()" disabled class="w-8 h-8 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none" title="Dán định dạng đã sao chép (Ctrl+Shift+V)">
+                            <button id="btn-paste-style" onclick="pasteBlockStyle()" disabled
+                                class="w-8 h-8 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                                title="Dán định dạng đã sao chép (Ctrl+Shift+V)">
                                 <i class="fa-solid fa-fill-drip text-xs"></i>
                             </button>
                         </div>
@@ -437,13 +491,16 @@
                 <div class="space-y-1.5">
                     <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Chế độ xem</label>
                     <div class="grid grid-cols-3 gap-1 bg-slate-900 rounded-lg p-1 border border-slate-800">
-                        <button id="view-mode-overlay" onclick="setViewMode('overlay')" class="py-1.5 text-[10px] font-semibold rounded bg-indigo-600 text-white transition-all flex flex-col items-center justify-center gap-1">
+                        <button id="view-mode-overlay" onclick="setViewMode('overlay')"
+                            class="py-1.5 text-[10px] font-semibold rounded bg-indigo-600 text-white transition-all flex flex-col items-center justify-center gap-1">
                             <i class="fa-solid fa-wand-magic text-xs"></i> Overlay
                         </button>
-                        <button id="view-mode-split" onclick="setViewMode('split')" class="py-1.5 text-[10px] font-semibold rounded text-slate-400 hover:text-slate-200 transition-all flex flex-col items-center justify-center gap-1">
+                        <button id="view-mode-split" onclick="setViewMode('split')"
+                            class="py-1.5 text-[10px] font-semibold rounded text-slate-400 hover:text-slate-200 transition-all flex flex-col items-center justify-center gap-1">
                             <i class="fa-solid fa-columns text-xs"></i> Split
                         </button>
-                        <button id="view-mode-original" onclick="setViewMode('original')" class="py-1.5 text-[10px] font-semibold rounded text-slate-400 hover:text-slate-200 transition-all flex flex-col items-center justify-center gap-1">
+                        <button id="view-mode-original" onclick="setViewMode('original')"
+                            class="py-1.5 text-[10px] font-semibold rounded text-slate-400 hover:text-slate-200 transition-all flex flex-col items-center justify-center gap-1">
                             <i class="fa-solid fa-image text-xs"></i> Ảnh gốc
                         </button>
                     </div>
@@ -453,16 +510,21 @@
                 <div class="space-y-1.5">
                     <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Thao tác</label>
                     <div class="grid grid-cols-2 gap-2">
-                        <button onclick="addNewBlock()" class="py-2 px-3 rounded-lg bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-600 text-indigo-400 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-1.5">
+                        <button onclick="addNewBlock()"
+                            class="py-2 px-3 rounded-lg bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-600 text-indigo-400 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-1.5">
                             <i class="fa-solid fa-square-plus"></i> Thêm ô
                         </button>
-                        <button id="btn-active-translate" onclick="translateActivePage()" disabled class="py-2 px-3 rounded-lg bg-emerald-600/10 border border-emerald-500/30 hover:bg-emerald-600 text-emerald-400 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none">
+                        <button id="btn-active-translate" onclick="translateActivePage()" disabled
+                            class="py-2 px-3 rounded-lg bg-emerald-600/10 border border-emerald-500/30 hover:bg-emerald-600 text-emerald-400 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none">
                             <i class="fa-solid fa-wand-magic-sparkles"></i> Dịch trang
                         </button>
-                        <button id="btn-export-page" onclick="exportActivePage()" disabled class="py-2 px-3 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 transition-all text-xs font-bold shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none">
+                        <button id="btn-export-page" onclick="exportActivePage()" disabled
+                            class="py-2 px-3 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 transition-all text-xs font-bold shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none">
                             <i class="fa-solid fa-download"></i> Xuất ảnh
                         </button>
-                        <button id="btn-eraser-mode" data-action="toggleEraserMode" disabled class="py-2 px-3 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-all text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none" title="Bật/Tắt chế độ cọ vẽ để tẩy chữ thô trực tiếp trên ảnh">
+                        <button id="btn-eraser-mode" data-action="toggleEraserMode" disabled
+                            class="py-2 px-3 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-all text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none"
+                            title="Bật/Tắt chế độ cọ vẽ để tẩy chữ thô trực tiếp trên ảnh">
                             <i class="fa-solid fa-eraser"></i> Cọ tẩy
                         </button>
                     </div>
@@ -475,13 +537,15 @@
                 <div id="no-block-selected-state"
                     class="text-center py-12 px-4 text-slate-500 border border-dashed border-slate-800 rounded-xl bg-slate-950/40">
                     <i class="fa-solid fa-arrow-pointer text-2xl mb-2 text-slate-700 block"></i>
-                    <p data-i18n="no-block-selected" class="text-xs">Nhấp chọn một khung thoại trên ảnh để bắt đầu biên dịch.</p>
+                    <p data-i18n="no-block-selected" class="text-xs">Nhấp chọn một khung thoại trên ảnh để bắt đầu biên
+                        dịch.</p>
                 </div>
 
                 <div id="block-editor-container" class="hidden space-y-4">
                     <!-- Block Type Selector -->
                     <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phân loại khung thoại</label>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phân loại khung
+                            thoại</label>
                         <div class="grid grid-cols-2 gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800">
                             <button id="btn-block-type-dialogue" onclick="setActiveBlockType('dialogue')"
                                 class="py-1.5 px-2 text-[11px] font-semibold rounded bg-indigo-600 text-white flex items-center justify-center gap-1.5 transition-all">
@@ -496,18 +560,22 @@
 
                     <!-- Voice Gender Assignment for Block -->
                     <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Giọng đọc Audio Drama</label>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Giọng đọc Audio
+                            Drama</label>
                         <div class="grid grid-cols-3 gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
                             <button id="btn-block-gender-male" onclick="setActiveBlockGender('male')"
-                                class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center gap-1 transition-all" title="Gán giọng Nam cho ô thoại này">
+                                class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center gap-1 transition-all"
+                                title="Gán giọng Nam cho ô thoại này">
                                 👨 Nam
                             </button>
                             <button id="btn-block-gender-female" onclick="setActiveBlockGender('female')"
-                                class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center gap-1 transition-all" title="Gán giọng Nữ cho ô thoại này">
+                                class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center gap-1 transition-all"
+                                title="Gán giọng Nữ cho ô thoại này">
                                 👩 Nữ
                             </button>
                             <button id="btn-block-gender-neutral" onclick="setActiveBlockGender('neutral')"
-                                class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center gap-1 transition-all" title="Gán giọng Dẫn chuyện">
+                                class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center gap-1 transition-all"
+                                title="Gán giọng Dẫn chuyện">
                                 🎙️ Dẫn chuyện
                             </button>
                         </div>
@@ -517,8 +585,11 @@
                     <!-- Text Area Original JP -->
                     <div class="space-y-1.5">
                         <div class="flex items-center justify-between">
-                            <label data-i18n="original-text-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Chữ gốc (OCR)</label>
-                            <span class="text-[9px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-mono">Original</span>
+                            <label data-i18n="original-text-label"
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Chữ gốc
+                                (OCR)</label>
+                            <span
+                                class="text-[9px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-mono">Original</span>
                         </div>
                         <textarea id="edit-original-text" rows="3" data-i18n-placeholder="original-text-placeholder"
                             class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors"
@@ -528,10 +599,14 @@
                     <!-- Text Area Translated VN -->
                     <div class="space-y-1.5">
                         <div class="flex items-center justify-between">
-                            <label data-i18n="translated-text-label" class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Bản dịch tiếng Việt</label>
-                            <span class="text-[9px] bg-indigo-950 text-indigo-300 px-1.5 py-0.5 rounded font-mono">Translated</span>
+                            <label data-i18n="translated-text-label"
+                                class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Bản dịch tiếng
+                                Việt</label>
+                            <span
+                                class="text-[9px] bg-indigo-950 text-indigo-300 px-1.5 py-0.5 rounded font-mono">Translated</span>
                         </div>
-                        <textarea id="edit-translated-text" oninput="syncActiveBlockTranslation(this.value)" rows="4" data-i18n-placeholder="translated-text-placeholder"
+                        <textarea id="edit-translated-text" oninput="syncActiveBlockTranslation(this.value)" rows="4"
+                            data-i18n-placeholder="translated-text-placeholder"
                             class="w-full bg-slate-950 border border-indigo-500/20 focus:border-indigo-500 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none transition-colors"
                             placeholder="Nhập bản dịch tiếng Việt..."></textarea>
 
@@ -543,12 +618,14 @@
                             </button>
                             <!-- Auto Clean Text AI Button -->
                             <button onclick="autoCleanActiveBlock()"
-                                class="text-[10px] bg-emerald-600/20 hover:bg-emerald-600 border border-emerald-500/30 text-emerald-300 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1.5" title="Tự động xóa vết chữ gốc bằng thuật toán AI Edge Fill">
+                                class="text-[10px] bg-emerald-600/20 hover:bg-emerald-600 border border-emerald-500/30 text-emerald-300 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1.5"
+                                title="Tự động xóa vết chữ gốc bằng thuật toán AI Edge Fill">
                                 <i class="fa-solid fa-wand-magic-sparkles"></i> 🧹 Xóa chữ AI
                             </button>
                             <!-- Speak Active Block Button -->
                             <button data-action="speakActiveBlock" onclick="speakActiveBlock()"
-                                class="text-[10px] bg-sky-600/20 hover:bg-sky-600 border border-sky-500/30 text-sky-300 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1.5" title="Phát âm câu thoại này bằng AI Speech">
+                                class="text-[10px] bg-sky-600/20 hover:bg-sky-600 border border-sky-500/30 text-sky-300 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1.5"
+                                title="Phát âm câu thoại này bằng AI Speech">
                                 <i class="fa-solid fa-volume-high"></i> 🔊 Nghe câu này
                             </button>
                             <!-- TOEIC analysis quick button -->
@@ -560,17 +637,21 @@
                     </div>
 
                     <!-- SFX Angle & Arc Slider Controls -->
-                    <div id="sfx-controls-container" class="space-y-3 p-3 bg-slate-950 rounded-lg border border-slate-800">
-                        <h4 class="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center justify-between">
+                    <div id="sfx-controls-container"
+                        class="space-y-3 p-3 bg-slate-950 rounded-lg border border-slate-800">
+                        <h4
+                            class="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center justify-between">
                             <span><i class="fa-solid fa-arrows-spin"></i> Góc xoay & Uốn cong (SFX)</span>
-                            <button onclick="resetSfxAngleControls()" class="text-[9px] text-slate-400 hover:text-white font-normal">Đặt lại</button>
+                            <button onclick="resetSfxAngleControls()"
+                                class="text-[9px] text-slate-400 hover:text-white font-normal">Đặt lại</button>
                         </h4>
                         <div class="space-y-1">
                             <div class="flex justify-between text-[10px] text-slate-400">
                                 <span>Góc nghiêng (Rotation):</span>
                                 <span id="lbl-sfx-rotate" class="font-mono text-slate-200">0°</span>
                             </div>
-                            <input type="range" id="slider-sfx-rotate" min="-180" max="180" value="0" oninput="updateSfxRotate(this.value)"
+                            <input type="range" id="slider-sfx-rotate" min="-180" max="180" value="0"
+                                oninput="updateSfxRotate(this.value)"
                                 class="w-full accent-amber-500 bg-slate-900 h-1.5 rounded cursor-pointer">
                         </div>
                         <div class="space-y-1">
@@ -578,7 +659,8 @@
                                 <span>Độ uốn cong (Arc Text):</span>
                                 <span id="lbl-sfx-arc" class="font-mono text-slate-200">0°</span>
                             </div>
-                            <input type="range" id="slider-sfx-arc" min="0" max="360" value="0" oninput="updateSfxArc(this.value)"
+                            <input type="range" id="slider-sfx-arc" min="0" max="360" value="0"
+                                oninput="updateSfxArc(this.value)"
                                 class="w-full accent-indigo-500 bg-slate-900 h-1.5 rounded cursor-pointer">
                         </div>
                     </div>
@@ -590,7 +672,7 @@
                             <i class="fa-solid fa-trash-can"></i> Xóa ô dịch này
                         </button>
                         <div class="text-[10px] text-slate-500 font-mono">
-                             ID: <span id="lbl-block-id" class="text-slate-400">none</span>
+                            ID: <span id="lbl-block-id" class="text-slate-400">none</span>
                         </div>
                     </div>
                 </div>
@@ -602,14 +684,17 @@
 
                 <!-- Typesetting Style Presets -->
                 <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mẫu chữ nhanh (Presets)</label>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mẫu chữ nhanh
+                        (Presets)</label>
                     <div class="grid grid-cols-2 gap-1.5">
                         <button data-action="applyStylePreset" data-preset="dialogue"
                             class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded text-left flex items-center gap-1.5 transition-colors group"
                             title="Kiểu bong bóng thoại chuẩn, font Manga đậm">
                             <span class="text-sm">💬</span>
                             <div>
-                                <p class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">Thoại thường</p>
+                                <p
+                                    class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">
+                                    Thoại thường</p>
                                 <p class="text-[8px] text-slate-500">Manga / Patrick Hand</p>
                             </div>
                         </button>
@@ -618,7 +703,9 @@
                             title="Kiểu hét lớn hoặc SFX, chữ trắng có viền đen dày nổi bật">
                             <span class="text-sm">💥</span>
                             <div>
-                                <p class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">Hét lớn / SFX</p>
+                                <p
+                                    class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">
+                                    Hét lớn / SFX</p>
                                 <p class="text-[8px] text-slate-500">Viền đen dày / Bangers</p>
                             </div>
                         </button>
@@ -627,7 +714,9 @@
                             title="Kiểu nói thầm, font chữ viết tay nhỏ, mờ nhẹ">
                             <span class="text-sm">💭</span>
                             <div>
-                                <p class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">Thầm thì</p>
+                                <p
+                                    class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">
+                                    Thầm thì</p>
                                 <p class="text-[8px] text-slate-500">Nghiêng / Xám nhạt</p>
                             </div>
                         </button>
@@ -636,7 +725,9 @@
                             title="Hộp dẫn truyện, chữ nhật thẳng đứng, căn lề trái">
                             <span class="text-sm">📜</span>
                             <div>
-                                <p class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">Dẫn truyện</p>
+                                <p
+                                    class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">
+                                    Dẫn truyện</p>
                                 <p class="text-[8px] text-slate-500">Hộp chữ / Nền che 95%</p>
                             </div>
                         </button>
@@ -645,7 +736,8 @@
 
                 <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-3">
                     <div class="flex items-center justify-between">
-                        <span data-i18n="auto-fit-label" class="text-xs font-semibold text-slate-300">Cỡ chữ Tự Động (Auto-Fit)</span>
+                        <span data-i18n="auto-fit-label" class="text-xs font-semibold text-slate-300">Cỡ chữ Tự Động
+                            (Auto-Fit)</span>
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="style-auto-fit" onchange="toggleAutoFit(this.checked)"
                                 class="sr-only peer">
@@ -654,7 +746,8 @@
                             </div>
                         </label>
                     </div>
-                    <p class="text-[10px] text-slate-500 leading-normal">Tự động điều chỉnh cỡ chữ lớn nhất có thể để điền đầy bong bóng thoại khi bạn kéo dãn.</p>
+                    <p class="text-[10px] text-slate-500 leading-normal">Tự động điều chỉnh cỡ chữ lớn nhất có thể để
+                        điền đầy bong bóng thoại khi bạn kéo dãn.</p>
                 </div>
 
                 <!-- Font Typography Customizers -->
@@ -662,13 +755,16 @@
                     <!-- Font Family Select -->
                     <div class="space-y-1">
                         <div class="flex justify-between items-center">
-                            <label data-i18n="font-family-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phông chữ (Font Family)</label>
+                            <label data-i18n="font-family-label"
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phông chữ (Font
+                                Family)</label>
                             <button onclick="document.getElementById('font-uploader').click()"
                                 class="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 transition-colors"
                                 title="Tải phông chữ tùy chỉnh từ máy tính (.ttf, .otf, .woff2)">
                                 <i class="fa-solid fa-file-invoice"></i> + Thêm Font
                             </button>
-                            <input type="file" id="font-uploader" accept=".ttf,.otf,.woff,.woff2" class="hidden" multiple onchange="uploadCustomFonts(this.files)">
+                            <input type="file" id="font-uploader" accept=".ttf,.otf,.woff,.woff2" class="hidden"
+                                multiple onchange="uploadCustomFonts(this.files)">
                         </div>
                         <select id="style-font" onchange="syncActiveBlockStyle('fontFamily', this.value)"
                             class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
@@ -688,7 +784,8 @@
                     <!-- Manual Font size -->
                     <div id="style-font-size-container" class="space-y-1">
                         <div class="flex justify-between items-center">
-                            <label data-i18n="font-size-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cỡ chữ (Font
+                            <label data-i18n="font-size-label"
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cỡ chữ (Font
                                 Size)</label>
                             <span id="lbl-font-size" class="text-xs text-indigo-400 font-mono">13px</span>
                         </div>
@@ -703,7 +800,8 @@
                     <!-- Text Align & Layout Orientations -->
                     <div class="grid grid-cols-2 gap-2">
                         <div class="space-y-1">
-                            <label data-i18n="align-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Căn lề
+                            <label data-i18n="align-label"
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Căn lề
                                 (Align)</label>
                             <select id="style-align" onchange="syncActiveBlockStyle('align', this.value)"
                                 class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none">
@@ -713,12 +811,15 @@
                             </select>
                         </div>
                         <div class="space-y-1">
-                            <label data-i18n="writing-direction-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hướng
+                            <label data-i18n="writing-direction-label"
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hướng
                                 viết</label>
                             <div class="grid grid-cols-2 gap-1">
-                                <button id="btn-style-horiz" data-i18n="horizontal-btn" onclick="syncActiveBlockStyle('vertical', false)"
+                                <button id="btn-style-horiz" data-i18n="horizontal-btn"
+                                    onclick="syncActiveBlockStyle('vertical', false)"
                                     class="py-1 text-xs rounded bg-indigo-600 text-white font-semibold">Ngang</button>
-                                <button id="btn-style-vert" data-i18n="vertical-btn" onclick="syncActiveBlockStyle('vertical', true)"
+                                <button id="btn-style-vert" data-i18n="vertical-btn"
+                                    onclick="syncActiveBlockStyle('vertical', true)"
                                     class="py-1 text-xs rounded bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 font-semibold">Dọc</button>
                             </div>
                         </div>
@@ -736,7 +837,8 @@
                     <!-- Text Color and Background Color Colorpickers -->
                     <div class="grid grid-cols-2 gap-2 border-t border-slate-800 pt-3">
                         <div class="space-y-1">
-                            <label data-i18n="text-color-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Màu chữ</label>
+                            <label data-i18n="text-color-label"
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Màu chữ</label>
                             <div class="flex items-center space-x-1.5">
                                 <input type="color" id="style-text-color" value="#000000"
                                     oninput="syncTextColorHex(this.value)"
@@ -747,7 +849,9 @@
                             </div>
                         </div>
                         <div class="space-y-1">
-                            <label data-i18n="bg-color-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Màu nền che</label>
+                            <label data-i18n="bg-color-label"
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Màu nền
+                                che</label>
                             <div class="flex items-center space-x-1.5">
                                 <input type="color" id="style-bg-color" value="#ffffff"
                                     oninput="syncBgColorHex(this.value)"
@@ -762,7 +866,9 @@
                     <!-- Background Opacity -->
                     <div class="space-y-1 border-t border-slate-800 pt-3">
                         <div class="flex justify-between items-center">
-                            <label data-i18n="bg-opacity-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Độ mờ của nền che (Opacity)</label>
+                            <label data-i18n="bg-opacity-label"
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Độ mờ của nền che
+                                (Opacity)</label>
                             <span id="lbl-bg-opacity" class="text-xs text-slate-400 font-mono">100%</span>
                         </div>
                         <input type="range" id="style-bg-opacity" min="0" max="100" value="100"
@@ -773,7 +879,9 @@
                     <!-- Text Stroke (Viền chữ) -->
                     <div class="space-y-2 border-t border-slate-800 pt-3">
                         <div class="flex justify-between items-center">
-                            <label data-i18n="stroke-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Viền chữ (Stroke)</label>
+                            <label data-i18n="stroke-label"
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Viền chữ
+                                (Stroke)</label>
                             <span id="lbl-stroke-width" class="text-xs text-indigo-400 font-mono">0px</span>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
@@ -794,7 +902,9 @@
                     <!-- Drop Shadow (Bóng đổ chữ) -->
                     <div class="space-y-2 border-t border-slate-800 pt-3">
                         <div class="flex justify-between items-center">
-                            <label data-i18n="shadow-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bóng đổ (Drop Shadow)</label>
+                            <label data-i18n="shadow-label"
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bóng đổ (Drop
+                                Shadow)</label>
                             <span id="lbl-shadow-blur" class="text-xs text-indigo-400 font-mono">0px</span>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
@@ -819,7 +929,9 @@
 
                     <!-- Masking Configurations for Perfect Speech Bubble Erasure -->
                     <div class="space-y-3 border-t border-slate-800 pt-3">
-                        <label data-i18n="masking-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Mặt nạ xóa chữ cũ (Masking)</label>
+                        <label data-i18n="masking-label"
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Mặt nạ xóa chữ
+                            cũ (Masking)</label>
                         <div class="grid grid-cols-2 gap-2">
                             <div class="space-y-1">
                                 <span data-i18n="mask-shape-label" class="text-[10px] text-slate-400">Dáng mặt nạ</span>
@@ -854,7 +966,9 @@
                     <!-- Element Internal Padding -->
                     <div class="space-y-1 border-t border-slate-800 pt-3">
                         <div class="flex justify-between items-center">
-                            <label data-i18n="padding-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Khoảng đệm chữ (Padding)</label>
+                            <label data-i18n="padding-label"
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Khoảng đệm chữ
+                                (Padding)</label>
                             <span id="lbl-padding" class="text-xs text-slate-400 font-mono">4px</span>
                         </div>
                         <input type="range" id="style-padding" min="0" max="24" value="4"
@@ -865,17 +979,23 @@
                     <!-- Element Rotation (Xoay block thoại) -->
                     <div class="space-y-1 border-t border-slate-800 pt-3">
                         <div class="flex justify-between items-center">
-                            <label data-i18n="rotation-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Xoay ô dịch (Rotation)</label>
+                            <label data-i18n="rotation-label"
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Xoay ô dịch
+                                (Rotation)</label>
                             <span id="lbl-rotate" class="text-xs text-indigo-400 font-mono">0°</span>
                         </div>
                         <input type="range" id="style-rotate" min="-180" max="180" value="0"
                             oninput="syncActiveBlockStyle('rotate', parseInt(this.value))"
                             class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
                         <div class="grid grid-cols-4 gap-1 mt-1">
-                            <button onclick="syncActiveBlockStyle('rotate', 0)" class="py-0.5 text-[10px] rounded bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 font-semibold">0°</button>
-                            <button onclick="syncActiveBlockStyle('rotate', 90)" class="py-0.5 text-[10px] rounded bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 font-semibold">90°</button>
-                            <button onclick="syncActiveBlockStyle('rotate', -90)" class="py-0.5 text-[10px] rounded bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 font-semibold">-90°</button>
-                            <button onclick="syncActiveBlockStyle('rotate', 180)" class="py-0.5 text-[10px] rounded bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 font-semibold">180°</button>
+                            <button onclick="syncActiveBlockStyle('rotate', 0)"
+                                class="py-0.5 text-[10px] rounded bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 font-semibold">0°</button>
+                            <button onclick="syncActiveBlockStyle('rotate', 90)"
+                                class="py-0.5 text-[10px] rounded bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 font-semibold">90°</button>
+                            <button onclick="syncActiveBlockStyle('rotate', -90)"
+                                class="py-0.5 text-[10px] rounded bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 font-semibold">-90°</button>
+                            <button onclick="syncActiveBlockStyle('rotate', 180)"
+                                class="py-0.5 text-[10px] rounded bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 font-semibold">180°</button>
                         </div>
                     </div>
 
@@ -885,7 +1005,7 @@
 
             <!-- Tab: TOEIC STUDY COMPANION -->
             <div id="panel-tab-toeic" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
-                
+
                 <!-- Không có block nào được chọn -->
                 <div id="toeic-no-block-selected-state"
                     class="text-center py-12 px-4 text-slate-500 border border-dashed border-slate-800 rounded-xl bg-slate-950/40">
@@ -895,14 +1015,14 @@
 
                 <!-- Giao diện khi chọn block thoại -->
                 <div id="toeic-analysis-container" class="hidden space-y-4">
-                    
+
                     <!-- Lựa chọn chế độ học (Mode Toggles) -->
                     <div class="flex rounded-lg bg-slate-950 p-1 border border-slate-800">
-                        <button onclick="setToeicMode('learn')" id="btn-toeic-mode-learn" 
+                        <button onclick="setToeicMode('learn')" id="btn-toeic-mode-learn"
                             class="flex-1 py-1.5 text-[11px] font-bold rounded bg-indigo-600 text-white transition-all">
                             Phân tích & Học
                         </button>
-                        <button onclick="setToeicMode('recall')" id="btn-toeic-mode-recall" 
+                        <button onclick="setToeicMode('recall')" id="btn-toeic-mode-recall"
                             class="flex-1 py-1.5 text-[11px] font-bold rounded text-slate-400 hover:text-slate-200 transition-all">
                             Luyện dịch ngược
                         </button>
@@ -920,7 +1040,9 @@
                         <div id="toeic-loading" class="hidden text-center py-8 space-y-3">
                             <div class="relative w-8 h-8 mx-auto">
                                 <div class="absolute inset-0 rounded-full border-2 border-indigo-500/20"></div>
-                                <div class="absolute inset-0 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"></div>
+                                <div
+                                    class="absolute inset-0 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin">
+                                </div>
                             </div>
                             <p class="text-xs text-slate-400">Gemini đang phân tích câu thoại...</p>
                         </div>
@@ -928,24 +1050,32 @@
                         <!-- Nội dung Kết quả Phân tích -->
                         <div id="toeic-results" class="hidden space-y-4">
                             <!-- Câu gốc và phát âm -->
-                            <div class="bg-slate-950 border border-slate-800 rounded-lg p-3 flex items-center justify-between gap-3">
-                                <div class="text-xs font-bold text-indigo-300 italic" id="toeic-original-sentence"></div>
-                                <button id="btn-speak-original" class="w-8 h-8 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-indigo-400 flex items-center justify-center transition-all shrink-0" title="Nghe phát âm câu thoại">
+                            <div
+                                class="bg-slate-950 border border-slate-800 rounded-lg p-3 flex items-center justify-between gap-3">
+                                <div class="text-xs font-bold text-indigo-300 italic" id="toeic-original-sentence">
+                                </div>
+                                <button id="btn-speak-original"
+                                    class="w-8 h-8 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-indigo-400 flex items-center justify-center transition-all shrink-0"
+                                    title="Nghe phát âm câu thoại">
                                     <i class="fa-solid fa-volume-high text-xs"></i>
                                 </button>
                             </div>
 
                             <!-- Cấu trúc ngữ pháp -->
                             <div class="space-y-1.5">
-                                <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <h4
+                                    class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                                     <i class="fa-solid fa-circle-info text-indigo-400"></i> Ngữ pháp & Cấu trúc
                                 </h4>
-                                <div id="toeic-grammar-content" class="bg-slate-950 border border-slate-800 rounded-lg p-3 text-[11px] text-slate-300 leading-relaxed whitespace-pre-wrap"></div>
+                                <div id="toeic-grammar-content"
+                                    class="bg-slate-950 border border-slate-800 rounded-lg p-3 text-[11px] text-slate-300 leading-relaxed whitespace-pre-wrap">
+                                </div>
                             </div>
 
                             <!-- Từ vựng phân tích -->
                             <div class="space-y-2">
-                                <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <h4
+                                    class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                                     <i class="fa-solid fa-list-check text-indigo-400"></i> Từ vựng TOEIC tìm thấy
                                 </h4>
                                 <div id="toeic-vocab-list" class="space-y-2 max-h-56 overflow-y-auto pr-1"></div>
@@ -953,23 +1083,35 @@
 
                             <!-- Câu hỏi Part 5 -->
                             <div id="toeic-question-section" class="space-y-2 border-t border-slate-800 pt-3">
-                                <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <h4
+                                    class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                                     <i class="fa-solid fa-circle-question text-amber-400"></i> Luyện tập câu hỏi TOEIC
                                 </h4>
                                 <!-- Bộ chọn câu hỏi (Q1, Q2, Q3) -->
-                                <div class="flex gap-1 rounded bg-slate-950 p-0.5 border border-slate-800" id="toeic-question-tabs">
-                                    <button onclick="selectToeicQuestion(0)" id="btn-question-tab-0" class="flex-1 py-1 text-[9px] font-bold rounded bg-indigo-600 text-white transition-all text-center">Ngữ pháp</button>
-                                    <button onclick="selectToeicQuestion(1)" id="btn-question-tab-1" class="flex-1 py-1 text-[9px] font-bold rounded text-slate-400 hover:text-slate-200 transition-all text-center">Từ vựng</button>
-                                    <button onclick="selectToeicQuestion(2)" id="btn-question-tab-2" class="flex-1 py-1 text-[9px] font-bold rounded text-slate-400 hover:text-slate-200 transition-all text-center">Đọc hiểu</button>
+                                <div class="flex gap-1 rounded bg-slate-950 p-0.5 border border-slate-800"
+                                    id="toeic-question-tabs">
+                                    <button onclick="selectToeicQuestion(0)" id="btn-question-tab-0"
+                                        class="flex-1 py-1 text-[9px] font-bold rounded bg-indigo-600 text-white transition-all text-center">Ngữ
+                                        pháp</button>
+                                    <button onclick="selectToeicQuestion(1)" id="btn-question-tab-1"
+                                        class="flex-1 py-1 text-[9px] font-bold rounded text-slate-400 hover:text-slate-200 transition-all text-center">Từ
+                                        vựng</button>
+                                    <button onclick="selectToeicQuestion(2)" id="btn-question-tab-2"
+                                        class="flex-1 py-1 text-[9px] font-bold rounded text-slate-400 hover:text-slate-200 transition-all text-center">Đọc
+                                        hiểu</button>
                                 </div>
                                 <div class="bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-2.5">
                                     <div class="flex justify-between items-center gap-2">
-                                        <span id="toeic-question-type" class="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[9px] font-bold uppercase tracking-wider">Part 5</span>
-                                        <button id="btn-speak-question" class="text-slate-500 hover:text-indigo-400 shrink-0" title="Nghe câu hỏi">
+                                        <span id="toeic-question-type"
+                                            class="px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[9px] font-bold uppercase tracking-wider">Part
+                                            5</span>
+                                        <button id="btn-speak-question"
+                                            class="text-slate-500 hover:text-indigo-400 shrink-0" title="Nghe câu hỏi">
                                             <i class="fa-solid fa-volume-high text-xs"></i>
                                         </button>
                                     </div>
-                                    <p id="toeic-question-text" class="text-xs font-semibold text-slate-200 leading-relaxed"></p>
+                                    <p id="toeic-question-text"
+                                        class="text-xs font-semibold text-slate-200 leading-relaxed"></p>
                                     <div id="toeic-question-options" class="space-y-1.5 text-xs"></div>
                                     <div id="toeic-question-feedback" class="hidden rounded-lg p-2.5 text-xs"></div>
                                 </div>
@@ -980,19 +1122,22 @@
                     <!-- Chế độ 2: Luyện dịch ngược (Active Recall) -->
                     <div id="toeic-recall-container" class="hidden space-y-4">
                         <div class="space-y-2">
-                            <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <h4
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                                 <i class="fa-solid fa-language text-indigo-400"></i> Bản dịch tiếng Việt (Gợi ý)
                             </h4>
-                            <div id="toeic-recall-vietnamese" class="bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 italic leading-relaxed break-words">
+                            <div id="toeic-recall-vietnamese"
+                                class="bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-200 italic leading-relaxed break-words">
                                 <!-- Tự động nạp bản dịch tiếng Việt của block -->
                             </div>
                         </div>
-                        
+
                         <div class="space-y-1.5">
-                            <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <h4
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                                 <i class="fa-solid fa-keyboard text-indigo-400"></i> Nhập câu gốc tiếng Anh của bạn
                             </h4>
-                            <textarea id="toeic-recall-input" rows="3" 
+                            <textarea id="toeic-recall-input" rows="3"
                                 class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors"
                                 placeholder="Gõ lại câu tiếng Anh theo trí nhớ của bạn..."></textarea>
                         </div>
@@ -1009,24 +1154,31 @@
                         </div>
 
                         <!-- Kết quả so sánh -->
-                        <div id="toeic-recall-result" class="hidden space-y-3 p-3 bg-slate-950 border border-slate-800 rounded-lg">
-                            <div id="toeic-recall-status-alert" class="text-xs font-bold flex items-center gap-1.5"></div>
-                            
+                        <div id="toeic-recall-result"
+                            class="hidden space-y-3 p-3 bg-slate-950 border border-slate-800 rounded-lg">
+                            <div id="toeic-recall-status-alert" class="text-xs font-bold flex items-center gap-1.5">
+                            </div>
+
                             <div class="space-y-2 text-xs">
                                 <div>
-                                    <span class="text-slate-400 block text-[9px] uppercase font-bold tracking-wider">Đáp án của bạn:</span>
+                                    <span class="text-slate-400 block text-[9px] uppercase font-bold tracking-wider">Đáp
+                                        án của bạn:</span>
                                     <span id="toeic-recall-user-phrase" class="text-slate-200 break-words"></span>
                                 </div>
                                 <div>
-                                    <span class="text-slate-400 block text-[9px] uppercase font-bold tracking-wider">Đáp án đúng:</span>
+                                    <span class="text-slate-400 block text-[9px] uppercase font-bold tracking-wider">Đáp
+                                        án đúng:</span>
                                     <div class="flex items-center justify-between gap-2 mt-0.5">
-                                        <span id="toeic-recall-correct-phrase" class="text-emerald-400 font-semibold break-words flex-1"></span>
-                                        <button onclick="speakCorrectRecallSentence()" class="text-slate-400 hover:text-indigo-400 shrink-0" title="Nghe phát âm">
+                                        <span id="toeic-recall-correct-phrase"
+                                            class="text-emerald-400 font-semibold break-words flex-1"></span>
+                                        <button onclick="speakCorrectRecallSentence()"
+                                            class="text-slate-400 hover:text-indigo-400 shrink-0" title="Nghe phát âm">
                                             <i class="fa-solid fa-volume-high text-xs"></i>
                                         </button>
                                     </div>
                                 </div>
-                                <div id="toeic-recall-comparison-diff" class="pt-2 border-t border-slate-800 text-[11px] text-slate-400 leading-relaxed whitespace-pre-wrap">
+                                <div id="toeic-recall-comparison-diff"
+                                    class="pt-2 border-t border-slate-800 text-[11px] text-slate-400 leading-relaxed whitespace-pre-wrap">
                                     <!-- So sánh chi tiết -->
                                 </div>
                             </div>
@@ -1037,8 +1189,10 @@
                 <!-- Sổ tay từ vựng & Hệ thống SRS (Luôn hiển thị cuối tab) -->
                 <div class="border-t border-slate-800 pt-4 space-y-3">
                     <div class="flex items-center justify-between">
-                        <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                            <i class="fa-solid fa-bookmark text-indigo-400"></i> Sổ tay từ vựng (<span id="toeic-saved-count">0</span>)
+                        <h4
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-bookmark text-indigo-400"></i> Sổ tay từ vựng (<span
+                                id="toeic-saved-count">0</span>)
                         </h4>
                         <div class="flex items-center gap-1">
                             <button id="btn-toeic-export-anki" onclick="exportToeicWordsToAnki()" disabled
@@ -1054,10 +1208,13 @@
                         <span class="flex items-center gap-1.5">
                             <i class="fa-solid fa-brain text-amber-300 animate-pulse"></i> Ôn tập SRS (Flashcard)
                         </span>
-                        <span id="srs-due-badge" class="px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-extrabold">0 từ đến hạn</span>
+                        <span id="srs-due-badge"
+                            class="px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-extrabold">0 từ
+                            đến hạn</span>
                     </button>
 
-                    <div id="toeic-notebook-empty" class="text-center py-6 text-slate-600 border border-dashed border-slate-800 rounded-xl bg-slate-950/20">
+                    <div id="toeic-notebook-empty"
+                        class="text-center py-6 text-slate-600 border border-dashed border-slate-800 rounded-xl bg-slate-950/20">
                         <p class="text-xs">Chưa lưu từ vựng nào.</p>
                     </div>
                     <div id="toeic-notebook-list" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
@@ -1074,37 +1231,48 @@
         onclick="closeSrsReviewModal()">
         <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col space-y-4 p-6"
             onclick="event.stopPropagation()">
-            
+
             <!-- Modal Header -->
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div class="flex items-center gap-2">
-                    <div class="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-xs">
+                    <div
+                        class="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-xs">
                         <i class="fa-solid fa-brain"></i>
                     </div>
                     <div>
-                        <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider">Ôn Tập Lặp Lại Ngắt Quãng (SRS)</h3>
+                        <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider">Ôn Tập Lặp Lại Ngắt Quãng
+                            (SRS)</h3>
                         <p class="text-[10px] text-slate-400">Thuật toán SuperMemo SM-2 giúp nhớ lâu hơn</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <span id="srs-progress-counter" class="text-xs font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">1 / 5</span>
-                    <button onclick="closeSrsReviewModal()" class="text-slate-500 hover:text-slate-200 transition-colors text-sm">
+                    <span id="srs-progress-counter"
+                        class="text-xs font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">1
+                        / 5</span>
+                    <button onclick="closeSrsReviewModal()"
+                        class="text-slate-500 hover:text-slate-200 transition-colors text-sm">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
                 </div>
             </div>
 
             <!-- Flashcard 3D Wrapper -->
-            <div id="srs-card-container" class="srs-card-perspective min-h-[220px] cursor-pointer" onclick="flipSrsCard()">
-                <div id="srs-card-inner" class="srs-card-inner bg-slate-950 border border-slate-800 rounded-xl p-5 flex flex-col items-center justify-center text-center space-y-3 relative shadow-inner">
-                    
+            <div id="srs-card-container" class="srs-card-perspective min-h-[220px] cursor-pointer"
+                onclick="flipSrsCard()">
+                <div id="srs-card-inner"
+                    class="srs-card-inner bg-slate-950 border border-slate-800 rounded-xl p-5 flex flex-col items-center justify-center text-center space-y-3 relative shadow-inner">
+
                     <!-- FRONT SIDE OF CARD -->
                     <div id="srs-card-front" class="space-y-2.5 w-full">
-                        <span id="srs-card-pos" class="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-wider">vocabulary</span>
+                        <span id="srs-card-pos"
+                            class="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-wider">vocabulary</span>
                         <h2 id="srs-card-word" class="text-2xl font-extrabold text-white tracking-wide">word</h2>
                         <div class="flex items-center justify-center gap-2">
-                            <span id="srs-card-phonetic" class="text-xs text-slate-400 font-mono italic">/phonetic/</span>
-                            <button id="btn-srs-speak" onclick="event.stopPropagation(); speakSrsCurrentWord()" class="w-6 h-6 rounded-full bg-slate-900 hover:bg-indigo-600 hover:text-white border border-slate-800 text-slate-400 flex items-center justify-center transition-all text-xs" title="Nghe phát âm">
+                            <span id="srs-card-phonetic"
+                                class="text-xs text-slate-400 font-mono italic">/phonetic/</span>
+                            <button id="btn-srs-speak" onclick="event.stopPropagation(); speakSrsCurrentWord()"
+                                class="w-6 h-6 rounded-full bg-slate-900 hover:bg-indigo-600 hover:text-white border border-slate-800 text-slate-400 flex items-center justify-center transition-all text-xs"
+                                title="Nghe phát âm">
                                 <i class="fa-solid fa-volume-high text-[10px]"></i>
                             </button>
                         </div>
@@ -1116,11 +1284,15 @@
                     <!-- BACK SIDE OF CARD -->
                     <div id="srs-card-back" class="hidden space-y-3 w-full">
                         <div class="space-y-1">
-                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Nghĩa Tiếng Việt</span>
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Nghĩa
+                                Tiếng Việt</span>
                             <h3 id="srs-card-meaning" class="text-base font-bold text-emerald-400">nghĩa</h3>
                         </div>
-                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-300 italic text-left space-y-1">
-                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block not-italic">Ví dụ TOEIC:</span>
+                        <div
+                            class="bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-300 italic text-left space-y-1">
+                            <span
+                                class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block not-italic">Ví
+                                dụ TOEIC:</span>
                             <p id="srs-card-example" class="leading-relaxed">"example sentence"</p>
                         </div>
                     </div>
@@ -1130,17 +1302,24 @@
 
             <!-- SRS Rating Action Buttons (Shown after flipping) -->
             <div id="srs-rating-actions" class="hidden grid grid-cols-3 gap-2 pt-2 border-t border-slate-800">
-                <button onclick="submitSrsReview(1)" class="py-2 px-1 rounded-xl bg-red-950/40 border border-red-500/30 hover:bg-red-900/60 text-red-300 text-xs font-bold flex flex-col items-center gap-0.5 transition-all">
-                    <span class="flex items-center gap-1"><i class="fa-solid fa-rotate-left text-red-400"></i> Quên</span>
+                <button onclick="submitSrsReview(1)"
+                    class="py-2 px-1 rounded-xl bg-red-950/40 border border-red-500/30 hover:bg-red-900/60 text-red-300 text-xs font-bold flex flex-col items-center gap-0.5 transition-all">
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-rotate-left text-red-400"></i>
+                        Quên</span>
                     <span class="text-[9px] font-normal text-red-400/80">Ôn lại 1 ngày</span>
                 </button>
-                <button onclick="submitSrsReview(3)" class="py-2 px-1 rounded-xl bg-amber-950/40 border border-amber-500/30 hover:bg-amber-900/60 text-amber-300 text-xs font-bold flex flex-col items-center gap-0.5 transition-all">
+                <button onclick="submitSrsReview(3)"
+                    class="py-2 px-1 rounded-xl bg-amber-950/40 border border-amber-500/30 hover:bg-amber-900/60 text-amber-300 text-xs font-bold flex flex-col items-center gap-0.5 transition-all">
                     <span class="flex items-center gap-1"><i class="fa-solid fa-check text-amber-400"></i> Đã nhớ</span>
-                    <span id="srs-lbl-good-interval" class="text-[9px] font-normal text-amber-400/80">Ôn lại 3 ngày</span>
+                    <span id="srs-lbl-good-interval" class="text-[9px] font-normal text-amber-400/80">Ôn lại 3
+                        ngày</span>
                 </button>
-                <button onclick="submitSrsReview(5)" class="py-2 px-1 rounded-xl bg-emerald-950/40 border border-emerald-500/30 hover:bg-emerald-900/60 text-emerald-300 text-xs font-bold flex flex-col items-center gap-0.5 transition-all">
-                    <span class="flex items-center gap-1"><i class="fa-solid fa-star text-emerald-400"></i> Rất dễ</span>
-                    <span id="srs-lbl-easy-interval" class="text-[9px] font-normal text-emerald-400/80">Ôn lại 7 ngày</span>
+                <button onclick="submitSrsReview(5)"
+                    class="py-2 px-1 rounded-xl bg-emerald-950/40 border border-emerald-500/30 hover:bg-emerald-900/60 text-emerald-300 text-xs font-bold flex flex-col items-center gap-0.5 transition-all">
+                    <span class="flex items-center gap-1"><i class="fa-solid fa-star text-emerald-400"></i> Rất
+                        dễ</span>
+                    <span id="srs-lbl-easy-interval" class="text-[9px] font-normal text-emerald-400/80">Ôn lại 7
+                        ngày</span>
                 </button>
             </div>
 
@@ -1176,41 +1355,51 @@
 
     <!-- NON-BLOCKING BACKGROUND TASK MANAGER (Góc dưới bên trái, tránh đè Toast bên phải) -->
     <!-- Chapter-Wide Find & Replace Modal -->
-    <div id="find-replace-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4" onclick="closeFindReplaceModal()">
-        <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden p-5 space-y-4" onclick="event.stopPropagation()">
+    <div id="find-replace-modal"
+        class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+        onclick="closeFindReplaceModal()">
+        <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-xl shadow-2xl overflow-hidden p-5 space-y-4"
+            onclick="event.stopPropagation()">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                    <div
+                        class="w-8 h-8 rounded bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
                         <i class="fa-solid fa-magnifying-glass-arrow-right"></i>
                     </div>
                     <div>
                         <h3 class="text-sm font-bold text-slate-100">Tìm & Thay thế toàn bộ chương</h3>
-                        <p class="text-[10px] text-slate-500">Thay đổi hàng loạt từ ngữ/xưng hô trên tất cả các trang</p>
+                        <p class="text-[10px] text-slate-500">Thay đổi hàng loạt từ ngữ/xưng hô trên tất cả các trang
+                        </p>
                     </div>
                 </div>
-                <button onclick="closeFindReplaceModal()" class="w-8 h-8 rounded hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white">
+                <button onclick="closeFindReplaceModal()"
+                    class="w-8 h-8 rounded hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
             <div class="space-y-3 text-xs">
                 <div class="space-y-1">
                     <label class="block font-semibold text-slate-400">Từ / cụm từ cần tìm:</label>
-                    <input type="text" id="find-input" placeholder="Ví dụ: tôi" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+                    <input type="text" id="find-input" placeholder="Ví dụ: tôi"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-indigo-500">
                 </div>
                 <div class="space-y-1">
                     <label class="block font-semibold text-slate-400">Thay bằng:</label>
-                    <input type="text" id="replace-input" placeholder="Ví dụ: tớ" class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-indigo-500">
+                    <input type="text" id="replace-input" placeholder="Ví dụ: tớ"
+                        class="w-full bg-slate-950 border border-slate-800 rounded p-2 text-slate-200 focus:outline-none focus:border-indigo-500">
                 </div>
                 <div class="flex items-center justify-between pt-1">
                     <label class="flex items-center gap-2 cursor-pointer text-slate-400">
-                        <input type="checkbox" id="match-case-chk" class="rounded border-slate-800 text-indigo-600 focus:ring-0">
+                        <input type="checkbox" id="match-case-chk"
+                            class="rounded border-slate-800 text-indigo-600 focus:ring-0">
                         <span>Phân biệt chữ HOA / thường</span>
                     </label>
                     <span id="find-replace-result-badge" class="text-[10px] text-indigo-400 font-semibold"></span>
                 </div>
             </div>
             <div class="flex gap-2 pt-2 border-t border-slate-800">
-                <button onclick="executeFindReplaceAll()" class="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-1.5 transition-all">
+                <button onclick="executeFindReplaceAll()"
+                    class="flex-1 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-1.5 transition-all">
                     <i class="fa-solid fa-rotate"></i> Thay thế tất cả các trang
                 </button>
             </div>
@@ -1229,8 +1418,10 @@
                         <i class="fa-solid fa-gear"></i>
                     </div>
                     <div>
-                        <h3 data-i18n="settings-modal-title" class="text-sm font-bold text-slate-100">Cài đặt dịch thuật</h3>
-                        <p data-i18n="settings-modal-sub" class="text-[10px] text-slate-500">API key, model và quy tắc giữ tên</p>
+                        <h3 data-i18n="settings-modal-title" class="text-sm font-bold text-slate-100">Cài đặt dịch thuật
+                        </h3>
+                        <p data-i18n="settings-modal-sub" class="text-[10px] text-slate-500">API key, model và quy tắc
+                            giữ tên</p>
                     </div>
                 </div>
                 <button data-action="closeSettingsModal" onclick="closeSettingsModal()"
@@ -1242,7 +1433,9 @@
                 <!-- UI Language Selector (i18n) -->
                 <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
                     <div class="space-y-1">
-                        <label data-i18n="ui-lang-label" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ngôn ngữ giao diện (UI Language)</label>
+                        <label data-i18n="ui-lang-label"
+                            class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ngôn ngữ giao
+                            diện (UI Language)</label>
                         <select id="ui-lang-select" onchange="changeUILanguage(this.value)"
                             class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
                             <option value="vi">🇻🇳 Tiếng Việt (Vietnamese)</option>
@@ -1262,9 +1455,11 @@
 
                     <!-- AI Provider Selector -->
                     <div class="space-y-1">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                        <label
+                            class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                             <span data-i18n="ai-provider-label">Nhà cung cấp AI (Provider)</span>
-                            <span class="text-[9px] text-indigo-400 font-normal"><i class="fa-solid fa-microchip"></i> Đa mô hình</span>
+                            <span class="text-[9px] text-indigo-400 font-normal"><i class="fa-solid fa-microchip"></i>
+                                Đa mô hình</span>
                         </label>
                         <select id="ai-provider-select" onchange="updateAiProvider(this.value)"
                             class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
@@ -1277,17 +1472,22 @@
 
                     <!-- API Endpoint Base URL (for Custom / Local LLM) -->
                     <div id="api-endpoint-container" class="hidden space-y-1">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">API Endpoint Base URL</label>
+                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">API Endpoint
+                            Base URL</label>
                         <input type="text" id="api-endpoint-input" onchange="updateApiEndpoint(this.value)"
                             placeholder="http://localhost:11434/v1"
                             class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
-                        <p class="text-[9px] text-slate-500 leading-relaxed">Ví dụ: Ollama: http://localhost:11434/v1 | LM Studio: http://localhost:1234/v1</p>
+                        <p class="text-[9px] text-slate-500 leading-relaxed">Ví dụ: Ollama: http://localhost:11434/v1 |
+                            LM Studio: http://localhost:1234/v1</p>
                     </div>
 
                     <div class="space-y-1">
-                        <label id="api-key-label" data-i18n="api-key-label" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gemini API Key</label>
+                        <label id="api-key-label" data-i18n="api-key-label"
+                            class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gemini API
+                            Key</label>
                         <div class="relative">
-                            <input type="password" id="api-key-input" data-i18n-placeholder="api-key-placeholder" placeholder="Tự động sử dụng key của hệ thống..."
+                            <input type="password" id="api-key-input" data-i18n-placeholder="api-key-placeholder"
+                                placeholder="Tự động sử dụng key của hệ thống..."
                                 class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors pr-8">
                             <button id="api-key-eye" onclick="toggleApiKeyVisibility()"
                                 class="absolute right-2.5 top-2 text-slate-500 hover:text-slate-300">
@@ -1299,7 +1499,9 @@
                     <!-- Dynamic Model Selector with Smart Locking & New Generation Models -->
                     <div class="space-y-1">
                         <div class="flex justify-between items-center">
-                            <label data-i18n="ai-model-label" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mô hình AI (Model)</label>
+                            <label data-i18n="ai-model-label"
+                                class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mô hình AI
+                                (Model)</label>
                             <span id="model-lock-badge"
                                 class="text-[9px] text-indigo-400 font-bold bg-indigo-500/10 px-1.5 py-0.5 rounded flex items-center gap-1">
                                 <i class="fa-solid fa-lock"></i> Hệ thống
@@ -1309,7 +1511,8 @@
                             class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
                             <option value="gemini-3.5-flash">Gemini 3.5 Flash (Mới nhất)</option>
                             <option value="gemini-3-flash-preview">Gemini 3 Flash Preview (mạnh, preview)</option>
-                            <option value="gemini-3.1-flash-lite" selected>Gemini 3.1 Flash-Lite (Khuyến nghị, nhanh/tiết kiệm)</option>
+                            <option value="gemini-3.1-flash-lite" selected>Gemini 3.1 Flash-Lite (Khuyến nghị,
+                                nhanh/tiết kiệm)</option>
                             <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview (chuyên sâu)</option>
                             <option value="gemini-2.5-flash">Gemini 2.5 Flash (ổn định)</option>
                             <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (rẻ/nhanh)</option>
@@ -1327,17 +1530,20 @@
                 <!-- Translation Settings -->
                 <div id="translation-settings-section"
                     class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-3">
-                    <h3 data-i18n="trans-config-title" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <h3 data-i18n="trans-config-title"
+                        class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                         <i class="fa-solid fa-sliders text-indigo-400"></i> Cấu hình dịch thuật
                     </h3>
 
                     <!-- Default Fonts for AI Translation (Per Block Type) -->
                     <div class="space-y-2 border-b border-slate-800/70 pb-3">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <label
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                             <i class="fa-solid fa-font text-indigo-400"></i> Font mặc định cho AI dịch
                         </label>
-                        <p class="text-[9px] text-slate-500 leading-relaxed -mt-1">Chọn phông chữ cho từng loại khung thoại khi AI tự động khớp font.</p>
-                        
+                        <p class="text-[9px] text-slate-500 leading-relaxed -mt-1">Chọn phông chữ cho từng loại khung
+                            thoại khi AI tự động khớp font.</p>
+
                         <div class="space-y-1.5">
                             <div class="flex items-center gap-2">
                                 <span class="text-[10px] text-slate-300 w-28 shrink-0">💬 Lời thoại:</span>
@@ -1392,7 +1598,9 @@
 
                     <!-- Source Language Selector -->
                     <div class="space-y-1">
-                        <label data-i18n="source-lang-label" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ngôn ngữ nguồn (Source Lang)</label>
+                        <label data-i18n="source-lang-label"
+                            class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ngôn ngữ nguồn
+                            (Source Lang)</label>
                         <select id="source-lang-select" onchange="updateSourceLanguage(this.value)"
                             class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
                             <option value="ja" selected>🇯🇵 Tiếng Nhật (Manga)</option>
@@ -1405,7 +1613,9 @@
 
                     <!-- Target Language Selector -->
                     <div class="space-y-1">
-                        <label data-i18n="target-lang-label" class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ngôn ngữ đích (Target Lang)</label>
+                        <label data-i18n="target-lang-label"
+                            class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ngôn ngữ đích
+                            (Target Lang)</label>
                         <select id="target-lang-select" onchange="updateTargetLanguage(this.value)"
                             class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
                             <option value="vi" selected>🇻🇳 Tiếng Việt (Vietnamese)</option>
@@ -1428,29 +1638,37 @@
                         <input type="checkbox" id="preserve-names-chk" onchange="togglePreserveNames(this.checked)"
                             checked class="mt-0.5 rounded border-slate-800 text-indigo-600 focus:ring-0">
                         <div class="text-[11px]">
-                            <span data-i18n="preserve-names-label" class="font-semibold text-slate-200">Không dịch tên nhân vật</span>
-                            <p data-i18n="preserve-names-sub" class="text-[10px] text-slate-500 mt-0.5">Giữ nguyên Romaji/English (vd: Luffy, Naruto, Sakura).</p>
+                            <span data-i18n="preserve-names-label" class="font-semibold text-slate-200">Không dịch tên
+                                nhân vật</span>
+                            <p data-i18n="preserve-names-sub" class="text-[10px] text-slate-500 mt-0.5">Giữ nguyên
+                                Romaji/English (vd: Luffy, Naruto, Sakura).</p>
                         </div>
                     </label>
 
                     <div id="glossary-container" class="space-y-1">
-                        <label data-i18n="glossary-label" class="block text-[10px] font-semibold text-slate-400">Tên cần giữ nguyên (cách nhau bằng dấu phẩy):</label>
-                        <input type="text" id="glossary-input" oninput="updateGlossary(this.value)" data-i18n-placeholder="glossary-placeholder"
-                            placeholder="Ví dụ: Luffy, Zoro, Nami, Sakura"
+                        <label data-i18n="glossary-label" class="block text-[10px] font-semibold text-slate-400">Tên cần
+                            giữ nguyên (cách nhau bằng dấu phẩy):</label>
+                        <input type="text" id="glossary-input" oninput="updateGlossary(this.value)"
+                            data-i18n-placeholder="glossary-placeholder" placeholder="Ví dụ: Luffy, Zoro, Nami, Sakura"
                             class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600">
                     </div>
 
                     <!-- Interactive Pronoun Matrix Section -->
                     <div id="pronoun-matrix-container" class="space-y-2 border-t border-slate-800/70 pt-2 pb-1">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                        <label
+                            class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                             <span data-i18n="pronoun-matrix-title">Ma trận xưng hô nhân vật</span>
-                            <span class="text-[9px] text-indigo-400 font-normal"><i class="fa-solid fa-users"></i> AI xưng hô chuẩn</span>
+                            <span class="text-[9px] text-indigo-400 font-normal"><i class="fa-solid fa-users"></i> AI
+                                xưng hô chuẩn</span>
                         </label>
-                        <p data-i18n="pronoun-matrix-sub" class="text-[9px] text-slate-500 leading-normal">Khai báo các nhân vật chính và cách họ xưng hô chéo với nhau để bản dịch tiếng Việt luôn tự nhiên, nhất quán.</p>
-                        
+                        <p data-i18n="pronoun-matrix-sub" class="text-[9px] text-slate-500 leading-normal">Khai báo các
+                            nhân vật chính và cách họ xưng hô chéo với nhau để bản dịch tiếng Việt luôn tự nhiên, nhất
+                            quán.</p>
+
                         <!-- Character Input Box -->
                         <div class="flex gap-1.5">
-                            <input type="text" id="pronoun-char-name-input" data-i18n-placeholder="pronoun-char-placeholder" placeholder="Tên nhân vật (vd: Luffy)"
+                            <input type="text" id="pronoun-char-name-input"
+                                data-i18n-placeholder="pronoun-char-placeholder" placeholder="Tên nhân vật (vd: Luffy)"
                                 class="flex-1 bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 placeholder:text-slate-600">
                             <button onclick="addCharacterToMatrix()" type="button" data-i18n="add-char-btn"
                                 class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-xs text-white font-bold transition-all hover:scale-105 active:scale-95">
@@ -1459,7 +1677,8 @@
                         </div>
 
                         <!-- Dynamic Matrix Table Wrapper -->
-                        <div id="pronoun-matrix-table-wrapper" class="overflow-x-auto border border-slate-800 rounded max-h-[180px] overflow-y-auto hidden">
+                        <div id="pronoun-matrix-table-wrapper"
+                            class="overflow-x-auto border border-slate-800 rounded max-h-[180px] overflow-y-auto hidden">
                             <!-- Table will be rendered dynamically by pronoun.js -->
                         </div>
                     </div>
@@ -1467,137 +1686,206 @@
 
 
                     <label class="flex items-start space-x-2 cursor-pointer pt-1 border-t border-slate-800/70">
-                        <input type="checkbox" id="ocr-enhance-chk" onchange="toggleOcrEnhance(this.checked)"
-                            checked class="mt-0.5 rounded border-slate-800 text-indigo-600 focus:ring-0">
+                        <input type="checkbox" id="ocr-enhance-chk" onchange="toggleOcrEnhance(this.checked)" checked
+                            class="mt-0.5 rounded border-slate-800 text-indigo-600 focus:ring-0">
                         <div class="text-[11px]">
-                            <span class="font-semibold text-slate-200" data-i18n="ocr-enhance-label"><i class="fa-solid fa-eye text-sky-400"></i> Tăng cường tương phản OCR</span>
-                            <p data-i18n="ocr-enhance-sub" class="text-[10px] text-slate-500 mt-0.5">Tiền xử lý tăng độ nét & tương phản giúp AI nhận diện chuẩn chữ mờ, chữ SFX nhạt.</p>
+                            <span class="font-semibold text-slate-200" data-i18n="ocr-enhance-label"><i
+                                    class="fa-solid fa-eye text-sky-400"></i> Tăng cường tương phản OCR</span>
+                            <p data-i18n="ocr-enhance-sub" class="text-[10px] text-slate-500 mt-0.5">Tiền xử lý tăng độ
+                                nét & tương phản giúp AI nhận diện chuẩn chữ mờ, chữ SFX nhạt.</p>
                         </div>
                     </label>
 
                     <div class="space-y-1">
-                        <label data-i18n="genre-preset-label" class="block text-[10px] font-semibold text-slate-400">Mẫu prompt theo thể loại:</label>
+                        <label data-i18n="genre-preset-label" class="block text-[10px] font-semibold text-slate-400">Mẫu
+                            prompt theo thể loại:</label>
                         <div id="genre-preset-container" class="grid grid-cols-2 gap-2 text-[11px] text-slate-200">
-                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="quality" checked>
+                            <label
+                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox"
+                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
+                                    value="quality" checked>
                                 <span>Ưu tiên chất lượng cao nhất</span>
                             </label>
-                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="comedy">
+                            <label
+                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox"
+                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
+                                    value="comedy">
                                 <span>Hài hước</span>
                             </label>
-                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="school">
+                            <label
+                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox"
+                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
+                                    value="school">
                                 <span>Học đường</span>
                             </label>
-                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="shounen">
+                            <label
+                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox"
+                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
+                                    value="shounen">
                                 <span>Shounen / hành động</span>
                             </label>
-                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="fantasy">
+                            <label
+                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox"
+                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
+                                    value="fantasy">
                                 <span>Fantasy / isekai</span>
                             </label>
-                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="drama">
+                            <label
+                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox"
+                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
+                                    value="drama">
                                 <span>Drama</span>
                             </label>
-                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="horror">
+                            <label
+                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox"
+                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
+                                    value="horror">
                                 <span>Horror / thriller</span>
                             </label>
-                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="polite">
+                            <label
+                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox"
+                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
+                                    value="polite">
                                 <span>Lịch sự / trang trọng</span>
                             </label>
-                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="dark">
+                            <label
+                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox"
+                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
+                                    value="dark">
                                 <span>U tối / nghiêm túc</span>
                             </label>
-                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="romance">
+                            <label
+                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox"
+                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
+                                    value="romance">
                                 <span>Lãng mạn</span>
                             </label>
-                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="slice">
+                            <label
+                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox"
+                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
+                                    value="slice">
                                 <span>Slice of life</span>
                             </label>
-                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="martial">
+                            <label
+                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox"
+                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
+                                    value="martial">
                                 <span>Kiếm hiệp / Tiên hiệp</span>
                             </label>
-                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="scifi">
+                            <label
+                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox"
+                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
+                                    value="scifi">
                                 <span>Viễn tưởng / Robot</span>
                             </label>
-                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="gag">
+                            <label
+                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox"
+                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
+                                    value="gag">
                                 <span>Hài bựa / Slang mạng</span>
                             </label>
-                            <label class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
-                                <input type="checkbox" class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0" value="historical">
+                            <label
+                                class="flex items-center gap-2 rounded border border-slate-800 bg-slate-900 px-2 py-1.5">
+                                <input type="checkbox"
+                                    class="genre-preset-option rounded border-slate-700 text-indigo-600 focus:ring-0"
+                                    value="historical">
                                 <span>Cổ trang / Lịch sử</span>
                             </label>
                         </div>
-                        <p class="text-[10px] text-slate-500 leading-relaxed">Bạn có thể tick nhiều thể loại cùng lúc. AI sẽ ghép tất cả preset đã chọn vào một prompt chung.</p>
+                        <p class="text-[10px] text-slate-500 leading-relaxed">Bạn có thể tick nhiều thể loại cùng lúc.
+                            AI sẽ ghép tất cả preset đã chọn vào một prompt chung.</p>
                     </div>
 
                     <div class="space-y-1">
-                        <label data-i18n="context-prompt-label" class="block text-[10px] font-semibold text-slate-400">Prompt ngữ cảnh dịch:</label>
-                        <textarea id="translation-context-prompt" oninput="updateTranslationContextPrompt(this.value)" data-i18n-placeholder="context-prompt-placeholder"
-                            rows="4"
+                        <label data-i18n="context-prompt-label"
+                            class="block text-[10px] font-semibold text-slate-400">Prompt ngữ cảnh dịch:</label>
+                        <textarea id="translation-context-prompt" oninput="updateTranslationContextPrompt(this.value)"
+                            data-i18n-placeholder="context-prompt-placeholder" rows="4"
                             placeholder="Ví dụ: Truyện có giọng điệu hài hước, nhân vật nói chuyện thân mật kiểu học sinh cấp 3, ưu tiên dịch tự nhiên, giữ nguyên thuật ngữ kỹ năng và xưng hô theo ngữ cảnh."
                             class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600 resize-y"></textarea>
-                        <p data-i18n="context-prompt-sub" class="text-[10px] text-slate-500 leading-relaxed">Nội dung này sẽ được thêm vào prompt hệ thống để AI hiểu bối cảnh, văn phong và quy ước dịch của bạn.</p>
+                        <p data-i18n="context-prompt-sub" class="text-[10px] text-slate-500 leading-relaxed">Nội dung
+                            này sẽ được thêm vào prompt hệ thống để AI hiểu bối cảnh, văn phong và quy ước dịch của bạn.
+                        </p>
                     </div>
 
                     <!-- Chapter Story Memory Configuration -->
                     <div class="pt-2 border-t border-slate-800/70 space-y-2">
                         <div class="flex items-center justify-between">
-                            <h4 data-i18n="story-memory-title" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <h4 data-i18n="story-memory-title"
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                                 <i class="fa-solid fa-brain text-purple-400"></i> Bộ nhớ ngữ cảnh chương
                             </h4>
-                            <span id="story-memory-badge" class="text-[9px] bg-purple-500/10 text-purple-300 font-semibold px-1.5 py-0.5 rounded">0 trang</span>
+                            <span id="story-memory-badge"
+                                class="text-[9px] bg-purple-500/10 text-purple-300 font-semibold px-1.5 py-0.5 rounded">0
+                                trang</span>
                         </div>
                         <label class="flex items-start space-x-2 cursor-pointer">
-                            <input type="checkbox" id="story-memory-chk" onchange="toggleStoryMemory(this.checked)" checked
-                                class="mt-0.5 rounded border-slate-800 text-purple-600 focus:ring-0">
+                            <input type="checkbox" id="story-memory-chk" onchange="toggleStoryMemory(this.checked)"
+                                checked class="mt-0.5 rounded border-slate-800 text-purple-600 focus:ring-0">
                             <div class="text-[11px]">
-                                <span data-i18n="story-memory-label" class="font-semibold text-slate-200">Tự động nối ngữ cảnh các trang trước</span>
-                                <p data-i18n="story-memory-desc" class="text-[10px] text-slate-500 mt-0.5">Tích lũy tóm tắt xưng hô & cốt truyện từ trang 1 đến trang cuối để dịch nhất quán.</p>
+                                <span data-i18n="story-memory-label" class="font-semibold text-slate-200">Tự động nối
+                                    ngữ cảnh các trang trước</span>
+                                <p data-i18n="story-memory-desc" class="text-[10px] text-slate-500 mt-0.5">Tích lũy tóm
+                                    tắt xưng hô & cốt truyện từ trang 1 đến trang cuối để dịch nhất quán.</p>
                             </div>
                         </label>
                         <div class="flex items-center justify-between text-[10px]">
-                            <button onclick="viewStoryMemoryModal()" data-i18n="view-memory-btn" class="text-indigo-400 hover:text-indigo-300 font-medium">Xem bộ nhớ...</button>
-                            <button onclick="clearStoryMemory()" data-i18n="clear-memory-btn" class="text-red-400 hover:text-red-300 font-medium"><i class="fa-solid fa-trash-can text-[9px]"></i> Xóa bộ nhớ</button>
+                            <button onclick="viewStoryMemoryModal()" data-i18n="view-memory-btn"
+                                class="text-indigo-400 hover:text-indigo-300 font-medium">Xem bộ nhớ...</button>
+                            <button onclick="clearStoryMemory()" data-i18n="clear-memory-btn"
+                                class="text-red-400 hover:text-red-300 font-medium"><i
+                                    class="fa-solid fa-trash-can text-[9px]"></i> Xóa bộ nhớ</button>
                         </div>
                     </div>
                     <div class="pt-2 border-t border-slate-800/70 space-y-2">
-                        <h4 data-i18n="api-limit-title" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <h4 data-i18n="api-limit-title"
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                             <i class="fa-solid fa-clock text-amber-500"></i> Giới hạn tần suất API (Tránh lỗi 429/503)
                         </h4>
                         <div class="grid grid-cols-2 gap-2">
                             <div class="space-y-1">
-                                <label data-i18n="api-delay-label" class="block text-[10px] font-semibold text-slate-400">Giãn cách gửi (giây):</label>
-                                <input type="number" id="api-delay-input" onchange="updateApiDelay(this.value)" min="0" max="60"
+                                <label data-i18n="api-delay-label"
+                                    class="block text-[10px] font-semibold text-slate-400">Giãn cách gửi (giây):</label>
+                                <input type="number" id="api-delay-input" onchange="updateApiDelay(this.value)" min="0"
+                                    max="60"
                                     class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
                             </div>
                             <div class="space-y-1">
-                                <label data-i18n="max-retries-label" class="block text-[10px] font-semibold text-slate-400">Số lần thử lại:</label>
-                                <input type="number" id="max-retries-input" onchange="updateMaxRetries(this.value)" min="1" max="10"
+                                <label data-i18n="max-retries-label"
+                                    class="block text-[10px] font-semibold text-slate-400">Số lần thử lại:</label>
+                                <input type="number" id="max-retries-input" onchange="updateMaxRetries(this.value)"
+                                    min="1" max="10"
                                     class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
                             </div>
                         </div>
                         <p data-i18n="api-limit-sub" class="text-[9px] text-slate-500 leading-relaxed">
-                            * Khuyến nghị: Giãn cách 8-12 giây và thử lại 5 lần khi dùng API miễn phí (Free Key) để hạn chế tối đa lỗi ngắt quãng.
+                            * Khuyến nghị: Giãn cách 8-12 giây và thử lại 5 lần khi dùng API miễn phí (Free Key) để hạn
+                            chế tối đa lỗi ngắt quãng.
                         </p>
                     </div>
 
                     <div class="pt-1 border-t border-slate-800/70 space-y-2">
                         <div class="flex items-center justify-between gap-2">
                             <div>
-                                <h4 data-i18n="consistency-title" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kiểm tra nhất quán</h4>
-                                <p data-i18n="consistency-sub" class="text-[10px] text-slate-500 mt-0.5">Quét các cụm lặp lại và danh sách tên cần giữ nguyên để tìm chỗ dịch lệch.</p>
+                                <h4 data-i18n="consistency-title"
+                                    class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kiểm tra nhất
+                                    quán</h4>
+                                <p data-i18n="consistency-sub" class="text-[10px] text-slate-500 mt-0.5">Quét các cụm
+                                    lặp lại và danh sách tên cần giữ nguyên để tìm chỗ dịch lệch.</p>
                             </div>
                             <button onclick="runConsistencyCheck()" data-i18n="consistency-btn"
                                 class="shrink-0 h-8 px-2.5 rounded bg-sky-600/10 hover:bg-sky-600 border border-sky-500/30 hover:border-sky-500 text-sky-300 hover:text-white text-[11px] font-semibold flex items-center gap-1.5 transition-all">
@@ -1625,7 +1913,8 @@
                         class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
                 </div>
-                <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Tiến trình dịch ngầm (<span id="bg-task-percentage" class="font-mono">0%</span>)</span>
+                <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Tiến trình dịch ngầm (<span
+                        id="bg-task-percentage" class="font-mono">0%</span>)</span>
             </div>
             <button onclick="cancelBatchTranslation()"
                 class="text-[10px] text-red-400 hover:text-red-300 font-bold px-2 py-1 rounded bg-red-500/10 hover:bg-red-500/20 border border-red-500/10 hover:border-red-500/20 transition-all flex items-center gap-1">
@@ -1690,17 +1979,20 @@
         <div class="absolute inset-0 bg-black/95"></div>
         <div class="relative z-10 h-full flex flex-col">
             <!-- Preview Header -->
-            <div class="flex items-center justify-between px-6 py-3 bg-slate-900/80 border-b border-slate-800 backdrop-blur-md">
+            <div
+                class="flex items-center justify-between px-6 py-3 bg-slate-900/80 border-b border-slate-800 backdrop-blur-md">
                 <div class="flex items-center gap-3">
                     <i class="fa-solid fa-book-open text-indigo-400"></i>
                     <span class="text-sm font-bold text-white">Chế độ Xem trước</span>
                     <span id="preview-page-indicator" class="text-xs text-slate-400 font-mono">Trang 1/1</span>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="previewPrevPage()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 transition-colors">
+                    <button onclick="previewPrevPage()"
+                        class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 transition-colors">
                         <i class="fa-solid fa-chevron-left"></i> Trước
                     </button>
-                    <button onclick="previewNextPage()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 transition-colors">
+                    <button onclick="previewNextPage()"
+                        class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 transition-colors">
                         Tiếp <i class="fa-solid fa-chevron-right"></i>
                     </button>
                     <button onclick="closePreviewMode()"
@@ -1723,7 +2015,7 @@
     <!-- CORS Warning check for file:// protocol -->
     <script>
         if (window.location.protocol === 'file:') {
-            document.addEventListener('DOMContentLoaded', function() {
+            document.addEventListener('DOMContentLoaded', function () {
                 const overlay = document.createElement('div');
                 overlay.style.position = 'fixed';
                 overlay.style.top = '0';
@@ -1778,21 +2070,26 @@
         }
     </script>
     <!-- LOREBOOK & CHARACTER DOSSIER MODAL -->
-    <div id="lorebook-dossier-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-            
+    <div id="lorebook-dossier-modal"
+        class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div
+            class="bg-slate-900 border border-slate-800 rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+
             <!-- Modal Header -->
             <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/80">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                    <div
+                        class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
                         <i class="fa-solid fa-address-card text-sm"></i>
                     </div>
                     <div>
                         <h3 class="text-sm font-bold text-slate-100">Quản Lý Hồ Sơ Nhân Vật & Lorebook Từ Vựng</h3>
-                        <p class="text-[11px] text-slate-400">Đảm bảo AI giữ 100% đúng tên nhân vật, cách xưng hô và thuật ngữ qua các tập truyện</p>
+                        <p class="text-[11px] text-slate-400">Đảm bảo AI giữ 100% đúng tên nhân vật, cách xưng hô và
+                            thuật ngữ qua các tập truyện</p>
                     </div>
                 </div>
-                <button onclick="closeLorebookModal()" class="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors">
+                <button onclick="closeLorebookModal()"
+                    class="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
@@ -1816,7 +2113,8 @@
                 <div id="lorebook-tab-dossier" class="space-y-4">
                     <!-- Add New Character Form -->
                     <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5 space-y-3">
-                        <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider block">Thêm Hồ Sơ Nhân Vật Mới</span>
+                        <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider block">Thêm Hồ Sơ Nhân
+                            Vật Mới</span>
                         <div class="grid grid-cols-3 gap-2.5">
                             <div>
                                 <label class="text-[10px] text-slate-400 block mb-1">Tên Gốc (Tiếng Nhật/Anh)</label>
@@ -1830,7 +2128,8 @@
                             </div>
                             <div>
                                 <label class="text-[10px] text-slate-400 block mb-1">Giới Tính</label>
-                                <select id="dossier-input-gender" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+                                <select id="dossier-input-gender"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
                                     <option value="male">Nam</option>
                                     <option value="female">Nữ</option>
                                     <option value="other">Khác / Ẩn</option>
@@ -1839,19 +2138,23 @@
                         </div>
                         <div class="grid grid-cols-2 gap-2.5">
                             <div>
-                                <label class="text-[10px] text-slate-400 block mb-1">Xưng Tự Nhận (Tôi/Ta/Mình...)</label>
+                                <label class="text-[10px] text-slate-400 block mb-1">Xưng Tự Nhận
+                                    (Tôi/Ta/Mình...)</label>
                                 <input type="text" id="dossier-input-self" placeholder="tôi"
                                     class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
                             </div>
                             <div>
-                                <label class="text-[10px] text-slate-400 block mb-1">Xưng Với Người Khác (Cậu/Ngươi/Anh...)</label>
+                                <label class="text-[10px] text-slate-400 block mb-1">Xưng Với Người Khác
+                                    (Cậu/Ngươi/Anh...)</label>
                                 <input type="text" id="dossier-input-target" placeholder="cậu"
                                     class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
                             </div>
                         </div>
                         <div>
-                            <label class="text-[10px] text-slate-400 block mb-1">Ghi Chú Tính Cách & Giọng Nói AI</label>
-                            <input type="text" id="dossier-input-personality" placeholder="Thuyền trưởng, nói chuyện hồn nhiên, cộc lốc"
+                            <label class="text-[10px] text-slate-400 block mb-1">Ghi Chú Tính Cách & Giọng Nói
+                                AI</label>
+                            <input type="text" id="dossier-input-personality"
+                                placeholder="Thuyền trưởng, nói chuyện hồn nhiên, cộc lốc"
                                 class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
                         </div>
                         <div class="flex justify-end">
@@ -1865,7 +2168,8 @@
                     <!-- Characters List Table -->
                     <div class="space-y-2">
                         <div class="flex justify-between items-center">
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Danh Sách Nhân Vật Đã Lưu</span>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Danh Sách Nhân
+                                Vật Đã Lưu</span>
                         </div>
                         <div id="dossier-items-list" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
                             <!-- Dynamic Character Items -->
@@ -1877,7 +2181,8 @@
                 <div id="lorebook-tab-lorebook" class="hidden space-y-4">
                     <!-- Add New Lorebook Term Form -->
                     <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl p-3.5 space-y-3">
-                        <span class="text-xs font-bold text-purple-400 uppercase tracking-wider block">Thêm Thuật Ngữ Lorebook Mới</span>
+                        <span class="text-xs font-bold text-purple-400 uppercase tracking-wider block">Thêm Thuật Ngữ
+                            Lorebook Mới</span>
                         <div class="grid grid-cols-3 gap-2.5">
                             <div>
                                 <label class="text-[10px] text-slate-400 block mb-1">Từ Gốc (Gốc)</label>
@@ -1891,7 +2196,8 @@
                             </div>
                             <div>
                                 <label class="text-[10px] text-slate-400 block mb-1">Phân Loại</label>
-                                <select id="lore-input-category" class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+                                <select id="lore-input-category"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
                                     <option value="Chiêu thức / Kỹ năng">Chiêu thức / Kỹ năng</option>
                                     <option value="Vật phẩm / Đồ vật">Vật phẩm / Đồ vật</option>
                                     <option value="Địa danh / Thế giới">Địa danh / Thế giới</option>
@@ -1916,7 +2222,8 @@
                     <!-- Lorebook Items List Table -->
                     <div class="space-y-2">
                         <div class="flex justify-between items-center">
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Danh Sách Thuật Ngữ Đã Lưu</span>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Danh Sách Thuật
+                                Ngữ Đã Lưu</span>
                         </div>
                         <div id="lorebook-items-list" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
                             <!-- Dynamic Lorebook Term Items -->
@@ -1929,15 +2236,19 @@
             <!-- Modal Footer (Import/Export Backup) -->
             <div class="px-5 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <button onclick="exportLorebookJSON()" class="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-[11px] font-semibold flex items-center gap-1 transition-all">
+                    <button onclick="exportLorebookJSON()"
+                        class="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-[11px] font-semibold flex items-center gap-1 transition-all">
                         <i class="fa-solid fa-download text-indigo-400"></i> Xuất File Backup (JSON)
                     </button>
-                    <button onclick="document.getElementById('file-lorebook-import').click()" class="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-[11px] font-semibold flex items-center gap-1 transition-all">
+                    <button onclick="document.getElementById('file-lorebook-import').click()"
+                        class="px-2.5 py-1 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 text-[11px] font-semibold flex items-center gap-1 transition-all">
                         <i class="fa-solid fa-upload text-emerald-400"></i> Nhập File (JSON)
                     </button>
-                    <input type="file" id="file-lorebook-import" accept=".json" class="hidden" onchange="importLorebookJSON(event)">
+                    <input type="file" id="file-lorebook-import" accept=".json" class="hidden"
+                        onchange="importLorebookJSON(event)">
                 </div>
-                <button onclick="closeLorebookModal()" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all">
+                <button onclick="closeLorebookModal()"
+                    class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all">
                     Đóng
                 </button>
             </div>
@@ -1946,23 +2257,28 @@
     </div>
 
     <!-- BILINGUAL HOVER TOOLTIP -->
-    <div id="bilingual-hover-tooltip" class="hidden fixed z-50 pointer-events-none bg-slate-900/95 border border-indigo-500/40 rounded-xl p-3 shadow-2xl backdrop-blur-md max-w-xs space-y-1.5 transition-opacity">
+    <div id="bilingual-hover-tooltip"
+        class="hidden fixed z-50 pointer-events-none bg-slate-900/95 border border-indigo-500/40 rounded-xl p-3 shadow-2xl backdrop-blur-md max-w-xs space-y-1.5 transition-opacity">
         <div class="flex items-center gap-1.5 text-[10px] font-bold text-indigo-400 uppercase tracking-wider">
             <i class="fa-solid fa-language"></i> Văn Bản Gốc
         </div>
         <div id="bilingual-tooltip-orig" class="text-xs text-slate-100 font-semibold leading-relaxed"></div>
-        <div id="bilingual-tooltip-trans" class="text-[11px] text-indigo-300 italic border-t border-slate-800/80 pt-1"></div>
+        <div id="bilingual-tooltip-trans" class="text-[11px] text-indigo-300 italic border-t border-slate-800/80 pt-1">
+        </div>
     </div>
 
     <!-- AUDIO DRAMA SETTINGS MODAL -->
-    <div id="audio-settings-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div id="audio-settings-modal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div class="flex items-center gap-2">
                     <i class="fa-solid fa-sliders text-indigo-400"></i>
-                    <h3 class="text-sm font-bold text-slate-100 uppercase tracking-wider">Cài Đặt Giọng Đọc Audio Drama</h3>
+                    <h3 class="text-sm font-bold text-slate-100 uppercase tracking-wider">Cài Đặt Giọng Đọc Audio Drama
+                    </h3>
                 </div>
-                <button onclick="closeAudioSettingsModal()" class="w-7 h-7 hover:bg-slate-800 rounded flex items-center justify-center text-slate-400 hover:text-white">
+                <button onclick="closeAudioSettingsModal()"
+                    class="w-7 h-7 hover:bg-slate-800 rounded flex items-center justify-center text-slate-400 hover:text-white">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -1971,30 +2287,39 @@
                 <!-- Male Voice Select -->
                 <div class="space-y-1">
                     <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
-                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-mars text-sky-400"></i> Giọng Nam (Male Voice):</span>
-                        <button onclick="testVoice('male')" class="text-[10px] text-sky-400 hover:underline">🔊 Nghe thử</button>
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-mars text-sky-400"></i> Giọng Nam
+                            (Male Voice):</span>
+                        <button onclick="testVoice('male')" class="text-[10px] text-sky-400 hover:underline">🔊 Nghe
+                            thử</button>
                     </div>
-                    <select id="voice-select-male" onchange="updateAudioSettingsFromUI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                    <select id="voice-select-male" onchange="updateAudioSettingsFromUI()"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
                     </select>
                 </div>
 
                 <!-- Female Voice Select -->
                 <div class="space-y-1">
                     <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
-                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-venus text-pink-400"></i> Giọng Nữ (Female Voice):</span>
-                        <button onclick="testVoice('female')" class="text-[10px] text-pink-400 hover:underline">🔊 Nghe thử</button>
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-venus text-pink-400"></i> Giọng Nữ
+                            (Female Voice):</span>
+                        <button onclick="testVoice('female')" class="text-[10px] text-pink-400 hover:underline">🔊 Nghe
+                            thử</button>
                     </div>
-                    <select id="voice-select-female" onchange="updateAudioSettingsFromUI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                    <select id="voice-select-female" onchange="updateAudioSettingsFromUI()"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
                     </select>
                 </div>
 
                 <!-- Narrator Voice Select -->
                 <div class="space-y-1">
                     <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
-                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-microphone text-purple-400"></i> Giọng Dẫn Chuyện (Narrator):</span>
-                        <button onclick="testVoice('neutral')" class="text-[10px] text-purple-400 hover:underline">🔊 Nghe thử</button>
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-microphone text-purple-400"></i>
+                            Giọng Dẫn Chuyện (Narrator):</span>
+                        <button onclick="testVoice('neutral')" class="text-[10px] text-purple-400 hover:underline">🔊
+                            Nghe thử</button>
                     </div>
-                    <select id="voice-select-narrator" onchange="updateAudioSettingsFromUI()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                    <select id="voice-select-narrator" onchange="updateAudioSettingsFromUI()"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
                     </select>
                 </div>
 
@@ -2005,14 +2330,18 @@
                             <span>👨 Pitch Nam:</span>
                             <span id="audio-male-pitch-val" class="font-bold text-sky-400">0.92</span>
                         </div>
-                        <input type="range" id="audio-male-pitch-input" min="0.7" max="1.3" step="0.05" value="0.92" oninput="document.getElementById('audio-male-pitch-val').textContent = this.value; updateAudioSettingsFromUI();" class="w-full accent-sky-500">
+                        <input type="range" id="audio-male-pitch-input" min="0.7" max="1.3" step="0.05" value="0.92"
+                            oninput="document.getElementById('audio-male-pitch-val').textContent = this.value; updateAudioSettingsFromUI();"
+                            class="w-full accent-sky-500">
                     </div>
                     <div class="space-y-1 bg-slate-950 p-2 rounded-lg border border-slate-800/80">
                         <div class="flex items-center justify-between text-[11px] font-semibold text-pink-300">
                             <span>👩 Pitch Nữ:</span>
                             <span id="audio-female-pitch-val" class="font-bold text-pink-400">1.08</span>
                         </div>
-                        <input type="range" id="audio-female-pitch-input" min="0.8" max="1.4" step="0.05" value="1.08" oninput="document.getElementById('audio-female-pitch-val').textContent = this.value; updateAudioSettingsFromUI();" class="w-full accent-pink-500">
+                        <input type="range" id="audio-female-pitch-input" min="0.8" max="1.4" step="0.05" value="1.08"
+                            oninput="document.getElementById('audio-female-pitch-val').textContent = this.value; updateAudioSettingsFromUI();"
+                            class="w-full accent-pink-500">
                     </div>
                 </div>
 
@@ -2022,12 +2351,15 @@
                         <span>⚡ Tốc độ phát âm (Rate):</span>
                         <span id="audio-rate-val" class="text-[11px] text-indigo-400 font-bold">1.0x</span>
                     </div>
-                    <input type="range" id="audio-rate-input" min="0.7" max="1.6" step="0.1" value="1.0" oninput="document.getElementById('audio-rate-val').textContent = this.value + 'x'; updateAudioSettingsFromUI();" class="w-full accent-indigo-500">
+                    <input type="range" id="audio-rate-input" min="0.7" max="1.6" step="0.1" value="1.0"
+                        oninput="document.getElementById('audio-rate-val').textContent = this.value + 'x'; updateAudioSettingsFromUI();"
+                        class="w-full accent-indigo-500">
                 </div>
             </div>
 
             <div class="flex justify-end border-t border-slate-800 pt-3">
-                <button onclick="closeAudioSettingsModal()" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow">
+                <button onclick="closeAudioSettingsModal()"
+                    class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow">
                     Hoàn tất
                 </button>
             </div>
@@ -2035,17 +2367,21 @@
     </div>
 
     <!-- GOOGLE DRIVE SYNC & TEAM COLLABORATION MODAL -->
-    <div id="gdrive-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div id="gdrive-modal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl">
             <div class="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div class="flex items-center gap-2">
                     <i class="fa-brands fa-google-drive text-sky-400 text-lg"></i>
                     <div>
-                        <h3 class="text-sm font-bold text-slate-100 uppercase tracking-wider">Đồng Bộ & Làm Việc Nhóm Qua Google Drive</h3>
-                        <p class="text-[10px] text-slate-400">Xuất/nhập tệp dự án làm việc chung giữa Translator, Proofreader và Typesetter</p>
+                        <h3 class="text-sm font-bold text-slate-100 uppercase tracking-wider">Đồng Bộ & Làm Việc Nhóm
+                            Qua Google Drive</h3>
+                        <p class="text-[10px] text-slate-400">Xuất/nhập tệp dự án làm việc chung giữa Translator,
+                            Proofreader và Typesetter</p>
                     </div>
                 </div>
-                <button onclick="closeGDriveModal()" class="w-7 h-7 hover:bg-slate-800 rounded flex items-center justify-center text-slate-400 hover:text-white">
+                <button onclick="closeGDriveModal()"
+                    class="w-7 h-7 hover:bg-slate-800 rounded flex items-center justify-center text-slate-400 hover:text-white">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -2053,42 +2389,64 @@
             <!-- Token Setup Section -->
             <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5">
                 <div class="flex items-center justify-between">
-                    <button onclick="loginWithGoogleOAuth()" class="px-3 py-2 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white rounded-lg text-xs font-bold transition-all shadow-lg flex items-center gap-1.5">
+                    <button onclick="loginWithGoogleOAuth()"
+                        class="px-3 py-2 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white rounded-lg text-xs font-bold transition-all shadow-lg flex items-center gap-1.5">
                         <i class="fa-brands fa-google text-sm"></i> Lấy Access Token Nhanh
                     </button>
-                    <button onclick="document.getElementById('gdrive-guide-box').classList.toggle('hidden')" class="text-[10px] text-slate-400 hover:text-amber-400 hover:underline flex items-center gap-1 transition-colors">
+                    <button onclick="document.getElementById('gdrive-guide-box').classList.toggle('hidden')"
+                        class="text-[10px] text-slate-400 hover:text-amber-400 hover:underline flex items-center gap-1 transition-colors">
                         <i class="fa-solid fa-eye"></i> Ẩn/Hiện hướng dẫn
                     </button>
                 </div>
 
                 <!-- Step-by-Step Token Guide (visible by default) -->
-                <div id="gdrive-guide-box" class="bg-slate-900/80 p-3 rounded-lg border border-sky-900/40 text-[11px] text-slate-300 space-y-1.5">
-                    <p class="font-bold text-amber-300 flex items-center gap-1.5"><i class="fa-solid fa-lightbulb"></i> Lấy Token miễn phí qua OAuth Playground (30 giây):</p>
+                <div id="gdrive-guide-box"
+                    class="bg-slate-900/80 p-3 rounded-lg border border-sky-900/40 text-[11px] text-slate-300 space-y-1.5">
+                    <p class="font-bold text-amber-300 flex items-center gap-1.5"><i class="fa-solid fa-lightbulb"></i>
+                        Lấy Token miễn phí qua OAuth Playground (30 giây):</p>
                     <ol class="list-decimal list-inside space-y-1.5 text-slate-400 leading-relaxed">
-                        <li>Bấm nút <b class="text-sky-300">Lấy Access Token Nhanh</b> bên trên (mở <a href="https://developers.google.com/oauthplayground/" target="_blank" class="text-sky-400 underline">OAuth Playground</a>)</li>
-                        <li>Ở cột trái <b class="text-white">Step 1</b>, cuộn tìm <b class="text-white">Drive API v3</b> → Tích chọn <code class="bg-slate-800 px-1 py-0.5 rounded text-sky-300 text-[10px]">../auth/drive</code> (quét toàn bộ thư mục Drive) hoặc <code class="bg-slate-800 px-1 py-0.5 rounded text-sky-300 text-[10px]">../auth/drive.file</code></li>
+                        <li>Bấm nút <b class="text-sky-300">Lấy Access Token Nhanh</b> bên trên (mở <a
+                                href="https://developers.google.com/oauthplayground/" target="_blank"
+                                class="text-sky-400 underline">OAuth Playground</a>)</li>
+                        <li>Ở cột trái <b class="text-white">Step 1</b>, cuộn tìm <b class="text-white">Drive API v3</b>
+                            → Tích chọn <code
+                                class="bg-slate-800 px-1 py-0.5 rounded text-sky-300 text-[10px]">../auth/drive</code>
+                            (quét toàn bộ thư mục Drive) hoặc <code
+                                class="bg-slate-800 px-1 py-0.5 rounded text-sky-300 text-[10px]">../auth/drive.file</code>
+                        </li>
                         <li>Bấm nút xanh <b class="text-blue-300">Authorize APIs</b> → Đăng nhập tài khoản Google</li>
-                        <li>Ở <b class="text-white">Step 2</b>, bấm <b class="text-blue-300">Exchange authorization code for tokens</b></li>
-                        <li>Copy chuỗi <b class="text-emerald-300">Access token</b> (dạng <code class="bg-slate-800 px-1 py-0.5 rounded text-emerald-300 text-[10px]">ya29.a0...</code>) → Dán vào ô bên dưới → Bấm <b class="text-indigo-300">Lưu Token</b></li>
+                        <li>Ở <b class="text-white">Step 2</b>, bấm <b class="text-blue-300">Exchange authorization code
+                                for tokens</b></li>
+                        <li>Copy chuỗi <b class="text-emerald-300">Access token</b> (dạng <code
+                                class="bg-slate-800 px-1 py-0.5 rounded text-emerald-300 text-[10px]">ya29.a0...</code>)
+                            → Dán vào ô bên dưới → Bấm <b class="text-indigo-300">Lưu Token</b></li>
                     </ol>
                 </div>
 
-                <div class="flex items-center justify-between text-xs font-semibold text-slate-200 pt-1 border-t border-slate-800">
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-key text-amber-400"></i> Access Token:</span>
-                    <button onclick="saveGDriveTokenFromUI()" class="text-[10px] bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 rounded font-bold transition-all">Lưu Token</button>
+                <div
+                    class="flex items-center justify-between text-xs font-semibold text-slate-200 pt-1 border-t border-slate-800">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-key text-amber-400"></i> Access
+                        Token:</span>
+                    <button onclick="saveGDriveTokenFromUI()"
+                        class="text-[10px] bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 rounded font-bold transition-all">Lưu
+                        Token</button>
                 </div>
-                <input type="text" id="gdrive-token-input" placeholder="Dán Access Token từ OAuth Playground vào đây..." class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-mono placeholder:text-slate-600">
+                <input type="text" id="gdrive-token-input" placeholder="Dán Access Token từ OAuth Playground vào đây..."
+                    class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-mono placeholder:text-slate-600">
             </div>
 
             <!-- Drive Folder Selection Section -->
             <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 space-y-1.5">
                 <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-folder-open text-amber-400"></i> Thư mục lưu trữ:</span>
-                    <button onclick="createNewGDriveFolder()" class="text-[10px] bg-sky-950 hover:bg-sky-900 border border-sky-500/40 text-sky-300 px-2 py-0.5 rounded font-bold transition-all flex items-center gap-1">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-folder-open text-amber-400"></i> Thư
+                        mục lưu trữ:</span>
+                    <button onclick="createNewGDriveFolder()"
+                        class="text-[10px] bg-sky-950 hover:bg-sky-900 border border-sky-500/40 text-sky-300 px-2 py-0.5 rounded font-bold transition-all flex items-center gap-1">
                         <i class="fa-solid fa-folder-plus"></i> Tạo thư mục mới
                     </button>
                 </div>
-                <select id="gdrive-folder-select" onchange="onGDriveFolderChange()" class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                <select id="gdrive-folder-select" onchange="onGDriveFolderChange()"
+                    class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
                     <option value="">📁 Google Drive gốc (Root)</option>
                 </select>
             </div>
@@ -2096,14 +2454,20 @@
             <!-- Export & Link Import Actions -->
             <div class="space-y-2">
                 <div class="flex gap-1.5">
-                    <input type="text" id="gdrive-export-name-input" placeholder="Tên tệp lưu lên Drive (mặc định: tự động)..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500 placeholder:text-slate-600 font-sans">
-                    <button onclick="uploadProjectToGDrive(document.getElementById('gdrive-export-name-input').value)" class="px-3.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shrink-0 flex items-center gap-1.5 transition-all">
+                    <input type="text" id="gdrive-export-name-input"
+                        placeholder="Tên tệp lưu lên Drive (mặc định: tự động)..."
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500 placeholder:text-slate-600 font-sans">
+                    <button onclick="uploadProjectToGDrive(document.getElementById('gdrive-export-name-input').value)"
+                        class="px-3.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shrink-0 flex items-center gap-1.5 transition-all">
                         <i class="fa-solid fa-cloud-arrow-up text-xs"></i> Tải Lên Drive
                     </button>
                 </div>
                 <div class="flex gap-1.5">
-                    <input type="text" id="gdrive-import-link-input" placeholder="Dán ID hoặc Đường dẫn chia sẻ Google Drive..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 placeholder:text-slate-600 font-sans">
-                    <button onclick="importProjectFromGDrive(document.getElementById('gdrive-import-link-input').value)" class="px-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shrink-0 flex items-center gap-1 transition-all">
+                    <input type="text" id="gdrive-import-link-input"
+                        placeholder="Dán ID hoặc Đường dẫn chia sẻ Google Drive..."
+                        class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 placeholder:text-slate-600 font-sans">
+                    <button onclick="importProjectFromGDrive(document.getElementById('gdrive-import-link-input').value)"
+                        class="px-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shrink-0 flex items-center gap-1 transition-all">
                         <i class="fa-solid fa-download text-xs"></i> Nạp
                     </button>
                 </div>
@@ -2113,7 +2477,9 @@
             <div class="space-y-2">
                 <div class="flex items-center justify-between text-xs font-bold text-slate-300">
                     <span>📂 Danh Sách Dự Án Trên Google Drive</span>
-                    <button onclick="loadGDriveProjectList()" class="text-[10px] text-sky-400 hover:underline flex items-center gap-1"><i class="fa-solid fa-rotate"></i> Làm mới</button>
+                    <button onclick="loadGDriveProjectList()"
+                        class="text-[10px] text-sky-400 hover:underline flex items-center gap-1"><i
+                            class="fa-solid fa-rotate"></i> Làm mới</button>
                 </div>
                 <div id="gdrive-file-list" class="max-h-52 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
                     <!-- Dynamically populated files -->
@@ -2121,7 +2487,8 @@
             </div>
 
             <div class="flex justify-end border-t border-slate-800 pt-3">
-                <button onclick="closeGDriveModal()" class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all">
+                <button onclick="closeGDriveModal()"
+                    class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all">
                     Đóng
                 </button>
             </div>
@@ -2130,44 +2497,43 @@
 
     <script>
         // Instant Window Function Stubs (Guarantees zero ReferenceErrors even before module JS loads)
-        window.openLorebookModal = window.openLorebookModal || function() {
+        window.openLorebookModal = window.openLorebookModal || function () {
             const modal = document.getElementById('lorebook-dossier-modal');
             if (modal) modal.classList.remove('hidden');
         };
-        window.closeLorebookModal = window.closeLorebookModal || function() {
+        window.closeLorebookModal = window.closeLorebookModal || function () {
             const modal = document.getElementById('lorebook-dossier-modal');
             if (modal) modal.classList.add('hidden');
         };
-        window.setBilingualMode = window.setBilingualMode || function(mode) {
+        window.setBilingualMode = window.setBilingualMode || function (mode) {
             if (window.globalState) window.globalState.bilingualMode = mode;
         };
-        window.openAudioSettingsModal = window.openAudioSettingsModal || function() {
+        window.openAudioSettingsModal = window.openAudioSettingsModal || function () {
             const modal = document.getElementById('audio-settings-modal');
             if (modal) modal.classList.remove('hidden');
         };
-        window.closeAudioSettingsModal = window.closeAudioSettingsModal || function() {
+        window.closeAudioSettingsModal = window.closeAudioSettingsModal || function () {
             const modal = document.getElementById('audio-settings-modal');
             if (modal) modal.classList.add('hidden');
         };
-        window.openPreviewMode = window.openPreviewMode || function() {
+        window.openPreviewMode = window.openPreviewMode || function () {
             const modal = document.getElementById('preview-modal');
             if (modal) modal.classList.remove('hidden');
         };
-        window.closePreviewMode = window.closePreviewMode || function() {
+        window.closePreviewMode = window.closePreviewMode || function () {
             const modal = document.getElementById('preview-modal');
             if (modal) modal.classList.add('hidden');
         };
-        window.openGDriveModal = window.openGDriveModal || function() {
+        window.openGDriveModal = window.openGDriveModal || function () {
             const modal = document.getElementById('gdrive-modal');
             if (modal) modal.classList.remove('hidden');
         };
-        window.closeGDriveModal = window.closeGDriveModal || function() {
+        window.closeGDriveModal = window.closeGDriveModal || function () {
             const modal = document.getElementById('gdrive-modal');
             if (modal) modal.classList.add('hidden');
         };
     </script>
     <script type="module" src="src/main.js"></script>
-    <script type="module" src="./src/ui/index.js"></script>
 </body>
 
 </html>
