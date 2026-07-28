@@ -126,6 +126,27 @@
                     <i class="fa-solid fa-sliders text-indigo-400"></i> Cấu hình dịch thuật
                 </h3>
 
+                <!-- Khối Quản lý Phông chữ Tùy chỉnh trong Modal Cài đặt -->
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-3 mt-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-font text-indigo-400"></i> Phông chữ đã tải lên (<span
+                                id="custom-fonts-count" class="text-indigo-400 font-mono">0</span>)
+                        </span>
+                        <button onclick="document.getElementById('font-uploader-modal').click()"
+                            class="px-2.5 py-1 bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white rounded text-[11px] font-semibold flex items-center gap-1 transition-all">
+                            <i class="fa-solid fa-file-arrow-up"></i> + Tải Font Mới
+                        </button>
+                        <input type="file" id="font-uploader-modal" accept=".ttf,.otf,.woff,.woff2" class="hidden"
+                            multiple onchange="uploadCustomFonts(this.files)">
+                    </div>
+
+                    <!-- Danh sách các Font tùy chỉnh hiện có -->
+                    <div id="custom-fonts-list" class="space-y-1.5 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                        <!-- JS sẽ tự động render danh sách font vào đây -->
+                    </div>
+                </div>
+
                 <!-- Default Fonts for AI Translation (Per Block Type) -->
                 <div class="space-y-2 border-b border-slate-800/70 pb-3">
                     <label

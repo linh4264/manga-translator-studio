@@ -816,3 +816,17 @@ export async function loadAndRegisterCustomFonts() {
         console.error("Lỗi tải phông chữ tùy chỉnh:", err);
     }
 }
+
+export async function deleteFontFromDB(family) {
+    return new Promise((resolve, reject) => {
+        if (!db) {
+            reject(new Error("Cơ sở dữ liệu chưa sẵn sàng."));
+            return;
+        }
+        const tx = db.transaction('fonts', 'readwrite');
+        const store = tx.objectStore('fonts');
+        const req = store.delete(family);
+        req.onsuccess = () => resolve(true);
+        req.onerror = (e) => reject(e.target.error);
+    });
+}
