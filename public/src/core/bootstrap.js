@@ -32,7 +32,7 @@ import { globalState, initDB, loadAndRegisterCustomFonts, initializeStateFromSto
 import { VALID_MODEL_IDS, CUSTOM_MODEL_VALUE } from '../config/constants.js';
 import { showToast } from './utils/dom.js';
 import { renderPronounMatrixTable } from '../features/pronoun.js';
-import { updateToeicNotebookUI } from '../features/toeic.js';
+import { updateToeicNotebookUI, persistToeicWordsToStorage } from '../features/toeic.js';
 import { toggleEraserMode } from '../features/inpainting.js';
 import { copyBlockStyle, pasteBlockStyle, applyStylePreset } from '../features/canvas/canvas-service.js';
 import { playPageAudioDrama, pauseAudioDrama, stopAudioDrama, speakActiveBlock, openAudioSettingsModal, closeAudioSettingsModal } from '../features/audio.js';
@@ -128,6 +128,24 @@ export async function initApplication() {
         await initDB();
         await loadAndRegisterCustomFonts();
         await populateCustomFontsDropdown();
+
+        // 1. NẠP TỪ VỰNG TOEIC ĐỘC LẬP (Luôn chạy bất kể dự án có trang hay không)
+        try {
+            const localWords = localStorage.getItem('manga_permanent_toeic_words');
+            if (localWords) {
+                globalState.toeicSavedWords = JSON.parse(localWords);
+            } else {
+                globalState.toeicSavedWords = await loadToeicWordsFromDB();
+                if (globalState.toeicSavedWords.length > 0) {
+                    persistToeicWordsToStorage(globalState.toeicSavedWords);
+                }
+            }
+        } catch (e) {
+            globalState.toeicSavedWords = await loadToeicWordsFromDB();
+        }
+        updateToeicNotebookUI();
+
+        // 2. KHÔI PHỤC TRANG TRUYỆN DỰ ÁN (Nếu có)
         const project = await loadProjectFromDB();
         console.log("Project loaded from DB:", project);
         if (project && project.pages && project.pages.length > 0) {
@@ -136,10 +154,6 @@ export async function initApplication() {
 
             updatePageListUI();
             await selectPage(globalState.activePageIndex);
-
-            // Khôi phục từ vựng TOEIC đã lưu
-            globalState.toeicSavedWords = await loadToeicWordsFromDB();
-            updateToeicNotebookUI();
 
             showToast("Đã khôi phục phiên làm việc trước đó!", "success");
         }

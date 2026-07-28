@@ -548,6 +548,8 @@ export async function submitSrsReview(quality) {
     await saveToeicWordsToDB(globalState.toeicSavedWords);
     srsCurrentIndex++;
     renderSrsCurrentCard();
+
+    persistToeicWordsToStorage(globalState.toeicSavedWords);
 }
 
 // 9. Xóa nhanh từ vựng khỏi sổ tay hiển thị
@@ -565,6 +567,8 @@ export async function deleteSavedToeicWord(index) {
     }
 
     showToast(`Đã xóa từ "${word}" khỏi sổ tay.`, "info");
+
+    persistToeicWordsToStorage(globalState.toeicSavedWords);
 }
 
 // 10. Xuất file Anki CSV

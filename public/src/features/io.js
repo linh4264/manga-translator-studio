@@ -10,7 +10,8 @@ import {
     garbageCollectPageCaches,
     activatePage,
     createThumbnail,
-    getPageDataURL
+    getPageDataURL,
+    saveToeicWordsToDB
 } from '../core/state.js';
 import { elements } from '../core/elements.js';
 import { showToast, getCleanFileBaseName, waitForNextPaint, escapeHTML, waitForImageReady } from '../core/utils.js';
@@ -865,6 +866,10 @@ export async function clearCurrentProject() {
     globalState.pages = [];
     globalState.activePageIndex = -1;
     globalState.selectedBlockId = null;
+
+    if (globalState.toeicSavedWords && globalState.toeicSavedWords.length > 0) {
+        await saveToeicWordsToDB(globalState.toeicSavedWords);
+    }
 
     await saveProjectMeta([], -1);
     garbageCollectPageCaches();
