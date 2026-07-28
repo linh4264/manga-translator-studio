@@ -428,7 +428,6 @@ export function applyDiamondFormat() {
         block.translated = formatted;
         elements.editTranslatedText.value = formatted;
 
-        // Import động để gọi syncActiveBlockTranslation tránh lặp import
         import('./canvas-styling.js').then(m => m.syncActiveBlockTranslation(formatted));
         requestOverlayRender();
         showToast("Đã định dạng dòng cân đối hình kim cương bầu dục thành công!", "success");

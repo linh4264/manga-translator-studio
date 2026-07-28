@@ -3,7 +3,7 @@ import { elements } from '../../core/elements.js';
 import { showToast } from '../../core/utils.js';
 import { DEFAULT_VERTICAL_WRITING_MODE } from '../../config/constants.js';
 import { requestOverlayRender } from './canvas-renderer.js';
-import { autoFitBlock } from './canvas-styling.js';
+import { autoFitBlock, copiedStyle } from './canvas-styling.js';
 import { duplicateActiveBlock as duplicateActiveBlockLogic } from './canvas-actions.js';
 
 export function startBlockDrag(e, block) {
@@ -195,6 +195,7 @@ export function selectBlock(blockId) {
     uiUpdateActiveBlockEditor();
 
     if (elements.btnCopyStyle) elements.btnCopyStyle.disabled = false;
+    if (elements.btnPasteStyle) elements.btnPasteStyle.disabled = !copiedStyle;
 
     if (globalState.viewMode === 'split') {
         uiUpdateSplitView();

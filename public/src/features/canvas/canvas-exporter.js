@@ -4,6 +4,25 @@ import { waitForNextPaint } from '../../core/utils.js';
 import { computeBubbleMask } from '../ocr/ocr-service.js';
 import { renderOverlays, convertHexToRGBA, wrapCanvasText, wrapCanvasVerticalText } from './canvas-renderer.js';
 
+// Helper mapper cho phông chữ canvas kết xuất
+function getFontFamilyName(fontClass) {
+    const fontMap = {
+        'font-manga': "'Nunito', sans-serif",
+        'font-vietnamese': "'Be Vietnam Pro', 'Inter', sans-serif",
+        'font-comicneue': "'Comic Neue', cursive",
+        'font-impact': "'Bangers', cursive",
+        'font-marker': "'Permanent Marker', cursive",
+        'font-bungee': "'Bungee', cursive",
+        'font-caveat': "'Caveat', cursive",
+        'font-tech': "'Chakra Petch', sans-serif",
+        'font-condensed': "'Saira Condensed', sans-serif"
+    };
+
+    if (fontMap[fontClass]) return fontMap[fontClass];
+    if (fontClass && !fontClass.startsWith('font-')) return `'${fontClass}', sans-serif`;
+    return "'Patrick Hand', cursive";
+}
+
 export async function renderPageToCanvas2D(page) {
     const imgElement = elements.mangaBgImage;
     if (!imgElement || !imgElement.naturalWidth || !imgElement.naturalHeight) {
@@ -80,19 +99,7 @@ export async function renderPageToCanvas2D(page) {
             ctx.rect(bx - 0.5, by - 0.5, bw + 1, bh + 1);
             ctx.clip();
 
-            const fontClass = block.style.fontFamily || 'font-comic';
-            let fontName = "'Patrick Hand', cursive";
-            if (fontClass === 'font-manga') fontName = "'Nunito', sans-serif";
-            else if (fontClass === 'font-vietnamese') fontName = "'Be Vietnam Pro', 'Inter', sans-serif";
-            else if (fontClass === 'font-comicneue') fontName = "'Comic Neue', cursive";
-            else if (fontClass === 'font-impact') fontName = "'Bangers', cursive";
-            else if (fontClass === 'font-marker') fontName = "'Permanent Marker', cursive";
-            else if (fontClass === 'font-bungee') fontName = "'Bungee', cursive";
-            else if (fontClass === 'font-caveat') fontName = "'Caveat', cursive";
-            else if (fontClass === 'font-tech') fontName = "'Chakra Petch', sans-serif";
-            else if (fontClass === 'font-condensed') fontName = "'Saira Condensed', sans-serif";
-            else if (fontClass && !fontClass.startsWith('font-')) fontName = `'${fontClass}', sans-serif`;
-
+            const fontName = getFontFamilyName(block.style.fontFamily);
             const displayWidth = page.lastDisplayWidth || imgElement.clientWidth || 800;
             const scaleFactor = W / Math.max(1, displayWidth);
             const fontSizePx = (block.style.fontSize || 16) * scaleFactor;
@@ -220,7 +227,6 @@ export async function renderPageToCanvas2D(page) {
             if (block.style.vertical) {
                 const colStep = fontSizePx * 1.12;
                 const charStep = fontSizePx * 1.12;
-
                 let rightX = bx + bw / 2 + totalTextWidth / 2 - colStep / 2;
 
                 for (let j = 0; j < columns.length; j++) {
@@ -268,7 +274,6 @@ export async function renderPageToCanvas2D(page) {
                 }
             } else {
                 const lineHeight = fontSizePx * 1.18;
-
                 let startY = by + (bh / 2) - (totalTextHeight / 2) + (lineHeight / 2);
                 const minStartY = by + paddingPx + (lineHeight / 2);
                 if (startY < minStartY) startY = minStartY;
