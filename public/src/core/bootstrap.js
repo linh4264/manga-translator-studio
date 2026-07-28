@@ -1,4 +1,5 @@
 import * as io from '../features/io.js';
+import { loadUIComponents } from './component-loader.js';
 import { registerAction, initEventDelegation } from './events.js';
 import {
     initEventListeners,
@@ -37,6 +38,9 @@ import { playPageAudioDrama, pauseAudioDrama, stopAudioDrama, speakActiveBlock, 
 import { initI18n, changeUILanguage } from './i18n.js';
 
 export async function initApplication() {
+
+    await loadUIComponents();
+
     // Initialize UI language translation (i18n)
     initI18n();
     window.changeUILanguage = changeUILanguage;

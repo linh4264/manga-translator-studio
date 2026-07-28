@@ -1,0 +1,100 @@
+<div id="srs-review-modal"
+    class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[70] flex items-center justify-center p-4"
+    onclick="closeSrsReviewModal()">
+    <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col space-y-4 p-6"
+        onclick="event.stopPropagation()">
+
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+                <div
+                    class="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-xs">
+                    <i class="fa-solid fa-brain"></i>
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold text-slate-200 uppercase tracking-wider">Ôn Tập Lặp Lại Ngắt Quãng
+                        (SRS)</h3>
+                    <p class="text-[10px] text-slate-400">Thuật toán SuperMemo SM-2 giúp nhớ lâu hơn</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="srs-progress-counter"
+                    class="text-xs font-mono font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">1
+                    / 5</span>
+                <button onclick="closeSrsReviewModal()"
+                    class="text-slate-500 hover:text-slate-200 transition-colors text-sm">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Flashcard 3D Wrapper -->
+        <div id="srs-card-container" class="srs-card-perspective min-h-[220px] cursor-pointer" onclick="flipSrsCard()">
+            <div id="srs-card-inner"
+                class="srs-card-inner bg-slate-950 border border-slate-800 rounded-xl p-5 flex flex-col items-center justify-center text-center space-y-3 relative shadow-inner">
+
+                <!-- FRONT SIDE OF CARD -->
+                <div id="srs-card-front" class="space-y-2.5 w-full">
+                    <span id="srs-card-pos"
+                        class="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-bold uppercase tracking-wider">vocabulary</span>
+                    <h2 id="srs-card-word" class="text-2xl font-extrabold text-white tracking-wide">word</h2>
+                    <div class="flex items-center justify-center gap-2">
+                        <span id="srs-card-phonetic" class="text-xs text-slate-400 font-mono italic">/phonetic/</span>
+                        <button id="btn-srs-speak" onclick="event.stopPropagation(); speakSrsCurrentWord()"
+                            class="w-6 h-6 rounded-full bg-slate-900 hover:bg-indigo-600 hover:text-white border border-slate-800 text-slate-400 flex items-center justify-center transition-all text-xs"
+                            title="Nghe phát âm">
+                            <i class="fa-solid fa-volume-high text-[10px]"></i>
+                        </button>
+                    </div>
+                    <div class="pt-4 text-[11px] text-slate-500 flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-hand-pointer animate-bounce"></i> Bấm thẻ để lật xem đáp án
+                    </div>
+                </div>
+
+                <!-- BACK SIDE OF CARD -->
+                <div id="srs-card-back" class="hidden space-y-3 w-full">
+                    <div class="space-y-1">
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Nghĩa
+                            Tiếng Việt</span>
+                        <h3 id="srs-card-meaning" class="text-base font-bold text-emerald-400">nghĩa</h3>
+                    </div>
+                    <div
+                        class="bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-300 italic text-left space-y-1">
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block not-italic">Ví
+                            dụ TOEIC:</span>
+                        <p id="srs-card-example" class="leading-relaxed">"example sentence"</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- SRS Rating Action Buttons (Shown after flipping) -->
+        <div id="srs-rating-actions" class="hidden grid grid-cols-3 gap-2 pt-2 border-t border-slate-800">
+            <button onclick="submitSrsReview(1)"
+                class="py-2 px-1 rounded-xl bg-red-950/40 border border-red-500/30 hover:bg-red-900/60 text-red-300 text-xs font-bold flex flex-col items-center gap-0.5 transition-all">
+                <span class="flex items-center gap-1"><i class="fa-solid fa-rotate-left text-red-400"></i>
+                    Quên</span>
+                <span class="text-[9px] font-normal text-red-400/80">Ôn lại 1 ngày</span>
+            </button>
+            <button onclick="submitSrsReview(3)"
+                class="py-2 px-1 rounded-xl bg-amber-950/40 border border-amber-500/30 hover:bg-amber-900/60 text-amber-300 text-xs font-bold flex flex-col items-center gap-0.5 transition-all">
+                <span class="flex items-center gap-1"><i class="fa-solid fa-check text-amber-400"></i> Đã nhớ</span>
+                <span id="srs-lbl-good-interval" class="text-[9px] font-normal text-amber-400/80">Ôn lại 3
+                    ngày</span>
+            </button>
+            <button onclick="submitSrsReview(5)"
+                class="py-2 px-1 rounded-xl bg-emerald-950/40 border border-emerald-500/30 hover:bg-emerald-900/60 text-emerald-300 text-xs font-bold flex flex-col items-center gap-0.5 transition-all">
+                <span class="flex items-center gap-1"><i class="fa-solid fa-star text-emerald-400"></i> Rất
+                    dễ</span>
+                <span id="srs-lbl-easy-interval" class="text-[9px] font-normal text-emerald-400/80">Ôn lại 7
+                    ngày</span>
+            </button>
+        </div>
+
+        <div id="srs-flip-prompt" class="text-center text-[11px] text-slate-500">
+            Nhấp chuột lên mặt thẻ để lật trước khi đánh giá mức độ thuộc.
+        </div>
+
+    </div>
+</div>

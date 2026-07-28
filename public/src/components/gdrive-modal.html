@@ -1,0 +1,127 @@
+<div id="gdrive-modal"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+                <i class="fa-brands fa-google-drive text-sky-400 text-lg"></i>
+                <div>
+                    <h3 class="text-sm font-bold text-slate-100 uppercase tracking-wider">Đồng Bộ & Làm Việc Nhóm
+                        Qua Google Drive</h3>
+                    <p class="text-[10px] text-slate-400">Xuất/nhập tệp dự án làm việc chung giữa Translator,
+                        Proofreader và Typesetter</p>
+                </div>
+            </div>
+            <button onclick="closeGDriveModal()"
+                class="w-7 h-7 hover:bg-slate-800 rounded flex items-center justify-center text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Token Setup Section -->
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5">
+            <div class="flex items-center justify-between">
+                <button onclick="loginWithGoogleOAuth()"
+                    class="px-3 py-2 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white rounded-lg text-xs font-bold transition-all shadow-lg flex items-center gap-1.5">
+                    <i class="fa-brands fa-google text-sm"></i> Lấy Access Token Nhanh
+                </button>
+                <button onclick="document.getElementById('gdrive-guide-box').classList.toggle('hidden')"
+                    class="text-[10px] text-slate-400 hover:text-amber-400 hover:underline flex items-center gap-1 transition-colors">
+                    <i class="fa-solid fa-eye"></i> Ẩn/Hiện hướng dẫn
+                </button>
+            </div>
+
+            <!-- Step-by-Step Token Guide (visible by default) -->
+            <div id="gdrive-guide-box"
+                class="bg-slate-900/80 p-3 rounded-lg border border-sky-900/40 text-[11px] text-slate-300 space-y-1.5">
+                <p class="font-bold text-amber-300 flex items-center gap-1.5"><i class="fa-solid fa-lightbulb"></i>
+                    Lấy Token miễn phí qua OAuth Playground (30 giây):</p>
+                <ol class="list-decimal list-inside space-y-1.5 text-slate-400 leading-relaxed">
+                    <li>Bấm nút <b class="text-sky-300">Lấy Access Token Nhanh</b> bên trên (mở <a
+                            href="https://developers.google.com/oauthplayground/" target="_blank"
+                            class="text-sky-400 underline">OAuth Playground</a>)</li>
+                    <li>Ở cột trái <b class="text-white">Step 1</b>, cuộn tìm <b class="text-white">Drive API v3</b>
+                        → Tích chọn <code
+                            class="bg-slate-800 px-1 py-0.5 rounded text-sky-300 text-[10px]">../auth/drive</code>
+                        (quét toàn bộ thư mục Drive) hoặc <code
+                            class="bg-slate-800 px-1 py-0.5 rounded text-sky-300 text-[10px]">../auth/drive.file</code>
+                    </li>
+                    <li>Bấm nút xanh <b class="text-blue-300">Authorize APIs</b> → Đăng nhập tài khoản Google</li>
+                    <li>Ở <b class="text-white">Step 2</b>, bấm <b class="text-blue-300">Exchange authorization code
+                            for tokens</b></li>
+                    <li>Copy chuỗi <b class="text-emerald-300">Access token</b> (dạng <code
+                            class="bg-slate-800 px-1 py-0.5 rounded text-emerald-300 text-[10px]">ya29.a0...</code>)
+                        → Dán vào ô bên dưới → Bấm <b class="text-indigo-300">Lưu Token</b></li>
+                </ol>
+            </div>
+
+            <div
+                class="flex items-center justify-between text-xs font-semibold text-slate-200 pt-1 border-t border-slate-800">
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-key text-amber-400"></i> Access
+                    Token:</span>
+                <button onclick="saveGDriveTokenFromUI()"
+                    class="text-[10px] bg-indigo-600 hover:bg-indigo-500 text-white px-2.5 py-1 rounded font-bold transition-all">Lưu
+                    Token</button>
+            </div>
+            <input type="text" id="gdrive-token-input" placeholder="Dán Access Token từ OAuth Playground vào đây..."
+                class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 font-mono placeholder:text-slate-600">
+        </div>
+
+        <!-- Drive Folder Selection Section -->
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 space-y-1.5">
+            <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-folder-open text-amber-400"></i> Thư
+                    mục lưu trữ:</span>
+                <button onclick="createNewGDriveFolder()"
+                    class="text-[10px] bg-sky-950 hover:bg-sky-900 border border-sky-500/40 text-sky-300 px-2 py-0.5 rounded font-bold transition-all flex items-center gap-1">
+                    <i class="fa-solid fa-folder-plus"></i> Tạo thư mục mới
+                </button>
+            </div>
+            <select id="gdrive-folder-select" onchange="onGDriveFolderChange()"
+                class="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                <option value="">📁 Google Drive gốc (Root)</option>
+            </select>
+        </div>
+
+        <!-- Export & Link Import Actions -->
+        <div class="space-y-2">
+            <div class="flex gap-1.5">
+                <input type="text" id="gdrive-export-name-input"
+                    placeholder="Tên tệp lưu lên Drive (mặc định: tự động)..."
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-slate-200 focus:outline-none focus:border-sky-500 placeholder:text-slate-600 font-sans">
+                <button onclick="uploadProjectToGDrive(document.getElementById('gdrive-export-name-input').value)"
+                    class="px-3.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shrink-0 flex items-center gap-1.5 transition-all">
+                    <i class="fa-solid fa-cloud-arrow-up text-xs"></i> Tải Lên Drive
+                </button>
+            </div>
+            <div class="flex gap-1.5">
+                <input type="text" id="gdrive-import-link-input"
+                    placeholder="Dán ID hoặc Đường dẫn chia sẻ Google Drive..."
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 placeholder:text-slate-600 font-sans">
+                <button onclick="importProjectFromGDrive(document.getElementById('gdrive-import-link-input').value)"
+                    class="px-3.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shrink-0 flex items-center gap-1 transition-all">
+                    <i class="fa-solid fa-download text-xs"></i> Nạp
+                </button>
+            </div>
+        </div>
+
+        <!-- Drive File List -->
+        <div class="space-y-2">
+            <div class="flex items-center justify-between text-xs font-bold text-slate-300">
+                <span>📂 Danh Sách Dự Án Trên Google Drive</span>
+                <button onclick="loadGDriveProjectList()"
+                    class="text-[10px] text-sky-400 hover:underline flex items-center gap-1"><i
+                        class="fa-solid fa-rotate"></i> Làm mới</button>
+            </div>
+            <div id="gdrive-file-list" class="max-h-52 overflow-y-auto space-y-1.5 custom-scrollbar pr-1">
+                <!-- Dynamically populated files -->
+            </div>
+        </div>
+
+        <div class="flex justify-end border-t border-slate-800 pt-3">
+            <button onclick="closeGDriveModal()"
+                class="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all">
+                Đóng
+            </button>
+        </div>
+    </div>
+</div>

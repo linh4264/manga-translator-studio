@@ -1,0 +1,97 @@
+<div id="audio-settings-modal"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-sliders text-indigo-400"></i>
+                <h3 class="text-sm font-bold text-slate-100 uppercase tracking-wider">Cài Đặt Giọng Đọc Audio Drama
+                </h3>
+            </div>
+            <button onclick="closeAudioSettingsModal()"
+                class="w-7 h-7 hover:bg-slate-800 rounded flex items-center justify-center text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="space-y-3.5">
+            <!-- Male Voice Select -->
+            <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-mars text-sky-400"></i> Giọng Nam
+                        (Male Voice):</span>
+                    <button onclick="testVoice('male')" class="text-[10px] text-sky-400 hover:underline">🔊 Nghe
+                        thử</button>
+                </div>
+                <select id="voice-select-male" onchange="updateAudioSettingsFromUI()"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                </select>
+            </div>
+
+            <!-- Female Voice Select -->
+            <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-venus text-pink-400"></i> Giọng Nữ
+                        (Female Voice):</span>
+                    <button onclick="testVoice('female')" class="text-[10px] text-pink-400 hover:underline">🔊 Nghe
+                        thử</button>
+                </div>
+                <select id="voice-select-female" onchange="updateAudioSettingsFromUI()"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                </select>
+            </div>
+
+            <!-- Narrator Voice Select -->
+            <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-microphone text-purple-400"></i>
+                        Giọng Dẫn Chuyện (Narrator):</span>
+                    <button onclick="testVoice('neutral')" class="text-[10px] text-purple-400 hover:underline">🔊
+                        Nghe thử</button>
+                </div>
+                <select id="voice-select-narrator" onchange="updateAudioSettingsFromUI()"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                </select>
+            </div>
+
+            <!-- Pitch Adjustment Sliders -->
+            <div class="grid grid-cols-2 gap-2">
+                <div class="space-y-1 bg-slate-950 p-2 rounded-lg border border-slate-800/80">
+                    <div class="flex items-center justify-between text-[11px] font-semibold text-sky-300">
+                        <span>👨 Pitch Nam:</span>
+                        <span id="audio-male-pitch-val" class="font-bold text-sky-400">0.92</span>
+                    </div>
+                    <input type="range" id="audio-male-pitch-input" min="0.7" max="1.3" step="0.05" value="0.92"
+                        oninput="document.getElementById('audio-male-pitch-val').textContent = this.value; updateAudioSettingsFromUI();"
+                        class="w-full accent-sky-500">
+                </div>
+                <div class="space-y-1 bg-slate-950 p-2 rounded-lg border border-slate-800/80">
+                    <div class="flex items-center justify-between text-[11px] font-semibold text-pink-300">
+                        <span>👩 Pitch Nữ:</span>
+                        <span id="audio-female-pitch-val" class="font-bold text-pink-400">1.08</span>
+                    </div>
+                    <input type="range" id="audio-female-pitch-input" min="0.8" max="1.4" step="0.05" value="1.08"
+                        oninput="document.getElementById('audio-female-pitch-val').textContent = this.value; updateAudioSettingsFromUI();"
+                        class="w-full accent-pink-500">
+                </div>
+            </div>
+
+            <!-- Speed Rate Slider -->
+            <div class="space-y-1">
+                <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
+                    <span>⚡ Tốc độ phát âm (Rate):</span>
+                    <span id="audio-rate-val" class="text-[11px] text-indigo-400 font-bold">1.0x</span>
+                </div>
+                <input type="range" id="audio-rate-input" min="0.7" max="1.6" step="0.1" value="1.0"
+                    oninput="document.getElementById('audio-rate-val').textContent = this.value + 'x'; updateAudioSettingsFromUI();"
+                    class="w-full accent-indigo-500">
+            </div>
+        </div>
+
+        <div class="flex justify-end border-t border-slate-800 pt-3">
+            <button onclick="closeAudioSettingsModal()"
+                class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow">
+                Hoàn tất
+            </button>
+        </div>
+    </div>
+</div>

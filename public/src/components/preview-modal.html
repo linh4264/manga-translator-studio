@@ -1,0 +1,32 @@
+<div id="preview-modal" class="fixed inset-0 z-[100] hidden">
+    <div class="absolute inset-0 bg-black/95"></div>
+    <div class="relative z-10 h-full flex flex-col">
+        <!-- Preview Header -->
+        <div
+            class="flex items-center justify-between px-6 py-3 bg-slate-900/80 border-b border-slate-800 backdrop-blur-md">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-book-open text-indigo-400"></i>
+                <span class="text-sm font-bold text-white">Chế độ Xem trước</span>
+                <span id="preview-page-indicator" class="text-xs text-slate-400 font-mono">Trang 1/1</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="previewPrevPage()"
+                    class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 transition-colors">
+                    <i class="fa-solid fa-chevron-left"></i> Trước
+                </button>
+                <button onclick="previewNextPage()"
+                    class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 transition-colors">
+                    Tiếp <i class="fa-solid fa-chevron-right"></i>
+                </button>
+                <button onclick="closePreviewMode()"
+                    class="px-3 py-1.5 rounded bg-red-950/60 border border-red-500/30 hover:bg-red-950 text-red-300 text-xs font-bold flex items-center gap-1 transition-colors">
+                    <i class="fa-solid fa-xmark"></i> Đóng
+                </button>
+            </div>
+        </div>
+        <!-- Preview Body -->
+        <div id="preview-body" class="flex-1 overflow-y-auto flex flex-col items-center py-6 gap-1">
+            <!-- Rendered preview pages go here -->
+        </div>
+    </div>
+</div>
