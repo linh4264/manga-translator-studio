@@ -289,6 +289,15 @@ Return ONLY the JSON. Do not wrap it in markdown code fences or anything else. J
     }
 }
 
+// Hàm helper hỗ trợ lưu bền vững vào localStorage
+export function persistToeicWordsToStorage(words) {
+    try {
+        localStorage.setItem('manga_permanent_toeic_words', JSON.stringify(words));
+    } catch (e) {
+        console.warn("Lỗi lưu TOEIC vào localStorage:", e);
+    }
+}
+
 // 7. Lưu / Bỏ lưu từ vựng TOEIC bằng chỉ số index
 export async function toggleSaveToeicWordByIndex(index) {
     if (!globalState.activeBlockToeicAnalysis || !globalState.activeBlockToeicAnalysis.analysis) return;
@@ -297,13 +306,10 @@ export async function toggleSaveToeicWordByIndex(index) {
 
     try {
         const wordIndex = globalState.toeicSavedWords.findIndex(w => w.word.toLowerCase() === item.word.toLowerCase());
-
         if (wordIndex !== -1) {
-            // Đã có -> Xóa bỏ
             globalState.toeicSavedWords.splice(wordIndex, 1);
-            showToast(`Đã xóa từ "${item.word}" khỏi sổ tay.`, "info");
+            showToast(`Đã xóa "${item.word}" khỏi sổ tay.`, "info");
         } else {
-            // Chưa có -> Thêm vào đầu danh sách
             globalState.toeicSavedWords.unshift({
                 word: item.word,
                 pos: item.pos,
@@ -312,16 +318,15 @@ export async function toggleSaveToeicWordByIndex(index) {
                 toeic_example: item.toeic_example || '',
                 savedAt: Date.now()
             });
-            showToast(`Đã lưu từ "${item.word}" vào sổ tay!`, "success");
+            showToast(`Đã lưu "${item.word}" vào sổ tay!`, "success");
         }
 
-        // Lưu vào database
+        // 1. Lưu vào DB như cũ
         await saveToeicWordsToDB(globalState.toeicSavedWords);
+        // 2. LƯU BỀN VỮNG VÀO LOCALSTORAGE (Không bao giờ mất khi xóa dự án)
+        persistToeicWordsToStorage(globalState.toeicSavedWords);
 
-        // Cập nhật giao diện
         updateToeicNotebookUI();
-
-        // Đồng bộ lại nút Lưu trong phần kết quả phân tích hiện tại
         if (globalState.activeBlockToeicAnalysis) {
             displayToeicAnalysis(globalState.activeBlockToeicAnalysis.analysis);
         }
