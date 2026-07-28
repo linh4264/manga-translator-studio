@@ -7,7 +7,7 @@ export function openLorebookModal() {
         modal.classList.remove('hidden');
         renderCharacterDossierUI();
         renderLorebookUI();
-        initLorebookDelegationOnce(); 
+        initLorebookDelegationOnce();
     }
 }
 
@@ -34,7 +34,6 @@ export function switchLorebookTab(tab) {
     }
 }
 
-// Bắt sự kiện xóa chung 1 lần duy nhất
 let isListenerInitialized = false;
 function initLorebookDelegationOnce() {
     if (isListenerInitialized) return;
@@ -42,9 +41,10 @@ function initLorebookDelegationOnce() {
     const dossierContainer = document.getElementById('dossier-items-list');
     if (dossierContainer) {
         dossierContainer.addEventListener('click', (e) => {
-            const btn = e.target.closest('[data-action="remove-dossier"]');
-            if (btn?.dataset.id) {
-                removeCharacterDossierEntry(btn.dataset.id);
+            // ✅ Đổi selector từ data-action sang data-dossier-id
+            const btn = e.target.closest('[data-dossier-id]');
+            if (btn?.dataset.dossierId) {
+                removeCharacterDossierEntry(btn.dataset.dossierId);
             }
         });
     }
@@ -52,9 +52,10 @@ function initLorebookDelegationOnce() {
     const lorebookContainer = document.getElementById('lorebook-items-list');
     if (lorebookContainer) {
         lorebookContainer.addEventListener('click', (e) => {
-            const btn = e.target.closest('[data-action="remove-lorebook"]');
-            if (btn?.dataset.id) {
-                removeLorebookTermEntry(btn.dataset.id);
+            // ✅ Đổi selector từ data-action sang data-lorebook-id
+            const btn = e.target.closest('[data-lorebook-id]');
+            if (btn?.dataset.lorebookId) {
+                removeLorebookTermEntry(btn.dataset.lorebookId);
             }
         });
     }
@@ -88,7 +89,8 @@ export function renderCharacterDossierUI() {
                     ${item.personality ? `<span class="truncate">🎭 ${escapeHTML(item.personality)}</span>` : ''}
                 </div>
             </div>
-            <button data-action="remove-dossier" data-id="${item.id}" class="w-7 h-7 hover:bg-red-950 text-red-400 rounded flex items-center justify-center transition-colors" title="Xóa nhân vật">
+            <!-- ✅ Đổi data-action="remove-dossier" thành data-dossier-id -->
+            <button data-dossier-id="${item.id}" class="w-7 h-7 hover:bg-red-950 text-red-400 rounded flex items-center justify-center transition-colors" title="Xóa nhân vật">
                 <i class="fa-solid fa-trash-can text-xs"></i>
             </button>
         </div>
@@ -167,7 +169,8 @@ export function renderLorebookUI() {
                 </div>
                 ${item.note ? `<div class="text-[11px] text-slate-400 truncate">💡 Ghi chú AI: ${escapeHTML(item.note)}</div>` : ''}
             </div>
-            <button data-action="remove-lorebook" data-id="${item.id}" class="w-7 h-7 hover:bg-red-950 text-red-400 rounded flex items-center justify-center transition-colors" title="Xóa thuật ngữ">
+            <!-- ✅ Đổi data-action="remove-lorebook" thành data-lorebook-id -->
+            <button data-lorebook-id="${item.id}" class="w-7 h-7 hover:bg-red-950 text-red-400 rounded flex items-center justify-center transition-colors" title="Xóa thuật ngữ">
                 <i class="fa-solid fa-trash-can text-xs"></i>
             </button>
         </div>
