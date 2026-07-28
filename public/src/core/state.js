@@ -60,10 +60,7 @@ export const globalState = {
     chapterStoryMemory: [], // Multi-page dialogue and character tone memory
     enableStoryMemory: true, // Toggle story context accumulation
     selectedModel: DEFAULT_MODEL,
-    // Default fonts for AI translation / auto-match (configurable via settings)
-    defaultDialogueFont: localStorage.getItem('manga_default_dialogue_font') || 'font-comic',
-    defaultSfxFont: localStorage.getItem('manga_default_sfx_font') || 'font-impact',
-    defaultNarrationFont: localStorage.getItem('manga_default_narration_font') || 'font-vietnamese',
+    defaultFont: localStorage.getItem('manga_default_font') || 'font-manga',
     pages: [],
     activePageIndex: -1,
     selectedBlockId: null,
@@ -129,7 +126,8 @@ export function initializeStateFromStorage() {
         'manga_default_dialogue_font': 'defaultDialogueFont',
         'manga_default_sfx_font': 'defaultSfxFont',
         'manga_default_narration_font': 'defaultNarrationFont',
-        'gemini_manga_audio_settings': 'audioSettings'
+        'gemini_manga_audio_settings': 'audioSettings',
+        'manga_default_font': 'defaultFont'
     };
 
     Object.entries(keysToLoad).forEach(([storageKey, stateKey]) => {

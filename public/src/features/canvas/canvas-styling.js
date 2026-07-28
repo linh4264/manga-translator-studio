@@ -164,6 +164,8 @@ export function toggleAutoFit(enabled) {
 export function autoMatchBlockStyle(block, imgElement) {
     if (!block || !imgElement || !imgElement.naturalWidth || !imgElement.naturalHeight) return;
 
+    if (!block.style) block.style = {};
+
     const W = imgElement.naturalWidth;
     const H = imgElement.naturalHeight;
 
@@ -207,26 +209,8 @@ export function autoMatchBlockStyle(block, imgElement) {
     const avgRimLum = rimCount > 0 ? (rimLumSum / rimCount) : 255;
     const avgCenterLum = centerCount > 0 ? (centerLumSum / centerCount) : 128;
 
-    if (block.type === 'sfx') {
-        block.style.fontFamily = globalState.defaultSfxFont || 'font-impact';
-        block.style.bold = true;
-        block.style.align = 'center';
-        block.style.strokeColor = '#000000';
-        block.style.strokeWidth = 2;
-        block.style.shadowColor = '#000000';
-        block.style.shadowBlur = 3;
-    } else if (block.type === 'narration') {
-        block.style.fontFamily = globalState.defaultNarrationFont || 'font-vietnamese';
-        block.style.bold = false;
-        block.style.align = 'left';
-        block.style.maskShape = 'rect';
-        block.style.maskSize = 'full';
-        block.style.bgColor = '#ffffff';
-        block.style.bgOpacity = 95;
-    } else {
-        block.style.fontFamily = globalState.defaultDialogueFont || 'font-comic';
-        block.style.align = 'center';
-    }
+    block.style.fontFamily = globalState.defaultFont || 'font-manga';
+    block.style.align = 'center';
 
     if (avgRimLum < 140) {
         if (avgCenterLum > avgRimLum + 30) {
@@ -251,6 +235,7 @@ export function autoMatchBlockStyle(block, imgElement) {
         block.style.strokeWidth = 0;
     }
 
+    block.style.align = 'center';
     block.maskCache = null;
     block.autoFitCache = null;
 }

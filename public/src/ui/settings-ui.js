@@ -214,14 +214,8 @@ export function openSettingsModal() {
         }
     }
 
-    const dialogueFont = document.getElementById('default-dialogue-font');
-    if (dialogueFont) dialogueFont.value = globalState.defaultDialogueFont;
-
-    const sfxFont = document.getElementById('default-sfx-font');
-    if (sfxFont) sfxFont.value = globalState.defaultSfxFont;
-
-    const narrationFont = document.getElementById('default-narration-font');
-    if (narrationFont) narrationFont.value = globalState.defaultNarrationFont;
+    const defaultFontSelect = document.getElementById('default-font');
+    if (defaultFontSelect) defaultFontSelect.value = globalState.defaultFont || 'font-manga';
 
     const apiDelay = document.getElementById('api-delay-input');
     if (apiDelay) apiDelay.value = globalState.apiDelay || 2;
@@ -240,29 +234,16 @@ export function closeSettingsModal() {
     if (modal) modal.classList.add('hidden');
 }
 
-export function updateDefaultDialogueFont(value) {
-    globalState.defaultDialogueFont = value;
-    const el = document.getElementById('default-dialogue-font');
+export function updateDefaultFont(value) {
+    globalState.defaultFont = value;
+    globalState.globalStyle.fontFamily = value;
+    const el = document.getElementById('default-font');
     if (el) el.value = value;
-    safeSetLocalStorage('manga_default_dialogue_font', value);
-    showToast('Đã cập nhật font mặc định cho Lời thoại', 'info');
+    localStorage.setItem('manga_default_font', value);
+    showToast('Đã cập nhật phông chữ mặc định!', 'info');
 }
 
-export function updateDefaultSfxFont(value) {
-    globalState.defaultSfxFont = value;
-    const el = document.getElementById('default-sfx-font');
-    if (el) el.value = value;
-    safeSetLocalStorage('manga_default_sfx_font', value);
-    showToast('Đã cập nhật font mặc định cho SFX', 'info');
-}
-
-export function updateDefaultNarrationFont(value) {
-    globalState.defaultNarrationFont = value;
-    const el = document.getElementById('default-narration-font');
-    if (el) el.value = value;
-    safeSetLocalStorage('manga_default_narration_font', value);
-    showToast('Đã cập nhật font mặc định cho Dẫn truyện', 'info');
-}
+window.updateDefaultFont = updateDefaultFont;
 
 export function updateSourceLanguage(value) {
     globalState.sourceLanguage = value;
