@@ -251,7 +251,7 @@ export function getTranslationGuidancePrompt() {
         guidanceParts.push(pronounPrompt);
     }
 
-    const dialogueRule = targetLang === 'vi' 
+    const dialogueRule = targetLang === 'vi'
         ? '- DIALOGUE RULE: Choose Vietnamese xưng hô from the relationship and scene, not from the surface grammar. Keep xưng hô consistent across the page unless the relationship or mood changes.'
         : `- DIALOGUE RULE: Choose ${targetLangName} pronouns and forms of address from the relationship and scene, not from the surface grammar. Keep pronouns, address forms, and honorifics consistent across the page unless the relationship or mood changes.`;
 
@@ -532,7 +532,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                                                 y: { type: "NUMBER" },
                                                 w: { type: "NUMBER" },
                                                 h: { type: "NUMBER" }
-                                             },
+                                            },
                                             required: ["x", "y", "w", "h"]
                                         },
                                         positionKnown: {
@@ -547,7 +547,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                                     },
                                     required: ["id", "type", "original", "translated", "box", "positionKnown"]
                                 }
-                             }
+                            }
                         },
                         required: ["blocks"]
                     }
@@ -691,7 +691,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
             const imgEl = elements.mangaBgImage;
             if (imgEl && imgEl.naturalWidth) {
                 try {
-                    const { autoMatchBlockStyle } = await import('./canvas.js');
+                    const { autoMatchBlockStyle } = await import('../canvas/canvas-service.js');
                     page.blocks.forEach(b => autoMatchBlockStyle(b, imgEl));
                 } catch (e) { }
             }
@@ -879,8 +879,8 @@ export async function requestAiInpaintPatch(page, block, cropX, cropY, cropW, cr
     tempCtx.drawImage(imgElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
     // Perform text cleaning & background reconstruction
-    const { cleanMangaTextRegion } = await import('./inpainting.js');
-    cleanMangaTextRegion(tempCtx, cropW, cropH, true);
+    const { cleanMangaBackgroundArtText } = await import('../inpainting.js');
+    cleanMangaBackgroundArtText(tempCtx, cropW, cropH);
 
     const canvas = elements.eraserCanvas;
     canvas.width = imgElement.naturalWidth;
