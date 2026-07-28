@@ -1,4 +1,5 @@
 import * as io from '../features/io.js';
+import '../features/gdrive.js';
 import { loadUIComponents } from './component-loader.js';
 import { registerAction, initEventDelegation } from './events.js';
 import {
