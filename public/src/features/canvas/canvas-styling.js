@@ -1,0 +1,579 @@
+import { globalState, pushStateToHistory, savePageToDB, debounceSavePage, uiUpdateActiveBlockEditor } from '../../core/state.js';
+import { elements } from '../../core/elements.js';
+import { showToast, setMultilineText } from '../../core/utils.js';
+import { requestOverlayRender } from './canvas-renderer.js';
+import { updateFloatingToolbarPosition } from './canvas-interactions.js';
+
+let isCurrentlySliding = false;
+export let copiedStyle = null;
+
+export function setCopiedStyle(val) {
+    copiedStyle = val;
+}
+
+export function autoFitBlock(block, customImgElement = null, forceExportScale = 1) {
+    if (!block.translated || block.translated.trim() === '') {
+        block.style.fontSize = 12;
+        return;
+    }
+
+    const imgEl = customImgElement || elements.mangaBgImage;
+
+    let displayWidth = (imgEl && imgEl.clientWidth > 0) ? imgEl.clientWidth : 0;
+    if (!displayWidth && elements.mangaCanvasContainer && elements.mangaCanvasContainer.clientWidth > 0) {
+        displayWidth = elements.mangaCanvasContainer.clientWidth;
+    }
+    if (!displayWidth && elements.workspaceViewport && elements.workspaceViewport.clientWidth > 0) {
+        displayWidth = Math.min(elements.workspaceViewport.clientWidth - 32, 1000);
+    }
+    if (!displayWidth) {
+        displayWidth = 800;
+    }
+
+    const naturalW = (imgEl && imgEl.naturalWidth > 0) ? imgEl.naturalWidth : 800;
+    const naturalH = (imgEl && imgEl.naturalHeight > 0) ? imgEl.naturalHeight : 1200;
+    const aspect = naturalH / Math.max(1, naturalW);
+    const displayHeight = displayWidth * aspect;
+
+    const maskShape = block.style.maskShape || 'bubble-fit';
+    const cacheKey = `${block.translated}_${block.box.w}_${block.box.h}_${block.style.fontFamily}_${block.style.padding}_${block.style.vertical}_${block.style.bold}_${block.style.align}_${maskShape}_${Math.round(displayWidth)}_${Math.round(displayHeight)}`;
+    if (block.autoFitCache && block.autoFitCache.key === cacheKey) {
+        block.style.fontSize = block.autoFitCache.fontSize;
+        block.textWidth = block.autoFitCache.textWidth;
+        block.textHeight = block.autoFitCache.textHeight;
+        return;
+    }
+
+    const ruler = elements.autoFitRuler || document.getElementById('auto-fit-ruler');
+    if (!ruler) {
+        block.style.fontSize = 13;
+        return;
+    }
+
+    ruler.className = `${block.style.fontFamily}`;
+    const padding = block.style.padding !== undefined ? block.style.padding : 4;
+    ruler.style.padding = `${padding}px`;
+    ruler.style.textAlign = block.style.align || 'center';
+    ruler.style.letterSpacing = '0';
+    ruler.style.fontKerning = 'normal';
+    ruler.style.wordBreak = 'keep-all';
+    ruler.style.overflowWrap = 'normal';
+
+    if (block.style.bold) {
+        ruler.style.fontWeight = 'bold';
+    } else {
+        ruler.style.fontWeight = 'normal';
+    }
+
+    if (block.style.vertical) {
+        ruler.classList.add('text-vertical');
+        ruler.style.writingMode = 'vertical-rl';
+        ruler.style.textOrientation = 'upright';
+        ruler.style.lineHeight = '1.12';
+    } else {
+        ruler.classList.remove('text-vertical');
+        ruler.style.writingMode = 'horizontal-tb';
+        ruler.style.textOrientation = 'mixed';
+        ruler.style.lineHeight = '1.18';
+    }
+
+    const targetWidth = (block.box.w / 100) * displayWidth;
+    const targetHeight = (block.box.h / 100) * displayHeight;
+
+    const isEllipseShape = maskShape === 'ellipse' || maskShape === 'bubble-fit';
+    const fitMargin = isEllipseShape ? 0.82 : 0.95;
+
+    if (block.style.vertical) {
+        ruler.style.height = `${targetHeight * fitMargin}px`;
+        ruler.style.width = 'auto';
+    } else {
+        ruler.style.width = `${targetWidth * fitMargin}px`;
+        ruler.style.height = 'auto';
+    }
+
+    setMultilineText(ruler, block.translated);
+
+    let minSize = 8;
+    let maxSize = Math.min(72, Math.floor(targetHeight * 0.85));
+    if (maxSize < minSize) maxSize = minSize;
+    let optimalSize = minSize;
+
+    while (minSize <= maxSize) {
+        const mid = Math.floor((minSize + maxSize) / 2);
+        ruler.style.fontSize = `${mid}px`;
+
+        const contentWidth = ruler.scrollWidth;
+        const contentHeight = ruler.scrollHeight;
+
+        const fits = contentWidth <= (targetWidth * fitMargin) + 1 && contentHeight <= (targetHeight * fitMargin) + 1;
+
+        if (fits) {
+            optimalSize = mid;
+            minSize = mid + 1;
+        } else {
+            maxSize = mid - 1;
+        }
+    }
+
+    let probeSize = optimalSize;
+    for (let i = 0; i < 2; i++) {
+        ruler.style.fontSize = `${probeSize}px`;
+        if (ruler.scrollWidth <= (targetWidth * fitMargin) + 1 && ruler.scrollHeight <= (targetHeight * fitMargin) + 1) break;
+        probeSize = Math.max(8, probeSize - 1);
+    }
+
+    const finalSize = probeSize;
+    block.style.fontSize = finalSize;
+
+    ruler.style.fontSize = `${finalSize}px`;
+    ruler.style.padding = '1px';
+    setMultilineText(ruler, block.translated);
+    block.textWidth = ruler.scrollWidth;
+    block.textHeight = ruler.scrollHeight;
+
+    block.autoFitCache = {
+        key: cacheKey,
+        fontSize: finalSize,
+        textWidth: block.textWidth,
+        textHeight: block.textHeight
+    };
+}
+
+export function autoFitAllBlocksOnPage(page = null, customImgElement = null, forceExportScale = 1) {
+    const targetPage = page || (globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null);
+    if (!targetPage) return;
+    targetPage.blocks.forEach(block => autoFitBlock(block, customImgElement, forceExportScale));
+}
+
+export function toggleAutoFit(enabled) {
+    globalState.autoFitEnabled = !!enabled;
+    if (elements.styleAutoFit) {
+        elements.styleAutoFit.checked = globalState.autoFitEnabled;
+    }
+    if (globalState.activePageIndex !== -1) {
+        const page = globalState.pages[globalState.activePageIndex];
+        if (page) {
+            page.blocks.forEach(b => b.autoFitCache = null);
+        }
+    }
+    requestOverlayRender();
+    uiUpdateActiveBlockEditor();
+    showToast(globalState.autoFitEnabled ? "Đã bật Cỡ chữ Tự động (Auto-Fit)" : "Đã tắt Auto-Fit (Chuyển sang chỉnh cỡ chữ thủ công)", "info");
+}
+
+export function autoMatchBlockStyle(block, imgElement) {
+    if (!block || !imgElement || !imgElement.naturalWidth || !imgElement.naturalHeight) return;
+
+    const W = imgElement.naturalWidth;
+    const H = imgElement.naturalHeight;
+
+    const cropX = Math.max(0, Math.round((block.box.x / 100) * W));
+    const cropY = Math.max(0, Math.round((block.box.y / 100) * H));
+    const cropW = Math.min(W - cropX, Math.round((block.box.w / 100) * W));
+    const cropH = Math.min(H - cropY, Math.round((block.box.h / 100) * H));
+
+    if (cropW <= 0 || cropH <= 0) return;
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = cropW;
+    tempCanvas.height = cropH;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(imgElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+
+    const imgData = tempCtx.getImageData(0, 0, cropW, cropH);
+    const data = imgData.data;
+
+    let rimLumSum = 0, rimCount = 0;
+    let centerLumSum = 0, centerCount = 0;
+
+    const borderMarginX = Math.max(1, Math.floor(cropW * 0.15));
+    const borderMarginY = Math.max(1, Math.floor(cropH * 0.15));
+
+    for (let y = 0; y < cropH; y++) {
+        for (let x = 0; x < cropW; x++) {
+            const idx = (y * cropW + x) * 4;
+            const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+            const isRim = (x < borderMarginX || x >= cropW - borderMarginX || y < borderMarginY || y >= cropH - borderMarginY);
+            if (isRim) {
+                rimLumSum += lum;
+                rimCount++;
+            } else {
+                centerLumSum += lum;
+                centerCount++;
+            }
+        }
+    }
+
+    const avgRimLum = rimCount > 0 ? (rimLumSum / rimCount) : 255;
+    const avgCenterLum = centerCount > 0 ? (centerLumSum / centerCount) : 128;
+
+    if (block.type === 'sfx') {
+        block.style.fontFamily = globalState.defaultSfxFont || 'font-impact';
+        block.style.bold = true;
+        block.style.align = 'center';
+        block.style.strokeColor = '#000000';
+        block.style.strokeWidth = 2;
+        block.style.shadowColor = '#000000';
+        block.style.shadowBlur = 3;
+    } else if (block.type === 'narration') {
+        block.style.fontFamily = globalState.defaultNarrationFont || 'font-vietnamese';
+        block.style.bold = false;
+        block.style.align = 'left';
+        block.style.maskShape = 'rect';
+        block.style.maskSize = 'full';
+        block.style.bgColor = '#ffffff';
+        block.style.bgOpacity = 95;
+    } else {
+        block.style.fontFamily = globalState.defaultDialogueFont || 'font-comic';
+        block.style.align = 'center';
+    }
+
+    if (avgRimLum < 140) {
+        if (avgCenterLum > avgRimLum + 30) {
+            block.style.textColor = '#ffffff';
+            block.style.strokeColor = '#000000';
+            block.style.strokeWidth = 2;
+            block.style.shadowColor = '#000000';
+            block.style.shadowBlur = 4;
+            block.style.bgColor = '#ffffff';
+            block.style.bgOpacity = 0;
+        } else {
+            block.style.textColor = '#000000';
+            block.style.bgColor = '#ffffff';
+            block.style.bgOpacity = 100;
+            block.style.maskShape = 'bubble-fit';
+        }
+    } else {
+        block.style.textColor = '#000000';
+        block.style.bgColor = '#ffffff';
+        block.style.bgOpacity = 100;
+        block.style.maskShape = 'bubble-fit';
+        block.style.strokeWidth = 0;
+    }
+
+    block.maskCache = null;
+    block.autoFitCache = null;
+}
+
+export function autoMatchActiveBlockStyle() {
+    if (globalState.activePageIndex === -1 || !globalState.selectedBlockId) {
+        showToast("Vui lòng chọn một ô thoại để tự động khớp phong cách chữ.", "warn");
+        return;
+    }
+    const page = globalState.pages[globalState.activePageIndex];
+    const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
+    const imgElement = elements.mangaBgImage;
+    if (block && imgElement) {
+        pushStateToHistory();
+        autoMatchBlockStyle(block, imgElement);
+        requestOverlayRender();
+        uiUpdateActiveBlockEditor();
+        savePageToDB(page);
+        showToast("✨ Đã tự động khớp phông chữ và màu sắc cho ô thoại!", "success");
+    }
+}
+
+export function applyStylePreset(presetKey) {
+    if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) {
+        showToast("Vui lòng nhấp chọn một ô thoại trước khi áp dụng preset mẫu.", "warn");
+        return;
+    }
+
+    const page = globalState.pages[globalState.activePageIndex];
+    const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!block) return;
+
+    pushStateToHistory();
+
+    const presets = {
+        dialogue: {
+            fontFamily: 'font-manga',
+            bold: true,
+            textColor: '#000000',
+            bgColor: '#ffffff',
+            bgOpacity: 100,
+            strokeWidth: 0,
+            shadowBlur: 0,
+            maskShape: 'bubble-fit',
+            align: 'center'
+        },
+        scream: {
+            fontFamily: 'font-impact',
+            bold: true,
+            textColor: '#ffffff',
+            bgColor: '#ffffff',
+            bgOpacity: 0,
+            strokeColor: '#000000',
+            strokeWidth: 4,
+            shadowColor: '#000000',
+            shadowBlur: 2,
+            maskShape: 'none',
+            align: 'center'
+        },
+        whisper: {
+            fontFamily: 'font-caveat',
+            bold: false,
+            textColor: '#555555',
+            bgColor: '#ffffff',
+            bgOpacity: 60,
+            strokeWidth: 0,
+            shadowBlur: 0,
+            maskShape: 'ellipse',
+            align: 'center'
+        },
+        narration: {
+            fontFamily: 'font-vietnamese',
+            bold: true,
+            textColor: '#000000',
+            bgColor: '#ffffff',
+            bgOpacity: 95,
+            strokeWidth: 0,
+            shadowBlur: 0,
+            maskShape: 'rect',
+            align: 'left'
+        }
+    };
+
+    presets['manga-std'] = presets.dialogue;
+    presets['shout-sfx'] = presets.scream;
+    presets['whisper-old'] = presets.whisper;
+    presets['horror'] = {
+        fontFamily: 'font-marker',
+        bold: true,
+        textColor: '#ffffff',
+        bgColor: '#000000',
+        bgOpacity: 0,
+        strokeColor: '#ff0000',
+        strokeWidth: 2,
+        shadowColor: '#000000',
+        shadowBlur: 3,
+        maskShape: 'none',
+        align: 'center'
+    };
+
+    const targetPreset = presets[presetKey];
+    if (!targetPreset) return;
+
+    Object.assign(block.style, targetPreset);
+    block.maskCache = null;
+    block.autoFitCache = null;
+    requestOverlayRender();
+    uiUpdateActiveBlockEditor();
+    updateFloatingToolbarPosition();
+    savePageToDB(page);
+
+    const label = presetKey === 'dialogue' || presetKey === 'manga-std' ? 'Thoại thường' :
+        presetKey === 'scream' || presetKey === 'shout-sfx' ? 'Hét lớn / SFX' :
+            presetKey === 'whisper' ? 'Thầm thì' :
+                presetKey === 'narration' ? 'Dẫn truyện' : 'Preset';
+    showToast(`💥 Đã áp dụng mẫu chữ "${label}"`, "success");
+}
+
+export function copyBlockStyle() {
+    if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) {
+        showToast("Vui lòng chọn một ô thoại để sao chép định dạng.", "warn");
+        return;
+    }
+    const page = globalState.pages[globalState.activePageIndex];
+    const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (block) {
+        copiedStyle = JSON.parse(JSON.stringify(block.style));
+        if (elements.btnPasteStyle) elements.btnPasteStyle.disabled = false;
+        showToast("Đã sao chép định dạng ô thoại!", "success");
+    }
+}
+
+export function pasteBlockStyle() {
+    if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) {
+        showToast("Vui lòng chọn một ô thoại để dán định dạng.", "warn");
+        return;
+    }
+    if (!copiedStyle) {
+        showToast("Chưa có định dạng nào được sao chép.", "warn");
+        return;
+    }
+    const page = globalState.pages[globalState.activePageIndex];
+    const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (block) {
+        pushStateToHistory();
+        block.style = JSON.parse(JSON.stringify(copiedStyle));
+        block.maskCache = null;
+        block.autoFitCache = null;
+        requestOverlayRender();
+        uiUpdateActiveBlockEditor();
+        savePageToDB(page);
+        showToast("Đã áp dụng định dạng ô thoại!", "success");
+    }
+}
+
+export function syncActiveBlockStyle(property, value) {
+    if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
+
+    if (block) {
+        if (property === 'fontSize' && globalState.autoFitEnabled) {
+            globalState.autoFitEnabled = false;
+            if (elements.styleAutoFit) elements.styleAutoFit.checked = false;
+        }
+
+        const rangeProperties = ['fontSize', 'bgOpacity', 'padding', 'rotate'];
+        if (rangeProperties.includes(property)) {
+            if (!isCurrentlySliding) {
+                isCurrentlySliding = true;
+                pushStateToHistory();
+                const stopSlide = () => {
+                    isCurrentlySliding = false;
+                    window.removeEventListener('mouseup', stopSlide);
+                    window.removeEventListener('touchend', stopSlide);
+                };
+                window.addEventListener('mouseup', stopSlide);
+                window.addEventListener('touchend', stopSlide);
+            }
+        } else {
+            pushStateToHistory();
+        }
+
+        block.style[property] = value;
+
+        if (property === 'fontSize') {
+            elements.lblFontSize.innerText = `${value}px`;
+            elements.styleFontSize.value = value;
+        } else if (property === 'bgOpacity') {
+            elements.lblBgOpacity.innerText = `${value}%`;
+        } else if (property === 'padding') {
+            elements.lblPadding.innerText = `${value}px`;
+        } else if (property === 'rotate') {
+            if (elements.lblRotate) elements.lblRotate.innerText = `${value}°`;
+            if (elements.styleRotate) elements.styleRotate.value = value;
+        } else if (property === 'strokeWidth') {
+            if (elements.lblStrokeWidth) elements.lblStrokeWidth.innerText = `${value}px`;
+            if (elements.styleStrokeWidth) elements.styleStrokeWidth.value = value;
+        } else if (property === 'shadowBlur') {
+            if (elements.lblShadowBlur) elements.lblShadowBlur.innerText = `${value}px`;
+            if (elements.styleShadowBlur) elements.styleShadowBlur.value = value;
+        }
+
+        block.maskCache = null;
+        block.autoFitCache = null;
+        requestOverlayRender();
+        uiUpdateActiveBlockEditor();
+        updateFloatingToolbarPosition();
+        debounceSavePage(page);
+    }
+}
+
+export function syncActiveBlockTranslation(val) {
+    if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (block) {
+        block.translated = val;
+
+        if (globalState.autoFitEnabled) {
+            autoFitBlock(block);
+        }
+
+        const overlayElem = document.getElementById(block.id);
+        if (overlayElem) {
+            const textContainer = overlayElem.querySelector('div > div');
+            if (textContainer) {
+                setMultilineText(textContainer, val);
+            }
+            if (globalState.autoFitEnabled) {
+                const maskElem = overlayElem.firstElementChild;
+                if (maskElem) {
+                    maskElem.style.fontSize = `${block.style.fontSize}px`;
+                }
+                if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px`;
+                if (elements.styleFontSize) elements.styleFontSize.value = block.style.fontSize;
+            }
+        }
+
+        if (globalState.viewMode === 'split') {
+            const cloneOverlay = document.getElementById(`mirror-${block.id}`);
+            if (cloneOverlay) {
+                const cloneTextContainer = cloneOverlay.querySelector('div > div');
+                if (cloneTextContainer) setMultilineText(cloneTextContainer, val);
+                if (globalState.autoFitEnabled) {
+                    const cloneMask = cloneOverlay.firstElementChild;
+                    if (cloneMask) {
+                        cloneMask.style.fontSize = `${block.style.fontSize}px`;
+                    }
+                }
+            }
+        }
+        debounceSavePage(page);
+    }
+}
+
+export function toggleActiveBlockOrientation() {
+    if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) return;
+
+    const page = globalState.pages[globalState.activePageIndex];
+    const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!block) return;
+
+    const nextVertical = !block.style.vertical;
+    syncActiveBlockStyle('vertical', nextVertical);
+    showToast(nextVertical ? "Đã chuyển sang viết chữ Dọc" : "Đã chuyển sang viết chữ Ngang", "info");
+}
+
+export function normalizeAllBlocksToHorizontal() {
+    if (globalState.activePageIndex === -1) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    if (!page || !page.blocks || page.blocks.length === 0) return;
+
+    let count = 0;
+    page.blocks.forEach(b => {
+        if (b.style && b.style.vertical) {
+            b.style.vertical = false;
+            count++;
+        }
+    });
+
+    if (count > 0) {
+        pushStateToHistory();
+        if (typeof window.selectPage === 'function') {
+            window.selectPage(globalState.activePageIndex);
+        }
+        showToast(`✅ Đã chuyển ${count} ô thoại thành chữ viết Ngang!`, "success");
+    } else {
+        showToast("Tất cả ô thoại đã là chữ viết Ngang.", "info");
+    }
+}
+
+export function updateSfxRotate(val) {
+    const angle = parseInt(val, 10) || 0;
+    const activePage = globalState.pages[globalState.activePageIndex];
+    if (!activePage || !globalState.selectedBlockId) return;
+    const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!block) return;
+
+    block.style.rotate = angle;
+    const lbl = document.getElementById('lbl-sfx-rotate');
+    if (lbl) lbl.textContent = `${angle}°`;
+    requestOverlayRender();
+}
+
+export function updateSfxArc(val) {
+    const arc = parseInt(val, 10) || 0;
+    const activePage = globalState.pages[globalState.activePageIndex];
+    if (!activePage || !globalState.selectedBlockId) return;
+    const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!block) return;
+
+    block.style.arcAngle = arc;
+    const lbl = document.getElementById('lbl-sfx-arc');
+    if (lbl) lbl.textContent = `${arc}°`;
+    requestOverlayRender();
+}
+
+export function resetSfxAngleControls() {
+    updateSfxRotate(0);
+    updateSfxArc(0);
+    const rSlider = document.getElementById('slider-sfx-rotate');
+    const aSlider = document.getElementById('slider-sfx-arc');
+    if (rSlider) rSlider.value = 0;
+    if (aSlider) aSlider.value = 0;
+}
