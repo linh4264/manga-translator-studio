@@ -516,9 +516,9 @@ export function applyStylePreset(presetKey) {
     savePageToDB(page);
 
     const label = presetKey === 'dialogue' || presetKey === 'manga-std' ? 'Thoại thường' :
-                  presetKey === 'scream' || presetKey === 'shout-sfx' ? 'Hét lớn / SFX' :
-                  presetKey === 'whisper' ? 'Thầm thì' :
-                  presetKey === 'narration' ? 'Dẫn truyện' : 'Preset';
+        presetKey === 'scream' || presetKey === 'shout-sfx' ? 'Hét lớn / SFX' :
+            presetKey === 'whisper' ? 'Thầm thì' :
+                presetKey === 'narration' ? 'Dẫn truyện' : 'Preset';
     showToast(`💥 Đã áp dụng mẫu chữ "${label}"`, "success");
 }
 
@@ -1694,8 +1694,7 @@ export function navigateBlocks(direction) {
 }
 
 async function restoreBackgroundForBlock(blockId) {
-    // Dynamic import to avoid circular dependency since restoreBackgroundForBlock is in ui.js
-    const ui = await import('../ui/ui.js');
+    const ui = await import('../../ui/block-editor-ui.js');
     return ui.restoreBackgroundForBlock(blockId);
 }
 

@@ -2,7 +2,7 @@
 import { globalState, pushStateToHistory, savePageToDB, saveProjectMeta, getPageDataURL } from '../core/state.js';
 import { showToast, escapeHTML, getCleanFileBaseName } from '../core/utils.js';
 import { dataURLtoBlob } from './io.js';
-import { updatePageListUI, selectPage, updateSourceLanguage, updateTargetLanguage, updatePronounMatrix, updateGlossary, togglePreserveNames } from '../ui/ui.js';
+import { updatePageListUI, selectPage, updateSourceLanguage, updateTargetLanguage, updatePronounMatrix, updateGlossary, togglePreserveNames } from '../ui/index.js';
 
 let gdriveAccessToken = localStorage.getItem('gdrive_access_token') || '';
 

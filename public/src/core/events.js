@@ -1,6 +1,3 @@
-// Central Declarative Event Delegation & Router for Manga Translator Studio
-// Decouples HTML from global window scope and provides safe action routing.
-
 export class EventEmitter {
     constructor() {
         this.listeners = {};
@@ -21,11 +18,6 @@ export const globalBus = new EventEmitter();
 
 const actionRegistry = new Map();
 
-/**
- * Register a handler function for an action name
- * @param {string} actionName 
- * @param {Function} handler 
- */
 export function registerAction(actionName, handler) {
     if (typeof handler !== 'function') {
         console.error(`Can't register action "${actionName}": handler is not a function.`);
@@ -34,12 +26,8 @@ export function registerAction(actionName, handler) {
     actionRegistry.set(actionName, handler);
 }
 
-/**
- * Initialize global event delegation on the document body
- */
 export function initEventDelegation() {
     document.body.addEventListener('click', (event) => {
-        // Find closest element with data-action attribute
         const target = event.target.closest('[data-action]');
         if (!target) return;
 
@@ -49,7 +37,6 @@ export function initEventDelegation() {
         const handler = actionRegistry.get(actionName);
 
         if (handler) {
-            // Prevent default link and submit behavior
             if (target.tagName === 'A' || target.tagName === 'BUTTON' || (target.tagName === 'INPUT' && target.type === 'submit')) {
                 event.preventDefault();
             }
@@ -59,7 +46,6 @@ export function initEventDelegation() {
                 console.error(`Error executing action handler for "${actionName}":`, err);
             }
         } else {
-            // Fallback for backward compatibility with window-bound functions
             if (typeof window[actionName] === 'function') {
                 if (target.tagName === 'A' || target.tagName === 'BUTTON') {
                     event.preventDefault();

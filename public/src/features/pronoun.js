@@ -1,13 +1,11 @@
-// Pronoun Matrix Configuration & Prompt Compiler for Manga Translator Studio
 import { globalState } from '../core/state.js';
 import { showToast } from '../core/utils.js';
 
-// Parse pronoun matrix from globalState
 export function getParsedPronounMatrix() {
     try {
         if (!globalState.pronounMatrix) return { characters: [], relationships: {} };
-        const parsed = typeof globalState.pronounMatrix === 'string' 
-            ? JSON.parse(globalState.pronounMatrix) 
+        const parsed = typeof globalState.pronounMatrix === 'string'
+            ? JSON.parse(globalState.pronounMatrix)
             : globalState.pronounMatrix;
         if (parsed && typeof parsed === 'object' && Array.isArray(parsed.characters)) {
             return parsed;
@@ -18,14 +16,12 @@ export function getParsedPronounMatrix() {
     return { characters: [], relationships: {} };
 }
 
-// Save parsed matrix back to globalState and localStorage
 export function savePronounMatrix(matrixData) {
     const jsonStr = JSON.stringify(matrixData);
     globalState.pronounMatrix = jsonStr;
     localStorage.setItem('gemini_manga_pronoun_matrix', jsonStr);
 }
 
-// Add a character name to the matrix
 export function addCharacterToMatrix() {
     const charInput = document.getElementById('pronoun-char-name-input');
     if (!charInput) return;
@@ -50,13 +46,11 @@ export function addCharacterToMatrix() {
     showToast(`Đã thêm nhân vật ${name} vào ma trận xưng hô`, 'success');
 }
 
-// Remove a character from the matrix
 export function removeCharacterFromMatrix(name) {
     const matrix = getParsedPronounMatrix();
     matrix.characters = matrix.characters.filter(c => c !== name);
     delete matrix.relationships[name];
-    
-    // Clean up relationships from other characters to this removed character
+
     matrix.characters.forEach(c => {
         if (matrix.relationships[c]) {
             delete matrix.relationships[c][name];
@@ -68,7 +62,6 @@ export function removeCharacterFromMatrix(name) {
     showToast(`Đã xoá nhân vật ${name} khỏi ma trận`, 'info');
 }
 
-// Update a specific relationship cell (speaker calls listener)
 export function updateRelationship(speaker, listener, value) {
     const matrix = getParsedPronounMatrix();
     matrix.relationships[speaker] = matrix.relationships[speaker] || {};
@@ -76,7 +69,6 @@ export function updateRelationship(speaker, listener, value) {
     savePronounMatrix(matrix);
 }
 
-// Render the matrix table dynamically
 export function renderPronounMatrixTable() {
     const wrapper = document.getElementById('pronoun-matrix-table-wrapper');
     if (!wrapper) return;
@@ -99,7 +91,6 @@ export function renderPronounMatrixTable() {
                     <th class="p-1.5 text-left font-bold text-slate-400 sticky left-0 bg-slate-900 border-r border-slate-800">Gọi \\ Xưng</th>
     `;
 
-    // Render header columns
     chars.forEach(name => {
         html += `
             <th class="p-1.5 text-center font-bold text-slate-400 border-r border-slate-800 min-w-[100px]">
@@ -120,7 +111,6 @@ export function renderPronounMatrixTable() {
             <tbody>
     `;
 
-    // Render rows
     chars.forEach(speaker => {
         html += `
             <tr class="border-b border-slate-900">
@@ -155,7 +145,6 @@ export function renderPronounMatrixTable() {
     wrapper.innerHTML = html;
 }
 
-// Generate the compiled prompt matrix block for translation instructions
 export function compilePronounMatrixPrompt() {
     const matrix = getParsedPronounMatrix();
     const chars = matrix.characters;
@@ -191,7 +180,6 @@ export function compilePronounMatrixPrompt() {
     return hasRules ? prompt : '';
 }
 
-// Global window bindings for inline HTML access
 window.addCharacterToMatrix = addCharacterToMatrix;
 window.removeCharacterFromMatrix = removeCharacterFromMatrix;
 window.updateRelationship = updateRelationship;

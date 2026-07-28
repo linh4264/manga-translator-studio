@@ -21,6 +21,16 @@ export function updateActiveBlockEditor() {
     syncBlockStyleInputs(activeBlock);
 }
 
+function resetBlockEditorUI() {
+    globalState.selectedBlockId = null;
+    if (elements.noBlockSelectedState) elements.noBlockSelectedState.classList.remove('hidden');
+    if (elements.blockEditorContainer) elements.blockEditorContainer.classList.add('hidden');
+
+    if (elements.toeicNoBlockSelectedState) elements.toeicNoBlockSelectedState.classList.remove('hidden');
+    if (elements.toeicAnalysisContainer) elements.toeicAnalysisContainer.classList.add('hidden');
+    globalState.activeBlockToeicAnalysis = null;
+}
+
 function getActiveBlock() {
     if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) return null;
     const page = globalState.pages[globalState.activePageIndex];
