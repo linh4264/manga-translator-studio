@@ -194,7 +194,31 @@ export function getTranslationGuidancePrompt() {
     const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
     const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
 
-    // 1. Source Language Rule
+    // 1. Định hướng Vai trò (Persona)
+    guidanceParts.push(
+        `- ROLE: You are a professional Scanlation Localizer and Manga Editor. Translate meaning, tone, and emotion—NEVER translate word-for-word.`
+    );
+
+    // 2. Quy tắc Khẩu ngữ & Văn phong Tiếng Việt Truyện Tranh (LOCALIZATION RULES)
+    if (targetLang === 'vi') {
+        guidanceParts.push(
+            `- MANGA LOCALIZATION RULES (BẮT BUỘC BẢN DỊCH TIẾNG VIỆT):`,
+            `  1. VĂN NÓI / KHẨU NGỮ: Dùng văn nói giao tiếp tự nhiên của giới trẻ/truyện tranh. Tận dụng tối đa từ đệm ngữ điệu phù hợp ngữ cảnh: "hả, đấy, chứ, nha, nhé, cơ, sao, đâu, thiệt luôn, chứ lị, mất thôi...".`,
+            `  2. TRIỆT TIÊU VĂN MÁY MÓC:`,
+            `     - TRÁNH lạm dụng đại từ "tôi/bạn" sượng sùng. Bỏ bớt đại từ nhân xưng khi ngữ cảnh đã rõ ai đang nói.`,
+            `     - TRÁNH câu dịch xuôi cấu trúc Anh/Nhật (VD: KHÔNG dịch "Bạn đang làm gì vậy?", HÃY dịch "Làm gì đấy?" / "Tính làm gì hả?").`,
+            `     - TRÁNH từ nối khô cứng ("Bởi vì...", "Mặc dù...", "Bị/Được...").`,
+            `  3. NGẮN GỌN & ĐẤM THÉP: Ô thoại truyện tranh rất nhỏ. Ưu tiên câu ngắn, súc tích, giật gân, nói đổng hoặc lược bỏ chủ ngữ nếu cần thiết.`,
+            `  4. VÍ DỤ CHUẨN MẪU (FEW-SHOT EXAMPLES):`,
+            `     - "What are you doing?" -> Dịch dở: "Bạn đang làm gì?" | Dịch chuẩn Manga: "Làm gì đấy?" / "Tính làm trò gì hả?"`,
+            `     - "I see..." -> Dịch dở: "Tôi hiểu rồi." | Dịch chuẩn Manga: "Ra thế..." / "Thế à..."`,
+            `     - "It can't be helped." -> Dịch dở: "Nó không thể giúp được." | Dịch chuẩn Manga: "Đành chịu thôi." / "Biết sao giờ."`,
+            `     - "Really?" -> Dịch dở: "Thật sao?" | Dịch chuẩn Manga: "Thật luôn?" / "Thiệt hả?"`,
+            `     - "Unbelievable!" -> Dịch dở: "Không thể tin được!" | Dịch chuẩn Manga: "Áo thật đấy!" / "Vô lý!"`
+        );
+    }
+
+    // 3. Source Language Rule
     const srcLang = globalState.sourceLanguage || 'ja';
     if (srcLang === 'ja') {
         guidanceParts.push('- SOURCE LANGUAGE: Japanese Manga. Pay special attention to vertical writing, reading order (right-to-left), Japanese honorifics (-san, -kun, -chan, -sama), and SFX sound effects.');
@@ -208,7 +232,7 @@ export function getTranslationGuidancePrompt() {
         guidanceParts.push('- SOURCE LANGUAGE: Auto-detect source language from image text.');
     }
 
-    // 2. Writing Direction Rule
+    // 4. Writing Direction Rule
     if (['ja', 'zh', 'ko'].includes(targetLang)) {
         guidanceParts.push(`- WRITING DIRECTION RULE: The target language (${targetLangName}) is traditionally written vertically in manga/comics. Ensure that you set style.vertical = true in the JSON properties for each translated text block.`);
     } else {
