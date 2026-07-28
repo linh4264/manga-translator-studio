@@ -1,6 +1,3 @@
-// ============================================================================
-// 1. IMPORTS TỪ CÁC SUB-MODULES VÀO SCOPE NỘI BỘ
-// ============================================================================
 import { debounceSavePage } from '../core/state.js';
 import {
     setRightTab, updateProcessingOverlay, updateBackgroundTaskOverlay,
@@ -48,9 +45,6 @@ import { globalBus } from '../core/events.js';
 import { elements } from '../core/elements.js';
 import { copyBlockStyle, pasteBlockStyle, navigateBlocks, syncActiveBlockStyle } from '../features/canvas/canvas-service.js';
 
-// ============================================================================
-// 2. RE-EXPORTS (Cung cấp hàm cho bootstrap.js, io.js, ai-service.js...)
-// ============================================================================
 export {
     setRightTab, updateProcessingOverlay, updateBackgroundTaskOverlay,
     setViewMode, updateSplitView, changeZoom, resetZoom,
@@ -76,7 +70,6 @@ export {
     exportLorebookJSON, importLorebookJSON
 };
 
-// --- HELPER STORAGE ---
 function safeSetLocalStorage(key, value) {
     try {
         localStorage.setItem(key, value);
@@ -91,9 +84,6 @@ export async function updateUndoRedoUI() {
     if (elements.btnRedo) elements.btnRedo.disabled = redoStack.length === 0;
 }
 
-// ============================================================================
-// 3. EVENT LISTENERS
-// ============================================================================
 export function initEventListeners() {
     globalBus.subscribe(stateEvents.PAGE_LIST_UPDATED, () => updatePageListUI());
     globalBus.subscribe(stateEvents.PROCESSING_OVERLAY, (data) => updateProcessingOverlay(data.show, data.message));
@@ -259,9 +249,6 @@ export function initEventListeners() {
     });
 }
 
-// ============================================================================
-// 4. GLOBAL WINDOW BINDINGS
-// ============================================================================
 Object.assign(window, {
     uploadCustomFonts,
     updateUndoRedoUI,

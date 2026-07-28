@@ -86,14 +86,11 @@ function syncBlockStyleInputs(block) {
     const fontSizeLbl = document.getElementById('lbl-font-size') || elements.lblFontSize;
     if (fontSizeLbl) fontSizeLbl.innerText = `${block.style.fontSize}px`;
     elements.styleAlign.value = block.style.align;
-
     if (elements.styleBold) elements.styleBold.checked = block.style.bold;
-    // Other style properties (textColor, bgColor, etc.) could be synced here or in a dedicated function
     syncColorAndOpacityInputs(block);
 }
 
 function syncColorAndOpacityInputs(block) {
-    // Ensure style object exists
     if (!block.style) block.style = {};
 
     const textColor = block.style.textColor || '#ffffff';
@@ -109,7 +106,6 @@ function syncColorAndOpacityInputs(block) {
     const bgOpacity = block.style.bgOpacity || 0;
     const padding = block.style.padding || 0;
 
-    // Set Inputs
     if (elements.styleTextColor) elements.styleTextColor.value = textColor;
     if (elements.styleTextColorHex) elements.styleTextColorHex.value = textColorHex;
 
