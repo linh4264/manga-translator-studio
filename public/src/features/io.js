@@ -422,8 +422,13 @@ export async function runBatchExport() {
     } finally {
         container.classList.remove('exporting-mode');
         setViewMode(prevViewMode);
-        if (prevPageIndex !== -1) {
-            selectPage(prevPageIndex);
+        if (prevPageIndex !== -1 && prevPageIndex < globalState.pages.length) {
+            // Chờ chọn trang và tải xong ảnh gốc trước khi render
+            await selectPage(prevPageIndex);
+            const prevPage = globalState.pages[prevPageIndex];
+            if (prevPage && elements.mangaBgImage) {
+                await waitForImageReady(elements.mangaBgImage, prevPage.src);
+            }
             globalState.selectedBlockId = prevSelectedId;
             renderOverlays();
         }

@@ -154,17 +154,23 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
         const currentMaskShape = block.style.maskShape || 'bubble-fit';
         let hasBubbleFitMask = false;
 
-        if (currentMaskShape === 'bubble-fit' && activeImageData) {
-            const maskCanvas = computeBubbleMask(page, block, activeImageData);
-            if (maskCanvas) {
-                if (block.maskCache && !block.maskCache.dataUrl) {
-                    block.maskCache.dataUrl = maskCanvas.toDataURL();
+        if (currentMaskShape === 'bubble-fit') {
+            // 1. Ưu tiên lấy dataUrl từ maskCache đã tính toán trước đó
+            let dataUrl = block.maskCache ? block.maskCache.dataUrl : null;
+
+            // 2. Nếu chưa có cache và ảnh gốc đã sẵn sàng, mới tính toán mask mới
+            if (!dataUrl && activeImageData) {
+                const maskCanvas = computeBubbleMask(page, block, activeImageData);
+                if (maskCanvas) {
+                    dataUrl = block.maskCache?.dataUrl || (maskCanvas.toDataURL ? maskCanvas.toDataURL() : null);
                 }
-                const dataUrl = (block.maskCache && block.maskCache.dataUrl) || maskCanvas.toDataURL();
+            }
+
+            // 3. Vẽ mask đè lên nếu đã có dataUrl (kể cả khi activeImageData tạm thời bị null)
+            if (dataUrl) {
                 maskContent.style.backgroundImage = `url(${dataUrl})`;
                 maskContent.style.backgroundSize = '100% 100%';
                 maskContent.style.backgroundRepeat = 'no-repeat';
-
                 maskContent.style.backgroundColor = 'transparent';
                 maskContent.style.borderRadius = '0px';
                 hasBubbleFitMask = true;
