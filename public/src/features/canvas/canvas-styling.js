@@ -122,7 +122,16 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
         probeSize = Math.max(8, probeSize - 1);
     }
 
-    const finalSize = probeSize;
+    const STANDARD_FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64];
+
+    let finalSize = STANDARD_FONT_SIZES[0];
+    for (const size of STANDARD_FONT_SIZES) {
+        if (size <= probeSize) {
+            finalSize = size;
+        } else {
+            break;
+        }
+    }
     block.style.fontSize = finalSize;
 
     ruler.style.fontSize = `${finalSize}px`;
