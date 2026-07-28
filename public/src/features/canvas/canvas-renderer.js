@@ -86,6 +86,10 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
         maskContent.style.overflow = 'hidden';
         maskContent.style.boxSizing = 'border-box';
 
+        // ✅ XỬ LÝ FONT FAMILY (Tách biệt Font mặc định vs Font tùy chỉnh người dùng tải lên)
+        const fontStyle = block.style.fontFamily || 'font-comic';
+        const isBuiltInFont = fontStyle.startsWith('font-');
+
         const currentMaskSize = block.style.maskSize || 'full';
         if (currentMaskSize === 'full') {
             maskContent.style.width = '100%';
@@ -98,7 +102,7 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
                 maskContent.style.alignItems = 'center';
                 maskContent.style.justifyContent = block.style.align === 'left' ? 'flex-start' : block.style.align === 'right' ? 'flex-end' : 'center';
             }
-            maskContent.className = `${block.style.fontFamily} pointer-events-none`;
+            maskContent.className = `${isBuiltInFont ? fontStyle : ''} pointer-events-none`;
         } else {
             maskContent.style.display = 'flex';
             maskContent.style.alignItems = 'center';
@@ -107,8 +111,16 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
             maskContent.style.height = 'auto';
             maskContent.style.maxWidth = '100%';
             maskContent.style.maxHeight = '100%';
-            maskContent.className = `${block.style.fontFamily} pointer-events-none`;
+            maskContent.className = `${isBuiltInFont ? fontStyle : ''} pointer-events-none`;
         }
+
+        // Nếu là font tùy chỉnh tải lên, gán trực tiếp style.fontFamily
+        if (!isBuiltInFont) {
+            maskContent.style.fontFamily = `'${fontStyle}', sans-serif`;
+        } else {
+            maskContent.style.fontFamily = '';
+        }
+
         maskContent.style.wordBreak = 'keep-all';
         maskContent.style.overflowWrap = 'normal';
         maskContent.style.hyphens = 'none';

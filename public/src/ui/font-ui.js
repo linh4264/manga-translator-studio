@@ -25,10 +25,10 @@ export async function populateCustomFontsDropdown() {
 }
 
 export async function registerCustomFont(family, blob) {
-    let fontUrl = null;
     try {
-        fontUrl = URL.createObjectURL(blob);
-        const fontFace = new FontFace(family, `url(${fontUrl})`);
+        // Đọc dữ liệu Blob thành ArrayBuffer trực tiếp
+        const buffer = await blob.arrayBuffer();
+        const fontFace = new FontFace(family, buffer);
         const loadedFace = await fontFace.load();
         document.fonts.add(loadedFace);
 
@@ -45,8 +45,6 @@ export async function registerCustomFont(family, blob) {
         }
     } catch (err) {
         console.error(`Không thể đăng ký phông chữ ${family}:`, err);
-    } finally {
-        if (fontUrl) URL.revokeObjectURL(fontUrl);
     }
 }
 
