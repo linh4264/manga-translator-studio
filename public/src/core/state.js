@@ -300,8 +300,10 @@ export function executeRedo() {
     applyStateFromSnapshot(next);
 }
 
-window.executeUndo = executeUndo;
-window.executeRedo = executeRedo;
+if (typeof window !== 'undefined') {
+    window.executeUndo = executeUndo;
+    window.executeRedo = executeRedo;
+}
 
 // --- INDEXEDDB PERSISTENCE MANAGER FOR AUTO-SAVE & RESTORE ---
 const DB_NAME = 'MangaTranslatorDB';
@@ -686,11 +688,11 @@ export function _loadPageBlobFromDB(pageId) {
     }
     return new Promise((resolve) => {
         try {
-            const req = indexedDB.open('MangaTranslatorDB');
+            const req = indexedDB.open(DB_NAME, DB_VERSION);
             req.onsuccess = (e) => {
                 const db = e.target.result;
-                const tx = db.transaction(['pages'], 'readonly');
-                const store = tx.objectStore('pages');
+                const tx = db.transaction([STORE_PAGES], 'readonly');
+                const store = tx.objectStore(STORE_PAGES);
                 const getReq = store.get(pageId);
                 getReq.onsuccess = (ev) => resolve(ev.target.result || null);
                 getReq.onerror = () => resolve(null);
@@ -753,11 +755,11 @@ export async function getPageDataURL(page) {
 
 export function deactivatePage(page) {
     if (!page) return;
-    if (page.src) {
+    if (page.src && page.src.startsWith('blob:')) {
         URL.revokeObjectURL(page.src);
         page.src = null;
     }
-    if (page.apiSrc) {
+    if (page.apiSrc && page.apiSrc.startsWith('blob:')) {
         URL.revokeObjectURL(page.apiSrc);
         page.apiSrc = null;
     }
@@ -836,14 +838,15 @@ export async function loadAndRegisterCustomFonts() {
 
 export async function deleteFontFromDB(family) {
     return new Promise((resolve, reject) => {
-        if (!db) {
+        if (!dbInstance) {
             reject(new Error("Cơ sở dữ liệu chưa sẵn sàng."));
             return;
         }
-        const tx = db.transaction('fonts', 'readwrite');
-        const store = tx.objectStore('fonts');
+        const tx = dbInstance.transaction(STORE_FONTS, 'readwrite');
+        const store = tx.objectStore(STORE_FONTS);
         const req = store.delete(family);
         req.onsuccess = () => resolve(true);
         req.onerror = (e) => reject(e.target.error);
     });
 }
+

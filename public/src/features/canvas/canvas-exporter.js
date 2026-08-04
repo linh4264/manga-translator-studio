@@ -388,7 +388,22 @@ export async function renderPageToCanvasSVG(page) {
 
         ctx.drawImage(imgElement, 0, 0, W, H);
 
-        if (page.eraserCanvasDataUrl) {
+        if (page.eraserLayerBlob) {
+            await new Promise((resolve) => {
+                const eraserImg = new Image();
+                const url = URL.createObjectURL(page.eraserLayerBlob);
+                eraserImg.onload = () => {
+                    ctx.drawImage(eraserImg, 0, 0, W, H);
+                    URL.revokeObjectURL(url);
+                    resolve();
+                };
+                eraserImg.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    resolve();
+                };
+                eraserImg.src = url;
+            });
+        } else if (page.eraserCanvasDataUrl) {
             await new Promise((resolve) => {
                 const eraserImg = new Image();
                 eraserImg.onload = () => {

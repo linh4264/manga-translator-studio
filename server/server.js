@@ -59,17 +59,19 @@ const server = http.createServer((req, res) => {
     // Extract path name without query strings
     const urlPath = decodedUrl.split('?')[0];
     const rootPath = path.join(__dirname, '..', 'public');
-    let filePath = path.join(rootPath, urlPath === '/' ? 'index.html' : urlPath);
 
-    // Security check to prevent directory traversal
-    const relative = path.relative(rootPath, filePath);
-    const isSafe = relative && !relative.startsWith('..') && !path.isAbsolute(relative);
-    if (!isSafe && filePath !== rootPath) {
+    // Security check to prevent directory traversal outside rootPath
+    let rawFilePath = path.join(rootPath, urlPath === '/' ? 'index.html' : urlPath);
+    const relative = path.relative(rootPath, rawFilePath);
+    const isSafe = relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+    if (!isSafe) {
         res.statusCode = 403;
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.end('403 Cấm truy cập: Yêu cầu ngoài phạm vi thư mục dự án.');
         return;
     }
+    const safePath = path.normalize(urlPath);
+    let filePath = path.join(rootPath, safePath === '/' || safePath === '.' ? 'index.html' : safePath);
 
     // If target is directory, append index.html
     fs.stat(filePath, (err, stats) => {
