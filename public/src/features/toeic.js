@@ -3,6 +3,7 @@ import { globalState, loadToeicWordsFromDB, saveToeicWordsToDB, uiSetRightTab, D
 import { elements } from '../core/elements.js';
 import { showToast, escapeHTML, parseGeminiJsonText } from '../core/utils.js';
 import { getGeminiApiKey } from './ai/ai-service.js';
+import { getGeminiGenerateContentUrl, getConfiguredAiProvider } from './ai/ai-config.js';
 
 let srsReviewQueue = [];
 let srsCurrentIndex = 0;
@@ -221,7 +222,11 @@ export async function analyzeBlockForToeic() {
 
     try {
         const modelToUse = globalState.selectedModel || DEFAULT_MODEL;
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${keyToUse}`;
+        if (getConfiguredAiProvider() !== 'gemini') {
+            throw new Error('Provider hiện tại chưa có adapter thực thi cho luồng TOEIC này.');
+        }
+
+        const apiUrl = getGeminiGenerateContentUrl(modelToUse, keyToUse);
 
         const promptText = `You are a TOEIC 450 preparation tutor. Analyze the following English sentence from a comic dialogue.
 Sentence: "${originalText}"

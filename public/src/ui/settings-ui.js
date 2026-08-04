@@ -3,6 +3,7 @@ import { globalState } from '../core/state.js';
 import { VALID_MODEL_IDS, CUSTOM_MODEL_VALUE, DEFAULT_MODEL } from '../config/constants.js';
 import { elements } from '../core/elements.js';
 import { showToast } from '../core/utils.js';
+import { getGeminiModelsUrl } from '../features/ai/ai-config.js';
 
 function safeSetLocalStorage(key, value) {
     try {
@@ -117,7 +118,7 @@ export async function fetchGeminiModels() {
     if (!keyToUse) return;
 
     try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${keyToUse}`);
+        const response = await fetch(getGeminiModelsUrl(keyToUse));
         if (!response.ok) return;
         const data = await response.json();
 
@@ -348,6 +349,6 @@ export function updateAiProvider(provider) {
 }
 
 export function updateApiEndpoint(val) {
-    globalState.customApiEndpoint = val;
+    globalState.apiEndpoint = val;
     safeSetLocalStorage('gemini_manga_api_endpoint', val);
 }

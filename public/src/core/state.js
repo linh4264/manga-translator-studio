@@ -61,7 +61,7 @@ export function markPageAutoFitDirty(page) {
 export const globalState = {
     apiKey: '',
     aiProvider: 'gemini', // 'gemini' | 'claude' | 'openai' | 'custom'
-    apiEndpoint: 'http://localhost:11434/v1', // Base URL for custom/local LLM
+    apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta', // Base URL for Gemini-compatible APIs
     chapterStoryMemory: [], // Multi-page dialogue and character tone memory
     enableStoryMemory: true, // Toggle story context accumulation
     selectedModel: DEFAULT_MODEL,
@@ -117,6 +117,8 @@ export const globalState = {
 export function initializeStateFromStorage() {
     const keysToLoad = {
         'gemini_manga_api_key': 'apiKey',
+        'gemini_manga_ai_provider': 'aiProvider',
+        'gemini_manga_api_endpoint': 'apiEndpoint',
         'gemini_manga_model': 'selectedModel',
         'gemini_manga_autofit_enabled': 'autoFitEnabled',
         'gemini_manga_preserve_names': 'preserveNames',

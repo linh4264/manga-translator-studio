@@ -28,6 +28,7 @@ import { parseGeminiJsonText } from '../../core/utils/json.js';
 import { refineAiBlockBox } from '../ocr/ocr-service.js';
 import { requestOverlayRender } from '../canvas/canvas-service.js';
 import { compilePronounMatrixPrompt } from '../pronoun.js';
+import { getConfiguredApiKey, getGeminiGenerateContentUrl, getConfiguredAiProvider } from './ai-config.js';
 
 export let cancelTranslationFlag = false;
 export let isBatchTranslating = false;
@@ -42,7 +43,7 @@ export function setIsBatchTranslating(val) {
 }
 
 export function getGeminiApiKey() {
-    return (globalState.apiKey || apiKey || "").trim();
+    return getConfiguredApiKey();
 }
 
 export function normalizeModelId(modelId) {
@@ -587,7 +588,10 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 isBackgroundMode ? progressVal : 50
             );
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${globalState.selectedModel}:generateContent?key=${keyToUse}`;
+            const apiUrl = getGeminiGenerateContentUrl(globalState.selectedModel, keyToUse);
+            if (getConfiguredAiProvider() !== 'gemini') {
+                throw new Error('Provider hiện tại chưa có adapter thực thi cho pipeline OCR/translation này.');
+            }
 
             const controller = new AbortController();
             timeoutId = setTimeout(() => controller.abort(), 45000); // 45 giây timeout
