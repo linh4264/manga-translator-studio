@@ -1,0 +1,17 @@
+{
+  "name": "Manga Translator Studio",
+  "short_name": "MangaStudio",
+  "description": "AI-Powered Manga & Comic Translation, OCR and Studio Editor",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "/demo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

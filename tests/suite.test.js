@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const path = require('path');
+const fs = require('fs');
 const http = require('http');
 const { spawn } = require('child_process');
 
@@ -30,7 +31,33 @@ test('OCR Box Normalization (scale 0-1000 to 0-100)', async () => {
     assert.deepStrictEqual(norm2, { x: 20, y: 15, w: 30, h: 40 });
 });
 
-// 2. Server Security & Path Traversal Test
+// 2. Local Text Contour Detection Engine Test
+test('Offline Local Text Detection Engine', async () => {
+    const { detectLocalTextRegions } = await import('../public/src/features/ocr/local-ocr.js');
+
+    // Create 100x100 synthetic image data with a dark rectangle block
+    const W = 100, H = 100;
+    const data = new Uint8ClampedArray(W * H * 4);
+    for (let i = 0; i < data.length; i += 4) {
+        data[i] = 255; data[i + 1] = 255; data[i + 2] = 255; data[i + 3] = 255; // White background
+    }
+
+    // Draw a dark 30x30 text block at (20, 20)
+    for (let y = 20; y < 50; y++) {
+        for (let x = 20; x < 50; x++) {
+            const idx = (y * W + x) * 4;
+            data[idx] = 10; data[idx + 1] = 10; data[idx + 2] = 10; // Dark ink
+        }
+    }
+
+    const mockImageData = { width: W, height: H, data: data };
+    const regions = detectLocalTextRegions(mockImageData);
+    assert.ok(Array.isArray(regions), 'Regions should be an array');
+    assert.ok(regions.length >= 1, 'Should detect synthetic dark region');
+    assert.ok(regions[0].x >= 15 && regions[0].x <= 25, 'Detected X should match synthetic box bounds');
+});
+
+// 3. Server Security & Path Traversal Test
 test('Server Path Traversal Prevention', async () => {
     const serverPath = path.join(__dirname, '../server/server.js');
     const serverProc = spawn('node', [serverPath], { stdio: 'pipe' });
@@ -60,7 +87,19 @@ test('Server Path Traversal Prevention', async () => {
     }
 });
 
-// 3. Module Import Integrity & State Functions Test
+// 4. PWA Web App Manifest & Service Worker Validation
+test('PWA Web App Manifest and Service Worker Assets', async () => {
+    const manifestPath = path.join(__dirname, '../public/manifest.json');
+    assert.ok(fs.existsSync(manifestPath), 'manifest.json must exist');
+    const manifestContent = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    assert.strictEqual(manifestContent.display, 'standalone');
+    assert.strictEqual(manifestContent.name, 'Manga Translator Studio');
+
+    const swPath = path.join(__dirname, '../public/sw.js');
+    assert.ok(fs.existsSync(swPath), 'sw.js Service Worker file must exist');
+});
+
+// 5. Module Import Integrity & State Functions Test
 test('All Core JS Modules Import Successfully and State Functions Work', async () => {
     const state = await import('../public/src/core/state.js');
     assert.strictEqual(typeof state.deleteFontFromDB, 'function');
