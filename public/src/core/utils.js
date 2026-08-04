@@ -50,25 +50,27 @@ export function showToast(message, type = 'info') {
     const toast = document.createElement('div');
 
     let colorClasses = 'bg-slate-900 border-slate-800 text-slate-300';
-    let icon = '<i class="fa-solid fa-circle-info text-blue-400"></i>';
+    let iconClass = 'fa-solid fa-circle-info text-blue-400';
 
     if (type === 'success') {
         colorClasses = 'bg-emerald-950/90 border-emerald-500/30 text-emerald-200';
-        icon = '<i class="fa-solid fa-circle-check text-emerald-400"></i>';
+        iconClass = 'fa-solid fa-circle-check text-emerald-400';
     } else if (type === 'error') {
         colorClasses = 'bg-red-950/90 border-red-500/30 text-red-200';
-        icon = '<i class="fa-solid fa-circle-exclamation text-red-400"></i>';
+        iconClass = 'fa-solid fa-circle-exclamation text-red-400';
     } else if (type === 'warn') {
         colorClasses = 'bg-amber-950/90 border-amber-500/30 text-amber-200';
-        icon = '<i class="fa-solid fa-triangle-exclamation text-amber-400"></i>';
+        iconClass = 'fa-solid fa-triangle-exclamation text-amber-400';
     }
 
     toast.className = `flex items-center space-x-3 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md pointer-events-auto transition-all duration-300 translate-y-2 opacity-0 ${colorClasses}`;
     const iconWrapper = document.createElement('span');
-    iconWrapper.innerHTML = icon;
+    const icon = document.createElement('i');
+    icon.className = iconClass;
+    iconWrapper.appendChild(icon);
     const messageText = document.createElement('span');
     messageText.className = "text-xs font-semibold leading-normal";
-    messageText.textContent = message;
+    messageText.textContent = String(message ?? '');
 
     toast.appendChild(iconWrapper);
     toast.appendChild(messageText);

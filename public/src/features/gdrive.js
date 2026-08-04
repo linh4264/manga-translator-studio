@@ -1,5 +1,5 @@
 // Google Drive Cloud Sync & Team Collaboration Module
-import { globalState, pushStateToHistory, savePageToDB, saveProjectMeta, getPageDataURL } from '../core/state.js';
+import { globalState, savePageToDB, saveProjectMeta, getPageDataURL, clearProjectDB } from '../core/state.js';
 import { showToast, escapeHTML, getCleanFileBaseName } from '../core/utils.js';
 import { dataURLtoBlob } from './io.js';
 import { updatePageListUI, selectPage, updateSourceLanguage, updateTargetLanguage, updatePronounMatrix, updateGlossary, togglePreserveNames } from '../ui/index.js';
@@ -383,7 +383,14 @@ export async function importProjectFromGDrive(fileId) {
         }
 
         if (confirm(`Nạp dự án từ Google Drive (${data.pages.length} trang)? Thao tác này sẽ thay thế dự án hiện tại.`)) {
-            pushStateToHistory();
+            globalState.pages.forEach(page => {
+                if (page?.apiSrc?.startsWith('blob:')) URL.revokeObjectURL(page.apiSrc);
+                if (page?.src?.startsWith('blob:')) URL.revokeObjectURL(page.src);
+                if (page?.thumbnailSrc?.startsWith('blob:')) URL.revokeObjectURL(page.thumbnailSrc);
+            });
+
+            await clearProjectDB();
+
             for (const p of data.pages) {
                 if (p.blocks) {
                     p.blocks.forEach(block => { delete block.maskCache; });

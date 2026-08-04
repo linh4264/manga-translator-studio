@@ -53,6 +53,11 @@ export function registerStateCallbacks(callbacks) {
     if (callbacks.onPageListChange) onPageListChange = callbacks.onPageListChange;
 }
 
+export function markPageAutoFitDirty(page) {
+    if (!page) return;
+    page.autoFitRevision = (page.autoFitRevision || 0) + 1;
+}
+
 export const globalState = {
     apiKey: '',
     aiProvider: 'gemini', // 'gemini' | 'claude' | 'openai' | 'custom'
@@ -794,17 +799,29 @@ export async function generateAndSaveThumbnailForPage(page) {
 }
 
 // --- LOAD AND REGISTER CUSTOM FONTS FROM INDEXEDDB ---
+const loadedCustomFontFamilies = new Set();
+
 export async function loadAndRegisterCustomFonts() {
     try {
         const fonts = await getAllFontsFromDB();
         for (const fontEntry of fonts) {
+            if (!fontEntry?.family || loadedCustomFontFamilies.has(fontEntry.family)) {
+                continue;
+            }
+
+            let fontUrl = null;
             try {
-                const fontUrl = URL.createObjectURL(fontEntry.blob);
+                fontUrl = URL.createObjectURL(fontEntry.blob);
                 const fontFace = new FontFace(fontEntry.family, `url(${fontUrl})`);
                 await fontFace.load();
                 document.fonts.add(fontFace);
+                loadedCustomFontFamilies.add(fontEntry.family);
             } catch (fontErr) {
                 console.warn(`Không thể tải phông chữ "${fontEntry.family}":`, fontErr);
+            } finally {
+                if (fontUrl) {
+                    URL.revokeObjectURL(fontUrl);
+                }
             }
         }
         if (fonts.length > 0) {

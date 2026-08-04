@@ -28,13 +28,30 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
 
     const fragment = document.createDocumentFragment();
 
-    if (globalState.autoFitEnabled) {
-        autoFitAllBlocksOnPage(page, customImgElement, forceExportScale);
-    }
-
     const imgElement = customImgElement || elements.mangaBgImage;
     if (imgElement && imgElement.clientWidth > 0) {
         page.lastDisplayWidth = imgElement.clientWidth;
+    }
+
+    if (globalState.autoFitEnabled) {
+        const currentDisplayWidth = imgElement?.clientWidth
+            || elements.mangaCanvasContainer?.clientWidth
+            || elements.workspaceViewport?.clientWidth
+            || 800;
+        const currentDisplayHeight = imgElement?.clientHeight
+            || elements.mangaCanvasContainer?.clientHeight
+            || elements.workspaceViewport?.clientHeight
+            || Math.round(currentDisplayWidth * ((imgElement?.naturalHeight || 1200) / Math.max(1, imgElement?.naturalWidth || 800)));
+        const currentRevision = page.autoFitRevision || 0;
+
+        if (page._lastAutoFitRevision !== currentRevision ||
+            page._lastAutoFitDisplayWidth !== currentDisplayWidth ||
+            page._lastAutoFitDisplayHeight !== currentDisplayHeight) {
+            autoFitAllBlocksOnPage(page, customImgElement, forceExportScale);
+            page._lastAutoFitRevision = currentRevision;
+            page._lastAutoFitDisplayWidth = currentDisplayWidth;
+            page._lastAutoFitDisplayHeight = currentDisplayHeight;
+        }
     }
 
     let activeImageData = page.imageDataCache || null;

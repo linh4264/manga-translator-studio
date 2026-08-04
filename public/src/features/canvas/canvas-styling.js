@@ -1,4 +1,4 @@
-import { globalState, pushStateToHistory, savePageToDB, debounceSavePage, uiUpdateActiveBlockEditor } from '../../core/state.js';
+import { globalState, pushStateToHistory, savePageToDB, debounceSavePage, uiUpdateActiveBlockEditor, markPageAutoFitDirty } from '../../core/state.js';
 import { elements } from '../../core/elements.js';
 import { showToast, setMultilineText } from '../../core/utils.js';
 import { requestOverlayRender } from './canvas-renderer.js';
@@ -260,6 +260,7 @@ export function autoMatchActiveBlockStyle() {
     if (block && imgElement) {
         pushStateToHistory();
         autoMatchBlockStyle(block, imgElement);
+        markPageAutoFitDirty(page);
         requestOverlayRender();
         uiUpdateActiveBlockEditor();
         savePageToDB(page);
@@ -351,6 +352,7 @@ export function applyStylePreset(presetKey) {
     Object.assign(block.style, targetPreset);
     block.maskCache = null;
     block.autoFitCache = null;
+    markPageAutoFitDirty(page);
     requestOverlayRender();
     uiUpdateActiveBlockEditor();
     updateFloatingToolbarPosition();
@@ -393,6 +395,7 @@ export function pasteBlockStyle() {
         block.style = JSON.parse(JSON.stringify(copiedStyle));
         block.maskCache = null;
         block.autoFitCache = null;
+        markPageAutoFitDirty(page);
         requestOverlayRender();
         uiUpdateActiveBlockEditor();
         savePageToDB(page);
@@ -450,6 +453,7 @@ export function syncActiveBlockStyle(property, value) {
 
         block.maskCache = null;
         block.autoFitCache = null;
+        markPageAutoFitDirty(page);
         requestOverlayRender();
         uiUpdateActiveBlockEditor();
         updateFloatingToolbarPosition();
@@ -463,6 +467,7 @@ export function syncActiveBlockTranslation(val) {
     const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
     if (block) {
         block.translated = val;
+        markPageAutoFitDirty(page);
 
         if (globalState.autoFitEnabled) {
             autoFitBlock(block);
@@ -527,6 +532,7 @@ export function normalizeAllBlocksToHorizontal() {
     });
 
     if (count > 0) {
+        markPageAutoFitDirty(page);
         pushStateToHistory();
         if (typeof window.selectPage === 'function') {
             window.selectPage(globalState.activePageIndex);

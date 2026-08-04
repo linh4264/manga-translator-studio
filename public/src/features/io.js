@@ -776,7 +776,13 @@ export async function importProjectBackup(files) {
         }
 
         if (confirm(`Khôi phục dự án chứa ${data.pages.length} trang truyện? Thao tác này sẽ thay thế dự án hiện tại.`)) {
-            pushStateToHistory();
+            globalState.pages.forEach(page => {
+                if (page?.apiSrc?.startsWith('blob:')) URL.revokeObjectURL(page.apiSrc);
+                if (page?.src?.startsWith('blob:')) URL.revokeObjectURL(page.src);
+                if (page?.thumbnailSrc?.startsWith('blob:')) URL.revokeObjectURL(page.thumbnailSrc);
+            });
+
+            await clearProjectDB();
 
             // Chuyển data URL base64 → Blob cho mỗi trang
             for (const p of data.pages) {

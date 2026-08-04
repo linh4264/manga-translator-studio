@@ -6,6 +6,15 @@ const { exec } = require('child_process');
 
 const PORT = 3000;
 
+function escapeHTML(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 const MIME_TYPES = {
     '.html': 'text/html; charset=utf-8',
     '.css': 'text/css; charset=utf-8',
@@ -79,13 +88,13 @@ const server = http.createServer((req, res) => {
                     res.end(`
                         <div style="font-family: sans-serif; text-align: center; padding: 50px; background: #0f172a; color: #f8fafc; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;">
                             <h1 style="color: #f43f5e; font-size: 48px; margin: 0 0 10px 0;">404 Not Found</h1>
-                            <p style="color: #94a3b8; font-size: 16px;">Tệp tin bạn yêu cầu không tồn tại: <code>${urlPath}</code></p>
+                            <p style="color: #94a3b8; font-size: 16px;">Tệp tin bạn yêu cầu không tồn tại: <code>${escapeHTML(urlPath)}</code></p>
                             <a href="/" style="margin-top: 20px; color: #6366f1; text-decoration: none; font-weight: bold; border: 1px solid #6366f1; padding: 10px 20px; border-radius: 8px; background: rgba(99,102,241,0.1);">Về Trang Chủ</a>
                         </div>
                     `);
                 } else {
                     res.statusCode = 500;
-                    res.end(`<h1>Lỗi Máy Chủ: ${readErr.code}</h1>`);
+                    res.end(`<h1>Lỗi Máy Chủ: ${escapeHTML(readErr.code)}</h1>`);
                 }
             } else {
                 res.writeHead(200, { 'Content-Type': contentType });
