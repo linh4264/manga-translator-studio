@@ -489,15 +489,14 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
             if (weakModel) {
                 systemInstruction = [
                     "You are a professional manga translator and OCR/text detector.",
-                    "Detect ALL text regions on the manga page: speech bubbles (dialogue), narration boxes (narration), sound effect labels (sfx), and signboards/labels (other). Return valid JSON only.",
+                    "Detect ALL text regions on the manga page, but return them in a single dialogue-only format. Treat every text region as a dialogue block. Return valid JSON only.",
                     "For each block, estimate bounding box coordinates (x, y, w, h) using Google Gemini's native integer scale of 0 to 1000 (where x=0, y=0 is top-left and x=1000, y=1000 is bottom-right). Example: x=200, y=150, w=300, h=250.",
-                    "For speech bubbles (dialogue) and narration boxes, use a box covering the entire inner blank space of the bubble so translated text fits easily. For SFX sound effects and signs, use the tightest box covering the characters.",
+                    "For speech bubbles and narration boxes, use a box covering the entire inner blank space of the bubble so translated text fits easily. For SFX sound effects and signs, use the tightest box covering the characters.",
                     "IMPORTANT RULE FOR CONNECTED BUBBLES: When multiple speech bubbles are attached/connected together (such as double-bubbles, stacked connected lobes, or chained bubbles), treat EACH lobe/section as a SEPARATE block with its own bounding box. Do NOT merge connected or stacked bubble sections into a single large block.",
                     "Do not split lines of text inside the SAME single bubble lobe into separate blocks. Only split when bubbles are connected/chained across separate lobes or tails.",
                     "Set positionKnown=true whenever text is visible and can be localized.",
                     "Set positionKnown=false only when text location cannot be localized.",
-                    `Translate text to short, conversational, and natural ${targetLangName} manga dialogue. Keep narrations smooth.`,
-                    "Classify block.type accurately: 'dialogue' for speech bubbles, 'narration' for caption boxes, 'sfx' for sound effects, 'other' for signs/labels.",
+                    `Translate text to short, conversational, and natural ${targetLangName} manga dialogue. Do not classify block types; every returned block must be treated as dialogue.`,
                     `Ensure ${pronounTerm} are highly consistent across nearby bubbles and match the previous page history.`,
                     globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
                     glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
@@ -505,16 +504,16 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 ].filter(Boolean).join(" ");
             } else {
                 systemInstruction = [
-                    "Detect every manga text bubble, narration box, SFX label, and sign/label area, then return JSON only.",
+                    "Detect every manga text bubble, narration box, SFX label, and sign/label area, then return JSON only. Use a single dialogue-only block format for all outputs.",
                     "For each block, estimate box coordinates (x, y, w, h) on an integer scale of 0 to 1000 (where x=0, y=0 is top-left, and x=1000, y=1000 is bottom-right).",
-                    "For speech bubbles (dialogue) and narration boxes, use a box that covers the entire inner blank space of the bubble or box (leaving a small 2% padding near the black outlines) rather than just the tight bounds of the original characters. This ensures there is sufficient room for the translated text. For SFX and signs, use the tightest box covering the characters.",
+                    "For speech bubbles and narration boxes, use a box that covers the entire inner blank space of the bubble or box (leaving a small 2% padding near the black outlines) rather than just the tight bounds of the original characters. This ensures there is sufficient room for the translated text. For SFX and signs, use the tightest box covering the characters.",
                     "IMPORTANT RULE FOR CONNECTED BUBBLES: When multiple speech bubbles are attached or connected together in double-bubbles or stacked lobes, treat EACH individual bubble lobe/section as a SEPARATE block with its own box coordinates. Do NOT group text from connected/chained bubble lobes into a single bounding box.",
                     "Do not split text inside the SAME bubble lobe into separate blocks, but ALWAYS separate connected/stacked bubble lobes.",
                     "Do not center by default.",
                     "Set positionKnown=true whenever the text region is visible enough to place a box.",
                     "Set positionKnown=false only when the text location is truly unreadable or cannot be localized.",
-                    `Translate to short, natural ${targetLangName} that matches the scene, speaker relationship, and block type.`,
-                    "Use block.type to guide style: dialogue should sound conversational, narration should be neutral and smooth, SFX should be short and expressive, labels/signs should be clear and concise.",
+                    `Translate to short, natural ${targetLangName} that matches the scene and speaker relationship.`,
+                    "Do not infer or output multiple block types; every block must be dialogue.",
                     `Preserve the same ${targetLangName} ${targetLang === 'vi' ? 'xưng hô' : 'pronouns'} and terminology within the page whenever the relationship stays the same.`,
                     "Keep line breaks and pacing natural for manga dialogue. Do not over-literalize Japanese sentence order.",
                     globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
@@ -547,7 +546,6 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                                     type: "OBJECT",
                                     properties: {
                                         id: { type: "STRING" },
-                                        type: { type: "STRING" },
                                         original: { type: "STRING" },
                                         translated: { type: "STRING" },
                                         box: {
@@ -570,7 +568,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                                             }
                                         }
                                     },
-                                    required: ["id", "type", "original", "translated", "box", "positionKnown"]
+                                    required: ["id", "original", "translated", "box", "positionKnown"]
                                 }
                             }
                         },
@@ -690,7 +688,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
 
                 return {
                     id: b.id || `block_${Date.now()}_${idx}`,
-                    type: b.type || 'dialogue',
+                    type: 'dialogue',
                     original: b.original || '',
                     translated: b.translated || '',
                     box: normalisedBox,
