@@ -23,8 +23,8 @@ function getFontFamilyName(fontClass) {
     return "'Patrick Hand', cursive";
 }
 
-export async function renderPageToCanvas2D(page) {
-    const imgElement = elements.mangaBgImage;
+export async function renderPageToCanvas2D(page, bgImageOverride = null) {
+    const imgElement = bgImageOverride || elements.mangaBgImage;
     if (!imgElement || !imgElement.naturalWidth || !imgElement.naturalHeight) {
         throw new Error("Dữ liệu ảnh gốc chưa sẵn sàng.");
     }

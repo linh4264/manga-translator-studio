@@ -24,10 +24,10 @@ self.onmessage = async function (e) {
                 self.postMessage({ type: 'PROGRESS', current: i + 1, total, progress, fileName: f.name });
             }
 
+            const compressionMode = (options && options.compression) ? options.compression : 'STORE';
             const zipBlob = await zip.generateAsync({
                 type: 'blob',
-                compression: 'DEFLATE',
-                compressionOptions: { level: 6 }
+                compression: compressionMode
             });
 
             self.postMessage({ type: 'DONE', zipBlob });

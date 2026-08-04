@@ -340,49 +340,47 @@ export async function runBatchExport() {
     const prevSelectedId = globalState.selectedBlockId;
 
     updateProcessingOverlay(true, "Đang khởi tạo...", "Đang thiết lập hệ thống nén dữ liệu ZIP...", 5);
-
     globalState.selectedBlockId = null;
 
-    const prevViewMode = globalState.viewMode;
-    setViewMode('overlay');
-
-    const container = elements.mangaCanvasContainer;
-
-    const zip = new JSZip();
+    const filesToZip = [];
     let successCount = 0;
 
     try {
-        container.classList.add('exporting-mode');
+        await document.fonts.ready;
+
         for (let i = 0; i < globalState.pages.length; i++) {
             const page = globalState.pages[i];
-            updateProcessingOverlay(true, `Kết xuất trang ${i + 1}/${globalState.pages.length}`, `Trang: ${page.name}`, Math.round((i / globalState.pages.length) * 100));
-
-            selectPage(i);
-            await waitForImageReady(elements.mangaBgImage, page.src);
-
-            await restorePageEraserDrawing(page);
-            renderOverlays();
-
-            await waitForNextPaint();
-            await document.fonts.ready;
+            updateProcessingOverlay(true, `Kết xuất trang ${i + 1}/${globalState.pages.length}`, `Trang: ${page.name}`, Math.round((i / globalState.pages.length) * 90));
 
             try {
-                const { mimeType, quality, ext } = getPageExportMimeType(page);
+                const pageFile = page.originalFile || page.file;
+                if (!pageFile) throw new Error("File ảnh không tồn tại.");
 
-                let canvas;
-                try {
-                    canvas = await renderPageToCanvas2D(page);
-                } catch (c2dErr) {
-                    canvas = await html2canvas(container, {
-                        useCORS: true,
-                        allowTaint: true,
-                        scale: 2,
-                        backgroundColor: null,
-                        logging: false
-                    });
+                // Load image offscreen
+                const img = new Image();
+                const blobUrl = URL.createObjectURL(pageFile);
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = () => reject(new Error("Không thể tải ảnh offscreen."));
+                    img.src = blobUrl;
+                });
+
+                // Establish aligned displayWidth scale for consistent offscreen autoFit calculations
+                const displayWidth = elements.mangaCanvasContainer?.clientWidth || 800;
+                page.lastDisplayWidth = displayWidth;
+
+                if (globalState.autoFitEnabled) {
+                    const { autoFitAllBlocksOnPage } = await import('./canvas/canvas-styling.js');
+                    autoFitAllBlocksOnPage(page, img);
                 }
 
-                const pngBlob = await new Promise((resolve, reject) => {
+                // Render page to offscreen canvas
+                const canvas = await renderPageToCanvas2D(page, img);
+                URL.revokeObjectURL(blobUrl);
+
+                const { mimeType, quality, ext } = getPageExportMimeType(page);
+
+                const pageBlob = await new Promise((resolve, reject) => {
                     canvas.toBlob((blob) => {
                         if (blob) resolve(blob);
                         else reject(new Error('Không thể chuyển canvas sang Blob.'));
@@ -390,7 +388,7 @@ export async function runBatchExport() {
                 });
 
                 const finalExportName = `translated_${getCleanFileBaseName(page.name, `page_${i + 1}`)}.${ext}`;
-                zip.file(finalExportName, pngBlob);
+                filesToZip.push({ name: finalExportName, blob: pageBlob });
                 successCount++;
             } catch (err) {
                 console.error(`Lỗi kết xuất tại trang ${i + 1}:`, err);
@@ -400,35 +398,62 @@ export async function runBatchExport() {
 
         if (successCount > 0) {
             updateProcessingOverlay(true, "Đang nén dữ liệu...", "Đang tạo file .zip tải về...", 95);
-            try {
-                const zipContent = await zip.generateAsync({ type: "blob" });
-                const zipDownloadUrl = URL.createObjectURL(zipContent);
-
-                const tempDownloadLink = document.createElement('a');
-                tempDownloadLink.href = zipDownloadUrl;
-                tempDownloadLink.download = `manga_studio_translated_${Date.now()}.zip`;
-                document.body.appendChild(tempDownloadLink);
-                tempDownloadLink.click();
-                document.body.removeChild(tempDownloadLink);
-                setTimeout(() => URL.revokeObjectURL(zipDownloadUrl), 1000);
-
-                showToast(`Tải xuống tệp ZIP thành công! Đã nén ${successCount} trang.`, "success");
-            } catch (zipErr) {
-                console.error("Lỗi khi đóng gói file ZIP:", zipErr);
-                showToast(`Lỗi khi đóng gói file ZIP: ${zipErr.message}`, "error");
+            
+            let zipBlob;
+            const useWorker = typeof Worker !== 'undefined';
+            
+            if (useWorker) {
+                zipBlob = await new Promise((resolve, reject) => {
+                    const worker = new Worker('/src/workers/zip-worker.js');
+                    worker.onmessage = (e) => {
+                        if (e.data.type === 'DONE') {
+                            resolve(e.data.zipBlob);
+                            worker.terminate();
+                        } else if (e.data.type === 'ERROR') {
+                            reject(new Error(e.data.message));
+                            worker.terminate();
+                        } else if (e.data.type === 'PROGRESS') {
+                            updateProcessingOverlay(true, "Đang đóng gói file ZIP...", `Đang lưu file: ${e.data.fileName} (${e.data.current}/${e.data.total})`, e.data.progress);
+                        }
+                    };
+                    worker.onerror = (err) => {
+                        reject(err);
+                        worker.terminate();
+                    };
+                    worker.postMessage({
+                        type: 'CREATE_ZIP',
+                        files: filesToZip,
+                        options: { compression: 'STORE' },
+                        jszipUrl: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'
+                    });
+                });
+            } else {
+                const zip = new JSZip();
+                filesToZip.forEach(f => zip.file(f.name, f.blob));
+                zipBlob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
             }
+
+            const zipDownloadUrl = URL.createObjectURL(zipBlob);
+            const tempDownloadLink = document.createElement('a');
+            tempDownloadLink.href = zipDownloadUrl;
+            tempDownloadLink.download = `manga_studio_translated_${Date.now()}.zip`;
+            document.body.appendChild(tempDownloadLink);
+            tempDownloadLink.click();
+            document.body.removeChild(tempDownloadLink);
+            setTimeout(() => URL.revokeObjectURL(zipDownloadUrl), 1000);
+
+            showToast(`Tải xuống tệp ZIP thành công! Đã nén ${successCount} trang.`, "success");
         } else {
             showToast("Không có trang nào được xuất thành công.", "error");
         }
+    } catch (err) {
+        console.error("Lỗi xuất ZIP:", err);
+        showToast(`Lỗi khi xuất ZIP: ${err.message}`, "error");
     } finally {
-        container.classList.remove('exporting-mode');
-        setViewMode(prevViewMode);
         if (prevPageIndex !== -1 && prevPageIndex < globalState.pages.length) {
-            // Chờ chọn trang và tải xong ảnh gốc trước khi render
             await selectPage(prevPageIndex);
-            const prevPage = globalState.pages[prevPageIndex];
-            if (prevPage && elements.mangaBgImage) {
-                await waitForImageReady(elements.mangaBgImage, prevPage.src);
+            if (globalState.pages[prevPageIndex] && elements.mangaBgImage) {
+                await waitForImageReady(elements.mangaBgImage, globalState.pages[prevPageIndex].src);
             }
             globalState.selectedBlockId = prevSelectedId;
             renderOverlays();
