@@ -3,15 +3,8 @@ import { globalState } from '../core/state.js';
 import { VALID_MODEL_IDS, CUSTOM_MODEL_VALUE, DEFAULT_MODEL } from '../config/constants.js';
 import { elements } from '../core/elements.js';
 import { showToast } from '../core/utils.js';
+import { safeSetLocalStorage } from '../core/utils/storage.js';
 import { getGeminiModelsUrl } from '../features/ai/ai-config.js';
-
-function safeSetLocalStorage(key, value) {
-    try {
-        localStorage.setItem(key, value);
-    } catch (e) {
-        console.warn(`Lỗi lưu localStorage cho key [${key}]:`, e);
-    }
-}
 
 export function toggleApiKeyVisibility() {
     const eyeBtn = document.getElementById('api-key-eye');

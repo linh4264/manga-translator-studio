@@ -44,6 +44,7 @@ import { CUSTOM_MODEL_VALUE } from '../config/constants.js';
 import { globalBus } from '../core/events.js';
 import { elements } from '../core/elements.js';
 import { copyBlockStyle, pasteBlockStyle, navigateBlocks, syncActiveBlockStyle } from '../features/canvas/canvas-service.js';
+import { safeSetLocalStorage } from '../core/utils/storage.js';
 
 export {
     setRightTab, updateProcessingOverlay, updateBackgroundTaskOverlay,
@@ -69,14 +70,6 @@ export {
     renderLorebookUI, addLorebookTermEntry, removeLorebookTermEntry,
     exportLorebookJSON, importLorebookJSON
 };
-
-function safeSetLocalStorage(key, value) {
-    try {
-        localStorage.setItem(key, value);
-    } catch (e) {
-        console.warn(`Lỗi lưu localStorage cho key [${key}]:`, e);
-    }
-}
 
 export async function updateUndoRedoUI() {
     const { undoStack, redoStack } = await import('../core/state.js');
