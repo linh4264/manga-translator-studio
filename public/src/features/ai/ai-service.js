@@ -205,17 +205,21 @@ export function getTranslationGuidancePrompt() {
         guidanceParts.push(
             `- MANGA LOCALIZATION RULES (BẮT BUỘC BẢN DỊCH TIẾNG VIỆT):`,
             `  1. VĂN NÓI / KHẨU NGỮ: Dùng văn nói giao tiếp tự nhiên của giới trẻ/truyện tranh. Tận dụng tối đa từ đệm ngữ điệu phù hợp ngữ cảnh: "hả, đấy, chứ, nha, nhé, cơ, sao, đâu, thiệt luôn, chứ lị, mất thôi...".`,
-            `  2. TRIỆT TIÊU VĂN MÁY MÓC:`,
+            `  2. TRIỆT TIÊU VĂN MÁY MÓC & DỊCH THÔ:`,
             `     - TRÁNH lạm dụng đại từ "tôi/bạn" sượng sùng. Bỏ bớt đại từ nhân xưng khi ngữ cảnh đã rõ ai đang nói.`,
             `     - TRÁNH câu dịch xuôi cấu trúc Anh/Nhật (VD: KHÔNG dịch "Bạn đang làm gì vậy?", HÃY dịch "Làm gì đấy?" / "Tính làm gì hả?").`,
             `     - TRÁNH từ nối khô cứng ("Bởi vì...", "Mặc dù...", "Bị/Được...").`,
-            `  3. NGẮN GỌN & ĐẤM THÉP: Ô thoại truyện tranh rất nhỏ. Ưu tiên câu ngắn, súc tích, giật gân, nói đổng hoặc lược bỏ chủ ngữ nếu cần thiết.`,
-            `  4. VÍ DỤ CHUẨN MẪU (FEW-SHOT EXAMPLES):`,
+            `  3. XƯNG HÔ NĂNG ĐỘNG (DỌN ĐƯỜNG CHO I/YOU): Tiếng Anh chỉ có "I/You". Cần tự động suy đoán vị thế, tuổi tác và thái độ nhân vật để chọn cặp xưng hô tự nhiên (mày-tao, cậu-tớ, anh-em, sếp-em...), tuyệt đối không giữ tôi-bạn trung tính.`,
+            `  4. CHUYỂN ĐỔI TỪ CẢM THÁN & TỪ LÓNG (SLANG/IDIOMS): Dịch linh hoạt từ lóng, cụm từ cố định và từ cảm thán sang khẩu ngữ tiếng Việt tương đương (VD: "Guh/Ugh" -> "Hừ/Haiz", "Holy crap" -> "Vãi thật/Trời ơi", "No way" -> "Làm gì có/Không đời nào", "I'm on it" -> "Để đó cho tôi/Có ngay").`,
+            `  5. NGẮN GỌN & ĐẤM THÉP: Ô thoại truyện tranh rất nhỏ. Ưu tiên câu ngắn, súc tích, giật gân, nói đổng hoặc lược bỏ chủ ngữ nếu cần thiết.`,
+            `  6. VÍ DỤ CHUẨN MẪU (FEW-SHOT EXAMPLES):`,
             `     - "What are you doing?" -> Dịch dở: "Bạn đang làm gì?" | Dịch chuẩn Manga: "Làm gì đấy?" / "Tính làm trò gì hả?"`,
             `     - "I see..." -> Dịch dở: "Tôi hiểu rồi." | Dịch chuẩn Manga: "Ra thế..." / "Thế à..."`,
             `     - "It can't be helped." -> Dịch dở: "Nó không thể giúp được." | Dịch chuẩn Manga: "Đành chịu thôi." / "Biết sao giờ."`,
             `     - "Really?" -> Dịch dở: "Thật sao?" | Dịch chuẩn Manga: "Thật luôn?" / "Thiệt hả?"`,
-            `     - "Unbelievable!" -> Dịch dở: "Không thể tin được!" | Dịch chuẩn Manga: "Áo thật đấy!" / "Vô lý!"`
+            `     - "Unbelievable!" -> Dịch dở: "Không thể tin được!" | Dịch chuẩn Manga: "Ảo thật đấy!" / "Vô lý!"`,
+            `     - "Holy crap!" -> Dịch dở: "Thánh phân!" | Dịch chuẩn Manga: "Vãi thật!" / "Trời đất ơi!"`,
+            `     - "No way!" -> Dịch dở: "Không có đường!" | Dịch chuẩn Manga: "Làm gì có!" / "Không đời nào!"`
         );
     }
 
@@ -228,7 +232,7 @@ export function getTranslationGuidancePrompt() {
     } else if (srcLang === 'ko') {
         guidanceParts.push(`- SOURCE LANGUAGE: Korean Manhwa. Handle Korean webtoon speech levels (jondaetmal/banmal) and sound effects smoothly in natural ${targetLangName}.`);
     } else if (srcLang === 'en') {
-        guidanceParts.push(`- SOURCE LANGUAGE: English Comic/Scanlation. Translate natural conversational English into idiomatic ${targetLangName}, preserve comic jokes and slang.`);
+        guidanceParts.push(`- SOURCE LANGUAGE: English Comic/Scanlation. English relies heavily on neutral "I/You" and conversational idioms. Actively infer character hierarchy, age, and emotional state to pick proper ${targetLangName} pronouns (xưng hô). Translate idioms, slang, and comic interjections (e.g., "Holy crap", "Sheesh", "No way", "Guh") into natural, vivid ${targetLangName} expressions.`);
     } else if (srcLang === 'auto') {
         guidanceParts.push('- SOURCE LANGUAGE: Auto-detect source language from image text.');
     }
