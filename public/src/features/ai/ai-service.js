@@ -230,7 +230,15 @@ export function getTranslationGuidancePrompt() {
     } else if (srcLang === 'zh') {
         guidanceParts.push(`- SOURCE LANGUAGE: Chinese Manhua. Translate idiom phrases naturally into ${targetLangName}, keep cultivation/wuxia/fantasy terms consistent.`);
     } else if (srcLang === 'ko') {
-        guidanceParts.push(`- SOURCE LANGUAGE: Korean Manhwa. Handle Korean webtoon speech levels (jondaetmal/banmal) and sound effects smoothly in natural ${targetLangName}.`);
+        guidanceParts.push(
+            `- SOURCE LANGUAGE: Korean Manhwa / Webtoon:`,
+            `  1. SPEECH LEVELS (존댓말 vs 반말):`,
+            `     - Jondaetmal (Kính ngữ 존댓말): Mandatory respectful speech in ${targetLangName}. Include polite particles ("dạ", "vâng", "ạ") and respectful forms of address.`,
+            `     - Banmal (Nói trống 반말): Casual, informal, or hostile speech (${targetLangName} "mày-tao", "cậu-tớ", "bạn-tôi"). Strictly remove polite markers ("dạ", "ạ").`,
+            `  2. KOREAN HONORIFICS & TITLES (XƯNG HÔ MANHWA): Localize Korean titles naturally into ${targetLangName}: Sunbae (선배) -> "Tiền bối / Anh / Chị", Oppa/Hyung/Unnie/Noona -> "Anh / Chị", Ahjussi (아저씨) -> "Chú / Bác", Nim (님) -> "Sếp / Ngài / Anh / Chị". Do not leave awkward raw transliterations unless requested.`,
+            `  3. MANHWA INTERJECTIONS & SLANG: Translate Korean webtoon exclamations naturally: "헐 (Heol)" -> "Sốc thật! / Vãi!", "대박 (Daebak)" -> "Đỉnh thật! / Bá cháy!", "아이구 (Aigoo)" -> "Ôi chao! / Trời ạ!", initial "아니 (Ani...)" -> "Ủa... / Mà... / Này...".`,
+            `  4. SENTENCE ENDINGS: Convert sentence endings (~잖아, ~거든, ~지, ~냐) into matching ${targetLangName} tone particles ("đấy thôi", "mà", "chứ", "sao/hả").`
+        );
     } else if (srcLang === 'en') {
         guidanceParts.push(`- SOURCE LANGUAGE: English Comic/Scanlation. English relies heavily on neutral "I/You" and conversational idioms. Actively infer character hierarchy, age, and emotional state to pick proper ${targetLangName} pronouns (xưng hô). Translate idioms, slang, and comic interjections (e.g., "Holy crap", "Sheesh", "No way", "Guh") into natural, vivid ${targetLangName} expressions.`);
     } else if (srcLang === 'auto') {
