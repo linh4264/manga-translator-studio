@@ -331,11 +331,34 @@ export function closeExportModal() {
     elements.lnkExportDirectDownload.removeAttribute('href');
 }
 
+function getExportRange() {
+    const chk = document.getElementById('chk-export-range');
+    const numStart = document.getElementById('num-export-start');
+    const numEnd = document.getElementById('num-export-end');
+    
+    let startIndex = 0;
+    let endIndex = globalState.pages.length - 1;
+    
+    if (chk && chk.checked && numStart && numEnd) {
+        const startVal = parseInt(numStart.value, 10);
+        const endVal = parseInt(numEnd.value, 10);
+        if (!isNaN(startVal) && !isNaN(endVal) && startVal >= 1 && endVal <= globalState.pages.length && startVal <= endVal) {
+            startIndex = startVal - 1;
+            endIndex = endVal - 1;
+        }
+    }
+    
+    return { startIndex, endIndex };
+}
+
 // Kết xuất toàn bộ chương và đóng gói ZIP
 export async function runBatchExport() {
     if (globalState.pages.length === 0) return;
 
-    showToast('Đang khởi động tiến trình đóng gói toàn bộ trang...', 'info');
+    const { startIndex, endIndex } = getExportRange();
+    const totalToExport = endIndex - startIndex + 1;
+
+    showToast('Đang khởi động tiến trình đóng gói trang...', 'info');
     const prevPageIndex = globalState.activePageIndex;
     const prevSelectedId = globalState.selectedBlockId;
 
@@ -348,9 +371,10 @@ export async function runBatchExport() {
     try {
         await document.fonts.ready;
 
-        for (let i = 0; i < globalState.pages.length; i++) {
+        for (let i = startIndex; i <= endIndex; i++) {
             const page = globalState.pages[i];
-            updateProcessingOverlay(true, `Kết xuất trang ${i + 1}/${globalState.pages.length}`, `Trang: ${page.name}`, Math.round((i / globalState.pages.length) * 90));
+            const currentCount = i - startIndex + 1;
+            updateProcessingOverlay(true, `Kết xuất trang ${currentCount}/${totalToExport}`, `Trang: ${page.name}`, Math.round((currentCount / totalToExport) * 90));
 
             try {
                 const pageFile = page.originalFile || page.file;
@@ -483,12 +507,14 @@ export async function runPdfExport() {
 
     try {
         let pdf = null;
-        const totalPages = globalState.pages.length;
+        const { startIndex, endIndex } = getExportRange();
+        const totalPages = endIndex - startIndex + 1;
 
-        for (let i = 0; i < totalPages; i++) {
+        for (let i = startIndex; i <= endIndex; i++) {
             const page = globalState.pages[i];
-            const progressVal = Math.round(((i + 1) / totalPages) * 90);
-            updateProcessingOverlay(true, `Đang ghép PDF (${i + 1}/${totalPages})`, `Trang: ${escapeHTML(page.name)}`, progressVal);
+            const currentCount = i - startIndex + 1;
+            const progressVal = Math.round((currentCount / totalPages) * 90);
+            updateProcessingOverlay(true, `Đang ghép PDF (${currentCount}/${totalPages})`, `Trang: ${escapeHTML(page.name)}`, progressVal);
 
             selectPage(i);
             await waitForImageReady(elements.mangaBgImage, page.src);

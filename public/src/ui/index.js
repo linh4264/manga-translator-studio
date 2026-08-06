@@ -6,7 +6,7 @@ import {
     closeMobileMenus, toggleLeftSidebar, toggleRightSidebar
 } from './layout-ui.js';
 
-import { selectPage, removePage, updatePageListUI, filterPagesList } from './pages-ui.js';
+import { selectPage, removePage, updatePageListUI, filterPagesList, toggleExportRangeInputs, validateExportRange } from './pages-ui.js';
 
 import {
     updateActiveBlockEditor, restoreBackgroundForBlock, restoreOriginalBackground,
@@ -51,7 +51,7 @@ export {
     setViewMode, updateSplitView, changeZoom, resetZoom,
     toggleSidebarToolsMenu, toggleMobileSidebar, syncMobileMenuState, syncMobileToolbarState,
     closeMobileMenus, toggleLeftSidebar, toggleRightSidebar,
-    selectPage, removePage, updatePageListUI, filterPagesList,
+    selectPage, removePage, updatePageListUI, filterPagesList, toggleExportRangeInputs, validateExportRange,
     updateActiveBlockEditor, restoreBackgroundForBlock, restoreOriginalBackground,
     syncTextColorHex, syncBgColorHex, syncStrokeColorHex, syncShadowColorHex,
     setBilingualMode, setActiveBlockGender,
@@ -282,6 +282,8 @@ Object.assign(window, {
     pasteBlockStyle,
     selectPage,
     removePage,
+    toggleExportRangeInputs,
+    validateExportRange,
     syncTextColorHex,
     syncBgColorHex,
     syncStrokeColorHex,

@@ -96,7 +96,10 @@ export const i18nDict = {
         "reader-preview-btn": "Xem trước",
         "translate-all-btn": "Dịch tất cả",
         "export-zip-btn": "Xuất ZIP",
-        "clear-ram-btn": "Dọn RAM"
+        "clear-ram-btn": "Dọn RAM",
+        "export-range-checkbox": "Xuất theo đoạn trang",
+        "export-range-from": "Từ:",
+        "export-range-to": "Đến:"
     },
     en: {
         // Left Panel - Image Source
@@ -192,7 +195,10 @@ export const i18nDict = {
         "reader-preview-btn": "Preview",
         "translate-all-btn": "Translate All",
         "export-zip-btn": "Export ZIP",
-        "clear-ram-btn": "Free RAM"
+        "clear-ram-btn": "Free RAM",
+        "export-range-checkbox": "Export page range",
+        "export-range-from": "From:",
+        "export-range-to": "To:"
     }
 };
 

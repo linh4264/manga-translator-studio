@@ -111,6 +111,9 @@ export function updatePageListUI() {
         if (elements.btnExportScript) elements.btnExportScript.disabled = true;
         if (elements.btnImportScript) elements.btnImportScript.disabled = true;
         if (elements.btnPreviewMode) elements.btnPreviewMode.disabled = true;
+        
+        const rangeContainer = document.getElementById('export-range-container');
+        if (rangeContainer) rangeContainer.classList.add('hidden');
         return;
     }
 
@@ -125,6 +128,29 @@ export function updatePageListUI() {
     if (elements.btnExportScript) elements.btnExportScript.disabled = false;
     if (elements.btnImportScript) elements.btnImportScript.disabled = false;
     if (elements.btnPreviewMode) elements.btnPreviewMode.disabled = false;
+
+    const rangeContainer = document.getElementById('export-range-container');
+    if (rangeContainer) {
+        rangeContainer.classList.remove('hidden');
+        const numStart = document.getElementById('num-export-start');
+        const numEnd = document.getElementById('num-export-end');
+        if (numStart && numEnd) {
+            numStart.max = globalState.pages.length;
+            numEnd.max = globalState.pages.length;
+            
+            const currentStartVal = parseInt(numStart.value, 10);
+            const currentEndVal = parseInt(numEnd.value, 10);
+            
+            if (isNaN(currentStartVal) || currentStartVal < 1 || currentStartVal > globalState.pages.length) {
+                numStart.value = 1;
+            }
+            if (isNaN(currentEndVal) || currentEndVal < 1 || currentEndVal > globalState.pages.length) {
+                numEnd.value = globalState.pages.length;
+            }
+            
+            validateExportRange();
+        }
+    }
 
     elements.pagesList.innerHTML = '';
     globalState.pages.forEach((page, index) => {
@@ -190,3 +216,76 @@ export function filterPagesList() {
         item.classList.toggle('hidden', !matches);
     });
 }
+
+export function toggleExportRangeInputs() {
+    const chk = document.getElementById('chk-export-range');
+    const inputsDiv = document.getElementById('export-range-inputs');
+    if (chk && inputsDiv) {
+        if (chk.checked) {
+            inputsDiv.classList.remove('hidden');
+        } else {
+            inputsDiv.classList.add('hidden');
+        }
+        validateExportRange();
+    }
+}
+
+export function validateExportRange() {
+    const chk = document.getElementById('chk-export-range');
+    const numStart = document.getElementById('num-export-start');
+    const numEnd = document.getElementById('num-export-end');
+    const totalSpan = document.getElementById('export-range-total');
+    
+    if (!numStart || !numEnd || !totalSpan) return;
+    
+    const maxVal = globalState.pages.length;
+    if (maxVal === 0) {
+        totalSpan.innerText = '';
+        return;
+    }
+    
+    let startVal = parseInt(numStart.value, 10);
+    let endVal = parseInt(numEnd.value, 10);
+    
+    if (isNaN(startVal) || isNaN(endVal)) {
+        totalSpan.innerText = '';
+        return;
+    }
+    
+    // Clamp values
+    if (startVal < 1) startVal = 1;
+    if (startVal > maxVal) startVal = maxVal;
+    if (endVal < 1) endVal = 1;
+    if (endVal > maxVal) endVal = maxVal;
+    
+    if (startVal > endVal) {
+        if (document.activeElement === numStart) {
+            endVal = startVal;
+        } else {
+            startVal = endVal;
+        }
+    }
+    
+    // Update value if needed
+    if (document.activeElement !== numStart) {
+        numStart.value = startVal;
+    }
+    if (document.activeElement !== numEnd) {
+        numEnd.value = endVal;
+    }
+    
+    if (chk && chk.checked) {
+        const count = endVal - startVal + 1;
+        const lang = globalState.uiLanguage || 'vi';
+        if (lang === 'vi') {
+            totalSpan.innerText = `Đã chọn ${count}/${maxVal} trang`;
+        } else {
+            totalSpan.innerText = `Selected ${count}/${maxVal} pages`;
+        }
+    } else {
+        totalSpan.innerText = '';
+    }
+}
+
+window.toggleExportRangeInputs = toggleExportRangeInputs;
+window.validateExportRange = validateExportRange;
