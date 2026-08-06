@@ -66,6 +66,13 @@ export async function initApplication() {
     registerAction('stopAudioDrama', stopAudioDrama);
     registerAction('speakActiveBlock', speakActiveBlock);
     registerAction('toggleEraserMode', toggleEraserMode);
+    registerAction('aiSmartInpaintBlock', () => import('../features/inpainting.js').then(m => m.aiSmartInpaintBlock()));
+    registerAction('activateEyedropper', () => import('../features/inpainting.js').then(m => m.activateEyedropper()));
+    registerAction('setEraserBrushMode', (target) => {
+        const mode = target.getAttribute('data-mode') || 'eraser';
+        import('../features/inpainting.js').then(m => m.setEraserBrushMode(mode));
+    });
+    registerAction('startTexturePatchSelection', () => import('../features/inpainting.js').then(m => m.startTexturePatchSelection()));
     registerAction('autoMatchActiveBlockStyle', () => import('../features/canvas/canvas-service.js').then(m => m.autoMatchActiveBlockStyle()));
     registerAction('copyBlockStyle', copyBlockStyle);
     registerAction('pasteBlockStyle', pasteBlockStyle);

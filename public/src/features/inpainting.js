@@ -11,6 +11,10 @@ export let eraserBrushSize = 15;
 export let eraserColor = '#ffffff';
 export let lastX = 0;
 export let lastY = 0;
+export let brushMode = 'eraser'; // 'eraser' or 'stamp'
+export let isSelectingPatch = false;
+export let isPatchStampActive = false;
+export let patchCanvas = null;
 
 export function setIsEraserModeActive(val) {
     isEraserModeActive = val;
@@ -133,10 +137,81 @@ export function setEraserColor(color) {
     }
 }
 
+export function setEraserBrushMode(mode) {
+    brushMode = mode;
+    
+    const btnEraser = document.getElementById('btn-brush-mode-eraser');
+    const btnStamp = document.getElementById('btn-brush-mode-stamp');
+    const stampControls = document.getElementById('stamp-controls');
+    const brushColorContainer = document.getElementById('brush-color-container');
+    const brushSizeContainer = document.getElementById('brush-size-container');
+
+    if (mode === 'stamp') {
+        if (btnStamp) {
+            btnStamp.classList.add('bg-indigo-600', 'text-white');
+            btnStamp.classList.remove('text-slate-400', 'hover:text-slate-200');
+        }
+        if (btnEraser) {
+            btnEraser.classList.remove('bg-indigo-600', 'text-white');
+            btnEraser.classList.add('text-slate-400', 'hover:text-slate-200');
+        }
+        
+        if (stampControls) stampControls.classList.remove('hidden');
+        if (brushColorContainer) brushColorContainer.classList.add('hidden');
+        if (brushSizeContainer) brushSizeContainer.classList.add('hidden');
+        
+        isPatchStampActive = patchCanvas !== null;
+    } else {
+        if (btnEraser) {
+            btnEraser.classList.add('bg-indigo-600', 'text-white');
+            btnEraser.classList.remove('text-slate-400', 'hover:text-slate-200');
+        }
+        if (btnStamp) {
+            btnStamp.classList.remove('bg-indigo-600', 'text-white');
+            btnStamp.classList.add('text-slate-400', 'hover:text-slate-200');
+        }
+        
+        if (stampControls) stampControls.classList.add('hidden');
+        if (brushColorContainer) brushColorContainer.classList.remove('hidden');
+        if (brushSizeContainer) brushSizeContainer.classList.remove('hidden');
+        
+        isPatchStampActive = false;
+        isSelectingPatch = false;
+        
+        const selectionBox = document.getElementById('patch-selection-box');
+        if (selectionBox) selectionBox.classList.add('hidden');
+        
+        const previewCanvas = elements.patchPreviewCanvas;
+        if (previewCanvas) previewCanvas.classList.add('hidden');
+    }
+
+    initEraserDrawingEvents();
+}
+
+export function startTexturePatchSelection() {
+    isSelectingPatch = true;
+    isPatchStampActive = false;
+    
+    const previewCanvas = elements.patchPreviewCanvas;
+    if (previewCanvas) previewCanvas.classList.add('hidden');
+    
+    const lblStatus = document.getElementById('lbl-stamp-status');
+    if (lblStatus) {
+        lblStatus.innerText = 'Đang quét vùng...';
+        lblStatus.classList.remove('text-slate-400');
+        lblStatus.classList.add('text-teal-400');
+    }
+
+    showToast("Nhấp giữ và kéo chuột vẽ để khoanh vùng họa tiết hình tròn.", "info");
+    initEraserDrawingEvents();
+}
+
 export function initEraserDrawingEvents() {
     const canvas = elements.eraserCanvas;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
+    // Clean up all mouse and touch events
     canvas.onmousedown = null;
     canvas.onmousemove = null;
     canvas.onmouseup = null;
@@ -145,6 +220,11 @@ export function initEraserDrawingEvents() {
     canvas.ontouchmove = null;
     canvas.ontouchend = null;
 
+    // Element references
+    const selectionBox = document.getElementById('patch-selection-box');
+    const previewCanvas = elements.patchPreviewCanvas;
+    const container = elements.mangaCanvasContainer;
+
     const getMousePos = (e) => {
         const rect = canvas.getBoundingClientRect();
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -152,8 +232,187 @@ export function initEraserDrawingEvents() {
 
         const x = ((clientX - rect.left) / rect.width) * canvas.width;
         const y = ((clientY - rect.top) / rect.height) * canvas.height;
-        return { x, y };
+        return { x, y, clientX, clientY };
     };
+
+    // --- CASE 1: Drag to Crop Texture Mode ---
+    if (isSelectingPatch) {
+        let isDragging = false;
+        let startClientX = 0;
+        let startClientY = 0;
+
+        const startSelect = (e) => {
+            e.preventDefault();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            isDragging = true;
+            startClientX = clientX;
+            startClientY = clientY;
+
+            const rect = container.getBoundingClientRect();
+            if (selectionBox) {
+                selectionBox.style.left = `${clientX - rect.left}px`;
+                selectionBox.style.top = `${clientY - rect.top}px`;
+                selectionBox.style.width = '0px';
+                selectionBox.style.height = '0px';
+                selectionBox.classList.remove('hidden');
+            }
+        };
+
+        const dragSelect = (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            const rect = container.getBoundingClientRect();
+            const x1 = Math.min(startClientX, clientX);
+            const y1 = Math.min(startClientY, clientY);
+            const w = Math.abs(clientX - startClientX);
+            const h = Math.abs(clientY - startClientY);
+
+            if (selectionBox) {
+                selectionBox.style.left = `${x1 - rect.left}px`;
+                selectionBox.style.top = `${y1 - rect.top}px`;
+                selectionBox.style.width = `${w}px`;
+                selectionBox.style.height = `${h}px`;
+            }
+        };
+
+        const stopSelect = (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+
+            if (selectionBox) selectionBox.classList.add('hidden');
+
+            const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+            const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+
+            // Project selection box coordinates to original image coordinates
+            const rect = canvas.getBoundingClientRect();
+            
+            const startX = Math.round(((Math.min(startClientX, clientX) - rect.left) / rect.width) * canvas.width);
+            const startY = Math.round(((Math.min(startClientY, clientY) - rect.top) / rect.height) * canvas.height);
+            const endX = Math.round(((Math.max(startClientX, clientX) - rect.left) / rect.width) * canvas.width);
+            const endY = Math.round(((Math.max(startClientY, clientY) - rect.top) / rect.height) * canvas.height);
+
+            const cropW = endX - startX;
+            const cropH = endY - startY;
+
+            if (cropW > 3 && cropH > 3) {
+                const imgElement = elements.mangaBgImage;
+                if (imgElement && imgElement.naturalWidth) {
+                    try {
+                        patchCanvas = document.createElement('canvas');
+                        patchCanvas.width = cropW;
+                        patchCanvas.height = cropH;
+                        const patchCtx = patchCanvas.getContext('2d');
+
+                        // Copy cropped texture from original background image as a circular patch
+                        patchCtx.save();
+                        patchCtx.beginPath();
+                        const r = Math.min(cropW, cropH) / 2;
+                        const cx = cropW / 2;
+                        const cy = cropH / 2;
+                        patchCtx.arc(cx, cy, r, 0, Math.PI * 2);
+                        patchCtx.clip();
+
+                        patchCtx.drawImage(imgElement, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
+                        patchCtx.restore();
+
+                        showToast(`Đã copy thành công họa tiết ${cropW}x${cropH}px. Click chuột vào bất kỳ đâu để dán!`, "success");
+                        
+                        isSelectingPatch = false;
+                        isPatchStampActive = true;
+
+                        const lblStatus = document.getElementById('lbl-stamp-status');
+                        if (lblStatus) {
+                            lblStatus.innerText = `Mẫu: ${cropW}x${cropH}px`;
+                            lblStatus.classList.remove('text-teal-400');
+                            lblStatus.classList.add('text-indigo-400');
+                        }
+
+                        setEraserBrushMode('stamp');
+                    } catch (err) {
+                        console.error("Cropping texture error:", err);
+                        showToast("Không thể sao chép họa tiết từ ảnh.", "error");
+                    }
+                }
+            } else {
+                showToast("Vùng quét quá nhỏ, vui lòng thử lại.", "warn");
+                isSelectingPatch = false;
+                setEraserBrushMode('stamp');
+            }
+        };
+
+        canvas.onmousedown = startSelect;
+        canvas.onmousemove = dragSelect;
+        canvas.onmouseup = stopSelect;
+        canvas.onmouseleave = () => { isDragging = false; if (selectionBox) selectionBox.classList.add('hidden'); };
+
+        canvas.ontouchstart = startSelect;
+        canvas.ontouchmove = dragSelect;
+        canvas.ontouchend = stopSelect;
+        return;
+    }
+
+    // --- CASE 2: Stamp Texture Mode ---
+    if (brushMode === 'stamp' && isPatchStampActive && patchCanvas) {
+        const updatePreview = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            // Display size matches current zoom on screen
+            const displayW = Math.round(patchCanvas.width * (rect.width / canvas.width));
+            const displayH = Math.round(patchCanvas.height * (rect.height / canvas.height));
+
+            const containerRect = container.getBoundingClientRect();
+            const x = clientX - containerRect.left - displayW / 2;
+            const y = clientY - containerRect.top - displayH / 2;
+
+            if (previewCanvas) {
+                previewCanvas.width = displayW;
+                previewCanvas.height = displayH;
+                const pCtx = previewCanvas.getContext('2d');
+                pCtx.clearRect(0, 0, displayW, displayH);
+                pCtx.drawImage(patchCanvas, 0, 0, displayW, displayH);
+
+                previewCanvas.style.left = `${x}px`;
+                previewCanvas.style.top = `${y}px`;
+                previewCanvas.style.width = `${displayW}px`;
+                previewCanvas.style.height = `${displayH}px`;
+                previewCanvas.classList.remove('hidden');
+            }
+        };
+
+        const applyStamp = (e) => {
+            e.preventDefault();
+            const pos = getMousePos(e);
+            pushStateToHistory();
+
+            // Center patch drawing at click coordinates
+            const drawX = Math.round(pos.x - patchCanvas.width / 2);
+            const drawY = Math.round(pos.y - patchCanvas.height / 2);
+
+            ctx.drawImage(patchCanvas, drawX, drawY);
+
+            saveEraserDrawingToPage();
+            showToast("Đã đóng dấu dán đè họa tiết thành công!", "success");
+        };
+
+        canvas.onmousemove = updatePreview;
+        canvas.onmousedown = applyStamp;
+        canvas.onmouseleave = () => { if (previewCanvas) previewCanvas.classList.add('hidden'); };
+
+        canvas.ontouchmove = updatePreview;
+        canvas.ontouchstart = applyStamp;
+        return;
+    }
+
+    // --- CASE 3: Standard solid color brush ---
+    if (previewCanvas) previewCanvas.classList.add('hidden');
 
     const startDraw = (e) => {
         e.preventDefault();
@@ -442,6 +701,68 @@ export async function aiSmartInpaintBlock(mode = 'local') {
     showToast('✨ Đã xóa chữ SFX & khôi phục kết cấu nền manga!', 'success');
 }
 
+export async function activateEyedropper() {
+    if (globalState.activePageIndex === -1) return;
+
+    if (!isEraserModeActive) {
+        toggleEraserMode();
+    }
+
+    if (window.EyeDropper) {
+        const eyeDropper = new EyeDropper();
+        try {
+            const result = await eyeDropper.open();
+            setEraserColor(result.sRGBHex);
+            showToast(`Đã chọn màu: ${result.sRGBHex}`, "success");
+            return;
+        } catch (e) {
+            console.log("Native EyeDropper closed or cancelled:", e);
+        }
+    }
+
+    const canvas = elements.eraserCanvas;
+    if (!canvas) return;
+
+    const originalCursor = canvas.style.cursor;
+    canvas.style.cursor = 'crosshair';
+    showToast("Nhấp chuột lên vùng tranh truyện trên ảnh để chọn màu xóa.", "info");
+
+    const onCanvasClick = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.clientX;
+        const clientY = e.clientY;
+
+        const x = Math.round(((clientX - rect.left) / rect.width) * canvas.width);
+        const y = Math.round(((clientY - rect.top) / rect.height) * canvas.height);
+
+        const imgElement = elements.mangaBgImage;
+        if (imgElement && imgElement.naturalWidth) {
+            try {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = 1;
+                tempCanvas.height = 1;
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.drawImage(imgElement, x, y, 1, 1, 0, 0, 1, 1);
+                const pixelData = tempCtx.getImageData(0, 0, 1, 1).data;
+                const hexColor = '#' + [pixelData[0], pixelData[1], pixelData[2]].map(val => {
+                    const hex = val.toString(16);
+                    return hex.length === 1 ? '0' + hex : hex;
+                }).join('');
+
+                setEraserColor(hexColor);
+                showToast(`Đã chọn màu: ${hexColor}`, "success");
+            } catch (err) {
+                console.error("Custom Eyedropper error:", err);
+            }
+        }
+
+        canvas.style.cursor = originalCursor;
+        canvas.removeEventListener('click', onCanvasClick);
+    };
+
+    canvas.addEventListener('click', onCanvasClick);
+}
+
 // Window bindings for inline HTML onClick handlers
 window.autoCleanActiveBlock = autoCleanActiveBlock;
 window.toggleEraserMode = toggleEraserMode;
@@ -449,3 +770,7 @@ window.updateEraserBrushSize = updateEraserBrushSize;
 window.setEraserColor = setEraserColor;
 window.clearEraserDrawing = clearEraserDrawing;
 window.aiSmartInpaintBlock = aiSmartInpaintBlock;
+window.activateEyedropper = activateEyedropper;
+window.setEraserBrushMode = setEraserBrushMode;
+window.startTexturePatchSelection = startTexturePatchSelection;
+

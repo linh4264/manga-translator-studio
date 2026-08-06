@@ -101,6 +101,7 @@ export const elements = {
     get eraserBrushSize() { return document.getElementById('eraser-brush-size'); },
     get lblEraserBrushSize() { return document.getElementById('lbl-eraser-brush-size'); },
     get eraserColorCustom() { return document.getElementById('eraser-color-custom'); },
+    get patchPreviewCanvas() { return document.getElementById('patch-preview-canvas'); },
     get btnExportScript() { return document.getElementById('btn-export-script'); },
     get btnImportScript() { return document.getElementById('btn-import-script'); },
     get btnPreviewMode() { return document.getElementById('btn-preview-mode'); },

@@ -303,8 +303,29 @@
                         <i class="fa-solid fa-paintbrush text-indigo-400"></i> Chế độ cọ tẩy chữ
                     </span>
 
+                    <!-- Mode Select: Brush vs Stamp -->
+                    <div class="flex items-center space-x-1 bg-slate-950 p-0.5 rounded border border-slate-800 shrink-0">
+                        <button id="btn-brush-mode-eraser" onclick="setEraserBrushMode('eraser')"
+                            class="px-2 py-0.5 text-[10px] font-semibold rounded bg-indigo-600 text-white transition-all flex items-center gap-1">
+                            <i class="fa-solid fa-paintbrush"></i> Cọ màu
+                        </button>
+                        <button id="btn-brush-mode-stamp" onclick="setEraserBrushMode('stamp')"
+                            class="px-2 py-0.5 text-[10px] font-semibold rounded text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1">
+                            <i class="fa-solid fa-stamp"></i> Đóng dấu Texture
+                        </button>
+                    </div>
+
+                    <!-- Stamp Specific Controls (hidden by default) -->
+                    <div id="stamp-controls" class="hidden flex items-center space-x-2 shrink-0">
+                        <button onclick="startTexturePatchSelection()"
+                            class="px-2 py-1 rounded bg-teal-600/20 border border-teal-500/30 hover:bg-teal-600 text-teal-300 hover:text-white text-[10px] font-bold flex items-center gap-1 transition-all">
+                            <i class="fa-solid fa-crop"></i> Chọn vùng sao chép
+                        </button>
+                        <span id="lbl-stamp-status" class="text-[9px] text-slate-400 font-mono">Chưa có mẫu</span>
+                    </div>
+
                     <!-- Brush Size Slider -->
-                    <div class="flex items-center space-x-2">
+                    <div id="brush-size-container" class="flex items-center space-x-2">
                         <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Cỡ cọ</span>
                         <input type="range" id="eraser-brush-size" min="3" max="80" value="15"
                             oninput="updateEraserBrushSize(this.value)"
@@ -313,9 +334,9 @@
                     </div>
 
                     <!-- Brush Color Presets -->
-                    <div class="flex items-center space-x-2">
+                    <div id="brush-color-container" class="flex items-center space-x-2">
                         <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Màu tẩy</span>
-                        <div class="flex items-center space-x-1 flex items-center">
+                        <div class="flex items-center space-x-1">
                             <button onclick="setEraserColor('#ffffff')"
                                 class="w-5 h-5 rounded border border-slate-700 bg-white"
                                 title="Trắng (Bong bóng thoại)"></button>
@@ -324,6 +345,11 @@
                             <input type="color" id="eraser-color-custom" oninput="setEraserColor(this.value)"
                                 class="w-6 h-5 p-0 bg-transparent border-0 cursor-pointer rounded overflow-hidden"
                                 title="Chọn màu tự do">
+                            <button onclick="activateEyedropper()"
+                                class="w-5 h-5 rounded border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center text-[10px] ml-1"
+                                title="Hút màu từ tranh (Eyedropper)">
+                                <i class="fa-solid fa-eye-dropper"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -381,6 +407,10 @@
                         class="block h-full w-auto max-w-none select-none rounded" pointer-events="none">
                     <canvas id="eraser-canvas"
                         class="absolute inset-0 w-full h-full rounded pointer-events-none z-10"></canvas>
+                    <canvas id="patch-preview-canvas"
+                        class="hidden absolute pointer-events-none border border-teal-400 border-dashed z-50 rounded-full"></canvas>
+                    <div id="patch-selection-box"
+                        class="hidden absolute border border-dashed border-teal-400 bg-teal-500/10 pointer-events-none z-40 rounded-full"></div>
 
 
                     <div id="manga-overlays-container"
