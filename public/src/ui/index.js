@@ -178,16 +178,17 @@ export function initEventListeners() {
         checkbox.addEventListener('change', () => updateTranslationGenrePreset());
     });
 
-    // Ctrl + Mouse Wheel Zoom
-    if (elements.workspaceViewport) {
-        elements.workspaceViewport.addEventListener('wheel', (e) => {
-            if (e.ctrlKey) {
+    // Ctrl + Mouse Wheel Zoom (bound to window with passive:false to block default browser scale zoom)
+    window.addEventListener('wheel', (e) => {
+        if (e.ctrlKey) {
+            const isInsideViewport = e.target && e.target.closest && e.target.closest('#workspace-viewport');
+            if (isInsideViewport) {
                 e.preventDefault();
                 const amount = e.deltaY < 0 ? 10 : -10;
                 changeZoom(amount);
             }
-        }, { passive: false });
-    }
+        }
+    }, { passive: false });
 
     document.addEventListener('keydown', (e) => {
         // Ctrl + Shortcuts for zooming

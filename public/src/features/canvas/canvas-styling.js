@@ -19,12 +19,16 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
 
     const imgEl = customImgElement || elements.mangaBgImage;
 
+    const zoomScale = (globalState.zoom || 100) / 100;
     let displayWidth = (imgEl && imgEl.clientWidth > 0) ? imgEl.clientWidth : 0;
     if (!displayWidth && elements.mangaCanvasContainer && elements.mangaCanvasContainer.clientWidth > 0) {
         displayWidth = elements.mangaCanvasContainer.clientWidth;
     }
+    if (displayWidth) {
+        displayWidth = displayWidth / zoomScale;
+    }
     if (!displayWidth && elements.workspaceViewport && elements.workspaceViewport.clientWidth > 0) {
-        displayWidth = Math.min(elements.workspaceViewport.clientWidth - 32, 1000);
+        displayWidth = Math.min((elements.workspaceViewport.clientWidth - 32) / zoomScale, 1000);
     }
     if (!displayWidth) {
         displayWidth = 800;
