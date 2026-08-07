@@ -289,5 +289,29 @@ export function validateExportRange() {
     }
 }
 
+export function setExportRangeToCurrent(type = 'start') {
+    if (globalState.activePageIndex === -1) {
+        import('../core/utils/dom.js').then(m => m.showToast("Vui lòng chọn một trang trước", "warning"));
+        return;
+    }
+    const pageNum = globalState.activePageIndex + 1;
+    if (type === 'start') {
+        const numStart = document.getElementById('num-export-start');
+        if (numStart) {
+            numStart.value = pageNum;
+            validateExportRange();
+            import('../core/utils/dom.js').then(m => m.showToast(`Đã ghim trang bắt đầu là trang ${pageNum}`, "success"));
+        }
+    } else {
+        const numEnd = document.getElementById('num-export-end');
+        if (numEnd) {
+            numEnd.value = pageNum;
+            validateExportRange();
+            import('../core/utils/dom.js').then(m => m.showToast(`Đã ghim trang kết thúc là trang ${pageNum}`, "success"));
+        }
+    }
+}
+
 window.toggleExportRangeInputs = toggleExportRangeInputs;
 window.validateExportRange = validateExportRange;
+window.setExportRangeToCurrent = setExportRangeToCurrent;

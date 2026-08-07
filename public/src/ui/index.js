@@ -6,7 +6,7 @@ import {
     closeMobileMenus, toggleLeftSidebar, toggleRightSidebar, toggleQuickBilingualMode, toggleQuickAudioDrama
 } from './layout-ui.js';
 
-import { selectPage, removePage, updatePageListUI, filterPagesList, toggleExportRangeInputs, validateExportRange } from './pages-ui.js';
+import { selectPage, removePage, updatePageListUI, filterPagesList, toggleExportRangeInputs, validateExportRange, setExportRangeToCurrent } from './pages-ui.js';
 
 import {
     updateActiveBlockEditor, restoreBackgroundForBlock, restoreOriginalBackground,

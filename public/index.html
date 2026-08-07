@@ -203,14 +203,20 @@
                                 <span data-i18n="export-range-checkbox">Xuất theo đoạn trang</span>
                             </label>
                         </div>
-                        <div id="export-range-inputs" class="flex items-center gap-2 hidden transition-all duration-200">
+                        <div id="export-range-inputs" class="flex items-center gap-1.5 hidden transition-all duration-200">
                             <div class="flex items-center gap-1">
                                 <span data-i18n="export-range-from" class="text-[9px] text-slate-500">Từ:</span>
-                                <input type="number" id="num-export-start" min="1" value="1" oninput="validateExportRange()" onblur="validateExportRange()" class="w-12 text-center bg-slate-950 border border-slate-800 focus:border-indigo-500/50 rounded py-0.5 px-1 text-[10px] text-slate-200 focus:outline-none">
+                                <input type="number" id="num-export-start" min="1" value="1" oninput="validateExportRange()" onblur="validateExportRange()" class="w-10 text-center bg-slate-950 border border-slate-800 focus:border-indigo-500/50 rounded py-0.5 px-1 text-[10px] text-slate-200 focus:outline-none">
+                                <button onclick="setExportRangeToCurrent('start')" class="w-5 h-5 bg-slate-950 hover:bg-indigo-600 hover:text-white border border-slate-800 text-slate-400 rounded flex items-center justify-center transition-all" title="Ghim trang hiện tại làm điểm bắt đầu">
+                                    <i class="fa-solid fa-thumbtack text-[8px]"></i>
+                                </button>
                             </div>
                             <div class="flex items-center gap-1">
                                 <span data-i18n="export-range-to" class="text-[9px] text-slate-500">Đến:</span>
-                                <input type="number" id="num-export-end" min="1" value="1" oninput="validateExportRange()" onblur="validateExportRange()" class="w-12 text-center bg-slate-950 border border-slate-800 focus:border-indigo-500/50 rounded py-0.5 px-1 text-[10px] text-slate-200 focus:outline-none">
+                                <input type="number" id="num-export-end" min="1" value="1" oninput="validateExportRange()" onblur="validateExportRange()" class="w-10 text-center bg-slate-950 border border-slate-800 focus:border-indigo-500/50 rounded py-0.5 px-1 text-[10px] text-slate-200 focus:outline-none">
+                                <button onclick="setExportRangeToCurrent('end')" class="w-5 h-5 bg-slate-950 hover:bg-indigo-600 hover:text-white border border-slate-800 text-slate-400 rounded flex items-center justify-center transition-all" title="Ghim trang hiện tại làm điểm kết thúc">
+                                    <i class="fa-solid fa-thumbtack text-[8px]"></i>
+                                </button>
                             </div>
                             <span id="export-range-total" class="text-[9px] text-indigo-400 ml-auto font-medium"></span>
                         </div>
