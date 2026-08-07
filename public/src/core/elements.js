@@ -86,6 +86,7 @@ export const elements = {
 
     // Trigger Buttons
     get btnActiveTranslate() { return document.getElementById('btn-active-translate'); },
+    get btnAiErasePage() { return document.getElementById('btn-ai-erase-page'); },
     get btnBatchTranslate() { return document.getElementById('btn-batch-translate'); },
     get btnBatchExport() { return document.getElementById('btn-batch-export'); },
     get btnExportPdf() { return document.getElementById('btn-export-pdf'); },

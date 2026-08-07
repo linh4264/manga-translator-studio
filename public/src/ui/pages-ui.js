@@ -25,6 +25,7 @@ export async function selectPage(index) {
 
     elements.workspaceEmptyState.classList.add('hidden');
     elements.btnActiveTranslate.disabled = false;
+    if (elements.btnAiErasePage) elements.btnAiErasePage.disabled = false;
     elements.btnExportPage.disabled = false;
     elements.btnEraserMode.disabled = false;
 
@@ -76,6 +77,7 @@ export async function removePage(index) {
         elements.workspaceSplitWrapper.classList.add('hidden');
         elements.workspaceEmptyState.classList.remove('hidden');
         elements.btnActiveTranslate.disabled = true;
+        if (elements.btnAiErasePage) elements.btnAiErasePage.disabled = true;
         elements.btnExportPage.disabled = true;
         elements.btnEraserMode.disabled = true;
     } else if (globalState.activePageIndex > index) {

@@ -68,6 +68,7 @@ export async function initApplication() {
     registerAction('toggleEraserMode', toggleEraserMode);
     registerAction('aiSmartInpaintBlock', () => import('../features/inpainting.js').then(m => m.aiSmartInpaintBlock()));
     registerAction('activateEyedropper', () => import('../features/inpainting.js').then(m => m.activateEyedropper()));
+    registerAction('runAIEraseTextPage', () => import('../features/ai/ai-service.js').then(m => m.runAIEraseTextPage()));
     registerAction('setEraserBrushMode', (target) => {
         const mode = target.getAttribute('data-mode') || 'eraser';
         import('../features/inpainting.js').then(m => m.setEraserBrushMode(mode));

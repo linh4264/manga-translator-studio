@@ -952,6 +952,7 @@ export async function clearCurrentProject() {
 
     // Vô hiệu hóa các nút bấm khi chưa có trang
     if (elements.btnActiveTranslate) elements.btnActiveTranslate.disabled = true;
+    if (elements.btnAiErasePage) elements.btnAiErasePage.disabled = true;
     if (elements.btnExportPage) elements.btnExportPage.disabled = true;
     if (elements.btnEraserMode) elements.btnEraserMode.disabled = true;
 
