@@ -82,18 +82,18 @@
                         title="Đóng menu">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
-                    <button onclick="openLorebookModal()"
+                    <button onclick="openLorebookModal()" data-i18n-title="title-lorebook"
                         class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-605 border border-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-all"
                         title="Lorebook từ vựng & Nhân vật">
                         <i class="fa-solid fa-address-card text-[11px] text-emerald-400"></i>
                     </button>
-                    <button onclick="openGDriveModal()"
+                    <button onclick="openGDriveModal()" data-i18n-title="title-gdrive"
                         class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-605 border border-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-all"
                         title="Đồng bộ Google Drive">
                         <i class="fa-brands fa-google-drive text-[11px] text-sky-400"></i>
                     </button>
-                    <button data-action="openSettingsModal"
-                        class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-605 border border-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-all"
+                    <button data-action="openSettingsModal" data-i18n-title="title-settings"
+                        class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-650 border border-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-all"
                         title="Cài đặt dịch thuật">
                         <i class="fa-solid fa-gear text-[11px] text-indigo-400"></i>
                     </button>
@@ -107,31 +107,31 @@
                     class="border border-dashed border-slate-800 hover:border-indigo-500/50 rounded-lg py-2 px-3 text-center cursor-pointer transition-all bg-slate-950 hover:bg-slate-900/50 group relative flex items-center justify-center gap-2">
                     <input type="file" id="file-input" multiple accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
                     <i class="fa-solid fa-cloud-arrow-up text-slate-500 group-hover:text-indigo-400 text-sm transition-colors"></i>
-                    <span class="text-[11px] font-semibold text-slate-300">Tải ảnh truyện lên</span>
+                    <span class="text-[11px] font-semibold text-slate-300" data-i18n="upload-title">Tải ảnh truyện lên</span>
                 </div>
 
                 <!-- Horizontal Tool Belt -->
                 <div class="grid grid-cols-4 gap-1">
                     <!-- Find & Replace -->
-                    <button onclick="openFindReplaceModal()"
+                    <button onclick="openFindReplaceModal()" data-i18n-title="title-find-replace"
                         class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-all"
                         title="Tìm & Thay thế từ ngữ">
                         <i class="fa-solid fa-magnifying-glass-arrow-right text-xs"></i>
                     </button>
                     <!-- Diamond Balance -->
-                    <button onclick="batchDiamondBalanceAllPages()"
+                    <button onclick="batchDiamondBalanceAllPages()" data-i18n-title="title-diamond-balance"
                         class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-all"
                         title="Cân đối Diamond tất cả các trang">
                         <i class="fa-solid fa-gem text-xs"></i>
                     </button>
                     <!-- Bilingual Toggle -->
-                    <button id="btn-bilingual-toggle-quick" onclick="toggleQuickBilingualMode()"
+                    <button id="btn-bilingual-toggle-quick" onclick="toggleQuickBilingualMode()" data-i18n-title="title-bilingual-toggle"
                         class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-all"
                         title="Bật/Tắt hiển thị Song ngữ">
                         <i class="fa-solid fa-language text-xs"></i>
                     </button>
                     <!-- Audio Drama Play/Stop -->
-                    <button id="btn-audio-toggle-quick" onclick="toggleQuickAudioDrama()"
+                    <button id="btn-audio-toggle-quick" onclick="toggleQuickAudioDrama()" data-i18n-title="title-audio-toggle"
                         class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-all"
                         title="Phát/Dừng Audio Drama (Kịch truyền thanh)">
                         <i id="icon-audio-quick" class="fa-solid fa-headphones text-xs"></i>
@@ -156,13 +156,13 @@
                                 id="page-count-badge">0</span>)</span>
                         <div class="flex items-center gap-2">
                             <!-- Sort Button -->
-                            <button onclick="sortPagesByName()" data-i18n="sort-pages-btn"
+                            <button onclick="sortPagesByName()" data-i18n="sort-pages-btn" data-i18n-title="title-sort-pages"
                                 class="text-[11px] text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 transition-colors"
                                 title="Sắp xếp danh sách theo tên file (1, 2, 3...)">
                                 <i class="fa-solid fa-sort-numeric-down text-[10px]"></i> Sắp xếp tên
                             </button>
                             <!-- Clear Project Button -->
-                            <button onclick="clearCurrentProject()" data-i18n="clear-project-btn"
+                            <button onclick="clearCurrentProject()" data-i18n="clear-project-btn" data-i18n-title="title-clear-project"
                                 class="text-[11px] text-red-400 hover:text-red-300 font-bold flex items-center gap-1 transition-colors"
                                 title="Xóa toàn bộ dự án hiện tại để bắt đầu mới">
                                 <i class="fa-solid fa-trash-can text-[10px]"></i> Xóa dự án
@@ -170,29 +170,29 @@
                         </div>
                     </div>
                     <div class="grid grid-cols-4 gap-1">
-                        <button id="btn-batch-translate" onclick="runBatchTranslation()" disabled
+                        <button id="btn-batch-translate" onclick="runBatchTranslation()" disabled data-i18n-title="title-translate-page"
                             class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex flex-col items-center justify-center transition-all"
                             title="Dịch tất cả các trang (Auto Translate)">
                             <i class="fa-solid fa-microchip text-[11px]"></i>
-                            <span class="text-[8px] font-bold mt-0.5 uppercase">Dịch hết</span>
+                            <span class="text-[8px] font-bold mt-0.5 uppercase" data-i18n="translate-all-btn">Dịch hết</span>
                         </button>
-                        <button id="btn-batch-export" onclick="runBatchExport()" disabled
-                            class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex flex-col items-center justify-center transition-all"
+                        <button id="btn-batch-export" onclick="runBatchExport()" disabled data-i18n-title="title-export-zip"
+                            class="h-8 rounded bg-slate-955 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex flex-col items-center justify-center transition-all"
                             title="Xuất ZIP chương truyện">
                             <i class="fa-solid fa-file-export text-[11px]"></i>
-                            <span class="text-[8px] font-bold mt-0.5 uppercase">Xuất ZIP</span>
+                            <span class="text-[8px] font-bold mt-0.5 uppercase" data-i18n="export-zip-btn">Xuất ZIP</span>
                         </button>
-                        <button id="btn-export-pdf" onclick="runPdfExport()" disabled
-                            class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex flex-col items-center justify-center transition-all"
+                        <button id="btn-export-pdf" onclick="runPdfExport()" disabled data-i18n-title="title-export-pdf"
+                            class="h-8 rounded bg-slate-955 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex flex-col items-center justify-center transition-all"
                             title="Xuất PDF đọc trên máy tính bảng/Kindle">
                             <i class="fa-solid fa-file-pdf text-[11px]"></i>
-                            <span class="text-[8px] font-bold mt-0.5 uppercase">Xuất PDF</span>
+                            <span class="text-[8px] font-bold mt-0.5 uppercase" data-i18n="export-pdf-btn">Xuất PDF</span>
                         </button>
-                        <button id="btn-preview-mode" onclick="openPreviewMode()" disabled
-                            class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex flex-col items-center justify-center transition-all"
+                        <button id="btn-preview-mode" onclick="openPreviewMode()" disabled data-i18n-title="title-preview-mode"
+                            class="h-8 rounded bg-slate-955 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex flex-col items-center justify-center transition-all"
                             title="Xem trước toàn bộ chương truyện đã dịch">
                             <i class="fa-solid fa-book-open text-[11px]"></i>
-                            <span class="text-[8px] font-bold mt-0.5 uppercase">Xem trước</span>
+                            <span class="text-[8px] font-bold mt-0.5 uppercase" data-i18n="reader-preview-btn">Xem trước</span>
                         </button>
                     </div>
                     <!-- Page range export options -->
@@ -207,14 +207,14 @@
                             <div class="flex items-center gap-1">
                                 <span data-i18n="export-range-from" class="text-[9px] text-slate-500">Từ:</span>
                                 <input type="number" id="num-export-start" min="1" value="1" oninput="validateExportRange()" onblur="validateExportRange()" class="w-10 text-center bg-slate-950 border border-slate-800 focus:border-indigo-500/50 rounded py-0.5 px-1 text-[10px] text-slate-200 focus:outline-none">
-                                <button onclick="setExportRangeToCurrent('start')" class="w-5 h-5 bg-slate-950 hover:bg-indigo-600 hover:text-white border border-slate-800 text-slate-400 rounded flex items-center justify-center transition-all" title="Ghim trang hiện tại làm điểm bắt đầu">
+                                <button onclick="setExportRangeToCurrent('start')" data-i18n-title="title-pin-start" class="w-5 h-5 bg-slate-950 hover:bg-indigo-600 hover:text-white border border-slate-800 text-slate-400 rounded flex items-center justify-center transition-all" title="Ghim trang hiện tại làm điểm bắt đầu">
                                     <i class="fa-solid fa-thumbtack text-[8px]"></i>
                                 </button>
                             </div>
                             <div class="flex items-center gap-1">
                                 <span data-i18n="export-range-to" class="text-[9px] text-slate-500">Đến:</span>
                                 <input type="number" id="num-export-end" min="1" value="1" oninput="validateExportRange()" onblur="validateExportRange()" class="w-10 text-center bg-slate-950 border border-slate-800 focus:border-indigo-500/50 rounded py-0.5 px-1 text-[10px] text-slate-200 focus:outline-none">
-                                <button onclick="setExportRangeToCurrent('end')" class="w-5 h-5 bg-slate-950 hover:bg-indigo-600 hover:text-white border border-slate-800 text-slate-400 rounded flex items-center justify-center transition-all" title="Ghim trang hiện tại làm điểm kết thúc">
+                                <button onclick="setExportRangeToCurrent('end')" data-i18n-title="title-pin-end" class="w-5 h-5 bg-slate-950 hover:bg-indigo-600 hover:text-white border border-slate-800 text-slate-400 rounded flex items-center justify-center transition-all" title="Ghim trang hiện tại làm điểm kết thúc">
                                     <i class="fa-solid fa-thumbtack text-[8px]"></i>
                                 </button>
                             </div>
@@ -222,19 +222,19 @@
                         </div>
                     </div>
                     <div class="grid grid-cols-3 gap-1">
-                        <button id="btn-export-project" onclick="exportProjectBackup()" disabled
+                        <button id="btn-export-project" onclick="exportProjectBackup()" disabled data-i18n="export-manga-btn" data-i18n-title="title-export-project"
                             class="py-1 rounded bg-slate-950/60 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white text-[9px] font-semibold flex items-center justify-center gap-1 transition-all disabled:opacity-40 disabled:pointer-events-none"
                             title="Sao lưu toàn bộ dự án thành file .manga">
                             <i class="fa-solid fa-floppy-disk text-[9px]"></i> Sao lưu
                         </button>
-                        <button id="btn-import-project" onclick="document.getElementById('import-project-input').click()"
+                        <button id="btn-import-project" onclick="document.getElementById('import-project-input').click()" data-i18n="import-manga-btn" data-i18n-title="title-import-project"
                             class="py-1 rounded bg-slate-950/60 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white text-[9px] font-semibold flex items-center justify-center gap-1 transition-all"
                             title="Khôi phục dự án .manga">
                             <i class="fa-solid fa-file-import text-[9px]"></i> Khôi phục
                         </button>
                         <input type="file" id="import-project-input" accept=".manga,.json" class="hidden"
                             onchange="importProjectBackup(this.files)">
-                        <button id="btn-clear-memory" onclick="clearMemoryCache()"
+                        <button id="btn-clear-memory" onclick="clearMemoryCache()" data-i18n="clear-ram-btn" data-i18n-title="title-clear-memory"
                             class="py-1 rounded bg-slate-850 border border-slate-800 hover:bg-slate-800 text-slate-300 text-[9px] font-semibold flex items-center justify-center gap-1 transition-all"
                             title="Giải phóng bộ nhớ RAM đệm Canvas">
                             <i class="fa-solid fa-broom text-[9px] text-amber-500"></i> Dọn RAM
@@ -499,12 +499,12 @@
                 <div class="flex items-center justify-between gap-2">
                     <!-- History Controls -->
                     <div class="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-800 flex-1 justify-around">
-                        <button id="btn-undo" onclick="executeUndo()" disabled
+                        <button id="btn-undo" onclick="executeUndo()" disabled data-i18n-title="title-undo"
                             class="w-7 h-7 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                             title="Hoàn tác (Ctrl+Z)">
                             <i class="fa-solid fa-rotate-left text-xs"></i>
                         </button>
-                        <button id="btn-redo" onclick="executeRedo()" disabled
+                        <button id="btn-redo" onclick="executeRedo()" disabled data-i18n-title="title-redo"
                             class="w-7 h-7 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                             title="Làm lại (Ctrl+Y)">
                             <i class="fa-solid fa-rotate-right text-xs"></i>
@@ -512,12 +512,12 @@
                     </div>
                     <!-- Formatting Controls -->
                     <div class="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-800 flex-1 justify-around">
-                        <button id="btn-copy-style" onclick="copyBlockStyle()" disabled
+                        <button id="btn-copy-style" onclick="copyBlockStyle()" disabled data-i18n-title="title-copy-style"
                             class="w-7 h-7 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                             title="Sao chép định dạng ô (Ctrl+Shift+C)">
                             <i class="fa-solid fa-paintbrush text-xs"></i>
                         </button>
-                        <button id="btn-paste-style" onclick="pasteBlockStyle()" disabled
+                        <button id="btn-paste-style" onclick="pasteBlockStyle()" disabled data-i18n-title="title-paste-style"
                             class="w-7 h-7 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                             title="Dán định dạng đã sao chép (Ctrl+Shift+V)">
                             <i class="fa-solid fa-fill-drip text-xs"></i>
@@ -543,27 +543,27 @@
 
                 <!-- Actions Tool belt -->
                 <div class="grid grid-cols-2 gap-1.5">
-                    <button onclick="addNewBlock()"
+                    <button onclick="addNewBlock()" data-i18n-title="title-add-block"
                         class="py-1.5 rounded bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
                         title="Thêm ô thoại mới">
                         <i class="fa-solid fa-square-plus text-xs"></i> Thêm ô
                     </button>
-                    <button id="btn-active-translate" onclick="translateActivePage()" disabled
+                    <button id="btn-active-translate" onclick="translateActivePage()" disabled data-i18n-title="title-translate-page"
                         class="py-1.5 rounded bg-emerald-600/20 hover:bg-emerald-600 border border-emerald-500/30 text-emerald-300 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
                         title="Dịch trang hiện tại">
                         <i class="fa-solid fa-wand-magic-sparkles text-xs"></i> Dịch trang
                     </button>
-                    <button id="btn-ai-erase-page" onclick="runAIEraseTextPage()" disabled
+                    <button id="btn-ai-erase-page" onclick="runAIEraseTextPage()" disabled data-i18n-title="title-ai-erase"
                         class="py-1.5 rounded bg-purple-600/20 hover:bg-purple-600 border border-purple-500/30 text-purple-300 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
                         title="Xóa chữ toàn trang bằng AI">
                         <i class="fa-solid fa-eraser text-xs"></i> AI Xóa Chữ
                     </button>
-                    <button id="btn-export-page" onclick="exportActivePage()" disabled
+                    <button id="btn-export-page" onclick="exportActivePage()" disabled data-i18n-title="title-export-page"
                         class="py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-500 transition-all text-xs font-bold flex items-center justify-center gap-1.5 shadow-md"
                         title="Xuất ảnh trang hiện tại">
                         <i class="fa-solid fa-download text-xs"></i> Xuất ảnh
                     </button>
-                    <button id="btn-eraser-mode" data-action="toggleEraserMode" disabled
+                    <button id="btn-eraser-mode" data-action="toggleEraserMode" disabled data-i18n-title="title-eraser-mode"
                         class="col-span-2 py-1.5 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
                         title="Bật/Tắt chế độ cọ vẽ để tẩy chữ thủ công">
                         <i class="fa-solid fa-paint-brush text-xs"></i> Chế độ cọ vẽ tẩy chữ
@@ -584,39 +584,37 @@
                 <div id="block-editor-container" class="hidden space-y-4">
                     <!-- Block Type Selector -->
                     <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phân loại khung
-                            thoại</label>
+                        <label data-i18n="block-type-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phân loại khung thoại</label>
                         <div class="grid grid-cols-2 gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800">
                             <button id="btn-block-type-dialogue" onclick="setActiveBlockType('dialogue')"
                                 class="py-1.5 px-2 text-[11px] font-semibold rounded bg-indigo-600 text-white flex items-center justify-center gap-1.5 transition-all">
-                                <i class="fa-regular fa-comment"></i> 💬 Lời thoại
+                                <i class="fa-regular fa-comment"></i> <span data-i18n="block-type-dialogue">💬 Lời thoại</span>
                             </button>
                             <button id="btn-block-type-sfx" onclick="setActiveBlockType('sfx')"
                                 class="py-1.5 px-2 text-[11px] font-semibold rounded text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5 transition-all">
-                                <i class="fa-solid fa-bolt"></i> 💥 Hiệu ứng (SFX)
+                                <i class="fa-solid fa-bolt"></i> <span data-i18n="block-type-sfx">💥 Hiệu ứng (SFX)</span>
                             </button>
                         </div>
                     </div>
 
                     <!-- Voice Gender Assignment for Block -->
                     <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Giọng đọc Audio
-                            Drama</label>
+                        <label data-i18n="voice-gender-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Giọng đọc Audio Drama</label>
                         <div class="grid grid-cols-3 gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
                             <button id="btn-block-gender-male" onclick="setActiveBlockGender('male')"
                                 class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center gap-1 transition-all"
                                 title="Gán giọng Nam cho ô thoại này">
-                                👨 Nam
+                                <span data-i18n="voice-gender-male">👨 Nam</span>
                             </button>
                             <button id="btn-block-gender-female" onclick="setActiveBlockGender('female')"
                                 class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center gap-1 transition-all"
                                 title="Gán giọng Nữ cho ô thoại này">
-                                👩 Nữ
+                                <span data-i18n="voice-gender-female">👩 Nữ</span>
                             </button>
                             <button id="btn-block-gender-neutral" onclick="setActiveBlockGender('neutral')"
                                 class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center gap-1 transition-all"
                                 title="Gán giọng Dẫn chuyện">
-                                🎙️ Dẫn chuyện
+                                <span data-i18n="voice-gender-neutral">🎙️ Dẫn chuyện</span>
                             </button>
                         </div>
                     </div>
@@ -671,13 +669,13 @@
                         class="space-y-3 p-3 bg-slate-950 rounded-lg border border-slate-800">
                         <h4
                             class="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center justify-between">
-                            <span><i class="fa-solid fa-arrows-spin"></i> Góc xoay & Uốn cong (SFX)</span>
-                            <button onclick="resetSfxAngleControls()"
+                            <span data-i18n="sfx-controls-title"><i class="fa-solid fa-arrows-spin"></i> Góc xoay & Uốn cong (SFX)</span>
+                            <button onclick="resetSfxAngleControls()" data-i18n="reset-btn"
                                 class="text-[9px] text-slate-400 hover:text-white font-normal">Đặt lại</button>
                         </h4>
                         <div class="space-y-1">
                             <div class="flex justify-between text-[10px] text-slate-400">
-                                <span>Góc nghiêng (Rotation):</span>
+                                <span data-i18n="sfx-rotation-label">Góc nghiêng (Rotation):</span>
                                 <span id="lbl-sfx-rotate" class="font-mono text-slate-200">0°</span>
                             </div>
                             <input type="range" id="slider-sfx-rotate" min="-180" max="180" value="0"
@@ -686,7 +684,7 @@
                         </div>
                         <div class="space-y-1">
                             <div class="flex justify-between text-[10px] text-slate-400">
-                                <span>Độ uốn cong (Arc Text):</span>
+                                <span data-i18n="sfx-arc-label">Độ uốn cong (Arc Text):</span>
                                 <span id="lbl-sfx-arc" class="font-mono text-slate-200">0°</span>
                             </div>
                             <input type="range" id="slider-sfx-arc" min="0" max="360" value="0"
@@ -697,7 +695,7 @@
 
                     <!-- Block Quick Controls -->
                     <div class="flex items-center justify-between border-t border-slate-800 pt-3">
-                        <button onclick="deleteActiveBlock()"
+                        <button onclick="deleteActiveBlock()" data-i18n="delete-block-btn"
                             class="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500 text-red-400 hover:text-white transition-all text-xs font-semibold flex items-center gap-1.5">
                             <i class="fa-solid fa-trash-can"></i> Xóa ô dịch này
                         </button>
@@ -719,22 +717,22 @@
                         <button data-action="applyStylePreset" data-preset="dialogue"
                             class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded flex items-center justify-center gap-1.5 transition-colors text-xs font-semibold text-slate-200"
                             title="Kiểu bong bóng thoại chuẩn">
-                            <span>💬 Thoại</span>
+                            <span data-i18n="preset-dialogue">💬 Thoại</span>
                         </button>
                         <button data-action="applyStylePreset" data-preset="scream"
                             class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded flex items-center justify-center gap-1.5 transition-colors text-xs font-semibold text-slate-200"
                             title="Kiểu hét lớn hoặc SFX">
-                            <span>💥 Hét / SFX</span>
+                            <span data-i18n="preset-scream">💥 Hét / SFX</span>
                         </button>
                         <button data-action="applyStylePreset" data-preset="whisper"
                             class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded flex items-center justify-center gap-1.5 transition-colors text-xs font-semibold text-slate-200"
                             title="Kiểu nói thầm">
-                            <span>💭 Thầm thì</span>
+                            <span data-i18n="preset-whisper">💭 Thầm thì</span>
                         </button>
                         <button data-action="applyStylePreset" data-preset="narration"
                             class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded flex items-center justify-center gap-1.5 transition-colors text-xs font-semibold text-slate-200"
                             title="Hộp dẫn truyện">
-                            <span>📜 Dẫn chuyện</span>
+                            <span data-i18n="preset-narration">📜 Dẫn chuyện</span>
                         </button>
                     </div>
                 </div>

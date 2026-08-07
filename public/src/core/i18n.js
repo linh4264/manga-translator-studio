@@ -99,7 +99,53 @@ export const i18nDict = {
         "clear-ram-btn": "Dọn RAM",
         "export-range-checkbox": "Xuất theo đoạn trang",
         "export-range-from": "Từ:",
-        "export-range-to": "Đến:"
+        "export-range-to": "Đến:",
+
+        // New Layout Features
+        "preset-dialogue": "💬 Thoại",
+        "preset-scream": "💥 Hét / SFX",
+        "preset-whisper": "💭 Thầm thì",
+        "preset-narration": "📜 Dẫn chuyện",
+        "block-type-label": "Phân loại khung thoại",
+        "block-type-dialogue": "💬 Lời thoại",
+        "block-type-sfx": "💥 Hiệu ứng (SFX)",
+        "voice-gender-label": "Giọng đọc Audio Drama",
+        "voice-gender-male": "👨 Nam",
+        "voice-gender-female": "👩 Nữ",
+        "voice-gender-neutral": "🎙️ Dẫn chuyện",
+        "sfx-controls-title": "Góc xoay & Uốn cong (SFX)",
+        "sfx-rotation-label": "Góc nghiêng (Rotation):",
+        "sfx-arc-label": "Độ uốn cong (Arc Text):",
+        "reset-btn": "Đặt lại",
+        "delete-block-btn": "Xóa ô dịch này",
+
+        // Tooltip Titles
+        "title-find-replace": "Tìm & Thay thế từ ngữ",
+        "title-diamond-balance": "Cân đối Diamond tất cả các trang",
+        "title-bilingual-toggle": "Bật/Tắt hiển thị Song ngữ",
+        "title-audio-toggle": "Phát/Dừng Audio Drama (Kịch truyền thanh)",
+        "title-lorebook": "Lorebook từ vựng & Nhân vật",
+        "title-gdrive": "Đồng bộ Google Drive",
+        "title-settings": "Cài đặt dịch thuật",
+        "title-sort-pages": "Sắp xếp danh sách theo tên file (1, 2, 3...)",
+        "title-clear-project": "Xóa toàn bộ dự án hiện tại để bắt đầu mới",
+        "title-export-zip": "Xuất ZIP chương truyện",
+        "title-export-pdf": "Xuất PDF đọc trên máy tính bảng/Kindle",
+        "title-preview-mode": "Xem trước toàn bộ chương truyện đã dịch",
+        "title-export-project": "Sao lưu toàn bộ dự án thành file .manga",
+        "title-import-project": "Khôi phục dự án từ file .manga / .json",
+        "title-clear-memory": "Giải phóng bộ nhớ RAM đệm Canvas",
+        "title-pin-start": "Ghim trang hiện tại làm điểm bắt đầu",
+        "title-pin-end": "Ghim trang hiện tại làm điểm kết thúc",
+        "title-undo": "Hoàn tác (Ctrl+Z)",
+        "title-redo": "Làm lại (Ctrl+Y)",
+        "title-copy-style": "Sao chép định dạng ô (Ctrl+Shift+C)",
+        "title-paste-style": "Dán định dạng đã sao chép (Ctrl+Shift+V)",
+        "title-add-block": "Thêm ô thoại mới",
+        "title-translate-page": "Dịch trang hiện tại",
+        "title-ai-erase": "Xóa chữ toàn trang bằng AI",
+        "title-export-page": "Xuất ảnh trang hiện tại",
+        "title-eraser-mode": "Bật/Tắt chế độ cọ vẽ để tẩy chữ thủ công"
     },
     en: {
         // Left Panel - Image Source
@@ -198,7 +244,53 @@ export const i18nDict = {
         "clear-ram-btn": "Free RAM",
         "export-range-checkbox": "Export page range",
         "export-range-from": "From:",
-        "export-range-to": "To:"
+        "export-range-to": "To:",
+
+        // New Layout Features
+        "preset-dialogue": "💬 Dialogue",
+        "preset-scream": "💥 Scream / SFX",
+        "preset-whisper": "💭 Whisper",
+        "preset-narration": "📜 Narration",
+        "block-type-label": "Block Type",
+        "block-type-dialogue": "💬 Dialogue",
+        "block-type-sfx": "💥 Sound Effects (SFX)",
+        "voice-gender-label": "Audio Drama Voice",
+        "voice-gender-male": "👨 Male",
+        "voice-gender-female": "👩 Female",
+        "voice-gender-neutral": "🎙️ Narrator",
+        "sfx-controls-title": "Rotation & Curve (SFX)",
+        "sfx-rotation-label": "Rotation:",
+        "sfx-arc-label": "Text Curve (Arc):",
+        "reset-btn": "Reset",
+        "delete-block-btn": "Delete This Bubble",
+
+        // Tooltip Titles
+        "title-find-replace": "Find & Replace text",
+        "title-diamond-balance": "Diamond balance all pages",
+        "title-bilingual-toggle": "Toggle Bilingual display mode",
+        "title-audio-toggle": "Play/Stop Audio Drama",
+        "title-lorebook": "Lorebook and Characters",
+        "title-gdrive": "Sync to Google Drive",
+        "title-settings": "Translation Settings",
+        "title-sort-pages": "Sort page list by file name",
+        "title-clear-project": "Clear current project to start fresh",
+        "title-export-zip": "Export chapter as ZIP",
+        "title-export-pdf": "Export chapter as PDF",
+        "title-preview-mode": "Preview translation pages",
+        "title-export-project": "Backup project (.manga)",
+        "title-import-project": "Restore project from file (.manga / .json)",
+        "title-clear-memory": "Free Canvas RAM cache",
+        "title-pin-start": "Pin current page as start page",
+        "title-pin-end": "Pin current page as end page",
+        "title-undo": "Undo (Ctrl+Z)",
+        "title-redo": "Redo (Ctrl+Y)",
+        "title-copy-style": "Copy block style (Ctrl+Shift+C)",
+        "title-paste-style": "Paste block style (Ctrl+Shift+V)",
+        "title-add-block": "Add new dialogue block",
+        "title-translate-page": "Translate active page",
+        "title-ai-erase": "AI erase text on active page",
+        "title-export-page": "Export active page image",
+        "title-eraser-mode": "Toggle brush tool for manual text erasing"
     }
 };
 
@@ -228,6 +320,14 @@ export function applyTranslations() {
         const key = el.getAttribute('data-i18n-placeholder');
         if (dict[key]) {
             el.setAttribute('placeholder', dict[key]);
+        }
+    });
+
+    // Translate tooltips with data-i18n-title attribute
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const key = el.getAttribute('data-i18n-title');
+        if (dict[key]) {
+            el.setAttribute('title', dict[key]);
         }
     });
 
