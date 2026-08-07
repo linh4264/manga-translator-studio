@@ -700,6 +700,47 @@ export function cleanMangaBackgroundArtWithMask(ctx, width, height, maskBytes) {
         }
     }
 
+    // Step 1.5: Sample boundary pixels to measure surrounding noise/grain (screentone intensity)
+    let boundaryPixels = [];
+    const step = Math.max(1, Math.floor(dilatedMask.length / 500)); // Sample up to 500 boundary pixels
+    for (let i = 0; i < dilatedMask.length; i += step) {
+        if (!dilatedMask[i]) {
+            const x = i % width;
+            const y = Math.floor(i / width);
+            let isBoundary = false;
+            for (let dy = -1; dy <= 1; dy++) {
+                const ny = y + dy;
+                if (ny < 0 || ny >= height) continue;
+                for (let dx = -1; dx <= 1; dx++) {
+                    const nx = x + dx;
+                    if (nx < 0 || nx >= width) continue;
+                    if (dilatedMask[ny * width + nx]) {
+                        isBoundary = true;
+                        break;
+                    }
+                }
+                if (isBoundary) break;
+            }
+            if (isBoundary) {
+                const p = i * 4;
+                const lum = 0.299 * data[p] + 0.587 * data[p + 1] + 0.114 * data[p + 2];
+                boundaryPixels.push(lum);
+            }
+        }
+    }
+
+    let stdDev = 0;
+    if (boundaryPixels.length > 0) {
+        const sum = boundaryPixels.reduce((a, b) => a + b, 0);
+        const avgLum = sum / boundaryPixels.length;
+        const sqSum = boundaryPixels.reduce((a, b) => a + (b - avgLum) * (b - avgLum), 0);
+        stdDev = Math.sqrt(sqSum / boundaryPixels.length);
+    }
+
+    // Calculate noise amplitude (higher contrast background -> more grain to prevent flat blurry regions)
+    // For flat black or white backgrounds, stdDev is low, so noiseAmp is nearly 0.
+    const noiseAmp = Math.min(16, stdDev * 0.45);
+
     // Step 2: 8-Directional Boundary Interpolation (Harmonic Inpainting)
     const dirs = [
         { x: 0, y: -1 },  // Up
@@ -761,15 +802,17 @@ export function cleanMangaBackgroundArtWithMask(ctx, width, height, maskBytes) {
         }
     }
 
-    // Write back to image data
+    // Write back to image data with monochrome grain matching
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
             const idx = y * width + x;
             if (dilatedMask[idx]) {
                 const p = idx * 4;
-                data[p] = outR[idx];
-                data[p + 1] = outG[idx];
-                data[p + 2] = outB[idx];
+                // Add gray noise offset to prevent digital blur
+                const noise = (Math.random() - 0.5) * noiseAmp;
+                data[p] = Math.min(255, Math.max(0, outR[idx] + noise));
+                data[p + 1] = Math.min(255, Math.max(0, outG[idx] + noise));
+                data[p + 2] = Math.min(255, Math.max(0, outB[idx] + noise));
                 data[p + 3] = 255;
             }
         }
