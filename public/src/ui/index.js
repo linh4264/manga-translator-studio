@@ -178,7 +178,37 @@ export function initEventListeners() {
         checkbox.addEventListener('change', () => updateTranslationGenrePreset());
     });
 
+    // Ctrl + Mouse Wheel Zoom
+    if (elements.workspaceViewport) {
+        elements.workspaceViewport.addEventListener('wheel', (e) => {
+            if (e.ctrlKey) {
+                e.preventDefault();
+                const amount = e.deltaY < 0 ? 10 : -10;
+                changeZoom(amount);
+            }
+        }, { passive: false });
+    }
+
     document.addEventListener('keydown', (e) => {
+        // Ctrl + Shortcuts for zooming
+        if (e.ctrlKey || e.metaKey) {
+            if (e.key === '=' || e.key === '+') {
+                e.preventDefault();
+                changeZoom(10);
+                return;
+            }
+            if (e.key === '-') {
+                e.preventDefault();
+                changeZoom(-10);
+                return;
+            }
+            if (e.key === '0') {
+                e.preventDefault();
+                resetZoom();
+                return;
+            }
+        }
+
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
         if (globalState.selectedBlockId !== null) {

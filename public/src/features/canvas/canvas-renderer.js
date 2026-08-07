@@ -30,23 +30,25 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
 
     const imgElement = customImgElement || elements.mangaBgImage;
     if (imgElement && imgElement.clientWidth > 0) {
-        page.lastDisplayWidth = imgElement.clientWidth;
+        const zoomScale = (globalState.zoom || 100) / 100;
+        page.lastDisplayWidth = imgElement.clientWidth / zoomScale;
     }
 
     if (globalState.autoFitEnabled) {
-        const currentDisplayWidth = imgElement?.clientWidth
+        const zoomScale = isMirror ? 1 : ((globalState.zoom || 100) / 100);
+        const currentDisplayWidth = (imgElement?.clientWidth
             || elements.mangaCanvasContainer?.clientWidth
             || elements.workspaceViewport?.clientWidth
-            || 800;
-        const currentDisplayHeight = imgElement?.clientHeight
+            || 800) / zoomScale;
+        const currentDisplayHeight = (imgElement?.clientHeight
             || elements.mangaCanvasContainer?.clientHeight
             || elements.workspaceViewport?.clientHeight
-            || Math.round(currentDisplayWidth * ((imgElement?.naturalHeight || 1200) / Math.max(1, imgElement?.naturalWidth || 800)));
+            || Math.round((currentDisplayWidth * zoomScale) * ((imgElement?.naturalHeight || 1200) / Math.max(1, imgElement?.naturalWidth || 800)))) / zoomScale;
         const currentRevision = page.autoFitRevision || 0;
 
         if (page._lastAutoFitRevision !== currentRevision ||
-            page._lastAutoFitDisplayWidth !== currentDisplayWidth ||
-            page._lastAutoFitDisplayHeight !== currentDisplayHeight) {
+            Math.abs(page._lastAutoFitDisplayWidth - currentDisplayWidth) > 2 ||
+            Math.abs(page._lastAutoFitDisplayHeight - currentDisplayHeight) > 2) {
             autoFitAllBlocksOnPage(page, customImgElement, forceExportScale);
             page._lastAutoFitRevision = currentRevision;
             page._lastAutoFitDisplayWidth = currentDisplayWidth;
@@ -179,14 +181,17 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
         }
 
         maskContent.style.color = block.style.textColor || '#000000';
+        const zoomScale = isMirror ? 1 : ((globalState.zoom || 100) / 100);
         const padding = block.style.padding !== undefined ? block.style.padding : 4;
-        const displayPadding = forceExportScale !== 1 ? padding * forceExportScale : padding;
+        const displayPadding = forceExportScale !== 1 ? (padding * forceExportScale) : (padding * zoomScale);
         maskContent.style.padding = `${displayPadding}px`;
         maskContent.style.textAlign = block.style.align || 'center';
 
         let displayFontSize = block.style.fontSize || 16;
         if (forceExportScale !== 1) {
             displayFontSize = displayFontSize * forceExportScale;
+        } else {
+            displayFontSize = displayFontSize * zoomScale;
         }
         maskContent.style.fontSize = `${displayFontSize}px`;
         maskContent.style.lineHeight = block.style.vertical ? '1.12' : '1.18';

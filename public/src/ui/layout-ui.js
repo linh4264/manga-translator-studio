@@ -132,16 +132,20 @@ export function changeZoom(amount) {
     globalState.zoom = Math.max(25, Math.min(250, globalState.zoom + amount));
     elements.zoomIndicator.innerText = `${globalState.zoom}%`;
     elements.mangaCanvasContainer.style.height = `${globalState.zoom}%`;
+    elements.mangaCanvasContainer.style.maxHeight = 'none';
     elements.mangaCanvasContainer.style.width = 'auto';
     elements.workspaceSplitWrapper.style.transform = `scale(${globalState.zoom / 100})`;
+    renderOverlays();
 }
 
 export function resetZoom() {
     globalState.zoom = 100;
     elements.zoomIndicator.innerText = '100%';
     elements.mangaCanvasContainer.style.height = '100%';
+    elements.mangaCanvasContainer.style.maxHeight = '100%';
     elements.mangaCanvasContainer.style.width = 'auto';
     elements.workspaceSplitWrapper.style.transform = 'scale(1)';
+    renderOverlays();
 }
 
 export function toggleSidebarToolsMenu() {

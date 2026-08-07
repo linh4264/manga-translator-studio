@@ -100,7 +100,12 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
             ctx.clip();
 
             const fontName = getFontFamilyName(block.style.fontFamily);
-            const displayWidth = page.lastDisplayWidth || imgElement.clientWidth || 800;
+            let displayWidth = page.lastDisplayWidth;
+            if (!displayWidth && imgElement) {
+                const zoomScale = (globalState.zoom || 100) / 100;
+                displayWidth = imgElement.clientWidth / zoomScale;
+            }
+            if (!displayWidth || isNaN(displayWidth)) displayWidth = 800;
             const scaleFactor = W / Math.max(1, displayWidth);
             const fontSizePx = (block.style.fontSize || 16) * scaleFactor;
             const fontWeight = block.style.bold ? 'bold' : 'normal';
@@ -334,7 +339,12 @@ export async function renderPageToCanvasSVG(page) {
     const W = imgElement.naturalWidth;
     const H = imgElement.naturalHeight;
 
-    const displayWidth = page.lastDisplayWidth || imgElement.clientWidth || 800;
+    let displayWidth = page.lastDisplayWidth;
+    if (!displayWidth && imgElement) {
+        const zoomScale = (globalState.zoom || 100) / 100;
+        displayWidth = imgElement.clientWidth / zoomScale;
+    }
+    if (!displayWidth || isNaN(displayWidth)) displayWidth = 800;
     const forceExportScale = W / Math.max(1, displayWidth);
 
     const mirrorContainer = document.createElement('div');

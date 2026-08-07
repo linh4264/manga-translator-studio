@@ -390,7 +390,8 @@ export async function runBatchExport() {
                 });
 
                 // Establish aligned displayWidth scale for consistent offscreen autoFit calculations
-                const displayWidth = elements.mangaCanvasContainer?.clientWidth || 800;
+                const zoomScale = (globalState.zoom || 100) / 100;
+                const displayWidth = (elements.mangaCanvasContainer?.clientWidth || 800) / zoomScale;
                 page.lastDisplayWidth = displayWidth;
 
                 if (globalState.autoFitEnabled) {

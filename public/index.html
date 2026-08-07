@@ -375,6 +375,21 @@
             <!-- Workspace Content Canvas area -->
             <div id="workspace-viewport" class="flex-1 overflow-auto p-0 flex items-start justify-center relative">
 
+                <!-- Floating Zoom Controls at bottom-right corner of workspace viewport -->
+                <div id="zoom-controls-floating" class="absolute bottom-6 right-6 z-30 bg-slate-900/90 border border-slate-800 rounded-lg p-1.5 flex items-center space-x-1.5 shadow-2xl backdrop-blur-md">
+                    <button onclick="changeZoom(-10)" class="w-6 h-6 hover:bg-slate-800 rounded text-slate-400 hover:text-white flex items-center justify-center transition-all" title="Thu nhỏ (Ctrl + -)">
+                        <i class="fa-solid fa-minus text-xs"></i>
+                    </button>
+                    <span id="zoom-indicator" class="text-[10px] font-semibold text-slate-300 w-10 text-center font-mono select-none">100%</span>
+                    <button onclick="changeZoom(10)" class="w-6 h-6 hover:bg-slate-800 rounded text-slate-400 hover:text-white flex items-center justify-center transition-all" title="Phóng to (Ctrl + +)">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                    </button>
+                    <div class="h-3 w-px bg-slate-800"></div>
+                    <button onclick="resetZoom()" class="w-6 h-6 hover:bg-slate-800 rounded text-slate-400 hover:text-white flex items-center justify-center transition-all" title="Khôi phục gốc 100% (Ctrl + 0)">
+                        <i class="fa-solid fa-rotate-left text-xs"></i>
+                    </button>
+                </div>
+
                 <!-- Center Empty State -->
                 <div id="workspace-empty-state"
                     class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-slate-600 z-10">
