@@ -866,79 +866,242 @@ export function cleanMangaBackgroundArtWithMask(ctx, width, height, maskBytes) {
     // For flat black or white backgrounds, stdDev is low, so noiseAmp is nearly 0.
     const noiseAmp = Math.min(16, stdDev * 0.45);
 
-    // Step 2: 8-Directional Boundary Interpolation (Harmonic Inpainting)
-    const dirs = [
-        { x: 0, y: -1 },  // Up
-        { x: 0, y: 1 },   // Down
-        { x: -1, y: 0 },  // Left
-        { x: 1, y: 0 },   // Right
-        { x: -1, y: -1 }, // Up-Left
-        { x: 1, y: -1 },  // Up-Right
-        { x: -1, y: 1 },  // Down-Left
-        { x: 1, y: 1 }    // Down-Right
-    ];
-
-    const outR = new Uint8Array(width * height);
-    const outG = new Uint8Array(width * height);
-    const outB = new Uint8Array(width * height);
-
+    // Step 2: Try Best-Shift Patch Synthesis (BSS) first to see if there is a repeating texture/screentone nearby
+    const boundaryPts = [];
+    const borderThickness = 4;
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
             const idx = y * width + x;
-            if (!dilatedMask[idx]) continue;
-
-            let sumR = 0, sumG = 0, sumB = 0, totalWeight = 0;
-
-            for (const dir of dirs) {
-                let dist = 1;
-                while (dist < 100) {
-                    const nx = x + dir.x * dist;
-                    const ny = y + dir.y * dist;
-
-                    if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
-                        break;
+            if (!dilatedMask[idx]) {
+                // Check if it is near a mask pixel
+                let nearMask = false;
+                for (let dy = -borderThickness; dy <= borderThickness; dy++) {
+                    const ny = y + dy;
+                    if (ny < 0 || ny >= height) continue;
+                    for (let dx = -borderThickness; dx <= borderThickness; dx++) {
+                        const nx = x + dx;
+                        if (nx < 0 || nx >= width) continue;
+                        if (dilatedMask[ny * width + nx]) {
+                            nearMask = true;
+                            break;
+                        }
                     }
-
-                    const nIdx = ny * width + nx;
-                    if (!dilatedMask[nIdx]) {
-                        const p = nIdx * 4;
-                        const weight = 1 / (dist * dist); // Inverse distance squared
-                        sumR += data[p] * weight;
-                        sumG += data[p + 1] * weight;
-                        sumB += data[p + 2] * weight;
-                        totalWeight += weight;
-                        break;
-                    }
-                    dist++;
+                    if (nearMask) break;
                 }
-            }
-
-            if (totalWeight > 0) {
-                outR[idx] = Math.round(sumR / totalWeight);
-                outG[idx] = Math.round(sumG / totalWeight);
-                outB[idx] = Math.round(sumB / totalWeight);
-            } else {
-                // Fallback to surrounding color if no boundary found in direction
-                const p = idx * 4;
-                outR[idx] = data[p];
-                outG[idx] = data[p + 1];
-                outB[idx] = data[p + 2];
+                if (nearMask) {
+                    boundaryPts.push({ x, y });
+                }
             }
         }
     }
 
-    // Write back to image data with monochrome grain matching
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-            const idx = y * width + x;
-            if (dilatedMask[idx]) {
-                const p = idx * 4;
-                // Add gray noise offset to prevent digital blur
-                const noise = (Math.random() - 0.5) * noiseAmp;
-                data[p] = Math.min(255, Math.max(0, outR[idx] + noise));
-                data[p + 1] = Math.min(255, Math.max(0, outG[idx] + noise));
-                data[p + 2] = Math.min(255, Math.max(0, outB[idx] + noise));
-                data[p + 3] = 255;
+    let useTextureShift = false;
+    let bestDx = 0, bestDy = 0;
+    let minRmse = Infinity;
+
+    // We only attempt texture shift search if we have a reasonable boundary region to match against
+    if (boundaryPts.length > 10) {
+        const testShift = (dx, dy) => {
+            if (dx === 0 && dy === 0) return;
+            let sumSsd = 0;
+            let count = 0;
+            let overlapCount = 0;
+
+            for (let i = 0; i < boundaryPts.length; i++) {
+                const pt = boundaryPts[i];
+                const sx = pt.x + dx;
+                const sy = pt.y + dy;
+
+                if (sx >= 0 && sx < width && sy >= 0 && sy < height) {
+                    if (dilatedMask[sy * width + sx]) {
+                        overlapCount++;
+                    }
+                    const originalIndex = (pt.y * width + pt.x) * 4;
+                    const shiftedIndex = (sy * width + sx) * 4;
+                    const dr = data[originalIndex] - data[shiftedIndex];
+                    const dg = data[originalIndex + 1] - data[shiftedIndex + 1];
+                    const db = data[originalIndex + 2] - data[shiftedIndex + 2];
+                    sumSsd += dr * dr + dg * dg + db * db;
+                    count++;
+                }
+            }
+
+            if (count > 0) {
+                // Penalize shifts that overlap heavily with the masked/dirty pixels
+                const rmse = Math.sqrt(sumSsd / (count * 3)) + (overlapCount / count) * 80;
+                if (rmse < minRmse) {
+                    minRmse = rmse;
+                    bestDx = dx;
+                    bestDy = dy;
+                }
+            }
+        };
+
+        // Coarse search (step of 3)
+        for (let dy = -36; dy <= 36; dy += 3) {
+            for (let dx = -36; dx <= 36; dx += 3) {
+                testShift(dx, dy);
+            }
+        }
+
+        // Fine search around best coarse shift
+        const coarseDx = bestDx;
+        const coarseDy = bestDy;
+        for (let dy = coarseDy - 2; dy <= coarseDy + 2; dy++) {
+            for (let dx = coarseDx - 2; dx <= coarseDx + 2; dx++) {
+                testShift(dx, dy);
+            }
+        }
+
+        // If RMSE is low, we found a high quality texture match!
+        if (minRmse < 22) {
+            useTextureShift = true;
+        }
+    }
+
+    if (useTextureShift) {
+        // Option A: Write back perfect shifted clean texture
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const idx = y * width + x;
+                if (dilatedMask[idx]) {
+                    const sx = Math.min(width - 1, Math.max(0, x + bestDx));
+                    const sy = Math.min(height - 1, Math.max(0, y + bestDy));
+                    const p = idx * 4;
+                    const sp = (sy * width + sx) * 4;
+                    
+                    // Mix in slight adaptive noise to avoid artificial digital perfect look
+                    const noise = (Math.random() - 0.5) * noiseAmp * 0.5;
+                    data[p] = Math.min(255, Math.max(0, data[sp] + noise));
+                    data[p + 1] = Math.min(255, Math.max(0, data[sp + 1] + noise));
+                    data[p + 2] = Math.min(255, Math.max(0, data[sp + 2] + noise));
+                    data[p + 3] = 255;
+                }
+            }
+        }
+    } else {
+        // Option B: Fallback to 16-Directional Boundary Interpolation + Box Blur + Adaptive Grain
+        const dirs = [
+            { x: 0, y: -1 },  // Up
+            { x: 0, y: 1 },   // Down
+            { x: -1, y: 0 },  // Left
+            { x: 1, y: 0 },   // Right
+            { x: -1, y: -1 }, // Up-Left
+            { x: 1, y: -1 },  // Up-Right
+            { x: -1, y: 1 },  // Down-Left
+            { x: 1, y: 1 },   // Down-Right
+            // Additional 8 directions
+            { x: -1, y: -2 },
+            { x: 1, y: -2 },
+            { x: -2, y: -1 },
+            { x: 2, y: -1 },
+            { x: -2, y: 1 },
+            { x: 2, y: 1 },
+            { x: -1, y: 2 },
+            { x: 1, y: 2 }
+        ];
+
+        const outR = new Uint8Array(width * height);
+        const outG = new Uint8Array(width * height);
+        const outB = new Uint8Array(width * height);
+
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const idx = y * width + x;
+                if (!dilatedMask[idx]) continue;
+
+                let sumR = 0, sumG = 0, sumB = 0, totalWeight = 0;
+
+                for (const dir of dirs) {
+                    let dist = 1;
+                    while (dist < 100) {
+                        const nx = x + dir.x * dist;
+                        const ny = y + dir.y * dist;
+
+                        if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
+                            break;
+                        }
+
+                        const nIdx = ny * width + nx;
+                        if (!dilatedMask[nIdx]) {
+                            const p = nIdx * 4;
+                            const weight = 1 / (dist * dist);
+                            sumR += data[p] * weight;
+                            sumG += data[p + 1] * weight;
+                            sumB += data[p + 2] * weight;
+                            totalWeight += weight;
+                            break;
+                        }
+                        dist++;
+                    }
+                }
+
+                if (totalWeight > 0) {
+                    outR[idx] = Math.round(sumR / totalWeight);
+                    outG[idx] = Math.round(sumG / totalWeight);
+                    outB[idx] = Math.round(sumB / totalWeight);
+                } else {
+                    const p = idx * 4;
+                    outR[idx] = data[p];
+                    outG[idx] = data[p + 1];
+                    outB[idx] = data[p + 2];
+                }
+            }
+        }
+
+        // Apply Box Blur only on inpainted pixels
+        const blurRadius = 2;
+        const tempR = new Uint8Array(width * height);
+        const tempG = new Uint8Array(width * height);
+        const tempB = new Uint8Array(width * height);
+
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const idx = y * width + x;
+                if (!dilatedMask[idx]) continue;
+
+                let rSum = 0, gSum = 0, bSum = 0, count = 0;
+                for (let dy = -blurRadius; dy <= blurRadius; dy++) {
+                    const ny = y + dy;
+                    if (ny < 0 || ny >= height) continue;
+                    for (let dx = -blurRadius; dx <= blurRadius; dx++) {
+                        const nx = x + dx;
+                        if (nx < 0 || nx >= width) continue;
+
+                        const nIdx = ny * width + nx;
+                        if (dilatedMask[nIdx]) {
+                            rSum += outR[nIdx];
+                            gSum += outG[nIdx];
+                            bSum += outB[nIdx];
+                        } else {
+                            const p = nIdx * 4;
+                            rSum += data[p];
+                            gSum += data[p + 1];
+                            bSum += data[p + 2];
+                        }
+                        count++;
+                    }
+                }
+                if (count > 0) {
+                    tempR[idx] = Math.round(rSum / count);
+                    tempG[idx] = Math.round(gSum / count);
+                    tempB[idx] = Math.round(bSum / count);
+                }
+            }
+        }
+
+        // Write back with noise matching
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                const idx = y * width + x;
+                if (dilatedMask[idx]) {
+                    const p = idx * 4;
+                    const noise = (Math.random() - 0.5) * noiseAmp;
+                    data[p] = Math.min(255, Math.max(0, tempR[idx] + noise));
+                    data[p + 1] = Math.min(255, Math.max(0, tempG[idx] + noise));
+                    data[p + 2] = Math.min(255, Math.max(0, tempB[idx] + noise));
+                    data[p + 3] = 255;
+                }
             }
         }
     }
