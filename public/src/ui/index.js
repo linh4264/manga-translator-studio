@@ -3,7 +3,7 @@ import {
     setRightTab, updateProcessingOverlay, updateBackgroundTaskOverlay,
     setViewMode, updateSplitView, changeZoom, resetZoom,
     toggleSidebarToolsMenu, toggleMobileSidebar, syncMobileMenuState, syncMobileToolbarState,
-    closeMobileMenus, toggleLeftSidebar, toggleRightSidebar
+    closeMobileMenus, toggleLeftSidebar, toggleRightSidebar, toggleQuickBilingualMode, toggleQuickAudioDrama
 } from './layout-ui.js';
 
 import { selectPage, removePage, updatePageListUI, filterPagesList, toggleExportRangeInputs, validateExportRange } from './pages-ui.js';
@@ -304,6 +304,8 @@ Object.assign(window, {
     closeMobileMenus,
     toggleLeftSidebar,
     toggleRightSidebar,
+    toggleQuickBilingualMode,
+    toggleQuickAudioDrama,
     openPreviewMode,
     closePreviewMode,
     previewPrevPage,

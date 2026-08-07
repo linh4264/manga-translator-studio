@@ -187,3 +187,49 @@ function toggleSidebar(panelId, handleId, openIconClass, closeIconClass) {
 
 export const toggleLeftSidebar = () => toggleSidebar('left-panel', 'left-sidebar-toggle-handle', 'fa-solid fa-chevron-right', 'fa-solid fa-chevron-left');
 export const toggleRightSidebar = () => toggleSidebar('right-panel', 'right-sidebar-toggle-handle', 'fa-solid fa-chevron-left', 'fa-solid fa-chevron-right');
+
+export function toggleQuickBilingualMode() {
+    const newMode = globalState.bilingualMode === 'sub' ? 'off' : 'sub';
+    import('./block-editor-ui.js').then(m => m.setBilingualMode(newMode));
+    
+    const btn = document.getElementById('btn-bilingual-toggle-quick');
+    if (btn) {
+        if (newMode === 'sub') {
+            btn.classList.add('bg-indigo-600', 'text-white', 'border-indigo-500');
+            btn.classList.remove('bg-slate-950', 'text-slate-400', 'border-slate-800');
+            import('../core/utils/dom.js').then(m => m.showToast("Đã bật hiển thị Song ngữ", "info"));
+        } else {
+            btn.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-500');
+            btn.classList.add('bg-slate-950', 'text-slate-400', 'border-slate-800');
+            import('../core/utils/dom.js').then(m => m.showToast("Đã tắt hiển thị Song ngữ (Đơn ngữ)", "info"));
+        }
+    }
+}
+
+export function toggleQuickAudioDrama() {
+    const btn = document.getElementById('btn-audio-toggle-quick');
+    const icon = document.getElementById('icon-audio-quick');
+    const isPlaying = icon && icon.classList.contains('text-emerald-400');
+    
+    if (isPlaying) {
+        import('../features/audio.js').then(m => m.stopAudioDrama());
+        if (icon) {
+            icon.className = 'fa-solid fa-headphones text-xs';
+        }
+        if (btn) {
+            btn.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-500');
+            btn.classList.add('bg-slate-950', 'text-slate-400', 'border-slate-800');
+        }
+        import('../core/utils/dom.js').then(m => m.showToast("Đã dừng phát Audio Drama", "info"));
+    } else {
+        import('../features/audio.js').then(m => m.playPageAudioDrama());
+        if (icon) {
+            icon.className = 'fa-solid fa-circle-stop text-emerald-400 text-xs animate-pulse';
+        }
+        if (btn) {
+            btn.classList.add('bg-indigo-600', 'text-white', 'border-indigo-500');
+            btn.classList.remove('bg-slate-950', 'text-slate-400', 'border-slate-800');
+        }
+        import('../core/utils/dom.js').then(m => m.showToast("Bắt đầu phát Audio Drama...", "info"));
+    }
+}

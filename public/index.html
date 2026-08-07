@@ -73,110 +73,77 @@
 
         <!-- LEFT PANEL: Batch Manager & Config -->
         <aside id="left-panel" class="w-80 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 min-h-0">
-            <!-- Section: Controls & Batch Config -->
-            <div class="p-4 border-b border-slate-800 space-y-4 overflow-y-auto max-h-[55vh] shrink-0 custom-scrollbar">
-                <div class="flex items-center justify-between gap-2">
-                    <div class="min-w-0">
-                        <p data-i18n="image-source"
-                            class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Nguồn ảnh</p>
-                        <p data-i18n="image-source-sub" class="text-[10px] text-slate-500 truncate">Tải truyện và quản
-                            lý trang</p>
-                    </div>
-                    <div class="flex items-center gap-1.5 shrink-0">
-                        <button onclick="closeMobileMenus()"
-                            class="md:hidden shrink-0 h-8 w-8 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-[11px] font-semibold flex items-center justify-center transition-colors"
-                            title="Đóng menu">
-                            <i class="fa-solid fa-xmark"></i>
-                        </button>
-                        <button onclick="openLorebookModal()"
-                            class="shrink-0 h-7 px-2 rounded bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-500/40 text-indigo-200 hover:text-white text-[11px] font-semibold flex items-center gap-1 transition-colors"
-                            title="Quản lý hồ sơ nhân vật & Lorebook từ vựng">
-                            <i class="fa-solid fa-address-card text-emerald-400"></i>
-                            <span>Lorebook</span>
-                        </button>
-                        <button onclick="openGDriveModal()"
-                            class="shrink-0 h-7 px-2 rounded bg-sky-950/60 hover:bg-sky-900 border border-sky-500/40 text-sky-200 hover:text-white text-[11px] font-semibold flex items-center gap-1 transition-colors"
-                            title="Xuất/Nhập nhanh dự án lên Google Drive cá nhân để làm việc nhóm">
-                            <i class="fa-brands fa-google-drive text-sky-400"></i>
-                            <span>GDrive</span>
-                        </button>
-                        <button data-action="openSettingsModal"
-                            class="shrink-0 h-7 px-2 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 hover:border-indigo-500/50 text-slate-300 hover:text-white text-[11px] font-semibold flex items-center gap-1 transition-colors"
-                            title="Cài đặt dịch thuật">
-                            <i class="fa-solid fa-gear text-indigo-400"></i>
-                            <span data-i18n="settings-btn">Cài đặt</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Bilingual Mode Segmented Toggle Bar -->
-                <div class="flex items-center justify-between p-1.5 bg-slate-950 rounded-lg border border-slate-800">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Hiển thị:</span>
-                    <div class="flex items-center bg-slate-900 p-0.5 rounded-md border border-slate-800">
-                        <button id="btn-bilingual-off" data-action="setBilingualOff" onclick="setBilingualMode('off')"
-                            class="px-2 py-0.5 rounded bg-indigo-600 text-white text-[10px] font-bold transition-all shadow"
-                            title="Hiển thị duy nhất Tiếng Việt">Đơn ngữ</button>
-                        <button id="btn-bilingual-sub" data-action="setBilingualSub" onclick="setBilingualMode('sub')"
-                            class="px-2 py-0.5 rounded bg-transparent text-slate-400 text-[10px] font-semibold hover:text-white transition-all"
-                            title="Hiển thị song song Tiếng Việt + Tiếng Nhật/Anh gốc">🌐 Song ngữ</button>
-                    </div>
-                </div>
-
-                <!-- Speed Productivity Bar (Công cụ chỉnh sửa siêu tốc độ) -->
-                <div class="grid grid-cols-2 gap-1.5 p-2 bg-slate-950 rounded-lg border border-slate-800">
-                    <button onclick="openFindReplaceModal()" data-i18n="find-replace-btn"
-                        class="py-1.5 px-2 rounded bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all"
-                        title="Tìm & Thay thế từ ngữ hoặc từ xưng hô trên TOÀN BỘ các trang trong 1 giây">
-                        <i class="fa-solid fa-magnifying-glass-arrow-right text-indigo-400"></i> Tìm & Thay thế
+            <!-- Header: Project Info & Quick Actions -->
+            <div class="p-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/40 shrink-0">
+                <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Manga Translator Studio</span>
+                <div class="flex items-center gap-1">
+                    <button onclick="closeMobileMenus()"
+                        class="md:hidden shrink-0 h-7 w-7 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white flex items-center justify-center transition-colors"
+                        title="Đóng menu">
+                        <i class="fa-solid fa-xmark"></i>
                     </button>
-                    <button onclick="batchDiamondBalanceAllPages()" data-i18n="diamond-balance-btn"
-                        class="py-1.5 px-2 rounded bg-purple-600/20 hover:bg-purple-600 border border-purple-500/30 text-purple-300 hover:text-white text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all"
-                        title="Tự động cân đối bố cục Diamond cho tất cả ô thoại trên toàn chương trong 1 click">
-                        <i class="fa-solid fa-gem text-purple-400"></i> Cân đối Diamond
+                    <button onclick="openLorebookModal()"
+                        class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-605 border border-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-all"
+                        title="Lorebook từ vựng & Nhân vật">
+                        <i class="fa-solid fa-address-card text-[11px] text-emerald-400"></i>
+                    </button>
+                    <button onclick="openGDriveModal()"
+                        class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-605 border border-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-all"
+                        title="Đồng bộ Google Drive">
+                        <i class="fa-brands fa-google-drive text-[11px] text-sky-400"></i>
+                    </button>
+                    <button data-action="openSettingsModal"
+                        class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-605 border border-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-all"
+                        title="Cài đặt dịch thuật">
+                        <i class="fa-solid fa-gear text-[11px] text-indigo-400"></i>
                     </button>
                 </div>
+            </div>
 
-                <!-- Audio Drama Reader Bar -->
-                <div class="flex items-center justify-between p-2 bg-slate-950 rounded-lg border border-slate-800">
-                    <div class="flex items-center gap-1.5 text-[10px] font-bold text-slate-300">
-                        <i class="fa-solid fa-headphones text-indigo-400"></i> Audio Drama
-                        <button onclick="openAudioSettingsModal()" data-action="openAudioSettingsModal"
-                            class="text-xs text-indigo-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors"
-                            title="Cài đặt chọn giọng đọc Nam/Nữ & Tốc độ phát âm">
-                            <i class="fa-solid fa-sliders"></i>
-                        </button>
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <button id="btn-audio-play" data-action="playPageAudioDrama" onclick="playPageAudioDrama()"
-                            class="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold flex items-center gap-1 transition-all shadow"
-                            title="Phát kịch truyền thanh Audio Drama cho toàn bộ trang">
-                            <i class="fa-solid fa-play"></i> Phát Audio
-                        </button>
-                        <button id="btn-audio-pause" data-action="pauseAudioDrama" onclick="pauseAudioDrama()"
-                            class="hidden px-2 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-bold flex items-center gap-1 transition-all shadow"
-                            title="Tạm dừng">
-                            <i class="fa-solid fa-pause"></i> Tạm dừng
-                        </button>
-                        <button id="btn-audio-stop" data-action="stopAudioDrama" onclick="stopAudioDrama()"
-                            class="hidden px-2 py-1 rounded bg-red-600/80 hover:bg-red-600 text-white text-[10px] font-bold flex items-center gap-1 transition-all shadow"
-                            title="Dừng phát">
-                            <i class="fa-solid fa-square"></i> Dừng
-                        </button>
-                    </div>
-                </div>
-
-
-
-                <!-- File Dropzone -->
+            <!-- Section: Editor Tools Dashboard -->
+            <div class="p-3 border-b border-slate-800 bg-slate-900/20 shrink-0 space-y-2">
+                <!-- Dropzone / Upload button (Compact) -->
                 <div id="dropzone"
-                    class="border border-dashed border-slate-800 hover:border-indigo-500/50 rounded-lg p-4 text-center cursor-pointer transition-all bg-slate-950 hover:bg-slate-900/50 group relative">
-                    <input type="file" id="file-input" multiple accept="image/*"
-                        class="absolute inset-0 opacity-0 cursor-pointer">
-                    <i
-                        class="fa-solid fa-images text-slate-500 group-hover:text-indigo-400 text-xl mb-1.5 transition-colors"></i>
-                    <p data-i18n="upload-title" class="text-xs font-semibold text-slate-300">Tải ảnh Manga lên</p>
-                    <p data-i18n="upload-sub" class="text-[10px] text-slate-500 mt-0.5">Hỗ trợ chọn hoặc thả nhiều ảnh
-                        cùng lúc</p>
+                    class="border border-dashed border-slate-800 hover:border-indigo-500/50 rounded-lg py-2 px-3 text-center cursor-pointer transition-all bg-slate-950 hover:bg-slate-900/50 group relative flex items-center justify-center gap-2">
+                    <input type="file" id="file-input" multiple accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
+                    <i class="fa-solid fa-cloud-arrow-up text-slate-500 group-hover:text-indigo-400 text-sm transition-colors"></i>
+                    <span class="text-[11px] font-semibold text-slate-300">Tải ảnh truyện lên</span>
+                </div>
+
+                <!-- Horizontal Tool Belt -->
+                <div class="grid grid-cols-4 gap-1">
+                    <!-- Find & Replace -->
+                    <button onclick="openFindReplaceModal()"
+                        class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-all"
+                        title="Tìm & Thay thế từ ngữ">
+                        <i class="fa-solid fa-magnifying-glass-arrow-right text-xs"></i>
+                    </button>
+                    <!-- Diamond Balance -->
+                    <button onclick="batchDiamondBalanceAllPages()"
+                        class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-all"
+                        title="Cân đối Diamond tất cả các trang">
+                        <i class="fa-solid fa-gem text-xs"></i>
+                    </button>
+                    <!-- Bilingual Toggle -->
+                    <button id="btn-bilingual-toggle-quick" onclick="toggleQuickBilingualMode()"
+                        class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-all"
+                        title="Bật/Tắt hiển thị Song ngữ">
+                        <i class="fa-solid fa-language text-xs"></i>
+                    </button>
+                    <!-- Audio Drama Play/Stop -->
+                    <button id="btn-audio-toggle-quick" onclick="toggleQuickAudioDrama()"
+                        class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-all"
+                        title="Phát/Dừng Audio Drama (Kịch truyền thanh)">
+                        <i id="icon-audio-quick" class="fa-solid fa-headphones text-xs"></i>
+                    </button>
+                    <!-- Hidden stubs to keep backward compatibility with DOM elements -->
+                    <div class="hidden">
+                        <button id="btn-bilingual-off"></button>
+                        <button id="btn-bilingual-sub"></button>
+                        <button id="btn-audio-play"></button>
+                        <button id="btn-audio-pause"></button>
+                        <button id="btn-audio-stop"></button>
+                    </div>
                 </div>
             </div>
 
@@ -202,26 +169,30 @@
                             </button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-1.5">
+                    <div class="grid grid-cols-4 gap-1">
                         <button id="btn-batch-translate" onclick="runBatchTranslation()" disabled
-                            data-i18n="translate-all-btn"
-                            class="py-1.5 px-2 rounded bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white text-indigo-400 text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all">
-                            <i class="fa-solid fa-microchip"></i> Dịch tất cả
+                            class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex flex-col items-center justify-center transition-all"
+                            title="Dịch tất cả các trang (Auto Translate)">
+                            <i class="fa-solid fa-microchip text-[11px]"></i>
+                            <span class="text-[8px] font-bold mt-0.5 uppercase">Dịch hết</span>
                         </button>
-                        <button id="btn-batch-export" onclick="runBatchExport()" disabled data-i18n="export-zip-btn"
-                            class="py-1.5 px-2 rounded bg-emerald-600/10 border border-emerald-500/30 hover:bg-emerald-600 hover:text-white text-emerald-400 text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all">
-                            <i class="fa-solid fa-file-export"></i> Xuất ZIP
+                        <button id="btn-batch-export" onclick="runBatchExport()" disabled
+                            class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex flex-col items-center justify-center transition-all"
+                            title="Xuất ZIP chương truyện">
+                            <i class="fa-solid fa-file-export text-[11px]"></i>
+                            <span class="text-[8px] font-bold mt-0.5 uppercase">Xuất ZIP</span>
                         </button>
-                        <button id="btn-export-pdf" onclick="runPdfExport()" disabled data-i18n="export-pdf-btn"
-                            class="py-1.5 px-2 rounded bg-rose-600/10 border border-rose-500/30 hover:bg-rose-600 hover:text-white text-rose-400 text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:pointer-events-none"
-                            title="Xuất chương truyện thành file PDF đọc trên Tablet/Kindle">
-                            <i class="fa-solid fa-file-pdf"></i> Xuất PDF
+                        <button id="btn-export-pdf" onclick="runPdfExport()" disabled
+                            class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex flex-col items-center justify-center transition-all"
+                            title="Xuất PDF đọc trên máy tính bảng/Kindle">
+                            <i class="fa-solid fa-file-pdf text-[11px]"></i>
+                            <span class="text-[8px] font-bold mt-0.5 uppercase">Xuất PDF</span>
                         </button>
                         <button id="btn-preview-mode" onclick="openPreviewMode()" disabled
-                            data-i18n="reader-preview-btn"
-                            class="py-1.5 px-2 rounded bg-violet-600/10 border border-violet-500/30 hover:bg-violet-600 hover:text-white text-violet-400 text-[10px] font-semibold flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:pointer-events-none"
+                            class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex flex-col items-center justify-center transition-all"
                             title="Xem trước toàn bộ chương truyện đã dịch">
-                            <i class="fa-solid fa-book-open"></i> Xem trước
+                            <i class="fa-solid fa-book-open text-[11px]"></i>
+                            <span class="text-[8px] font-bold mt-0.5 uppercase">Xem trước</span>
                         </button>
                     </div>
                     <!-- Page range export options -->
@@ -244,26 +215,23 @@
                             <span id="export-range-total" class="text-[9px] text-indigo-400 ml-auto font-medium"></span>
                         </div>
                     </div>
-                    <div class="grid grid-cols-3 gap-1.5 mt-1.5">
+                    <div class="grid grid-cols-3 gap-1">
                         <button id="btn-export-project" onclick="exportProjectBackup()" disabled
-                            data-i18n="export-manga-btn"
-                            class="py-1.5 px-1 rounded bg-sky-600/10 border border-sky-500/30 hover:bg-sky-600 hover:text-white text-sky-400 text-[10px] font-semibold flex items-center justify-center gap-1 transition-all disabled:opacity-40 disabled:pointer-events-none"
+                            class="py-1 rounded bg-slate-950/60 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white text-[9px] font-semibold flex items-center justify-center gap-1 transition-all disabled:opacity-40 disabled:pointer-events-none"
                             title="Sao lưu toàn bộ dự án thành file .manga">
-                            <i class="fa-solid fa-floppy-disk"></i> Sao lưu
+                            <i class="fa-solid fa-floppy-disk text-[9px]"></i> Sao lưu
                         </button>
-                        <button id="btn-import-project"
-                            onclick="document.getElementById('import-project-input').click()"
-                            data-i18n="import-manga-btn"
-                            class="py-1.5 px-1 rounded bg-amber-600/10 border border-amber-500/30 hover:bg-amber-600 hover:text-white text-amber-400 text-[10px] font-semibold flex items-center justify-center gap-1 transition-all"
-                            title="Khôi phục dự án từ file .manga / .json">
-                            <i class="fa-solid fa-file-import"></i> Khôi phục
+                        <button id="btn-import-project" onclick="document.getElementById('import-project-input').click()"
+                            class="py-1 rounded bg-slate-950/60 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white text-[9px] font-semibold flex items-center justify-center gap-1 transition-all"
+                            title="Khôi phục dự án .manga">
+                            <i class="fa-solid fa-file-import text-[9px]"></i> Khôi phục
                         </button>
                         <input type="file" id="import-project-input" accept=".manga,.json" class="hidden"
                             onchange="importProjectBackup(this.files)">
-                        <button id="btn-clear-memory" onclick="clearMemoryCache()" data-i18n="clear-ram-btn"
-                            class="py-1.5 px-1 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold flex items-center justify-center gap-1 transition-all"
+                        <button id="btn-clear-memory" onclick="clearMemoryCache()"
+                            class="py-1 rounded bg-slate-850 border border-slate-800 hover:bg-slate-800 text-slate-300 text-[9px] font-semibold flex items-center justify-center gap-1 transition-all"
                             title="Giải phóng bộ nhớ RAM đệm Canvas">
-                            <i class="fa-solid fa-broom text-amber-400"></i> Dọn RAM
+                            <i class="fa-solid fa-broom text-[9px] text-amber-500"></i> Dọn RAM
                         </button>
                     </div>
                 </div>
