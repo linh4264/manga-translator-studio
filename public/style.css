@@ -467,3 +467,45 @@ button:not(:disabled):active {
     border-color: #6366f1 !important;
     background-color: rgba(99, 102, 241, 0.15) !important;
 }
+
+/* Premium Range Input Styling */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #1e293b;
+    border-radius: 9999px;
+    height: 4px;
+    outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #6366f1;
+    cursor: pointer;
+    transition: transform 0.1s ease, background-color 0.1s ease;
+    border: none;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.25);
+    background: #818cf8;
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #6366f1;
+    cursor: pointer;
+    transition: transform 0.1s ease, background-color 0.1s ease;
+    border: none;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+    transform: scale(1.25);
+    background: #818cf8;
+}

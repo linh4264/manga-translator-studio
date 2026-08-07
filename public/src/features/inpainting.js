@@ -4,6 +4,7 @@ import { elements } from '../core/elements.js';
 import { showToast } from '../core/utils.js';
 import { requestOverlayRender } from './canvas/canvas-service.js';
 import { computeBubbleMask } from './ocr/ocr-service.js';
+import { getConfiguredApiKey, getGeminiGenerateContentUrl } from './ai/ai-config.js';
 
 export let isEraserModeActive = false;
 export let isDrawingOnEraser = false;
@@ -101,8 +102,12 @@ export function toggleEraserMode() {
 
     isEraserModeActive = !isEraserModeActive;
 
+    const trigger = document.getElementById('btn-eraser-floating-trigger');
+
     if (isEraserModeActive) {
         elements.eraserSettingsPanel.classList.remove('hidden');
+        if (trigger) trigger.classList.add('hidden');
+        
         elements.btnEraserMode.classList.add('bg-indigo-600', 'text-white');
         elements.btnEraserMode.classList.remove('bg-slate-800', 'text-slate-300');
 
@@ -113,6 +118,8 @@ export function toggleEraserMode() {
         showToast("Đã bật chế độ cọ tẩy. Dùng chuột/bút vẽ trực tiếp lên ảnh để xóa.", "info");
     } else {
         elements.eraserSettingsPanel.classList.add('hidden');
+        if (trigger) trigger.classList.add('hidden');
+
         elements.btnEraserMode.classList.remove('bg-indigo-600', 'text-white');
         elements.btnEraserMode.classList.add('bg-slate-800', 'text-slate-300');
 
@@ -139,16 +146,18 @@ export function setEraserColor(color) {
 
 export function setEraserBrushMode(mode) {
     brushMode = mode;
-    
+
     const btnEraser = document.getElementById('btn-brush-mode-eraser');
     const btnStamp = document.getElementById('btn-brush-mode-stamp');
     const btnSpotInpaint = document.getElementById('btn-brush-mode-spot-inpaint');
+    const btnLasso = document.getElementById('btn-brush-mode-lasso');
     const stampControls = document.getElementById('stamp-controls');
+    const lassoControls = document.getElementById('lasso-controls');
     const brushColorContainer = document.getElementById('brush-color-container');
     const brushSizeContainer = document.getElementById('brush-size-container');
 
     // Reset button states
-    [btnEraser, btnStamp, btnSpotInpaint].forEach(btn => {
+    [btnEraser, btnStamp, btnSpotInpaint, btnLasso].forEach(btn => {
         if (btn) {
             btn.classList.remove('bg-indigo-600', 'text-white');
             btn.classList.add('text-slate-400', 'hover:text-slate-200');
@@ -161,9 +170,10 @@ export function setEraserBrushMode(mode) {
             btnStamp.classList.remove('text-slate-400', 'hover:text-slate-200');
         }
         if (stampControls) stampControls.classList.remove('hidden');
+        if (lassoControls) lassoControls.classList.add('hidden');
         if (brushColorContainer) brushColorContainer.classList.add('hidden');
         if (brushSizeContainer) brushSizeContainer.classList.add('hidden');
-        
+
         isPatchStampActive = patchCanvas !== null;
     } else if (mode === 'spot-inpaint') {
         if (btnSpotInpaint) {
@@ -171,27 +181,46 @@ export function setEraserBrushMode(mode) {
             btnSpotInpaint.classList.remove('text-slate-400', 'hover:text-slate-200');
         }
         if (stampControls) stampControls.classList.add('hidden');
+        if (lassoControls) lassoControls.classList.add('hidden');
         if (brushColorContainer) brushColorContainer.classList.add('hidden');
         if (brushSizeContainer) brushSizeContainer.classList.remove('hidden');
-        
+
         isPatchStampActive = false;
         isSelectingPatch = false;
+    } else if (mode === 'lasso') {
+        if (btnLasso) {
+            btnLasso.classList.add('bg-indigo-600', 'text-white');
+            btnLasso.classList.remove('text-slate-400', 'hover:text-slate-200');
+        }
+        if (stampControls) stampControls.classList.add('hidden');
+        if (lassoControls) lassoControls.classList.remove('hidden');
+        if (brushColorContainer) brushColorContainer.classList.add('hidden');
+        if (brushSizeContainer) brushSizeContainer.classList.add('hidden');
+
+        isPatchStampActive = false;
+        isSelectingPatch = false;
+
+        // Clear lasso selection on mode enter
+        window.activeLassoPoints = null;
+        const fillBtn = document.getElementById('btn-lasso-fill');
+        if (fillBtn) fillBtn.disabled = true;
     } else { // mode === 'eraser'
         if (btnEraser) {
             btnEraser.classList.add('bg-indigo-600', 'text-white');
             btnEraser.classList.remove('text-slate-400', 'hover:text-slate-200');
         }
         if (stampControls) stampControls.classList.add('hidden');
+        if (lassoControls) lassoControls.classList.add('hidden');
         if (brushColorContainer) brushColorContainer.classList.remove('hidden');
         if (brushSizeContainer) brushSizeContainer.classList.remove('hidden');
-        
+
         isPatchStampActive = false;
         isSelectingPatch = false;
     }
 
     const selectionBox = document.getElementById('patch-selection-box');
     if (selectionBox) selectionBox.classList.add('hidden');
-    
+
     const previewCanvas = elements.patchPreviewCanvas;
     if (previewCanvas) previewCanvas.classList.add('hidden');
 
@@ -201,10 +230,10 @@ export function setEraserBrushMode(mode) {
 export function startTexturePatchSelection() {
     isSelectingPatch = true;
     isPatchStampActive = false;
-    
+
     const previewCanvas = elements.patchPreviewCanvas;
     if (previewCanvas) previewCanvas.classList.add('hidden');
-    
+
     const lblStatus = document.getElementById('lbl-stamp-status');
     if (lblStatus) {
         lblStatus.innerText = 'Đang quét vùng...';
@@ -244,6 +273,102 @@ export function initEraserDrawingEvents() {
         const y = ((clientY - rect.top) / rect.height) * canvas.height;
         return { x, y, clientX, clientY };
     };
+
+    // --- CASE 0.5: Lasso Selection Mode ---
+    if (brushMode === 'lasso') {
+        let isDrawing = false;
+        let points = [];
+        let preLassoImageData = null;
+
+        const startLasso = (e) => {
+            e.preventDefault();
+            const pos = getMousePos(e);
+            isDrawing = true;
+            points = [pos];
+
+            // Backup main canvas state before drawing lasso outline
+            preLassoImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        };
+
+        const drawLasso = (e) => {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const pos = getMousePos(e);
+            points.push(pos);
+
+            // Redraw backed-up canvas first to remove old lasso path lines
+            ctx.putImageData(preLassoImageData, 0, 0);
+
+            // Draw selection line path
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.strokeStyle = '#a855f7'; // Purple dashed line
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+            ctx.restore();
+        };
+
+        const stopLasso = (e) => {
+            if (!isDrawing) return;
+            isDrawing = false;
+
+            if (points.length < 3) {
+                // Not enough points for a polygon
+                if (preLassoImageData) {
+                    ctx.putImageData(preLassoImageData, 0, 0);
+                }
+                points = [];
+                const fillBtn = document.getElementById('btn-lasso-fill');
+                if (fillBtn) fillBtn.disabled = true;
+                return;
+            }
+
+            // Close the path
+            ctx.putImageData(preLassoImageData, 0, 0);
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i].x, points[i].y);
+            }
+            ctx.closePath();
+
+            // Draw finalized marching ants closed polygon
+            ctx.strokeStyle = '#a855f7';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+
+            // Draw transparent overlay
+            ctx.fillStyle = 'rgba(168, 85, 247, 0.1)';
+            ctx.fill();
+            ctx.restore();
+
+            window.activeLassoPoints = points;
+
+            const fillBtn = document.getElementById('btn-lasso-fill');
+            if (fillBtn) fillBtn.disabled = false;
+        };
+
+        canvas.onmousedown = startLasso;
+        canvas.onmousemove = drawLasso;
+        canvas.onmouseup = stopLasso;
+        canvas.onmouseleave = stopLasso;
+
+        canvas.ontouchstart = startLasso;
+        canvas.ontouchmove = drawLasso;
+        canvas.ontouchend = stopLasso;
+        return;
+    }
 
     // --- CASE 1: Drag to Crop Texture Mode ---
     if (isSelectingPatch) {
@@ -301,7 +426,7 @@ export function initEraserDrawingEvents() {
 
             // Project selection box coordinates to original image coordinates
             const rect = canvas.getBoundingClientRect();
-            
+
             const startX = Math.round(((Math.min(startClientX, clientX) - rect.left) / rect.width) * canvas.width);
             const startY = Math.round(((Math.min(startClientY, clientY) - rect.top) / rect.height) * canvas.height);
             const endX = Math.round(((Math.max(startClientX, clientX) - rect.left) / rect.width) * canvas.width);
@@ -332,7 +457,7 @@ export function initEraserDrawingEvents() {
                         patchCtx.restore();
 
                         showToast(`Đã copy thành công họa tiết ${cropW}x${cropH}px. Click chuột vào bất kỳ đâu để dán!`, "success");
-                        
+
                         isSelectingPatch = false;
                         isPatchStampActive = true;
 
@@ -432,7 +557,7 @@ export function initEraserDrawingEvents() {
         const startSpot = (e) => {
             e.preventDefault();
             const pos = getMousePos(e);
-            
+
             isDrawing = true;
             lastX = pos.x;
             lastY = pos.y;
@@ -452,7 +577,7 @@ export function initEraserDrawingEvents() {
 
             // Draw initial dot on both
             const r = eraserBrushSize / 2;
-            
+
             ctx.beginPath();
             ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
             ctx.fillStyle = 'rgba(168, 85, 247, 0.55)';
@@ -1000,6 +1125,305 @@ export async function activateEyedropper() {
     canvas.addEventListener('click', onCanvasClick);
 }
 
+export async function inpaintWithGemini(cropCanvas, maskCanvas) {
+    const key = getConfiguredApiKey();
+    if (!key) {
+        throw new Error("Vui lòng cấu hình API Key trong mục cài đặt để sử dụng AI.");
+    }
+
+    const cropBase64 = cropCanvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, '');
+    const maskBase64 = maskCanvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, '');
+
+    const apiUrl = getGeminiGenerateContentUrl('gemini-3.1-flash-image-preview', key);
+    const payload = {
+        contents: [{
+            role: "user",
+            parts: [
+                {
+                    text: "You are a professional manga editor. Clean the provided cropped manga image by completely removing the text and sound effects inside the area marked by the white pixels in the mask image. Reconstruct the background artwork, screentones, line art, and textures in the masked area seamlessly. Return ONLY the edited cleaned cropped image as the output."
+                },
+                {
+                    inlineData: {
+                        mimeType: "image/png",
+                        data: cropBase64
+                    }
+                },
+                {
+                    inlineData: {
+                        mimeType: "image/png",
+                        data: maskBase64
+                    }
+                }
+            ]
+        }],
+        generationConfig: {
+            responseModalities: ['IMAGE']
+        }
+    };
+
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Gemini API Error: ${errText}`);
+    }
+
+    const result = await response.json();
+    const part = result?.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+    if (!part || !part.inlineData) {
+        throw new Error("Không tìm thấy kết quả ảnh từ Gemini AI.");
+    }
+
+    const img = new Image();
+    img.src = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+    await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = () => reject(new Error("Không thể tải ảnh kết quả từ AI."));
+    });
+    return img;
+}
+
+export function clearLassoSelection() {
+    window.activeLassoPoints = null;
+    const fillBtn = document.getElementById('btn-lasso-fill');
+    if (fillBtn) fillBtn.disabled = true;
+
+    const activePage = globalState.pages[globalState.activePageIndex];
+    if (activePage) {
+        restorePageEraserDrawing(activePage).then(() => {
+            requestOverlayRender();
+        });
+    }
+    showToast("Đã hủy vùng chọn Lasso.", "info");
+}
+
+export async function runLassoContentAwareFill() {
+    const points = window.activeLassoPoints;
+    if (!points || points.length < 3) {
+        showToast("Vui lòng vẽ khoanh vùng chọn Lasso trước.", "warn");
+        return;
+    }
+
+    const canvas = elements.eraserCanvas;
+    const ctx = canvas.getContext('2d');
+    const imgElement = elements.mangaBgImage;
+    const page = globalState.pages[globalState.activePageIndex];
+
+    if (!imgElement || !imgElement.naturalWidth || !page) {
+        showToast("Không tìm thấy ảnh gốc để xử lý.", "error");
+        return;
+    }
+
+    // Read UI controls
+    const fuzzinessInput = document.getElementById('num-lasso-fuzziness');
+    const fuzziness = fuzzinessInput ? parseInt(fuzzinessInput.value) || 25 : 25;
+
+    const expandInput = document.getElementById('num-lasso-expand');
+    const expandSize = expandInput ? parseInt(expandInput.value) || 0 : 3;
+
+    const methodSelect = document.getElementById('select-lasso-method');
+    const method = methodSelect ? methodSelect.value : 'lama';
+
+    // 1. Calculate bounding box of selection
+    let minX = points[0].x;
+    let minY = points[0].y;
+    let maxX = points[0].x;
+    let maxY = points[0].y;
+    for (let i = 1; i < points.length; i++) {
+        minX = Math.min(minX, points[i].x);
+        minY = Math.min(minY, points[i].y);
+        maxX = Math.max(maxX, points[i].x);
+        maxY = Math.max(maxY, points[i].y);
+    }
+
+    // Pad selection box
+    const pad = Math.ceil(expandSize + 8);
+    const startX = Math.max(0, Math.floor(minX - pad));
+    const startY = Math.max(0, Math.floor(minY - pad));
+    const endX = Math.min(canvas.width, Math.ceil(maxX + pad));
+    const endY = Math.min(canvas.height, Math.ceil(maxY + pad));
+    const cropW = endX - startX;
+    const cropH = endY - startY;
+
+    if (cropW <= 3 || cropH <= 3) {
+        showToast("Vùng chọn quá nhỏ, vui lòng vẽ lại.", "warn");
+        return;
+    }
+
+    // Show processing state
+    const methodLabel = method === 'lama' ? "Gemini AI" : "Fast Match";
+
+    // Check if we can display standard processing overlay or local spinner
+    let showGlobalOverlay = typeof elements.processingOverlay !== 'undefined';
+    if (showGlobalOverlay) {
+        const { uiUpdateProcessingOverlay: updateOverlay } = await import('../core/state.js');
+        updateOverlay(true, "Đang xử lý vẽ bù...", `Thuật toán ${methodLabel} đang khôi phục kết cấu vùng chọn...`, 30);
+    } else {
+        showToast("Đang vẽ bù nền thông minh...", "info");
+    }
+
+    try {
+        pushStateToHistory();
+
+        // 2. Capture the composite screen (original background + saved drawings)
+        const compositeCanvas = document.createElement('canvas');
+        compositeCanvas.width = canvas.width;
+        compositeCanvas.height = canvas.height;
+        const compCtx = compositeCanvas.getContext('2d');
+        compCtx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
+
+        // Temporarily restore elements.eraserCanvas without lasso overlay
+        await restorePageEraserDrawing(page);
+        compCtx.drawImage(canvas, 0, 0);
+
+        // Crop this composite image
+        const cropCanvas = document.createElement('canvas');
+        cropCanvas.width = cropW;
+        cropCanvas.height = cropH;
+        const cropCtx = cropCanvas.getContext('2d');
+        cropCtx.drawImage(compositeCanvas, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
+
+        // 3. Create initial selection mask (Rough Lasso selection)
+        const lassoMaskCanvas = document.createElement('canvas');
+        lassoMaskCanvas.width = cropW;
+        lassoMaskCanvas.height = cropH;
+        const lmCtx = lassoMaskCanvas.getContext('2d');
+        lmCtx.fillStyle = '#ffffff';
+        lmCtx.beginPath();
+        lmCtx.moveTo(points[0].x - startX, points[0].y - startY);
+        for (let i = 1; i < points.length; i++) {
+            lmCtx.lineTo(points[i].x - startX, points[i].y - startY);
+        }
+        lmCtx.closePath();
+        lmCtx.fill();
+
+        const lassoMaskImgData = lmCtx.getImageData(0, 0, cropW, cropH);
+        const lmData = lassoMaskImgData.data;
+
+        // 4. Color Range Isolation (Refine Mask to text only based on contrast with background)
+        const cropImgData = cropCtx.getImageData(0, 0, cropW, cropH);
+        const cData = cropImgData.data;
+
+        // Calculate average background luminance along the rim of the crop (outer 12%)
+        let bgLumSum = 0, bgCount = 0;
+        const rimX = Math.max(1, Math.floor(cropW * 0.12));
+        const rimY = Math.max(1, Math.floor(cropH * 0.12));
+        for (let y = 0; y < cropH; y++) {
+            for (let x = 0; x < cropW; x++) {
+                const isRim = (x < rimX || x >= cropW - rimX || y < rimY || y >= cropH - rimY);
+                if (isRim) {
+                    const p = (y * cropW + x) * 4;
+                    const lum = 0.299 * cData[p] + 0.587 * cData[p + 1] + 0.114 * cData[p + 2];
+                    bgLumSum += lum;
+                    bgCount++;
+                }
+            }
+        }
+        const avgBgLum = bgCount > 0 ? (bgLumSum / bgCount) : 128;
+
+        // Mark isolated text pixels INSIDE the rough lasso selection
+        const isolatedMask = new Uint8Array(cropW * cropH);
+        for (let y = 0; y < cropH; y++) {
+            for (let x = 0; x < cropW; x++) {
+                const idx = y * cropW + x;
+                // Only consider pixels inside the drawn lasso selection
+                if (lmData[idx * 4 + 3] > 128) {
+                    const p = idx * 4;
+                    const lum = 0.299 * cData[p] + 0.587 * cData[p + 1] + 0.114 * cData[p + 2];
+                    if (Math.abs(lum - avgBgLum) > fuzziness) {
+                        isolatedMask[idx] = 1;
+                    }
+                }
+            }
+        }
+
+        // If color range isolation is empty, fallback to the entire lasso region to prevent zero mask
+        const hasIsolatedPixels = isolatedMask.some(v => v === 1);
+        const finalIsolatedMask = hasIsolatedPixels ? isolatedMask : new Uint8Array(cropW * cropH).map((_, i) => lmData[i * 4 + 3] > 128 ? 1 : 0);
+
+        // 5. Expand Selection (Dilation)
+        let finalMaskBytes = finalIsolatedMask;
+        if (expandSize > 0) {
+            finalMaskBytes = new Uint8Array(cropW * cropH);
+            for (let y = 0; y < cropH; y++) {
+                for (let x = 0; x < cropW; x++) {
+                    const idx = y * cropW + x;
+                    if (finalIsolatedMask[idx]) {
+                        for (let dy = -expandSize; dy <= expandSize; dy++) {
+                            const ny = y + dy;
+                            if (ny < 0 || ny >= cropH) continue;
+                            for (let dx = -expandSize; dx <= expandSize; dx++) {
+                                const nx = x + dx;
+                                if (nx < 0 || nx >= cropW) continue;
+                                finalMaskBytes[ny * cropW + nx] = 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Create the final expanded mask canvas
+        const finalMaskCanvas = document.createElement('canvas');
+        finalMaskCanvas.width = cropW;
+        finalMaskCanvas.height = cropH;
+        const fmCtx = finalMaskCanvas.getContext('2d');
+        const fmImgData = fmCtx.createImageData(cropW, cropH);
+        for (let i = 0; i < cropW * cropH; i++) {
+            const p = i * 4;
+            if (finalMaskBytes[i]) {
+                fmImgData.data[p] = 255;
+                fmImgData.data[p + 1] = 255;
+                fmImgData.data[p + 2] = 255;
+                fmImgData.data[p + 3] = 255;
+            }
+        }
+        fmCtx.putImageData(fmImgData, 0, 0);
+
+        // 6. Perform inpainting / Content-Aware Fill
+        if (method === 'lama') {
+            const resultImg = await inpaintWithGemini(cropCanvas, finalMaskCanvas);
+            ctx.drawImage(resultImg, startX, startY);
+        } else {
+            // Local Fast Match (Telea)
+            const patchCanvas = document.createElement('canvas');
+            patchCanvas.width = cropW;
+            patchCanvas.height = cropH;
+            const patchCtx = patchCanvas.getContext('2d');
+            patchCtx.drawImage(cropCanvas, 0, 0);
+
+            cleanMangaBackgroundArtWithMask(patchCtx, cropW, cropH, finalMaskBytes);
+            ctx.drawImage(patchCanvas, startX, startY);
+        }
+
+        // 7. Save and redraw
+        await saveEraserDrawingToPage();
+        requestOverlayRender();
+
+        window.activeLassoPoints = null;
+        const fillBtn = document.getElementById('btn-lasso-fill');
+        if (fillBtn) fillBtn.disabled = true;
+
+        showToast("✨ Đã lấp đầy vùng chọn Lasso thành công!", "success");
+    } catch (err) {
+        console.error("Lasso fill error:", err);
+        showToast(`Không thể vẽ bù vùng chọn: ${err.message}`, "error");
+
+        // Restore canvas state to saved state
+        await restorePageEraserDrawing(page);
+        requestOverlayRender();
+    } finally {
+        if (showGlobalOverlay) {
+            const { uiUpdateProcessingOverlay: updateOverlay } = await import('../core/state.js');
+            updateOverlay(false);
+        }
+    }
+}
+
 // Window bindings for inline HTML onClick handlers
 window.autoCleanActiveBlock = autoCleanActiveBlock;
 window.toggleEraserMode = toggleEraserMode;
@@ -1010,4 +1434,22 @@ window.aiSmartInpaintBlock = aiSmartInpaintBlock;
 window.activateEyedropper = activateEyedropper;
 window.setEraserBrushMode = setEraserBrushMode;
 window.startTexturePatchSelection = startTexturePatchSelection;
+window.clearLassoSelection = clearLassoSelection;
+window.runLassoContentAwareFill = runLassoContentAwareFill;
+
+export function minimizeEraserPanel() {
+    const panel = document.getElementById('eraser-settings-panel');
+    const trigger = document.getElementById('btn-eraser-floating-trigger');
+    if (panel) panel.classList.add('hidden');
+    if (trigger) trigger.classList.remove('hidden');
+}
+window.minimizeEraserPanel = minimizeEraserPanel;
+
+export function expandEraserPanel() {
+    const panel = document.getElementById('eraser-settings-panel');
+    const trigger = document.getElementById('btn-eraser-floating-trigger');
+    if (panel) panel.classList.remove('hidden');
+    if (trigger) trigger.classList.add('hidden');
+}
+window.expandEraserPanel = expandEraserPanel;
 

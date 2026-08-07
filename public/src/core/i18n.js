@@ -145,7 +145,12 @@ export const i18nDict = {
         "title-translate-page": "Dịch trang hiện tại",
         "title-ai-erase": "Xóa chữ toàn trang bằng AI",
         "title-export-page": "Xuất ảnh trang hiện tại",
-        "title-eraser-mode": "Bật/Tắt chế độ cọ vẽ để tẩy chữ thủ công"
+        "title-eraser-mode": "Bật/Tắt chế độ cọ vẽ để tẩy chữ thủ công",
+        "lasso-expand-label": "Mở rộng",
+        "lasso-fuzziness-label": "Độ nhạy (Fuzziness)",
+        "lasso-method-label": "Thuật toán",
+        "lasso-fill-btn": "Lấp đầy (Fill)",
+        "lasso-clear-btn": "Hủy chọn"
     },
     en: {
         // Left Panel - Image Source
@@ -290,7 +295,12 @@ export const i18nDict = {
         "title-translate-page": "Translate active page",
         "title-ai-erase": "AI erase text on active page",
         "title-export-page": "Export active page image",
-        "title-eraser-mode": "Toggle brush tool for manual text erasing"
+        "title-eraser-mode": "Toggle brush tool for manual text erasing",
+        "lasso-expand-label": "Expand Selection",
+        "lasso-fuzziness-label": "Fuzziness sensitivity",
+        "lasso-method-label": "Algorithm",
+        "lasso-fill-btn": "Fill Selection",
+        "lasso-clear-btn": "Deselect"
     }
 };
 
