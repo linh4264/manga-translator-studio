@@ -487,91 +487,81 @@
 
             <!-- Collapsible Tools Menu Panel -->
             <div id="sidebar-tools-menu"
-                class="hidden bg-slate-950 border-b border-slate-800 p-4 space-y-4 shrink-0 transition-all">
+                class="hidden bg-slate-950 border-b border-slate-800 p-3 space-y-3 shrink-0 transition-all">
 
-
-                <!-- UNDO / REDO / COPY / PASTE -->
-                <div class="grid grid-cols-2 gap-2">
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lịch sử</label>
-                        <div
-                            class="flex items-center space-x-1 bg-slate-900 rounded-lg p-1 border border-slate-800 justify-around">
-                            <button id="btn-undo" onclick="executeUndo()" disabled
-                                class="w-8 h-8 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                                title="Hoàn tác (Ctrl+Z)">
-                                <i class="fa-solid fa-rotate-left text-xs"></i>
-                            </button>
-                            <button id="btn-redo" onclick="executeRedo()" disabled
-                                class="w-8 h-8 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                                title="Làm lại (Ctrl+Y)">
-                                <i class="fa-solid fa-rotate-right text-xs"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Định dạng ô</label>
-                        <div
-                            class="flex items-center space-x-1 bg-slate-900 rounded-lg p-1 border border-slate-800 justify-around">
-                            <button id="btn-copy-style" onclick="copyBlockStyle()" disabled
-                                class="w-8 h-8 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                                title="Sao chép định dạng ô đang chọn (Ctrl+Shift+C)">
-                                <i class="fa-solid fa-paintbrush text-xs"></i>
-                            </button>
-                            <button id="btn-paste-style" onclick="pasteBlockStyle()" disabled
-                                class="w-8 h-8 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                                title="Dán định dạng đã sao chép (Ctrl+Shift+V)">
-                                <i class="fa-solid fa-fill-drip text-xs"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- DISPLAY MODE -->
-                <div class="space-y-1.5">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Chế độ xem</label>
-                    <div class="grid grid-cols-3 gap-1 bg-slate-900 rounded-lg p-1 border border-slate-800">
-                        <button id="view-mode-overlay" onclick="setViewMode('overlay')"
-                            class="py-1.5 text-[10px] font-semibold rounded bg-indigo-600 text-white transition-all flex flex-col items-center justify-center gap-1">
-                            <i class="fa-solid fa-wand-magic text-xs"></i> Overlay
+                <!-- Undo/Redo & Copy/Paste Style Toolbelt -->
+                <div class="flex items-center justify-between gap-2">
+                    <!-- History Controls -->
+                    <div class="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-800 flex-1 justify-around">
+                        <button id="btn-undo" onclick="executeUndo()" disabled
+                            class="w-7 h-7 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                            title="Hoàn tác (Ctrl+Z)">
+                            <i class="fa-solid fa-rotate-left text-xs"></i>
                         </button>
-                        <button id="view-mode-split" onclick="setViewMode('split')"
-                            class="py-1.5 text-[10px] font-semibold rounded text-slate-400 hover:text-slate-200 transition-all flex flex-col items-center justify-center gap-1">
-                            <i class="fa-solid fa-columns text-xs"></i> Split
+                        <button id="btn-redo" onclick="executeRedo()" disabled
+                            class="w-7 h-7 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                            title="Làm lại (Ctrl+Y)">
+                            <i class="fa-solid fa-rotate-right text-xs"></i>
                         </button>
-                        <button id="view-mode-original" onclick="setViewMode('original')"
-                            class="py-1.5 text-[10px] font-semibold rounded text-slate-400 hover:text-slate-200 transition-all flex flex-col items-center justify-center gap-1">
-                            <i class="fa-solid fa-image text-xs"></i> Ảnh gốc
+                    </div>
+                    <!-- Formatting Controls -->
+                    <div class="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-800 flex-1 justify-around">
+                        <button id="btn-copy-style" onclick="copyBlockStyle()" disabled
+                            class="w-7 h-7 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                            title="Sao chép định dạng ô (Ctrl+Shift+C)">
+                            <i class="fa-solid fa-paintbrush text-xs"></i>
+                        </button>
+                        <button id="btn-paste-style" onclick="pasteBlockStyle()" disabled
+                            class="w-7 h-7 flex items-center justify-center hover:bg-slate-800 rounded text-slate-400 hover:text-slate-100 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                            title="Dán định dạng đã sao chép (Ctrl+Shift+V)">
+                            <i class="fa-solid fa-fill-drip text-xs"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- ACTIONS -->
-                <div class="space-y-1.5">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Thao tác</label>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="addNewBlock()"
-                            class="py-2 px-3 rounded-lg bg-indigo-600/10 border border-indigo-500/30 hover:bg-indigo-600 text-indigo-400 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-1.5">
-                            <i class="fa-solid fa-square-plus"></i> Thêm ô
-                        </button>
-                        <button id="btn-active-translate" onclick="translateActivePage()" disabled
-                            class="py-2 px-3 rounded-lg bg-emerald-600/10 border border-emerald-500/30 hover:bg-emerald-600 text-emerald-400 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> Dịch trang
-                        </button>
-                        <button id="btn-ai-erase-page" onclick="runAIEraseTextPage()" disabled
-                            class="py-2 px-3 rounded-lg bg-purple-600/10 border border-purple-500/30 hover:bg-purple-600 text-purple-400 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none"
-                            title="Tẩy sạch chữ toàn bộ trang bằng Gemini AI">
-                            <i class="fa-solid fa-wand-magic-sparkles text-purple-400"></i> AI Xóa Chữ
-                        </button>
-                        <button id="btn-export-page" onclick="exportActivePage()" disabled
-                            class="py-2 px-3 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 transition-all text-xs font-bold shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none">
-                            <i class="fa-solid fa-download"></i> Xuất ảnh
-                        </button>
-                        <button id="btn-eraser-mode" data-action="toggleEraserMode" disabled
-                            class="py-2 px-3 rounded-lg bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-all text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none"
-                            title="Bật/Tắt chế độ cọ vẽ để tẩy chữ thô trực tiếp trên ảnh">
-                            <i class="fa-solid fa-eraser"></i> Cọ tẩy
-                        </button>
-                    </div>
+                <!-- Display View Modes -->
+                <div class="grid grid-cols-3 gap-1 bg-slate-900 rounded-lg p-1 border border-slate-800">
+                    <button id="view-mode-overlay" onclick="setViewMode('overlay')"
+                        class="py-1.5 text-[10px] font-bold rounded bg-indigo-600 text-white transition-all flex flex-col items-center justify-center gap-0.5">
+                        <i class="fa-solid fa-wand-magic text-xs"></i> Overlay
+                    </button>
+                    <button id="view-mode-split" onclick="setViewMode('split')"
+                        class="py-1.5 text-[10px] font-bold rounded text-slate-400 hover:text-slate-200 transition-all flex flex-col items-center justify-center gap-0.5">
+                        <i class="fa-solid fa-columns text-xs"></i> Split
+                    </button>
+                    <button id="view-mode-original" onclick="setViewMode('original')"
+                        class="py-1.5 text-[10px] font-bold rounded text-slate-400 hover:text-slate-200 transition-all flex flex-col items-center justify-center gap-0.5">
+                        <i class="fa-solid fa-image text-xs"></i> Ảnh gốc
+                    </button>
+                </div>
+
+                <!-- Actions Tool belt -->
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button onclick="addNewBlock()"
+                        class="py-1.5 rounded bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
+                        title="Thêm ô thoại mới">
+                        <i class="fa-solid fa-square-plus text-xs"></i> Thêm ô
+                    </button>
+                    <button id="btn-active-translate" onclick="translateActivePage()" disabled
+                        class="py-1.5 rounded bg-emerald-600/20 hover:bg-emerald-600 border border-emerald-500/30 text-emerald-300 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
+                        title="Dịch trang hiện tại">
+                        <i class="fa-solid fa-wand-magic-sparkles text-xs"></i> Dịch trang
+                    </button>
+                    <button id="btn-ai-erase-page" onclick="runAIEraseTextPage()" disabled
+                        class="py-1.5 rounded bg-purple-600/20 hover:bg-purple-600 border border-purple-500/30 text-purple-300 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
+                        title="Xóa chữ toàn trang bằng AI">
+                        <i class="fa-solid fa-eraser text-xs"></i> AI Xóa Chữ
+                    </button>
+                    <button id="btn-export-page" onclick="exportActivePage()" disabled
+                        class="py-1.5 rounded bg-indigo-600 text-white hover:bg-indigo-500 transition-all text-xs font-bold flex items-center justify-center gap-1.5 shadow-md"
+                        title="Xuất ảnh trang hiện tại">
+                        <i class="fa-solid fa-download text-xs"></i> Xuất ảnh
+                    </button>
+                    <button id="btn-eraser-mode" data-action="toggleEraserMode" disabled
+                        class="col-span-2 py-1.5 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
+                        title="Bật/Tắt chế độ cọ vẽ để tẩy chữ thủ công">
+                        <i class="fa-solid fa-paint-brush text-xs"></i> Chế độ cọ vẽ tẩy chữ
+                    </button>
                 </div>
             </div>
 
@@ -627,55 +617,45 @@
 
 
                     <!-- Text Area Original JP -->
-                    <div class="space-y-1.5">
-                        <div class="flex items-center justify-between">
-                            <label data-i18n="original-text-label"
-                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Chữ gốc
-                                (OCR)</label>
-                            <span
-                                class="text-[9px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-400 font-mono">Original</span>
-                        </div>
+                    <div class="space-y-1">
+                        <label data-i18n="original-text-label"
+                            class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Chữ gốc (OCR)</label>
                         <textarea id="edit-original-text" rows="3" data-i18n-placeholder="original-text-placeholder"
-                            class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors"
+                            class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-350 focus:outline-none focus:border-indigo-500 transition-colors"
                             placeholder="Chữ nguyên bản tiếng Nhật..."></textarea>
                     </div>
 
                     <!-- Text Area Translated VN -->
-                    <div class="space-y-1.5">
-                        <div class="flex items-center justify-between">
-                            <label data-i18n="translated-text-label"
-                                class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Bản dịch tiếng
-                                Việt</label>
-                            <span
-                                class="text-[9px] bg-indigo-950 text-indigo-300 px-1.5 py-0.5 rounded font-mono">Translated</span>
-                        </div>
+                    <div class="space-y-1">
+                        <label data-i18n="translated-text-label"
+                            class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Bản dịch tiếng Việt</label>
                         <textarea id="edit-translated-text" oninput="syncActiveBlockTranslation(this.value)" rows="4"
                             data-i18n-placeholder="translated-text-placeholder"
-                            class="w-full bg-slate-950 border border-indigo-500/20 focus:border-indigo-500 rounded-lg p-2.5 text-xs text-slate-100 focus:outline-none transition-colors"
+                            class="w-full bg-slate-950 border border-indigo-500/20 focus:border-indigo-500 rounded-lg p-2 text-xs text-slate-100 focus:outline-none transition-colors"
                             placeholder="Nhập bản dịch tiếng Việt..."></textarea>
 
-                        <div class="flex flex-wrap items-center gap-2 mt-2">
+                        <div class="flex flex-wrap items-center gap-1 mt-1.5">
                             <!-- Smart Manga Diamond Balance Button -->
                             <button onclick="applyDiamondFormat()"
-                                class="text-[10px] bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-400 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1.5">
-                                <i class="fa-solid fa-gem"></i> ⚡ Diamond
+                                class="text-[10px] bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-400 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-gem text-[9px]"></i> Diamond
                             </button>
                             <!-- Auto Clean Text AI Button -->
                             <button onclick="autoCleanActiveBlock()"
-                                class="text-[10px] bg-emerald-600/20 hover:bg-emerald-600 border border-emerald-500/30 text-emerald-300 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1.5"
+                                class="text-[10px] bg-emerald-600/20 hover:bg-emerald-600 border border-emerald-500/30 text-emerald-300 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1"
                                 title="Tự động xóa vết chữ gốc bằng thuật toán AI Edge Fill">
-                                <i class="fa-solid fa-wand-magic-sparkles"></i> 🧹 Xóa chữ AI
+                                <i class="fa-solid fa-wand-magic-sparkles text-[9px]"></i> Xóa chữ AI
                             </button>
                             <!-- Speak Active Block Button -->
                             <button data-action="speakActiveBlock" onclick="speakActiveBlock()"
-                                class="text-[10px] bg-sky-600/20 hover:bg-sky-600 border border-sky-500/30 text-sky-300 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1.5"
+                                class="text-[10px] bg-sky-600/20 hover:bg-sky-600 border border-sky-500/30 text-sky-300 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1"
                                 title="Phát âm câu thoại này bằng AI Speech">
-                                <i class="fa-solid fa-volume-high"></i> 🔊 Nghe câu này
+                                <i class="fa-solid fa-volume-high text-[9px]"></i> Nghe
                             </button>
                             <!-- TOEIC analysis quick button -->
                             <button onclick="quickOpenToeicAnalysis()"
-                                class="text-[10px] bg-amber-600/20 hover:bg-amber-600 border border-amber-500/30 text-amber-400 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1.5">
-                                <i class="fa-solid fa-graduation-cap"></i> TOEIC
+                                class="text-[10px] bg-amber-600/20 hover:bg-amber-600 border border-amber-500/30 text-amber-400 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-graduation-cap text-[9px]"></i> TOEIC
                             </button>
                         </div>
                     </div>
@@ -728,70 +708,40 @@
 
                 <!-- Typesetting Style Presets -->
                 <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mẫu chữ nhanh
-                        (Presets)</label>
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mẫu chữ nhanh (Presets)</label>
                     <div class="grid grid-cols-2 gap-1.5">
                         <button data-action="applyStylePreset" data-preset="dialogue"
-                            class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded text-left flex items-center gap-1.5 transition-colors group"
-                            title="Kiểu bong bóng thoại chuẩn, font Manga đậm">
-                            <span class="text-sm">💬</span>
-                            <div>
-                                <p
-                                    class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">
-                                    Thoại thường</p>
-                                <p class="text-[8px] text-slate-500">Manga / Patrick Hand</p>
-                            </div>
+                            class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded flex items-center justify-center gap-1.5 transition-colors text-xs font-semibold text-slate-200"
+                            title="Kiểu bong bóng thoại chuẩn">
+                            <span>💬 Thoại</span>
                         </button>
                         <button data-action="applyStylePreset" data-preset="scream"
-                            class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded text-left flex items-center gap-1.5 transition-colors group"
-                            title="Kiểu hét lớn hoặc SFX, chữ trắng có viền đen dày nổi bật">
-                            <span class="text-sm">💥</span>
-                            <div>
-                                <p
-                                    class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">
-                                    Hét lớn / SFX</p>
-                                <p class="text-[8px] text-slate-500">Viền đen dày / Bangers</p>
-                            </div>
+                            class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded flex items-center justify-center gap-1.5 transition-colors text-xs font-semibold text-slate-200"
+                            title="Kiểu hét lớn hoặc SFX">
+                            <span>💥 Hét / SFX</span>
                         </button>
                         <button data-action="applyStylePreset" data-preset="whisper"
-                            class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded text-left flex items-center gap-1.5 transition-colors group"
-                            title="Kiểu nói thầm, font chữ viết tay nhỏ, mờ nhẹ">
-                            <span class="text-sm">💭</span>
-                            <div>
-                                <p
-                                    class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">
-                                    Thầm thì</p>
-                                <p class="text-[8px] text-slate-500">Nghiêng / Xám nhạt</p>
-                            </div>
+                            class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded flex items-center justify-center gap-1.5 transition-colors text-xs font-semibold text-slate-200"
+                            title="Kiểu nói thầm">
+                            <span>💭 Thầm thì</span>
                         </button>
                         <button data-action="applyStylePreset" data-preset="narration"
-                            class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded text-left flex items-center gap-1.5 transition-colors group"
-                            title="Hộp dẫn truyện, chữ nhật thẳng đứng, căn lề trái">
-                            <span class="text-sm">📜</span>
-                            <div>
-                                <p
-                                    class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-400 transition-colors">
-                                    Dẫn truyện</p>
-                                <p class="text-[8px] text-slate-500">Hộp chữ / Nền che 95%</p>
-                            </div>
+                            class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded flex items-center justify-center gap-1.5 transition-colors text-xs font-semibold text-slate-200"
+                            title="Hộp dẫn truyện">
+                            <span>📜 Dẫn chuyện</span>
                         </button>
                     </div>
                 </div>
 
-                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-3">
-                    <div class="flex items-center justify-between">
-                        <span data-i18n="auto-fit-label" class="text-xs font-semibold text-slate-300">Cỡ chữ Tự Động
-                            (Auto-Fit)</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="style-auto-fit" onchange="toggleAutoFit(this.checked)"
-                                class="sr-only peer">
-                            <div
-                                class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600">
-                            </div>
-                        </label>
-                    </div>
-                    <p class="text-[10px] text-slate-500 leading-normal">Tự động điều chỉnh cỡ chữ lớn nhất có thể để
-                        điền đầy bong bóng thoại khi bạn kéo dãn.</p>
+                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 flex items-center justify-between">
+                    <span data-i18n="auto-fit-label" class="text-xs font-semibold text-slate-350">Cỡ chữ Tự Động (Auto-Fit)</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="style-auto-fit" onchange="toggleAutoFit(this.checked)"
+                            class="sr-only peer">
+                        <div
+                            class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600">
+                        </div>
+                    </label>
                 </div>
 
                 <!-- Font Typography Customizers -->
@@ -800,8 +750,7 @@
                     <div class="space-y-1">
                         <div class="flex justify-between items-center">
                             <label data-i18n="font-family-label"
-                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phông chữ (Font
-                                Family)</label>
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phông chữ</label>
                             <button onclick="document.getElementById('font-uploader').click()"
                                 class="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 transition-colors"
                                 title="Tải phông chữ tùy chỉnh từ máy tính (.ttf, .otf, .woff2)">
@@ -829,16 +778,12 @@
                     <div id="style-font-size-container" class="space-y-1">
                         <div class="flex justify-between items-center">
                             <label data-i18n="font-size-label"
-                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cỡ chữ (Font
-                                Size)</label>
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cỡ chữ</label>
                             <span id="lbl-font-size" class="text-xs text-indigo-400 font-mono">13px</span>
                         </div>
                         <input type="range" id="style-font-size" min="8" max="72" value="13"
                             oninput="syncActiveBlockStyle('fontSize', parseInt(this.value))"
                             class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-                        <p class="text-[9px] text-slate-500 italic">Dùng phím <kbd
-                                class="bg-slate-800 px-1 rounded text-slate-300">[</kbd> và <kbd
-                                class="bg-slate-800 px-1 rounded text-slate-300">]</kbd> để chỉnh nhanh khi chọn ô.</p>
                     </div>
 
                     <!-- Text Align & Layout Orientations -->
