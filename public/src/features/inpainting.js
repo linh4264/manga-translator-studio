@@ -142,48 +142,58 @@ export function setEraserBrushMode(mode) {
     
     const btnEraser = document.getElementById('btn-brush-mode-eraser');
     const btnStamp = document.getElementById('btn-brush-mode-stamp');
+    const btnSpotInpaint = document.getElementById('btn-brush-mode-spot-inpaint');
     const stampControls = document.getElementById('stamp-controls');
     const brushColorContainer = document.getElementById('brush-color-container');
     const brushSizeContainer = document.getElementById('brush-size-container');
+
+    // Reset button states
+    [btnEraser, btnStamp, btnSpotInpaint].forEach(btn => {
+        if (btn) {
+            btn.classList.remove('bg-indigo-600', 'text-white');
+            btn.classList.add('text-slate-400', 'hover:text-slate-200');
+        }
+    });
 
     if (mode === 'stamp') {
         if (btnStamp) {
             btnStamp.classList.add('bg-indigo-600', 'text-white');
             btnStamp.classList.remove('text-slate-400', 'hover:text-slate-200');
         }
-        if (btnEraser) {
-            btnEraser.classList.remove('bg-indigo-600', 'text-white');
-            btnEraser.classList.add('text-slate-400', 'hover:text-slate-200');
-        }
-        
         if (stampControls) stampControls.classList.remove('hidden');
         if (brushColorContainer) brushColorContainer.classList.add('hidden');
         if (brushSizeContainer) brushSizeContainer.classList.add('hidden');
         
         isPatchStampActive = patchCanvas !== null;
-    } else {
+    } else if (mode === 'spot-inpaint') {
+        if (btnSpotInpaint) {
+            btnSpotInpaint.classList.add('bg-indigo-600', 'text-white');
+            btnSpotInpaint.classList.remove('text-slate-400', 'hover:text-slate-200');
+        }
+        if (stampControls) stampControls.classList.add('hidden');
+        if (brushColorContainer) brushColorContainer.classList.add('hidden');
+        if (brushSizeContainer) brushSizeContainer.classList.remove('hidden');
+        
+        isPatchStampActive = false;
+        isSelectingPatch = false;
+    } else { // mode === 'eraser'
         if (btnEraser) {
             btnEraser.classList.add('bg-indigo-600', 'text-white');
             btnEraser.classList.remove('text-slate-400', 'hover:text-slate-200');
         }
-        if (btnStamp) {
-            btnStamp.classList.remove('bg-indigo-600', 'text-white');
-            btnStamp.classList.add('text-slate-400', 'hover:text-slate-200');
-        }
-        
         if (stampControls) stampControls.classList.add('hidden');
         if (brushColorContainer) brushColorContainer.classList.remove('hidden');
         if (brushSizeContainer) brushSizeContainer.classList.remove('hidden');
         
         isPatchStampActive = false;
         isSelectingPatch = false;
-        
-        const selectionBox = document.getElementById('patch-selection-box');
-        if (selectionBox) selectionBox.classList.add('hidden');
-        
-        const previewCanvas = elements.patchPreviewCanvas;
-        if (previewCanvas) previewCanvas.classList.add('hidden');
     }
+
+    const selectionBox = document.getElementById('patch-selection-box');
+    if (selectionBox) selectionBox.classList.add('hidden');
+    
+    const previewCanvas = elements.patchPreviewCanvas;
+    if (previewCanvas) previewCanvas.classList.add('hidden');
 
     initEraserDrawingEvents();
 }
@@ -411,6 +421,152 @@ export function initEraserDrawingEvents() {
         return;
     }
 
+    // --- CASE 2.5: Spot Inpaint Brush Mode ---
+    if (brushMode === 'spot-inpaint') {
+        let isDrawing = false;
+        let preStrokeImageData = null;
+        let strokeCanvas = null;
+        let strokeCtx = null;
+        let minX = 0, minY = 0, maxX = 0, maxY = 0;
+
+        const startSpot = (e) => {
+            e.preventDefault();
+            const pos = getMousePos(e);
+            
+            isDrawing = true;
+            lastX = pos.x;
+            lastY = pos.y;
+            minX = pos.x;
+            minY = pos.y;
+            maxX = pos.x;
+            maxY = pos.y;
+
+            // Backup main canvas state
+            preStrokeImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            // Create temporary mask canvas
+            strokeCanvas = document.createElement('canvas');
+            strokeCanvas.width = canvas.width;
+            strokeCanvas.height = canvas.height;
+            strokeCtx = strokeCanvas.getContext('2d');
+
+            // Draw initial dot on both
+            const r = eraserBrushSize / 2;
+            
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(168, 85, 247, 0.55)';
+            ctx.fill();
+
+            strokeCtx.beginPath();
+            strokeCtx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+            strokeCtx.fillStyle = '#ffffff';
+            strokeCtx.fill();
+        };
+
+        const drawSpot = (e) => {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const pos = getMousePos(e);
+
+            minX = Math.min(minX, pos.x);
+            minY = Math.min(minY, pos.y);
+            maxX = Math.max(maxX, pos.x);
+            maxY = Math.max(maxY, pos.y);
+
+            // Draw line on main canvas (purple overlay)
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.strokeStyle = 'rgba(168, 85, 247, 0.55)';
+            ctx.lineWidth = eraserBrushSize;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+
+            // Draw line on mask canvas (white mask)
+            strokeCtx.beginPath();
+            strokeCtx.moveTo(lastX, lastY);
+            strokeCtx.lineTo(pos.x, pos.y);
+            strokeCtx.strokeStyle = '#ffffff';
+            strokeCtx.lineWidth = eraserBrushSize;
+            strokeCtx.lineCap = 'round';
+            strokeCtx.lineJoin = 'round';
+            strokeCtx.stroke();
+
+            lastX = pos.x;
+            lastY = pos.y;
+        };
+
+        const applySpotInpaint = async (e) => {
+            if (!isDrawing) return;
+            isDrawing = false;
+
+            // Restore canvas to hide purple lines
+            if (preStrokeImageData) {
+                ctx.putImageData(preStrokeImageData, 0, 0);
+            }
+
+            const pad = Math.ceil(eraserBrushSize / 2 + 5);
+            const startX = Math.max(0, Math.floor(minX - pad));
+            const startY = Math.max(0, Math.floor(minY - pad));
+            const endX = Math.min(canvas.width, Math.ceil(maxX + pad));
+            const endY = Math.min(canvas.height, Math.ceil(maxY + pad));
+            const cropW = endX - startX;
+            const cropH = endY - startY;
+
+            if (cropW > 3 && cropH > 3) {
+                const imgElement = elements.mangaBgImage;
+                const page = globalState.pages[globalState.activePageIndex];
+                if (imgElement && imgElement.naturalWidth && page) {
+                    try {
+                        pushStateToHistory();
+
+                        // Get mask bytes from strokeCanvas
+                        const strokeImgData = strokeCtx.getImageData(startX, startY, cropW, cropH);
+                        const sData = strokeImgData.data;
+                        const maskBytes = new Uint8Array(cropW * cropH);
+                        for (let i = 0; i < cropW * cropH; i++) {
+                            if (sData[i * 4 + 3] > 10) {
+                                maskBytes[i] = 1;
+                            }
+                        }
+
+                        // Crop background image
+                        const patchCanvas = document.createElement('canvas');
+                        patchCanvas.width = cropW;
+                        patchCanvas.height = cropH;
+                        const patchCtx = patchCanvas.getContext('2d');
+                        patchCtx.drawImage(imgElement, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
+
+                        // Run Telea Inpainting on crop using maskBytes
+                        cleanMangaBackgroundArtWithMask(patchCtx, cropW, cropH, maskBytes);
+
+                        // Draw clean patch onto eraserCanvas
+                        ctx.drawImage(patchCanvas, startX, startY);
+
+                        await saveEraserDrawingToPage();
+                        requestOverlayRender();
+                        showToast("✨ Đã tẩy sạch vùng chọn và vẽ bù kết cấu nền!", "success");
+                    } catch (err) {
+                        console.error("Spot inpaint error:", err);
+                        showToast("Không thể thực hiện Spot Inpainting.", "error");
+                    }
+                }
+            }
+        };
+
+        canvas.onmousedown = startSpot;
+        canvas.onmousemove = drawSpot;
+        canvas.onmouseup = applySpotInpaint;
+        canvas.onmouseleave = applySpotInpaint;
+
+        canvas.ontouchstart = startSpot;
+        canvas.ontouchmove = drawSpot;
+        canvas.ontouchend = applySpotInpaint;
+        return;
+    }
+
     // --- CASE 3: Standard solid color brush ---
     if (previewCanvas) previewCanvas.classList.add('hidden');
 
@@ -520,6 +676,108 @@ export function restorePageEraserDrawing(page) {
     return Promise.resolve();
 }
 
+export function cleanMangaBackgroundArtWithMask(ctx, width, height, maskBytes) {
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const data = imgData.data;
+
+    // Step 1: Dilate the brush mask by 4px to completely cover outlines
+    const dilatedMask = new Uint8Array(width * height);
+    const dilateRadius = 4;
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const idx = y * width + x;
+            if (maskBytes[idx]) {
+                for (let dy = -dilateRadius; dy <= dilateRadius; dy++) {
+                    const ny = y + dy;
+                    if (ny < 0 || ny >= height) continue;
+                    for (let dx = -dilateRadius; dx <= dilateRadius; dx++) {
+                        const nx = x + dx;
+                        if (nx < 0 || nx >= width) continue;
+                        dilatedMask[ny * width + nx] = 1;
+                    }
+                }
+            }
+        }
+    }
+
+    // Step 2: 8-Directional Boundary Interpolation (Harmonic Inpainting)
+    const dirs = [
+        { x: 0, y: -1 },  // Up
+        { x: 0, y: 1 },   // Down
+        { x: -1, y: 0 },  // Left
+        { x: 1, y: 0 },   // Right
+        { x: -1, y: -1 }, // Up-Left
+        { x: 1, y: -1 },  // Up-Right
+        { x: -1, y: 1 },  // Down-Left
+        { x: 1, y: 1 }    // Down-Right
+    ];
+
+    const outR = new Uint8Array(width * height);
+    const outG = new Uint8Array(width * height);
+    const outB = new Uint8Array(width * height);
+
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const idx = y * width + x;
+            if (!dilatedMask[idx]) continue;
+
+            let sumR = 0, sumG = 0, sumB = 0, totalWeight = 0;
+
+            for (const dir of dirs) {
+                let dist = 1;
+                while (dist < 100) {
+                    const nx = x + dir.x * dist;
+                    const ny = y + dir.y * dist;
+
+                    if (nx < 0 || nx >= width || ny < 0 || ny >= height) {
+                        break;
+                    }
+
+                    const nIdx = ny * width + nx;
+                    if (!dilatedMask[nIdx]) {
+                        const p = nIdx * 4;
+                        const weight = 1 / (dist * dist); // Inverse distance squared
+                        sumR += data[p] * weight;
+                        sumG += data[p + 1] * weight;
+                        sumB += data[p + 2] * weight;
+                        totalWeight += weight;
+                        break;
+                    }
+                    dist++;
+                }
+            }
+
+            if (totalWeight > 0) {
+                outR[idx] = Math.round(sumR / totalWeight);
+                outG[idx] = Math.round(sumG / totalWeight);
+                outB[idx] = Math.round(sumB / totalWeight);
+            } else {
+                // Fallback to surrounding color if no boundary found in direction
+                const p = idx * 4;
+                outR[idx] = data[p];
+                outG[idx] = data[p + 1];
+                outB[idx] = data[p + 2];
+            }
+        }
+    }
+
+    // Write back to image data
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const idx = y * width + x;
+            if (dilatedMask[idx]) {
+                const p = idx * 4;
+                data[p] = outR[idx];
+                data[p + 1] = outG[idx];
+                data[p + 2] = outB[idx];
+                data[p + 3] = 255;
+            }
+        }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+}
+
 export function cleanMangaBackgroundArtText(ctx, width, height) {
     const imgData = ctx.getImageData(0, 0, width, height);
     const data = imgData.data;
@@ -550,7 +808,6 @@ export function cleanMangaBackgroundArtText(ctx, width, height) {
             const p = idx * 4;
             const lum = 0.299 * data[p] + 0.587 * data[p + 1] + 0.114 * data[p + 2];
 
-            // Mark dark text/outlines OR bright white Katakana/SFX glyphs
             const isDarkStroke = lum < Math.min(140, avgBgLum - 20);
             const isWhiteGlyph = lum > Math.max(160, avgBgLum + 20);
             const isHighContrast = Math.abs(lum - avgBgLum) > 25;
@@ -561,71 +818,8 @@ export function cleanMangaBackgroundArtText(ctx, width, height) {
         }
     }
 
-    // Step 3: Morphological Dilation (expand text mask by 3px to cover outlines)
-    const dilatedMask = new Uint8Array(width * height);
-    const dilateRadius = 3;
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-            const idx = y * width + x;
-            if (mask[idx]) {
-                for (let dy = -dilateRadius; dy <= dilateRadius; dy++) {
-                    const ny = y + dy;
-                    if (ny < 0 || ny >= height) continue;
-                    for (let dx = -dilateRadius; dx <= dilateRadius; dx++) {
-                        const nx = x + dx;
-                        if (nx < 0 || nx >= width) continue;
-                        dilatedMask[ny * width + nx] = 1;
-                    }
-                }
-            }
-        }
-    }
-
-    // Step 4: Multi-pass Telea Inpainting using surrounding background pixels
-    const radius = 5;
-    const r2 = radius * radius;
-
-    for (let pass = 0; pass < 4; pass++) {
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                const idx = y * width + x;
-                if (!dilatedMask[idx]) continue;
-
-                let sumR = 0, sumG = 0, sumB = 0, totalWeight = 0;
-                for (let dy = -radius; dy <= radius; dy++) {
-                    const ny = y + dy;
-                    if (ny < 0 || ny >= height) continue;
-                    for (let dx = -radius; dx <= radius; dx++) {
-                        const nx = x + dx;
-                        if (nx < 0 || nx >= width) continue;
-
-                        const d2 = dx * dx + dy * dy;
-                        if (d2 === 0 || d2 > r2) continue;
-
-                        const nIdx = ny * width + nx;
-                        if (dilatedMask[nIdx]) continue; // Only sample clean background pixels
-
-                        const weight = 1 / Math.sqrt(d2);
-                        const p = nIdx * 4;
-                        sumR += data[p] * weight;
-                        sumG += data[p + 1] * weight;
-                        sumB += data[p + 2] * weight;
-                        totalWeight += weight;
-                    }
-                }
-
-                if (totalWeight > 0) {
-                    const p = idx * 4;
-                    data[p] = Math.round(sumR / totalWeight);
-                    data[p + 1] = Math.round(sumG / totalWeight);
-                    data[p + 2] = Math.round(sumB / totalWeight);
-                    data[p + 3] = 255;
-                }
-            }
-        }
-    }
-
-    ctx.putImageData(imgData, 0, 0);
+    // Step 3: Run 8-Directional Boundary Interpolation using this auto-detected mask!
+    cleanMangaBackgroundArtWithMask(ctx, width, height, mask);
 }
 
 export async function aiSmartInpaintBlock(mode = 'local') {
