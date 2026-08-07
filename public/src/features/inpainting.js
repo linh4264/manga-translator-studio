@@ -661,7 +661,7 @@ export function initEraserDrawingEvents() {
                         const patchCanvas = document.createElement('canvas');
                         patchCanvas.width = cropW;
                         patchCanvas.height = cropH;
-                        const patchCtx = patchCanvas.getContext('2d');
+                        const patchCtx = patchCanvas.getContext('2d', { willReadFrequently: true });
                         patchCtx.drawImage(imgElement, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
 
                         // Run Telea Inpainting on crop using maskBytes
@@ -747,7 +747,7 @@ export function initEraserDrawingEvents() {
 export function clearEraserDrawing() {
     if (globalState.activePageIndex === -1) return;
     const canvas = elements.eraserCanvas;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     pushStateToHistory();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     saveEraserDrawingToPage();
@@ -759,7 +759,7 @@ export async function saveEraserDrawingToPage() {
     const page = globalState.pages[globalState.activePageIndex];
     const canvas = elements.eraserCanvas;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const hasDrawings = imgData.data.some(val => val !== 0);
 
@@ -776,7 +776,7 @@ export async function saveEraserDrawingToPage() {
 export function restorePageEraserDrawing(page) {
     const canvas = elements.eraserCanvas;
     if (!canvas) return Promise.resolve();
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
     canvas.width = elements.mangaBgImage.naturalWidth || page.width || 1200;
     canvas.height = elements.mangaBgImage.naturalHeight || page.height || 1600;
@@ -1372,7 +1372,7 @@ export async function runLassoContentAwareFill() {
     }
 
     const canvas = elements.eraserCanvas;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const imgElement = elements.mangaBgImage;
     const page = globalState.pages[globalState.activePageIndex];
 
@@ -1436,7 +1436,7 @@ export async function runLassoContentAwareFill() {
         const compositeCanvas = document.createElement('canvas');
         compositeCanvas.width = canvas.width;
         compositeCanvas.height = canvas.height;
-        const compCtx = compositeCanvas.getContext('2d');
+        const compCtx = compositeCanvas.getContext('2d', { willReadFrequently: true });
         compCtx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
 
         // Temporarily restore elements.eraserCanvas without lasso overlay
@@ -1447,14 +1447,14 @@ export async function runLassoContentAwareFill() {
         const cropCanvas = document.createElement('canvas');
         cropCanvas.width = cropW;
         cropCanvas.height = cropH;
-        const cropCtx = cropCanvas.getContext('2d');
+        const cropCtx = cropCanvas.getContext('2d', { willReadFrequently: true });
         cropCtx.drawImage(compositeCanvas, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
 
         // 3. Create initial selection mask (Rough Lasso selection)
         const lassoMaskCanvas = document.createElement('canvas');
         lassoMaskCanvas.width = cropW;
         lassoMaskCanvas.height = cropH;
-        const lmCtx = lassoMaskCanvas.getContext('2d');
+        const lmCtx = lassoMaskCanvas.getContext('2d', { willReadFrequently: true });
         lmCtx.fillStyle = '#ffffff';
         lmCtx.beginPath();
         lmCtx.moveTo(points[0].x - startX, points[0].y - startY);
@@ -1534,7 +1534,7 @@ export async function runLassoContentAwareFill() {
         const finalMaskCanvas = document.createElement('canvas');
         finalMaskCanvas.width = cropW;
         finalMaskCanvas.height = cropH;
-        const fmCtx = finalMaskCanvas.getContext('2d');
+        const fmCtx = finalMaskCanvas.getContext('2d', { willReadFrequently: true });
         const fmImgData = fmCtx.createImageData(cropW, cropH);
         for (let i = 0; i < cropW * cropH; i++) {
             const p = i * 4;
@@ -1549,14 +1549,29 @@ export async function runLassoContentAwareFill() {
 
         // 6. Perform inpainting / Content-Aware Fill
         if (method === 'lama') {
-            const resultImg = await inpaintWithGemini(cropCanvas, finalMaskCanvas);
-            ctx.drawImage(resultImg, startX, startY);
+            try {
+                const resultImg = await inpaintWithGemini(cropCanvas, finalMaskCanvas);
+                ctx.drawImage(resultImg, startX, startY);
+            } catch (geminiErr) {
+                console.warn("Gemini API call failed, falling back to Offline Fast Match:", geminiErr);
+                showToast("Key Gemini hết hạn/hạn ngạch. Đang tự động chuyển sang thuật toán Offline!", "warning");
+                
+                // Fallback: Local Fast Match (Telea / BSS)
+                const patchCanvas = document.createElement('canvas');
+                patchCanvas.width = cropW;
+                patchCanvas.height = cropH;
+                const patchCtx = patchCanvas.getContext('2d', { willReadFrequently: true });
+                patchCtx.drawImage(cropCanvas, 0, 0);
+
+                cleanMangaBackgroundArtWithMask(patchCtx, cropW, cropH, finalMaskBytes);
+                ctx.drawImage(patchCanvas, startX, startY);
+            }
         } else {
             // Local Fast Match (Telea)
             const patchCanvas = document.createElement('canvas');
             patchCanvas.width = cropW;
             patchCanvas.height = cropH;
-            const patchCtx = patchCanvas.getContext('2d');
+            const patchCtx = patchCanvas.getContext('2d', { willReadFrequently: true });
             patchCtx.drawImage(cropCanvas, 0, 0);
 
             cleanMangaBackgroundArtWithMask(patchCtx, cropW, cropH, finalMaskBytes);
