@@ -113,8 +113,36 @@ export function initEventListeners() {
         });
     }
 
+    const viewport = document.getElementById('workspace-viewport');
+    if (viewport) {
+        viewport.addEventListener('dragover', (e) => {
+            if (globalState.activePageIndex !== -1) {
+                e.preventDefault();
+            }
+        });
+        viewport.addEventListener('drop', (e) => {
+            if (globalState.activePageIndex !== -1 && e.dataTransfer.files?.length) {
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    e.preventDefault();
+                    import('./pages-ui.js').then(p => p.replacePageBackgroundImage(globalState.activePageIndex, file));
+                }
+            }
+        });
+    }
+
     if (elements.pagesList) {
         elements.pagesList.addEventListener('click', (e) => {
+            const replaceBtn = e.target.closest('[data-action="replace-bg-page"]');
+            if (replaceBtn) {
+                e.stopPropagation();
+                const index = Number(replaceBtn.dataset.index);
+                if (Number.isInteger(index)) {
+                    import('./pages-ui.js').then(p => p.triggerReplaceBgImage(index));
+                }
+                return;
+            }
+
             const translateBtn = e.target.closest('[data-action="translate-page"]');
             if (translateBtn) {
                 e.stopPropagation();

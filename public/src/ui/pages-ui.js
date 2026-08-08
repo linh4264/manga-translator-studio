@@ -28,6 +28,8 @@ export async function selectPage(index) {
     if (elements.btnAiErasePage) elements.btnAiErasePage.disabled = false;
     elements.btnExportPage.disabled = false;
     elements.btnEraserMode.disabled = false;
+    const btnReplace = document.getElementById('btn-replace-bg-image');
+    if (btnReplace) btnReplace.disabled = false;
 
     if (globalState.viewMode === 'split') {
         updateSplitView();
@@ -80,6 +82,8 @@ export async function removePage(index) {
         if (elements.btnAiErasePage) elements.btnAiErasePage.disabled = true;
         elements.btnExportPage.disabled = true;
         elements.btnEraserMode.disabled = true;
+        const btnReplace = document.getElementById('btn-replace-bg-image');
+        if (btnReplace) btnReplace.disabled = true;
     } else if (globalState.activePageIndex > index) {
         globalState.activePageIndex--;
     }
@@ -93,6 +97,76 @@ export async function removePage(index) {
 
     updatePageListUI();
     showToast('Đã xóa trang truyện', 'info');
+}
+
+let replaceTargetPageIndex = null;
+
+export function triggerReplaceBgImage(targetIndex = null) {
+    const idx = targetIndex !== null ? targetIndex : globalState.activePageIndex;
+    if (idx === null || idx === -1 || idx >= globalState.pages.length) {
+        showToast("Vui lòng chọn một trang trước khi đổi ảnh gốc.", "warning");
+        return;
+    }
+    replaceTargetPageIndex = idx;
+    const input = document.getElementById('replace-bg-file-input');
+    if (input) {
+        input.value = '';
+        input.click();
+    }
+}
+
+export function handleReplaceBgFileInput(files) {
+    if (files && files[0] && replaceTargetPageIndex !== null) {
+        replacePageBackgroundImage(replaceTargetPageIndex, files[0]);
+        replaceTargetPageIndex = null;
+    }
+}
+
+export async function replacePageBackgroundImage(pageIndex, file) {
+    if (!file || pageIndex < 0 || pageIndex >= globalState.pages.length) return;
+
+    pushStateToHistory();
+    const page = globalState.pages[pageIndex];
+
+    const tempImg = new Image();
+    const newSrc = URL.createObjectURL(file);
+
+    await new Promise((resolve, reject) => {
+        tempImg.onload = resolve;
+        tempImg.onerror = reject;
+        tempImg.src = newSrc;
+    });
+
+    const newWidth = tempImg.naturalWidth || 800;
+    const newHeight = tempImg.naturalHeight || 1200;
+
+    if (page.src?.startsWith('blob:')) URL.revokeObjectURL(page.src);
+    if (page.apiSrc?.startsWith('blob:')) URL.revokeObjectURL(page.apiSrc);
+    if (page.thumbnailSrc?.startsWith('blob:')) URL.revokeObjectURL(page.thumbnailSrc);
+
+    page.file = file;
+    page.originalFile = file;
+    page.src = newSrc;
+    page.apiSrc = newSrc;
+    page.width = newWidth;
+    page.height = newHeight;
+    page.apiWidth = newWidth;
+    page.apiHeight = newHeight;
+    page.thumbnailBlob = null;
+
+    const { generateAndSaveThumbnailForPage, savePageToDB } = await import('../core/state.js');
+    await generateAndSaveThumbnailForPage(page);
+    await savePageToDB(page);
+
+    if (globalState.activePageIndex === pageIndex) {
+        elements.mangaBgImage.dataset.loadedSrc = "";
+        elements.mangaBgImage.src = page.src;
+        restorePageEraserDrawing(page);
+        requestOverlayRender();
+    }
+
+    updatePageListUI();
+    showToast(`Đã đổi ảnh gốc cho trang ${pageIndex + 1}! Giữ nguyên toàn bộ ô thoại.`, 'success');
 }
 
 export function updatePageListUI() {
@@ -191,6 +265,9 @@ export function updatePageListUI() {
                 </div>
             </div>
             <div class="flex items-center space-x-1 shrink-0 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                <button data-action="replace-bg-page" data-index="${index}" title="Đổi ảnh gốc (Giữ nguyên ô thoại)" class="w-6 h-6 rounded bg-slate-900 hover:bg-amber-600 border border-slate-800 hover:border-amber-500 text-slate-400 hover:text-white flex items-center justify-center transition-all">
+                    <i class="fa-solid fa-file-image text-[10px]"></i>
+                </button>
                 <button data-action="translate-page" data-index="${index}" title="Dịch trang này" class="w-6 h-6 rounded bg-slate-900 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 text-slate-400 hover:text-white flex items-center justify-center transition-all">
                     <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
                 </button>
@@ -315,3 +392,6 @@ export function setExportRangeToCurrent(type = 'start') {
 window.toggleExportRangeInputs = toggleExportRangeInputs;
 window.validateExportRange = validateExportRange;
 window.setExportRangeToCurrent = setExportRangeToCurrent;
+window.triggerReplaceBgImage = triggerReplaceBgImage;
+window.handleReplaceBgFileInput = handleReplaceBgFileInput;
+window.replacePageBackgroundImage = replacePageBackgroundImage;

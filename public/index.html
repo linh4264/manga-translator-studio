@@ -631,9 +631,14 @@
                         <i class="fa-solid fa-download text-xs"></i> Xuất ảnh
                     </button>
                     <button id="btn-eraser-mode" data-action="toggleEraserMode" disabled data-i18n-title="title-eraser-mode"
-                        class="col-span-2 py-1.5 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
+                        class="py-1.5 rounded bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
                         title="Bật/Tắt chế độ cọ vẽ để tẩy chữ thủ công">
-                        <i class="fa-solid fa-paint-brush text-xs"></i> Chế độ cọ vẽ tẩy chữ
+                        <i class="fa-solid fa-paint-brush text-xs"></i> Cọ vẽ
+                    </button>
+                    <button id="btn-replace-bg-image" onclick="triggerReplaceBgImage()" data-action="triggerReplaceBgImage" disabled
+                        class="py-1.5 rounded bg-amber-600/20 hover:bg-amber-600 border border-amber-500/30 text-amber-300 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
+                        title="Thay đổi ảnh gốc của trang hiện tại (Giữ nguyên toàn bộ ô thoại và bản dịch)">
+                        <i class="fa-solid fa-file-image text-xs"></i> Đổi ảnh gốc
                     </button>
                 </div>
             </div>
@@ -1444,6 +1449,8 @@
             if (modal) modal.classList.add('hidden');
         };
     </script>
+    <!-- Hidden input for quick background image replacement -->
+    <input type="file" id="replace-bg-file-input" accept="image/*" class="hidden" onchange="handleReplaceBgFileInput(this.files)">
     <script type="module" src="src/main.js"></script>
 </body>
 

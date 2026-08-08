@@ -81,6 +81,7 @@ export async function initApplication() {
         const preset = target.getAttribute('data-preset');
         applyStylePreset(preset);
     });
+    registerAction('triggerReplaceBgImage', () => import('../ui/pages-ui.js').then(m => m.triggerReplaceBgImage()));
     initEventDelegation();
 
     mountSettingsModal();
