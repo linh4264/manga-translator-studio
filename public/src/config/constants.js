@@ -28,7 +28,7 @@ export const TARGET_LANG_MAP = {
 
 export const TRANSLATION_GENRE_PRESETS = {
     custom: '',
-    quality: '- GENRE PRESET: Best-quality scanlation. Keep meaning, tone, subtext, and character voice. Prefer natural Vietnamese over literal wording. Preserve honorifics and xưng hô khi quan trọng.',
+    quality: '- GENRE PRESET: Master-level Japanese Scanlation. Prioritize natural, fluent, and expressive Vietnamese dialogue. Eliminate robotic, literal, or machine-translated structures. Adapt Japanese nuances, honorifics, and character speech styles seamlessly.',
     comedy: '- GENRE PRESET: Comedy manga. Keep timing sharp, wording natural, and punchlines intact.',
     school: '- GENRE PRESET: School-life manga. Use casual, youthful Vietnamese.',
     shounen: '- GENRE PRESET: Shounen/action manga. Use short, punchy, energetic Vietnamese.',

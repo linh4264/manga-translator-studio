@@ -223,10 +223,53 @@ export function getTranslationGuidancePrompt() {
         );
     }
 
-    // 3. Source Language Rule
+    // 3. Source Language Rule (Đặc biệt tối ưu hóa cho Tiếng Nhật -> Tiếng Việt)
     const srcLang = globalState.sourceLanguage || 'ja';
     if (srcLang === 'ja') {
-        guidanceParts.push('- SOURCE LANGUAGE: Japanese Manga. Pay special attention to vertical writing, reading order (right-to-left), Japanese honorifics (-san, -kun, -chan, -sama), and SFX sound effects.');
+        if (targetLang === 'vi') {
+            guidanceParts.push(
+                `- JAPANESE TO VIETNAMESE MANGA TRANSLATION MASTER SPECIFICATION:`,
+                `  1. XƯNG HÔ ĐA DẠNG & SẮC THÁI NHÂN VẬT (PRONOUNS & PERSONA):`,
+                `     - 私 (Watashi) -> Trọng thị/Lịch sự: "Tôi/Em/Cháu"; Nữ thân mật: "Tớ/Em"; Bình thản: "Tôi".`,
+                `     - 僕 (Boku) -> Nam dịu dàng, khiêm tốn, con trai trẻ: "Tớ - Cậu", "Anh - Em", "Em - Anh/Chị".`,
+                `     - 俺 (Ore) -> Nam tính, mạnh mẽ, năng động, bốc đồng: "Tao - Mày", "Anh - Em", "Tôi".`,
+                `     - あたし (Atashi) -> Nữ tính, điệu đà, nhí nhảnh: "Tớ", "Em", "Con".`,
+                `     - 俺様 (Oresama) -> Kiêu ngạo, hợm hĩnh: "Bổn thiếu gia", "Ta", "Đại gia đây".`,
+                `     - あなた (Anata) -> Vợ gọi chồng: "Anh"; Thân mật: "Cậu/Anh"; Lịch sự: "Anh/Chị/Ông".`,
+                `     - お前 (Omae) -> Thân thiết/Ngang hàng: "Mày - Tao", "Cậu - Tớ"; Bề trên: "Chú em", "Thằng này".`,
+                `     - 貴様 (Kisama) / 手前 (Teme) -> Tức giận, thù địch: "Thằng ranh", "Mày", "Tên kia", "Thằng nhãi".`,
+                `     - 君 (Kimi) -> Người trên/bằng vai gọi nhẹ nhàng: "Cậu", "Em".`,
+                `  2. TỪ ĐỆM & NGỮ ĐIỆU CUỐI CÂU (終助詞 - SENTENCE-ENDING PARTICLES):`,
+                `     - ね (ne) -> "nhé", "nha", "đúng không", "nhỉ".`,
+                `     - よ (yo) -> "đấy", "đó nha", "này".`,
+                `     - な (na) / ぞ (zo) -> "đấy", "chưa", "đó".`,
+                `     - わ (wa) -> "nha", "đấy", "mà".`,
+                `     - かしら (kashira) -> "không biết nữa", "nhỉ", "sao ta".`,
+                `     - じゃん (jan) -> "còn gì", "mà", "đấy thôi".`,
+                `     - っけ (kke) -> "hả", "nhỉ", "quên mất".`,
+                `  3. TỪ ĐỆM GIAO TIẾP & KHẨU NGỮ (AIZUCHI & CONVERSATIONAL IDIOMS):`,
+                `     - なるほど (Naruhodo) -> "Ra là thế...", "Thì ra là vậy".`,
+                `     - まさか (Masaka) -> "Chẳng lẽ...", "Không thể nào!", "Làm gì có!".`,
+                `     - やっぱり (Yappari) -> "Quả nhiên...", "Y như rằng...", "Đúng là...".`,
+                `     - やれやれ (Yare yare) -> "Haiz...", "Thiệt tình...", "Mệt mỏi thật đấy...".`,
+                `     - マジで (Maji de) -> "Thật luôn?", "Thiệt hả?", "Nói nghiêm túc đấy!".`,
+                `     - ヤバい (Yabai) -> "Tệ rồi!", "Đỉnh vãi!", "Chết dở!", "Vãi thật!".`,
+                `     - べつに (Betsuni) -> "Đâu có gì...", "Chả có gì hết."`,
+                `     - うざい (Uzai) -> "Phiền phức!", "Chướng mắt!".`,
+                `  4. HẬU TỐ XƯNG HÔ (HONORIFICS): GIỮ NGUYÊN các hậu tố danh xưng Nhật Bản quen thuộc ghép phía sau tên riêng (gắn dấu gạch nối hoặc viết liền tự nhiên theo đúng phong cách Manga Scanlation Việt Nam):`,
+                `     - ～さん (-san) -> GIỮ NGUYÊN (VD: "Tanaka-san").`,
+                `     - ～ちゃん (-chan) -> GIỮ NGUYÊN (VD: "Sakura-chan").`,
+                `     - ～くん (-kun) -> GIỮ NGUYÊN (VD: "Taro-kun").`,
+                `     - ～様 (-sama) -> GIỮ NGUYÊN (VD: "Kaguya-sama" / "Cậu chủ Sama").`,
+                `     - ～先輩 (-senpai) -> GIỮ NGUYÊN (VD: "Senpai" / "Kuroko-senpai").`,
+                `     - ～先生 (-sensei) -> GIỮ NGUYÊN (VD: "Gojo-sensei" / "Thầy Sensei").`,
+                `     - ～殿 (-dono), ～たん (-tan) -> GIỮ NGUYÊN hậu tố Nhật Bản gốc.`,
+                `  5. TỪ TƯỢNG THANH / TỪ TƯỢNG HÌNH (SFX - 擬音語・擬態語): Dịch sang từ cảm thán hoặc từ mô tả âm thanh/hành động tự nhiên trong tiếng Việt:`,
+                `     - ドキドキ (Doki Doki) -> "Thình thịch", ギラギラ (Gira Gira) -> "Lấp lánh / Sắc bén", ニコニコ (Niko Niko) -> "Cười khì", バッサリ (Bassari) -> "Xoẹt", シーン (Shiin) -> "Yên ắng...", ハッ (Ha) -> "Hả?! / Ực!".`
+            );
+        } else {
+            guidanceParts.push('- SOURCE LANGUAGE: Japanese Manga. Pay special attention to vertical writing, reading order (right-to-left), Japanese honorifics (-san, -kun, -chan, -sama), and SFX sound effects.');
+        }
     } else if (srcLang === 'zh') {
         guidanceParts.push(`- SOURCE LANGUAGE: Chinese Manhua. Translate idiom phrases naturally into ${targetLangName}, keep cultivation/wuxia/fantasy terms consistent.`);
     } else if (srcLang === 'ko') {
