@@ -24,12 +24,24 @@
   - Toggle the entire Studio interface between **English** and **Vietnamese** with a single click in the Settings panel.
 - 🤖 **Multi-Provider AI & Local LLM Integration**:
   - Connect with **Google Gemini**, **Anthropic Claude** (Claude 3.7/3.5 Sonnet), **OpenAI** (GPT-4o), and **Custom Local LLMs** (Ollama: `http://localhost:11434/v1`, LM Studio: `http://localhost:1234/v1`).
+- ⛩️ **Japanese-to-Vietnamese Scanlation Master Spec**:
+  - 5-layer Japanese-to-Vietnamese localization rules covering pronoun nuances (*Watashi, Boku, Ore, Atashi, Oresama, Anata, Omae, Kisama, Kimi*), sentence-ending modal particles (*ne, yo, na, zo, wa, kashira, jan, kke*), conversational slang/aizuchi, Japanese honorific suffixes (-san, -kun, -chan, -sama, -senpai, -sensei, -dono, -tan preserved for scanlation), and SFX sound effects.
 - 🧠 **Chapter Story Memory**:
   - Automatically chains summaries and character relationships from previous pages so the AI maintains contextual continuity from page 1 to the end of the chapter.
-- 🧹 **AI-Powered Background Inpainting (Auto Clean)**:
-  - The **🧹 Auto Clean** button automatically clears the original bubble text using context-aware fill, preserving borders and underlying artwork.
+- 🖼️ **Quick Background Image Replacement**:
+  - Swap the underlying manga page background image (e.g. after upscaling with Waifu2x or retouching in Photoshop) while **preserving 100% of speech bubble coordinates, translations, fonts, and lorebook bindings**. Supports direct drag-and-drop onto the workspace viewport.
+- 🎨 **Photoshop-Grade Redrawing & Inpainting Tools**:
+  - **Spot Healing Brush (Cọ xóa AI)**: Paint a quick purple highlight over text/SFX and release to instantly reconstruct clean background artwork client-side.
+  - **Lasso AI & Content-Aware Fill**: Draw freeform selection boundaries, isolate text pixels with contrast thresholds (Fuzziness), dilate borders, and fill using offline BSS or online Gemini AI (with automatic offline fallback on rate limit errors).
+  - **Best-Shift Patch Synthesis (BSS) & Adaptive Grain Matching**: Analyzes surrounding screentone grain patterns and injects matching sand noise to avoid smooth computer blur.
+  - **Circular Texture Stamp Tool**: Copy clean screentone patches and stamp them with circular feathered edges.
+  - **Eyedropper Tool**: Sample exact background colors directly from canvas pixels.
 - 💥 **Advanced SFX & Styling Tools**:
-  - Distinguish bubbles as `Dialogue` or `💥 SFX (Sound Effects)`. Adjust angle rotation (`Rotation Slider: -180° đến 180°`), vertical/horizontal layout, curved path (`Arc Slider`), stroke outlines, and text shadows.
+  - Distinguish bubbles as `Dialogue` or `💥 SFX (Sound Effects)`. Adjust angle rotation (`Rotation Slider: -180° to 180°`), vertical/horizontal layout, curved path (`Arc Slider`), stroke outlines, and text shadows.
+- 📐 **Decoupled Interactive Zoom Controls**:
+  - Translucent zoom toolbar, mouse wheel zoom (`Ctrl + Scroll`), keyboard shortcuts (`Ctrl + +`, `Ctrl + -`, `Ctrl + 0`). All zoom operations are fully decoupled from export resolution.
+- ⚡ **Quick Format Preset (Opacity 0% + Stroke 4px)**:
+  - 1-click quick styling button to set 0% background opacity and 4px text stroke with smart contrasting outline colors for overlay dialogue.
 - 🎨 **Robust Typeset & Canvas System**:
   - **Auto-fit Font Size**: Shrinks or grows text dynamically to fit bubble bounds.
   - **Vertical Text Support**: Auto-centers and wraps vertical columns (standard in traditional Manga/Manhua/Manhwa layouts).
@@ -44,7 +56,8 @@
 - 📦 **Batch Operations & Output Packaging**:
   - Translate the entire chapter in one click with **Translate All**.
   - Review all pages in the chapter sequentially using **Preview/Reader Mode**.
-  - Export final assets as individual images, packaged **ZIP** archives, or consolidated **HD PDFs** for tablets and Kindle readers.
+  - Custom **Page Range Export** (from Start Page to End Page) for ZIP and PDF exports.
+  - Export final assets as individual images (PNG/JPG/WebP), packaged **ZIP** archives, or consolidated **HD PDFs** for tablets and Kindle readers.
   - **Backup & Restore**: Download progress as `.manga` or `.json` project files and resume anytime.
   - **Consistency Checker**: Scans the entire project for translation inconsistencies and glossary violations.
 
@@ -94,11 +107,11 @@ The zero-dependency static file server will launch and automatically open the ap
 ### Method 3: Use VS Code Live Server Extension
 1. Open the project folder in **VS Code**.
 2. Install the **Live Server** extension (by *Ritwick Dey*).
-3. Right-click [index.html](index.html) -> select **"Open with Live Server"** (or click **"Go Live"** in the status bar at the bottom right).
+3. Right-click [index.html](public/index.html) -> select **"Open with Live Server"** (or click **"Go Live"** in the status bar at the bottom right).
 
 ### Method 4: CLI Utilities
-*   **Using npx:** Run `npx serve .` and open `http://localhost:3000`.
-*   **Using Python:** Run `python -m http.server 3000` and open `http://localhost:3000`.
+*   **Using npx:** Run `npx serve public` and open `http://localhost:3000`.
+*   **Using Python:** Run `python -m http.server 3000 --directory public` and open `http://localhost:3000`.
 
 ---
 
@@ -123,14 +136,15 @@ The zero-dependency static file server will launch and automatically open the ap
 ### 3. Polish & Typeset
 - **Edit Text**: Click any text box on the canvas to edit the translation text, font styles, color, alignment, border stroke, and drop shadow.
 - **Manual Bubble Addition**: Click **"Add Text Box"** to manually place boxes if the AI missed any dialogue.
-- **Eraser Mode**: Toggle the eraser brush to manually wipe away raw text, background details, or complex SFX.
+- **Eraser Mode & Spot Healing Brush**: Toggle eraser mode or spot healing brush to wipe away raw text, background details, or complex SFX.
+- **Quick Image Swap**: Click **Replace Image** or drop a new background image onto the workspace to update upscaled/retouched art without losing text blocks.
 
 ### 4. Rate-Limiting for Free API Keys
 - If using Google's free tier, configure the API settings to have **Giãn cách gửi (API Delay): 8-12 seconds** and **Số lần thử lại (Max Retries): 5** to avoid `429 Too Many Requests` errors.
 
 ### 5. Export Assets
 - Use **Preview** to read the translated chapter in full reader format.
-- Click **Export ZIP** to download all final images in a single ZIP.
+- Click **Export ZIP** (supports custom page range A to B) to download all final images in a single ZIP.
 - Click **Export PDF** to output a tablet-optimized PDF file.
 - Click **Backup** to export a `.manga` file to save your project state.
 
@@ -142,6 +156,10 @@ The zero-dependency static file server will launch and automatically open the ap
 | :--- | :--- |
 | `Ctrl + Z` / `Cmd + Z` | Undo the last action |
 | `Ctrl + Y` / `Cmd + Y` | Redo the last action |
+| `Ctrl + Scroll` | Zoom in / Zoom out of the workspace viewport |
+| `Ctrl + +` / `Ctrl + =` | Zoom in to workspace |
+| `Ctrl + -` | Zoom out of workspace |
+| `Ctrl + 0` | Reset workspace zoom to 100% |
 | `Tab` / `Shift + Tab` | Focus on the next / previous text block |
 | `Ctrl + D` / `Cmd + D` | Duplicate the selected text block |
 | `Delete` / `Backspace` | Delete the selected text block |
