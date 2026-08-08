@@ -336,6 +336,13 @@ export function applyStylePreset(presetKey) {
     presets['manga-std'] = presets.dialogue;
     presets['shout-sfx'] = presets.scream;
     presets['whisper-old'] = presets.whisper;
+    presets['transparent-stroke4'] = {
+        bgOpacity: 0,
+        strokeWidth: 4,
+        strokeColor: block.style?.textColor?.toLowerCase() === '#000000' ? '#ffffff' : (block.style?.strokeColor || '#000000')
+    };
+    presets['no-bg-stroke4'] = presets['transparent-stroke4'];
+    presets['outline-4px'] = presets['transparent-stroke4'];
     presets['horror'] = {
         fontFamily: 'font-marker',
         bold: true,
@@ -365,7 +372,8 @@ export function applyStylePreset(presetKey) {
     const label = presetKey === 'dialogue' || presetKey === 'manga-std' ? 'Thoại thường' :
         presetKey === 'scream' || presetKey === 'shout-sfx' ? 'Hét lớn / SFX' :
             presetKey === 'whisper' ? 'Thầm thì' :
-                presetKey === 'narration' ? 'Dẫn truyện' : 'Preset';
+                presetKey === 'narration' ? 'Dẫn truyện' :
+                    presetKey === 'transparent-stroke4' || presetKey === 'no-bg-stroke4' ? 'Nền 0% & Viền 4px' : 'Preset';
     showToast(`💥 Đã áp dụng mẫu chữ "${label}"`, "success");
 }
 
@@ -581,3 +589,5 @@ export function resetSfxAngleControls() {
     if (rSlider) rSlider.value = 0;
     if (aSlider) aSlider.value = 0;
 }
+
+window.applyStylePreset = applyStylePreset;
