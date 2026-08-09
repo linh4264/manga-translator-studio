@@ -94,7 +94,7 @@ Nhấn nút **"Copy"** để sao chép chuỗi mã API Key (có dạng bắt đ�
 Dưới đây là các cách cực kỳ đơn giản để khởi chạy:
 
 ### Cách 1: Khởi chạy nhanh một-click (Khuyên dùng)
-*   **Trên Windows:** Nhấp đúp chuột vào tệp [start.bat](file:///d:/DATA/manga-translator-studio/start.bat) ở thư mục gốc. Hệ thống sẽ tự động khởi chạy máy chủ web Node.js thuần (hoặc Python) và mở trình duyệt tại địa chỉ `http://localhost:3000`.
+*   **Trên Windows:** Nhấp đúp chuột vào tệp [start.bat](/manga-translator-studio/server/start.bat). Hệ thống sẽ tự động khởi chạy máy chủ web Node.js thuần (hoặc Python) và mở trình duyệt tại địa chỉ `http://localhost:3000`.
 *   **Trên macOS/Linux:** Mở Terminal tại thư mục dự án, chạy lệnh cấp quyền `chmod +x start.sh` (chỉ cần chạy một lần duy nhất), sau đó nhấp đúp hoặc chạy `./start.sh` để mở máy chủ.
 
 ### Cách 2: Chạy trực tiếp qua Node.js (server.js có sẵn)
@@ -107,7 +107,7 @@ Máy chủ tĩnh zero-dependency sẽ khởi chạy và tự động mở trình
 ### Cách 3: Sử dụng VS Code Live Server (Cho lập trình viên)
 1. Mở thư mục dự án trong phần mềm **VS Code**.
 2. Cài đặt extension **Live Server** (của nhà phát triển *Ritwick Dey*).
-3. Nhấp chuột phải vào file [index.html](file:///d:/DATA/manga-translator-studio/public/index.html) -> chọn **"Open with Live Server"** (hoặc bấm nút **"Go Live"** ở góc dưới cùng bên phải VS Code).
+3. Nhấp chuột phải vào file [index.html](/manga-translator-studio/public/index.html) -> chọn **"Open with Live Server"** (hoặc bấm nút **"Go Live"** ở góc dưới cùng bên phải VS Code).
 
 ### Cách 4: Sử dụng CLI npx serve hoặc Python
 *   **Dùng Node npx:** Chạy lệnh `npx serve public` và truy cập `http://localhost:3000`.
