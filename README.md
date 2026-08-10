@@ -92,9 +92,8 @@ Nhấn nút **"Copy"** để sao chép chuỗi mã API Key (có dạng bắt đ�
 > **Lưu ý về ES Modules**: Vì ứng dụng sử dụng cấu trúc mã nguồn dạng mô-đun hiện đại (ES Modules `import`/`export`), trình duyệt sẽ chặn tải file nếu mở trực tiếp bằng giao thức `file://` (Double-click vào `index.html` sẽ gặp lỗi CORS). **Bạn bắt buộc phải chạy ứng dụng thông qua một máy chủ Web cục bộ (Local Web Server).**
 
 Dưới đây là các cách cực kỳ đơn giản để khởi chạy:
-
-### Cách 1: Khởi chạy nhanh một-click (Khuyên dùng)
-*   **Trên Windows:** Nhấp đúp chuột vào tệp [start.bat](/manga-translator-studio/server/start.bat). Hệ thống sẽ tự động khởi chạy máy chủ web Node.js thuần (hoặc Python) và mở trình duyệt tại địa chỉ `http://localhost:3000`.
+### Cách 1: Khởi chạy nhanh một-click (Khuyên dùng) (nhớ cài node.js hoặc python)
+*   **Trên Windows:** Nhấp đúp chuột vào tệp [start.bat](/manga-translator-studio/server/start.bat). Hệ thống sẽ tự động khởi chạy máy chủ web Node.js thuần (hoặc Python) và mở trình duyệt tại địa chỉ `http://localhost:3000`. Nếu chưa cài node.js, hãy cài đặt tại [https://nodejs.org/](https://nodejs.org/) CMD: `winget install OpenJS.NodeJS.LTS` hoặc [https://www.python.org/](https://www.python.org/) CMD: `winget install Python.Python.3.11`
 *   **Trên macOS/Linux:** Mở Terminal tại thư mục dự án, chạy lệnh cấp quyền `chmod +x start.sh` (chỉ cần chạy một lần duy nhất), sau đó nhấp đúp hoặc chạy `./start.sh` để mở máy chủ.
 
 ### Cách 2: Chạy trực tiếp qua Node.js (server.js có sẵn)
