@@ -370,6 +370,9 @@ export async function runBatchExport() {
 
     try {
         await document.fonts.ready;
+        const { autoFitAllBlocksOnPage } = globalState.autoFitEnabled 
+            ? await import('./canvas/canvas-styling.js') 
+            : { autoFitAllBlocksOnPage: null };
 
         for (let i = startIndex; i <= endIndex; i++) {
             const page = globalState.pages[i];
@@ -394,8 +397,7 @@ export async function runBatchExport() {
                 const displayWidth = (elements.mangaCanvasContainer?.clientWidth || 800) / zoomScale;
                 page.lastDisplayWidth = displayWidth;
 
-                if (globalState.autoFitEnabled) {
-                    const { autoFitAllBlocksOnPage } = await import('./canvas/canvas-styling.js');
+                if (globalState.autoFitEnabled && autoFitAllBlocksOnPage) {
                     autoFitAllBlocksOnPage(page, img);
                 }
 
@@ -425,9 +427,13 @@ export async function runBatchExport() {
             updateProcessingOverlay(true, "Đang nén dữ liệu...", "Đang tạo file .zip tải về...", 95);
             
             let zipBlob;
-            const useWorker = typeof Worker !== 'undefined';
-            
-            if (useWorker) {
+            const JSZipClass = window.JSZip || (typeof JSZip !== 'undefined' ? JSZip : null);
+
+            if (JSZipClass) {
+                const zip = new JSZipClass();
+                filesToZip.forEach(f => zip.file(f.name, f.blob));
+                zipBlob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+            } else if (typeof Worker !== 'undefined') {
                 zipBlob = await new Promise((resolve, reject) => {
                     const worker = new Worker('/src/workers/zip-worker.js');
                     worker.onmessage = (e) => {
@@ -453,9 +459,7 @@ export async function runBatchExport() {
                     });
                 });
             } else {
-                const zip = new JSZip();
-                filesToZip.forEach(f => zip.file(f.name, f.blob));
-                zipBlob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+                throw new Error("Thư viện nén ZIP chưa sẵn sàng.");
             }
 
             const zipDownloadUrl = URL.createObjectURL(zipBlob);
