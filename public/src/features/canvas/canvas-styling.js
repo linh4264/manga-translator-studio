@@ -11,7 +11,17 @@ export function setCopiedStyle(val) {
     copiedStyle = val;
 }
 
+export function isBlockAutoFit(block) {
+    if (!block) return globalState.autoFitEnabled;
+    if (block.style && block.style.autoFit !== undefined) {
+        return !!block.style.autoFit;
+    }
+    return globalState.autoFitEnabled;
+}
+
 export function autoFitBlock(block, customImgElement = null, forceExportScale = 1) {
+    if (!isBlockAutoFit(block)) return;
+
     if (!block.translated || block.translated.trim() === '') {
         block.style.fontSize = 12;
         return;
@@ -166,13 +176,42 @@ export function toggleAutoFit(enabled) {
     if (globalState.activePageIndex !== -1) {
         const page = globalState.pages[globalState.activePageIndex];
         if (page) {
-            page.blocks.forEach(b => b.autoFitCache = null);
+            page.blocks.forEach(b => {
+                if (b.style) delete b.style.autoFit;
+                b.autoFitCache = null;
+            });
+            markPageAutoFitDirty(page);
         }
     }
     requestOverlayRender();
     uiUpdateActiveBlockEditor();
-    showToast(globalState.autoFitEnabled ? "Đã bật Cỡ chữ Tự động (Auto-Fit)" : "Đã tắt Auto-Fit (Chuyển sang chỉnh cỡ chữ thủ công)", "info");
+    showToast(globalState.autoFitEnabled ? "Đã bật Cỡ chữ Tự động (Auto-Fit) toàn trang" : "Đã tắt Auto-Fit toàn trang", "info");
 }
+
+export function toggleBlockAutoFit(enabled) {
+    if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    const block = page ? page.blocks.find(b => b.id === globalState.selectedBlockId) : null;
+    if (!block) return;
+
+    pushStateToHistory();
+    if (!block.style) block.style = {};
+    block.style.autoFit = !!enabled;
+    block.autoFitCache = null;
+
+    if (enabled) {
+        autoFitBlock(block);
+    }
+
+    markPageAutoFitDirty(page);
+    requestOverlayRender();
+    uiUpdateActiveBlockEditor();
+    savePageToDB(page);
+    showToast(enabled ? "Đã bật Auto-Fit cho ô dịch này" : "Đã tắt Auto-Fit cho ô dịch này (Chế độ thủ công)", "info");
+}
+
+window.toggleBlockAutoFit = toggleBlockAutoFit;
+window.toggleAutoFit = toggleAutoFit;
 
 export function autoMatchBlockStyle(block, imgElement) {
     if (!block || !imgElement || !imgElement.naturalWidth || !imgElement.naturalHeight) return;
@@ -421,8 +460,8 @@ export function syncActiveBlockStyle(property, value) {
     const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
 
     if (block) {
-        if (property === 'fontSize' && globalState.autoFitEnabled) {
-            globalState.autoFitEnabled = false;
+        if (property === 'fontSize') {
+            block.style.autoFit = false;
             if (elements.styleAutoFit) elements.styleAutoFit.checked = false;
         }
 
@@ -481,7 +520,8 @@ export function syncActiveBlockTranslation(val) {
         block.translated = val;
         markPageAutoFitDirty(page);
 
-        if (globalState.autoFitEnabled) {
+        const autoFitActive = isBlockAutoFit(block);
+        if (autoFitActive) {
             autoFitBlock(block);
         }
 
@@ -491,7 +531,7 @@ export function syncActiveBlockTranslation(val) {
             if (textContainer) {
                 setMultilineText(textContainer, val);
             }
-            if (globalState.autoFitEnabled) {
+            if (autoFitActive) {
                 const maskElem = overlayElem.firstElementChild;
                 if (maskElem) {
                     maskElem.style.fontSize = `${block.style.fontSize}px`;
@@ -506,7 +546,7 @@ export function syncActiveBlockTranslation(val) {
             if (cloneOverlay) {
                 const cloneTextContainer = cloneOverlay.querySelector('div > div');
                 if (cloneTextContainer) setMultilineText(cloneTextContainer, val);
-                if (globalState.autoFitEnabled) {
+                if (autoFitActive) {
                     const cloneMask = cloneOverlay.firstElementChild;
                     if (cloneMask) {
                         cloneMask.style.fontSize = `${block.style.fontSize}px`;

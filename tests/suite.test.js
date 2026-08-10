@@ -199,5 +199,18 @@ test('Full Chapter Translation Script Export and Import Functions', async () => 
     assert.strictEqual(typeof canvasRenderer.triggerInlineEditActiveBlock, 'function');
 });
 
+// 9. Per-Block Auto-Fit Toggle Test
+test('Per-Block Auto-Fit Toggle Functions', async () => {
+    const canvasStyling = await import('../public/src/features/canvas/canvas-styling.js');
+    assert.strictEqual(typeof canvasStyling.isBlockAutoFit, 'function');
+    assert.strictEqual(typeof canvasStyling.toggleBlockAutoFit, 'function');
+
+    const testBlock = { id: 'b1', style: { autoFit: false, fontSize: 18 } };
+    assert.strictEqual(canvasStyling.isBlockAutoFit(testBlock), false, 'isBlockAutoFit must return block.style.autoFit override if present');
+
+    const testBlockDefault = { id: 'b2', style: { fontSize: 18 } };
+    assert.strictEqual(canvasStyling.isBlockAutoFit(testBlockDefault), true, 'isBlockAutoFit must fallback to global state if undefined');
+});
+
 
 

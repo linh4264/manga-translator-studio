@@ -161,7 +161,8 @@ function syncBlockStyleInputs(block) {
     if (btnSfxRestore) btnSfxRestore.classList.toggle('hidden', !block.originalBackgroundBackup);
 
     // General Style
-    if (elements.styleAutoFit) elements.styleAutoFit.checked = !!globalState.autoFitEnabled;
+    const isAutoFit = (block.style && block.style.autoFit !== undefined) ? !!block.style.autoFit : globalState.autoFitEnabled;
+    if (elements.styleAutoFit) elements.styleAutoFit.checked = isAutoFit;
     elements.styleFont.value = block.style.fontFamily;
     elements.styleFontSize.value = block.style.fontSize;
     const fontSizeLbl = document.getElementById('lbl-font-size') || elements.lblFontSize;

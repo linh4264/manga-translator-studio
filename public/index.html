@@ -923,11 +923,18 @@
                         </select>
                     </div>
 
-                    <!-- Manual Font size -->
+                    <!-- Manual Font size & Per-block Auto-Fit -->
                     <div id="style-font-size-container" class="space-y-1">
                         <div class="flex justify-between items-center">
-                            <label data-i18n="font-size-label"
-                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cỡ chữ</label>
+                            <div class="flex items-center gap-2">
+                                <label data-i18n="font-size-label"
+                                    class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cỡ chữ</label>
+                                <label class="flex items-center gap-1 text-[10px] text-indigo-400 cursor-pointer select-none font-semibold" title="Bật/Tắt tự động tính cỡ chữ vừa bóng thoại cho riêng ô thoại này">
+                                    <input type="checkbox" id="style-auto-fit" onchange="toggleBlockAutoFit(this.checked)"
+                                        class="rounded border-slate-800 text-indigo-600 focus:ring-0 w-3 h-3">
+                                    <span>Tự động (Auto-Fit)</span>
+                                </label>
+                            </div>
                             <span id="lbl-font-size" class="text-xs text-indigo-400 font-mono">13px</span>
                         </div>
                         <input type="range" id="style-font-size" min="8" max="72" value="13"
