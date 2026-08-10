@@ -128,14 +128,60 @@ export function updateSplitView() {
     renderOverlays(overlaysDiv);
 }
 
-export function changeZoom(amount) {
-    globalState.zoom = Math.max(25, Math.min(250, globalState.zoom + amount));
+export function changeZoom(amount, mouseEvent = null) {
+    const viewport = document.getElementById('workspace-viewport');
+    const oldZoom = globalState.zoom;
+    const newZoom = Math.max(25, Math.min(250, oldZoom + amount));
+    if (newZoom === oldZoom) return;
+
+    let targetEl = null;
+    let targetContentLeft = 0;
+    let targetContentTop = 0;
+    let mouseXOnTarget = 0;
+    let mouseYOnTarget = 0;
+    let vRect = null;
+
+    if (mouseEvent && viewport) {
+        vRect = viewport.getBoundingClientRect();
+        targetEl = (elements.workspaceSplitWrapper && !elements.workspaceSplitWrapper.classList.contains('hidden'))
+            ? elements.workspaceSplitWrapper
+            : elements.mangaCanvasContainer;
+
+        if (targetEl) {
+            const tRect = targetEl.getBoundingClientRect();
+            mouseXOnTarget = mouseEvent.clientX - tRect.left;
+            mouseYOnTarget = mouseEvent.clientY - tRect.top;
+
+            const targetViewportLeft = tRect.left - vRect.left;
+            const targetViewportTop = tRect.top - vRect.top;
+
+            targetContentLeft = viewport.scrollLeft + targetViewportLeft;
+            targetContentTop = viewport.scrollTop + targetViewportTop;
+        }
+    }
+
+    globalState.zoom = newZoom;
     elements.zoomIndicator.innerText = `${globalState.zoom}%`;
     elements.mangaCanvasContainer.style.height = `${globalState.zoom}%`;
     elements.mangaCanvasContainer.style.maxHeight = 'none';
     elements.mangaCanvasContainer.style.width = 'auto';
     elements.workspaceSplitWrapper.style.transform = `scale(${globalState.zoom / 100})`;
     renderOverlays();
+
+    if (mouseEvent && viewport && targetEl && vRect) {
+        const ratio = newZoom / oldZoom;
+        const mouseXOnTargetNew = mouseXOnTarget * ratio;
+        const mouseYOnTargetNew = mouseYOnTarget * ratio;
+
+        const mxInViewport = mouseEvent.clientX - vRect.left;
+        const myInViewport = mouseEvent.clientY - vRect.top;
+
+        const newTargetViewportLeft = mxInViewport - mouseXOnTargetNew;
+        const newTargetViewportTop = myInViewport - mouseYOnTargetNew;
+
+        viewport.scrollLeft = targetContentLeft - newTargetViewportLeft;
+        viewport.scrollTop = targetContentTop - newTargetViewportTop;
+    }
 }
 
 export function resetZoom() {
