@@ -539,7 +539,14 @@
         </main>
 
         <!-- RIGHT PANEL: Editor, Customization & Font styling -->
-        <aside id="right-panel" class="w-80 bg-slate-900 border-l border-slate-800 flex flex-col shrink-0">
+        <aside id="right-panel" class="relative w-80 bg-slate-900 border-l border-slate-800 flex flex-col shrink-0">
+            <!-- Floating Handle to toggle Quick Tools Menu (Undo, Redo, Thêm ô, Xuất ảnh...) -->
+            <button id="sidebar-tools-toggle" onclick="toggleSidebarToolsMenu()"
+                class="absolute -left-9 top-2.5 z-40 w-9 h-9 bg-slate-900 border-y border-l border-slate-800 hover:border-indigo-500 rounded-l-xl text-slate-300 hover:text-white flex items-center justify-center transition-all shadow-lg group pointer-events-auto cursor-pointer"
+                title="Ẩn/Hiện Hộp công cụ (Undo, Redo, Thêm ô, Xuất ảnh...)">
+                <i class="fa-solid fa-toolbox text-sm group-hover:scale-110 transition-transform text-indigo-400 group-hover:text-white"></i>
+            </button>
+
             <!-- Tab Headers -->
             <div class="flex items-center gap-2 border-b border-slate-800 shrink-0 px-2 pt-2">
                 <button onclick="closeMobileMenus()"
@@ -561,12 +568,6 @@
                         <i class="fa-solid fa-graduation-cap mr-1"></i> TOEIC
                     </button>
                 </div>
-                <!-- Menu Toggle Button for hidden tools -->
-                <button id="sidebar-tools-toggle" onclick="toggleSidebarToolsMenu()"
-                    class="h-8 w-8 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white flex items-center justify-center transition-colors shrink-0 mr-1 self-center"
-                    title="Công cụ chỉnh sửa">
-                    <i class="fa-solid fa-bars-staggered"></i>
-                </button>
             </div>
 
             <!-- Collapsible Tools Menu Panel -->

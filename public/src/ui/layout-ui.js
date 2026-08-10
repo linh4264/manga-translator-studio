@@ -149,7 +149,18 @@ export function resetZoom() {
 }
 
 export function toggleSidebarToolsMenu() {
-    document.getElementById('sidebar-tools-menu')?.classList.toggle('hidden');
+    const menu = document.getElementById('sidebar-tools-menu');
+    const btn = document.getElementById('sidebar-tools-toggle');
+    if (menu) {
+        menu.classList.toggle('hidden');
+        if (btn) {
+            const isOpen = !menu.classList.contains('hidden');
+            btn.classList.toggle('bg-indigo-600', isOpen);
+            btn.classList.toggle('bg-slate-900', !isOpen);
+            btn.classList.toggle('text-white', isOpen);
+            btn.classList.toggle('border-indigo-500', isOpen);
+        }
+    }
 }
 
 export function toggleMobileSidebar() {
