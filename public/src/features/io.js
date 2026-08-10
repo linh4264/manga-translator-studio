@@ -571,15 +571,43 @@ export async function runPdfExport() {
     }
 }
 
-// Gợi ý phương thức xuất kịch bản dịch thuật
-export function promptExportScript() {
-    if (globalState.pages.length === 0) return;
+// Trích xuất & kích hoạt nạp kịch bản từ máy tính (.json hoặc .txt)
+export function triggerImportScript() {
+    let inputEl = document.getElementById('import-script-input');
+    if (!inputEl) {
+        inputEl = document.createElement('input');
+        inputEl.type = 'file';
+        inputEl.id = 'import-script-input';
+        inputEl.accept = '.json,.txt';
+        inputEl.className = 'hidden';
+        inputEl.onchange = (e) => importTranslationScript(e.target.files);
+        document.body.appendChild(inputEl);
+    }
+    inputEl.click();
+}
 
-    const choice = confirm("Bấm OK để tải kịch bản dạng Văn Bản (.txt) trình bày rõ ràng.\nBấm CANCEL để tải dữ liệu Cấu Trúc (.json) cho lập trình.");
-    if (choice) {
+// Gợi ý phương thức quản lý kịch bản dịch thuật (Xuất / Nhập)
+export function promptExportScript() {
+    if (globalState.pages.length === 0) {
+        showToast("Không có trang truyện nào trong dự án.", "warn");
+        return;
+    }
+
+    const choice = prompt(
+        "QUẢN LÝ KỊCH BẢN DỊCH THUẬT:\n\n" +
+        "1 - Xuất kịch bản Văn Bản (.txt)\n" +
+        "2 - Xuất kịch bản Cấu Trúc (.json)\n" +
+        "3 - Nhập kịch bản từ tệp (.json hoặc .txt)\n\n" +
+        "Vui lòng nhập số 1, 2 hoặc 3:",
+        "1"
+    );
+
+    if (choice === '1') {
         exportTranslationScript('txt');
-    } else {
+    } else if (choice === '2') {
         exportTranslationScript('json');
+    } else if (choice === '3') {
+        triggerImportScript();
     }
 }
 
@@ -682,78 +710,138 @@ export function exportTranslationScript(format) {
     showToast(`Đã xuất kịch bản thành công dưới định dạng ${format.toUpperCase()}!`, "success");
 }
 
-// Nhập kịch bản dịch thuật JSON
+// Nhập kịch bản dịch thuật JSON / TXT
 export async function importTranslationScript(fileList) {
     if (!fileList || fileList.length === 0) return;
     const file = fileList[0];
+    const fileName = file.name.toLowerCase();
 
-    if (!file.name.toLowerCase().endsWith('.json')) {
-        showToast("Chỉ hỗ trợ nhập kịch bản định dạng JSON!", "error");
+    if (!fileName.endsWith('.json') && !fileName.endsWith('.txt')) {
+        showToast("Chỉ hỗ trợ nhập kịch bản định dạng .JSON hoặc .TXT!", "error");
         return;
     }
 
     try {
         const text = await file.text();
-        const scriptData = JSON.parse(text);
-
-        if (!Array.isArray(scriptData)) {
-            showToast("Dữ liệu kịch bản JSON không hợp lệ (thiếu mảng trang)!", "error");
-            return;
-        }
-
         pushStateToHistory();
 
         let matchedPages = 0;
         let matchedBlocks = 0;
 
-        scriptData.forEach(scriptPage => {
-            if (!scriptPage.blocks || !Array.isArray(scriptPage.blocks)) return;
+        if (fileName.endsWith('.json')) {
+            let scriptData = JSON.parse(text);
+            const pagesArray = Array.isArray(scriptData)
+                ? scriptData
+                : (scriptData && Array.isArray(scriptData.pages) ? scriptData.pages : null);
 
-            let targetPage = null;
-
-            if (scriptPage.page) {
-                targetPage = globalState.pages.find(p => p.name === scriptPage.page);
+            if (!pagesArray) {
+                showToast("Dữ liệu kịch bản JSON không hợp lệ (thiếu danh sách trang)!", "error");
+                return;
             }
 
-            if (!targetPage && scriptPage.pageIndex !== undefined) {
-                if (scriptPage.pageIndex >= 0 && scriptPage.pageIndex < globalState.pages.length) {
-                    targetPage = globalState.pages[scriptPage.pageIndex];
+            pagesArray.forEach((scriptPage, pIdx) => {
+                if (!scriptPage.blocks || !Array.isArray(scriptPage.blocks)) return;
+
+                let targetPage = null;
+
+                if (scriptPage.pageName) {
+                    targetPage = globalState.pages.find(p => p.name === scriptPage.pageName);
                 }
-            }
-
-            if (!targetPage) return;
-            matchedPages++;
-
-            scriptPage.blocks.forEach((scriptBlock, blockIdx) => {
-                let targetBlock = null;
-
-                if (scriptBlock.id) {
-                    targetBlock = targetPage.blocks.find(b => b.id === scriptBlock.id);
+                if (!targetPage && scriptPage.page) {
+                    targetPage = globalState.pages.find(p => p.name === scriptPage.page);
+                }
+                if (!targetPage && scriptPage.pageIndex !== undefined) {
+                    if (scriptPage.pageIndex >= 0 && scriptPage.pageIndex < globalState.pages.length) {
+                        targetPage = globalState.pages[scriptPage.pageIndex];
+                    }
+                }
+                if (!targetPage && pIdx < globalState.pages.length) {
+                    targetPage = globalState.pages[pIdx];
                 }
 
-                if (!targetBlock && blockIdx < targetPage.blocks.length) {
-                    targetBlock = targetPage.blocks[blockIdx];
-                }
+                if (!targetPage) return;
+                matchedPages++;
 
-                if (!targetBlock) return;
+                scriptPage.blocks.forEach((scriptBlock, blockIdx) => {
+                    let targetBlock = null;
 
-                if (scriptBlock.translated !== undefined && scriptBlock.translated !== null) {
-                    targetBlock.translated = scriptBlock.translated;
-                    matchedBlocks++;
-                }
+                    if (scriptBlock.id) {
+                        targetBlock = targetPage.blocks.find(b => b.id === scriptBlock.id);
+                    }
+                    if (!targetBlock && blockIdx < targetPage.blocks.length) {
+                        targetBlock = targetPage.blocks[blockIdx];
+                    }
+
+                    if (!targetBlock) return;
+
+                    if (scriptBlock.translated !== undefined && scriptBlock.translated !== null) {
+                        targetBlock.translated = scriptBlock.translated;
+                        matchedBlocks++;
+                    }
+                    if (scriptBlock.speaker) {
+                        targetBlock.speaker = scriptBlock.speaker;
+                    }
+                });
+
+                savePageToDB(targetPage);
             });
+        } else if (fileName.endsWith('.txt')) {
+            const pageHeaderRegex = /\[TRANG\s+(\d+)(?:\s*:\s*([^\]]+))?\]/gi;
+            let match;
+            let matches = [];
+            while ((match = pageHeaderRegex.exec(text)) !== null) {
+                matches.push({
+                    index: match.index,
+                    pageIndex: parseInt(match[1], 10) - 1,
+                    pageName: (match[2] || '').trim(),
+                    headerLength: match[0].length
+                });
+            }
 
-            savePageToDB(targetPage);
-        });
+            if (matches.length === 0) {
+                showToast("Không tìm thấy cấu trúc [TRANG ...] trong file kịch bản TXT!", "error");
+                return;
+            }
+
+            matches.forEach((m, idx) => {
+                const startPos = m.index + m.headerLength;
+                const endPos = (idx < matches.length - 1) ? matches[idx + 1].index : text.length;
+                const sectionText = text.substring(startPos, endPos);
+
+                let targetPage = null;
+                if (m.pageName) {
+                    targetPage = globalState.pages.find(p => p.name === m.pageName);
+                }
+                if (!targetPage && m.pageIndex >= 0 && m.pageIndex < globalState.pages.length) {
+                    targetPage = globalState.pages[m.pageIndex];
+                }
+
+                if (!targetPage) return;
+                matchedPages++;
+
+                const blockRegex = /\[Gốc\]:\s*"([^"]*)"\s*\n\s*\[Dịch\]:\s*"([^"]*)"/gi;
+                let bMatch;
+                let bIdx = 0;
+                while ((bMatch = blockRegex.exec(sectionText)) !== null) {
+                    const translatedVal = bMatch[2];
+                    if (bIdx < targetPage.blocks.length) {
+                        targetPage.blocks[bIdx].translated = translatedVal;
+                        matchedBlocks++;
+                    }
+                    bIdx++;
+                }
+                savePageToDB(targetPage);
+            });
+        }
 
         renderOverlays();
         updateActiveBlockEditor();
 
-        showToast(`Đã nhập kịch bản thành công! Khớp ${matchedPages} trang, cập nhật ${matchedBlocks} ô thoại.`, "success");
+        showToast(`Đã nhập kịch bản thành công! Khớp ${matchedPages} trang, cập nhật ${matchedBlocks} ô dịch.`, "success");
 
     } catch (err) {
         console.error("Lỗi nhập kịch bản:", err);
-        showToast(`Lỗi khi đọc/phân tích tệp JSON: ${err.message}`, "error");
+        showToast(`Lỗi khi đọc/phân tích tệp kịch bản: ${err.message}`, "error");
     }
 
     const importScriptInput = document.getElementById('import-script-input');
@@ -1065,6 +1153,7 @@ window.runPdfExport = runPdfExport;
 window.promptExportScript = promptExportScript;
 window.exportTranslationScript = exportTranslationScript;
 window.importTranslationScript = importTranslationScript;
+window.triggerImportScript = triggerImportScript;
 window.exportProjectBackup = exportProjectBackup;
 window.importProjectBackup = importProjectBackup;
 window.clearMemoryCache = clearMemoryCache;

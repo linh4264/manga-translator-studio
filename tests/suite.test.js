@@ -188,11 +188,13 @@ test('Image Block Overlay Structure and Service Functions', async () => {
     assert.strictEqual(snapshotBlock.imageUrl, mockImageBlock.imageUrl, 'History snapshot must preserve block imageUrl');
 });
 
-// 8. Full Chapter Translation Script Export Test
-test('Full Chapter Translation Script Export Functions', async () => {
+// 8. Full Chapter Translation Script Export & Import Test
+test('Full Chapter Translation Script Export and Import Functions', async () => {
     const io = await import('../public/src/features/io.js');
     assert.strictEqual(typeof io.exportTranslationScript, 'function');
     assert.strictEqual(typeof io.promptExportScript, 'function');
+    assert.strictEqual(typeof io.importTranslationScript, 'function');
+    assert.strictEqual(typeof io.triggerImportScript, 'function');
 });
 
 
