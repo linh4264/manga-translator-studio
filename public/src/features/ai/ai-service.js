@@ -271,7 +271,30 @@ export function getTranslationGuidancePrompt() {
             guidanceParts.push('- SOURCE LANGUAGE: Japanese Manga. Pay special attention to vertical writing, reading order (right-to-left), Japanese honorifics (-san, -kun, -chan, -sama), and SFX sound effects.');
         }
     } else if (srcLang === 'zh') {
-        guidanceParts.push(`- SOURCE LANGUAGE: Chinese Manhua. Translate idiom phrases naturally into ${targetLangName}, keep cultivation/wuxia/fantasy terms consistent.`);
+        if (targetLang === 'vi') {
+            guidanceParts.push(
+                `- CHINESE TO VIETNAMESE MANHWA TRANSLATION MASTER SPECIFICATION:`,
+                `  1. QUY TẮC XƯNG HÔ & VĂN PHONG THEO BỐI CẢNH (PRONOUNS & PERSONA):`,
+                `     - HIỆN ĐẠI / ĐÔ THỊ / HỌC ĐƯỜNG: Bắt buộc chọn cặp xưng hô tiếng Việt tự nhiên phù hợp ngữ cảnh (cậu-tớ, mày-tao, anh-em, tôi-cậu, chú-cháu, sếp-em...). TUYỆT ĐỐI KHÔNG dùng đại từ "tôi - bạn" sượng sùng. Bỏ 我/你 khi ngữ cảnh đã rõ.`,
+                `     - TIÊN HIỆP / KIẾM HIỆP / HUYỀN HUYỄN / CỔ ĐẠI:`,
+                `       * Tự xưng tôn xưng / Bề trên: 本座 (Bổn tọa), 本王 (Bổn vương), 本帝 (Bổn đế), 本少 (Bổn thiếu gia), 老夫 (Lão phu), 朕 (Trẫm), 妾身 (Thiếp thân) -> Dịch giữ khí phách Hán Việt ("Bổn tọa", "Bổn vương", "Bổn thiếu gia", "Lão phu", "Ta").`,
+                `       * Khiêm xưng / Hậu bối: 在下 (Tại hạ), 鄙人 (Bỉ nhân), 小弟 (Tiểu đệ), 晚辈 (Vãn bối) -> Dịch "Tại hạ", "Vãn bối", "Tiểu đệ", "Cháu/Em".`,
+                `       * Sư môn & Tôn xưng: 师兄 (Sư huynh), 师姐 (Sư tỷ), 师弟 (Sư đệ), 师妹 (Sư muội), 师父/师傅 (Sư phụ), 尊上 (Tôn thượng), 前辈 (Tiền bối), 道友 (Đạo hữu), 阁下 (Các hạ).`,
+                `       * Thù địch / Hạ thấp / Miệt thị: 小儿/小辈 (Tiểu nhi/Tiểu bối) -> "Thằng ranh", "Nhãi ranh", "Tên tiểu tử"; 狗贼/老狗 -> "Tên cẩu tặc", "Lão chó chết"; 废柴/废物 -> "Kẻ phế vật", "Đồ bỏ đi".`,
+                `  2. XỬ LÝ TỪ NGHĨA HÁN VIỆT & THÀNH NGỮ (SINO-VIETNAMESE & CHENGYU 成语):`,
+                `     - Thành ngữ 4 chữ Hán Việt: Nếu là cụm từ quen thuộc trong cổ phong/tiên hiệp/ngôn tình (VD: "Kinh thiên động địa", "Song hỷ lâm môn", "Khai sơn phá thạch", "Kinh hãi", "Khai thiên lập địa") -> GIỮ ÂM HÁN VIỆT mượt mà, thoát ý tự nhiên.`,
+                `     - Thành ngữ / Cụm từ khẩu ngữ Hán tối nghĩa: DỊCH THOÁT Ý sang thành ngữ/tục ngữ/khẩu ngữ tiếng Việt tương đương (VD: "Giang sơn dễ đổi, bản tính khó dời", "Không đánh mà khai"), TRÁNH dịch từng từ cứng nhắc.`,
+                `  3. TRỢ TỪ NGỮ KHÍ & KHẨU NGỮ TIẾNG TRUNG (MODAL PARTICLES & SPOKEN SLANG):`,
+                `     - Trợ từ cuối câu (语气词): 啊 (a), 吧 (ba), 呀 (ya), 嘛 (ma), 呗 (bei), 啦 (la) -> Chuyển thành từ đệm tiếng Việt tương ứng: "nhé", "nha", "đấy", "mà", "chứ", "sao", "thôi", "hả", "cơ".`,
+                `     - Từ cảm thán & Khẩu ngữ: 卧槽/靠 (Wòcáo/Kào) -> "Vãi!", "Má nó!", "Độc thật!"; 没门儿 (Méiménr) -> "Mơ đi!", "Không đời nào!"; 鬼知道 (Guǐ zhīdào) -> "Quỷ mới biết!"; 算了 (Suànle) -> "Bỏ đi", "Thôi dẹp đi"; 没事 (Méishì) -> "Chẳng sao đâu", "Không có gì".`,
+                `  4. THUẬT NGỮ CẢNH GIỚI, TU VI & HỆ THỐNG (CULTIVATION & SYSTEM TERMS):`,
+                `     - Thống nhất thuật ngữ chuẩn Hán Việt cho cảnh giới (Luyện Khí, Trúc Cơ, Kim Đan, Nguyên Anh, Hóa Thần, Động Hư, Đại Thừa, Độ Kiếp...) và game/hệ thống (Ký chủ, Bảng thuộc tính, Rút thưởng, Điểm kinh nghiệm).`,
+                `  5. TỪ TƯỢNG THANH / TỪ TƯỢNG HÌNH MANHUA (SFX - 象声词/拟声词):`,
+                `     - Dịch linh hoạt sang từ cảm thán hoặc âm thanh tiếng Việt: 轰 (Hōng) -> "Đùng! / Oành!", 咔嚓 (Kāchā) -> "Rắc! / Cạch!", 嗖 (Sōu) -> "Xoẹt! / Vút!", 扑通 (Pūtōng) -> "Thịch! / Tõm!", 哈哈 (Hāhā) -> "Ha ha!", 哼 (Hēng) -> "Hừm! / Hừ!".`
+            );
+        } else {
+            guidanceParts.push(`- SOURCE LANGUAGE: Chinese Manhua. Translate idiom phrases naturally into ${targetLangName}, keep cultivation/wuxia/fantasy terms consistent.`);
+        }
     } else if (srcLang === 'ko') {
         guidanceParts.push(
             `- SOURCE LANGUAGE: Korean Manhwa / Webtoon:`,

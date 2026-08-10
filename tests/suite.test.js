@@ -106,3 +106,21 @@ test('All Core JS Modules Import Successfully and State Functions Work', async (
     assert.strictEqual(typeof state.initDB, 'function');
     assert.strictEqual(typeof state.globalState, 'object');
 });
+
+// 6. Chinese to Vietnamese Translation Prompt Guidance Test
+test('Chinese to Vietnamese Translation Prompt Master Specification', async () => {
+    const { globalState } = await import('../public/src/core/state.js');
+    const { getTranslationGuidancePrompt } = await import('../public/src/features/ai/ai-service.js');
+    
+    globalState.sourceLanguage = 'zh';
+    globalState.targetLanguage = 'vi';
+
+    const promptText = getTranslationGuidancePrompt();
+    assert.ok(promptText.includes('CHINESE TO VIETNAMESE MANHWA TRANSLATION MASTER SPECIFICATION'), 'Should contain Chinese to Vietnamese Master Spec header');
+    assert.ok(promptText.includes('QUY TẮC XƯNG HÔ & VĂN PHONG THEO BỐI CẢNH'), 'Should contain Pronoun and Persona rules');
+    assert.ok(promptText.includes('XỬ LÝ TỪ NGHĨA HÁN VIỆT & THÀNH NGỮ'), 'Should contain Chengyu & Sino-Vietnamese rules');
+    assert.ok(promptText.includes('TRỢ TỪ NGỮ KHÍ & KHẨU NGỮ TIẾNG TRUNG'), 'Should contain Modal particles and slang rules');
+    assert.ok(promptText.includes('THUẬT NGỮ CẢNH GIỚI, TU VI & HỆ THỐNG'), 'Should contain Cultivation and system terms rules');
+    assert.ok(promptText.includes('TỪ TƯỢNG THANH / TỪ TƯỢNG HÌNH MANHUA'), 'Should contain SFX rules');
+});
+
