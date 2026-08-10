@@ -191,6 +191,33 @@ function syncBlockStyleInputs(block) {
     if (fontSizeLbl) fontSizeLbl.innerText = `${block.style.fontSize}px`;
     elements.styleAlign.value = block.style.align;
     if (elements.styleBold) elements.styleBold.checked = block.style.bold;
+
+    // Sync Align Icon Buttons
+    const alignVal = block.style.align || 'center';
+    ['left', 'center', 'right'].forEach(a => {
+        const btn = document.getElementById(`btn-align-${a}`);
+        if (btn) {
+            btn.className = (a === alignVal)
+                ? 'flex-1 py-1 text-[10px] rounded bg-indigo-600 text-white font-bold transition-all flex items-center justify-center'
+                : 'flex-1 py-1 text-[10px] rounded text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center';
+        }
+    });
+
+    // Sync Direction Buttons
+    const isVert = !!block.style.vertical;
+    const btnHoriz = document.getElementById('btn-style-horiz');
+    const btnVert = document.getElementById('btn-style-vert');
+    if (btnHoriz) btnHoriz.className = isVert ? 'flex-1 py-1 text-[10px] rounded text-slate-400 hover:text-slate-200 font-bold transition-all flex items-center justify-center gap-1' : 'flex-1 py-1 text-[10px] rounded bg-indigo-600 text-white font-bold transition-all flex items-center justify-center gap-1';
+    if (btnVert) btnVert.className = isVert ? 'flex-1 py-1 text-[10px] rounded bg-indigo-600 text-white font-bold transition-all flex items-center justify-center gap-1' : 'flex-1 py-1 text-[10px] rounded text-slate-400 hover:text-slate-200 font-bold transition-all flex items-center justify-center gap-1';
+
+    // Sync Bold Toggle Button
+    const btnBold = document.getElementById('btn-toggle-bold');
+    if (btnBold) {
+        btnBold.className = block.style.bold
+            ? 'py-1 px-2 rounded-lg bg-indigo-600 border border-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition-all shadow'
+            : 'py-1 px-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-bold text-xs flex items-center justify-center gap-1 transition-all hover:border-indigo-500/50';
+    }
+
     syncColorAndOpacityInputs(block);
 }
 

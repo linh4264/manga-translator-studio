@@ -25,7 +25,8 @@ if (typeof globalThis.document === 'undefined') {
                 addEventListener: () => {}
             };
             return el;
-        }
+        },
+        createTextNode: (text) => ({ nodeType: 3, textContent: String(text || '') })
     };
 }
 if (typeof globalThis.localStorage === 'undefined') {

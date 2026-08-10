@@ -701,6 +701,15 @@ export function resetWarpTransformControls() {
     if (bSlider) bSlider.value = 0;
 }
 
+export function toggleActiveBlockBold() {
+    const activePage = globalState.pages[globalState.activePageIndex];
+    if (!activePage || !globalState.selectedBlockId) return;
+    const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!block) return;
+    const newBold = !block.style.bold;
+    syncActiveBlockStyle('bold', newBold);
+}
+
 export function resetSfxAngleControls() {
     resetWarpTransformControls();
 }
@@ -714,3 +723,4 @@ window.updateSfxArc = updateSfxArc;
 window.updateSfxRotate = updateSfxRotate;
 window.resetWarpTransformControls = resetWarpTransformControls;
 window.resetSfxAngleControls = resetSfxAngleControls;
+window.toggleActiveBlockBold = toggleActiveBlockBold;

@@ -850,351 +850,285 @@
             <!-- Tab: STYLE CONTAINER -->
             <div id="panel-tab-style" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
 
-                <!-- Typesetting Style Presets -->
-                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-2">
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mẫu chữ nhanh (Presets)</label>
-                    <div class="grid grid-cols-2 gap-1.5">
-                        <button data-action="applyStylePreset" data-preset="dialogue"
-                            class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded flex items-center justify-center gap-1.5 transition-colors text-xs font-semibold text-slate-200"
-                            title="Kiểu bong bóng thoại chuẩn">
-                            <span data-i18n="preset-dialogue">💬 Thoại</span>
+                <!-- 1. QUẢN LÝ PHÔNG CHỮ & BỐ CỤC (Typography & Layout) -->
+                <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-3 shadow-sm">
+                    <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                        <label class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-font"></i> <span>Phông chữ & Bố cục</span>
+                        </label>
+                        <button onclick="document.getElementById('font-uploader').click()"
+                            class="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 transition-colors"
+                            title="Tải phông chữ tùy chỉnh (.ttf, .otf, .woff2)">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> + Font
                         </button>
-                        <button data-action="applyStylePreset" data-preset="scream"
-                            class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded flex items-center justify-center gap-1.5 transition-colors text-xs font-semibold text-slate-200"
-                            title="Kiểu hét lớn hoặc SFX">
-                            <span data-i18n="preset-scream">💥 Hét / SFX</span>
-                        </button>
-                        <button data-action="applyStylePreset" data-preset="whisper"
-                            class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded flex items-center justify-center gap-1.5 transition-colors text-xs font-semibold text-slate-200"
-                            title="Kiểu nói thầm">
-                            <span data-i18n="preset-whisper">💭 Thầm thì</span>
-                        </button>
-                        <button data-action="applyStylePreset" data-preset="narration"
-                            class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded flex items-center justify-center gap-1.5 transition-colors text-xs font-semibold text-slate-200"
-                            title="Hộp dẫn truyện">
-                            <span data-i18n="preset-narration">📜 Dẫn chuyện</span>
-                        </button>
-                        <button data-action="applyStylePreset" data-preset="transparent-stroke4"
-                            class="col-span-2 py-1.5 px-2 bg-purple-950/40 border border-purple-500/30 hover:border-purple-500 hover:bg-purple-900/40 rounded flex items-center justify-center gap-1.5 transition-colors text-xs font-bold text-purple-300"
-                            title="Định dạng nhanh: Nền trong suốt Opacity 0% và Viền chữ Stroke 4px">
-                            <i class="fa-solid fa-border-none text-xs"></i> <span>✨ Nền 0% + Viền 4px</span>
-                        </button>
+                        <input type="file" id="font-uploader" accept=".ttf,.otf,.woff,.woff2" class="hidden" multiple onchange="uploadCustomFonts(this.files)">
                     </div>
-                </div>
 
-                <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 flex items-center justify-between">
-                    <span data-i18n="auto-fit-label" class="text-xs font-semibold text-slate-350">Cỡ chữ Tự Động (Auto-Fit)</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="style-auto-fit" onchange="toggleAutoFit(this.checked)"
-                            class="sr-only peer">
-                        <div
-                            class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-300 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600">
-                        </div>
-                    </label>
-                </div>
-
-                <!-- Font Typography Customizers -->
-                <div class="space-y-3">
                     <!-- Font Family Select -->
-                    <div class="space-y-1">
-                        <div class="flex justify-between items-center">
-                            <label data-i18n="font-family-label"
-                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phông chữ</label>
-                            <button onclick="document.getElementById('font-uploader').click()"
-                                class="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 transition-colors"
-                                title="Tải phông chữ tùy chỉnh từ máy tính (.ttf, .otf, .woff2)">
-                                <i class="fa-solid fa-file-invoice"></i> + Thêm Font
-                            </button>
-                            <input type="file" id="font-uploader" accept=".ttf,.otf,.woff,.woff2" class="hidden"
-                                multiple onchange="uploadCustomFonts(this.files)">
-                        </div>
-                        <select id="style-font" onchange="syncActiveBlockStyle('fontFamily', this.value)"
-                            class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-                            <option value="font-comic" selected>Vui nhộn (Patrick Hand)</option>
-                            <option value="font-comicneue">Comic mượt (Comic Neue)</option>
-                            <option value="font-manga">Chuẩn Manga (Nunito Bold)</option>
-                            <option value="font-vietnamese">Việt tối ưu (Be Vietnam Pro)</option>
-                            <option value="font-impact">Kỳ vĩ / SFX (Bangers)</option>
-                            <option value="font-marker">Cọ vẽ / SFX Đậm (Permanent Marker)</option>
-                            <option value="font-bungee">SFX Khối vuông (Bungee)</option>
-                            <option value="font-caveat">SFX Viết tay (Caveat)</option>
-                            <option value="font-tech">Cơ khí / Robot (Chakra Petch)</option>
-                            <option value="font-condensed">Gào thét / Ghi chú (Saira Condensed)</option>
-                        </select>
-                    </div>
+                    <select id="style-font" onchange="syncActiveBlockStyle('fontFamily', this.value)"
+                        class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
+                        <option value="font-comic" selected>Vui nhộn (Patrick Hand)</option>
+                        <option value="font-comicneue">Comic mượt (Comic Neue)</option>
+                        <option value="font-manga">Chuẩn Manga (Nunito Bold)</option>
+                        <option value="font-vietnamese">Việt tối ưu (Be Vietnam Pro)</option>
+                        <option value="font-impact">Kỳ vĩ / SFX (Bangers)</option>
+                        <option value="font-marker">Cọ vẽ / SFX Đậm (Permanent Marker)</option>
+                        <option value="font-bungee">SFX Khối vuông (Bungee)</option>
+                        <option value="font-caveat">SFX Viết tay (Caveat)</option>
+                        <option value="font-tech">Cơ khí / Robot (Chakra Petch)</option>
+                        <option value="font-condensed">Gào thét / Ghi chú (Saira Condensed)</option>
+                    </select>
 
-                    <!-- Manual Font size & Per-block Auto-Fit -->
-                    <div id="style-font-size-container" class="space-y-1">
-                        <div class="flex justify-between items-center">
+                    <!-- Cỡ chữ Slider + Auto-Fit Checkbox -->
+                    <div id="style-font-size-container" class="space-y-1 pt-1">
+                        <div class="flex justify-between items-center text-xs">
                             <div class="flex items-center gap-2">
-                                <label data-i18n="font-size-label"
-                                    class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cỡ chữ</label>
-                                <label class="flex items-center gap-1 text-[10px] text-indigo-400 cursor-pointer select-none font-semibold" title="Bật/Tắt tự động tính cỡ chữ vừa bóng thoại cho riêng ô thoại này">
-                                    <input type="checkbox" id="style-auto-fit" onchange="toggleBlockAutoFit(this.checked)"
-                                        class="rounded border-slate-800 text-indigo-600 focus:ring-0 w-3 h-3">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cỡ chữ</span>
+                                <label class="flex items-center gap-1 text-[10px] text-indigo-400 cursor-pointer select-none font-semibold">
+                                    <input type="checkbox" id="style-auto-fit" onchange="toggleBlockAutoFit(this.checked)" class="rounded border-slate-800 text-indigo-600 focus:ring-0 w-3.5 h-3.5">
                                     <span>Tự động (Auto-Fit)</span>
                                 </label>
                             </div>
-                            <span id="lbl-font-size" class="text-xs text-indigo-400 font-mono">13px</span>
+                            <span id="lbl-font-size" class="text-xs text-indigo-400 font-mono font-bold">13px</span>
                         </div>
                         <input type="range" id="style-font-size" min="8" max="72" value="13"
                             oninput="syncActiveBlockStyle('fontSize', parseInt(this.value))"
                             class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
                     </div>
 
-                    <!-- Text Align & Layout Orientations -->
-                    <div class="grid grid-cols-2 gap-2">
-                        <div class="space-y-1">
-                            <label data-i18n="align-label"
-                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Căn lề
-                                (Align)</label>
-                            <select id="style-align" onchange="syncActiveBlockStyle('align', this.value)"
-                                class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none">
+                    <!-- Alignment, Direction & Bold Control Bar -->
+                    <div class="grid grid-cols-3 gap-1.5 pt-1">
+                        <!-- Align Buttons -->
+                        <div class="flex rounded-lg bg-slate-900 p-0.5 border border-slate-800">
+                            <button onclick="syncActiveBlockStyle('align', 'left')" id="btn-align-left" title="Căn trái"
+                                class="flex-1 py-1 text-[10px] rounded text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center">
+                                <i class="fa-solid fa-align-left"></i>
+                            </button>
+                            <button onclick="syncActiveBlockStyle('align', 'center')" id="btn-align-center" title="Căn giữa"
+                                class="flex-1 py-1 text-[10px] rounded bg-indigo-600 text-white transition-all flex items-center justify-center">
+                                <i class="fa-solid fa-align-center"></i>
+                            </button>
+                            <button onclick="syncActiveBlockStyle('align', 'right')" id="btn-align-right" title="Căn phải"
+                                class="flex-1 py-1 text-[10px] rounded text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center">
+                                <i class="fa-solid fa-align-right"></i>
+                            </button>
+                            <select id="style-align" onchange="syncActiveBlockStyle('align', this.value)" class="hidden">
                                 <option value="center">Giữa</option>
                                 <option value="left">Trái</option>
                                 <option value="right">Phải</option>
                             </select>
                         </div>
-                        <div class="space-y-1">
-                            <label data-i18n="writing-direction-label"
-                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hướng
-                                viết</label>
-                            <div class="grid grid-cols-2 gap-1">
-                                <button id="btn-style-horiz" data-i18n="horizontal-btn"
-                                    onclick="syncActiveBlockStyle('vertical', false)"
-                                    class="py-1 text-xs rounded bg-indigo-600 text-white font-semibold">Ngang</button>
-                                <button id="btn-style-vert" data-i18n="vertical-btn"
-                                    onclick="syncActiveBlockStyle('vertical', true)"
-                                    class="py-1 text-xs rounded bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 font-semibold">Dọc</button>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Bold and Style options -->
-                    <div class="flex items-center space-x-4 py-1">
-                        <label class="flex items-center space-x-2 text-xs text-slate-300 cursor-pointer">
-                            <input type="checkbox" id="style-bold" onchange="syncActiveBlockStyle('bold', this.checked)"
-                                class="rounded border-slate-800 text-indigo-600 focus:ring-0">
-                            <span>Chữ In đậm (Bold)</span>
-                        </label>
-                    </div>
-
-                    <!-- Text Color and Background Color Colorpickers -->
-                    <div class="grid grid-cols-2 gap-2 border-t border-slate-800 pt-3">
-                        <div class="space-y-1">
-                            <label data-i18n="text-color-label"
-                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Màu chữ</label>
-                            <div class="flex items-center space-x-1.5">
-                                <input type="color" id="style-text-color" value="#000000"
-                                    oninput="syncTextColorHex(this.value)"
-                                    class="w-8 h-8 rounded border border-slate-800 bg-transparent cursor-pointer">
-                                <input type="text" id="style-text-color-hex" value="#000000"
-                                    oninput="syncTextColorHex(this.value)"
-                                    class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-300 font-mono focus:outline-none">
-                            </div>
-                        </div>
-                        <div class="space-y-1">
-                            <label data-i18n="bg-color-label"
-                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Màu nền
-                                che</label>
-                            <div class="flex items-center space-x-1.5">
-                                <input type="color" id="style-bg-color" value="#ffffff"
-                                    oninput="syncBgColorHex(this.value)"
-                                    class="w-8 h-8 rounded border border-slate-800 bg-transparent cursor-pointer">
-                                <input type="text" id="style-bg-color-hex" value="#ffffff"
-                                    oninput="syncBgColorHex(this.value)"
-                                    class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-300 font-mono focus:outline-none">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Background Opacity -->
-                    <div class="space-y-1 border-t border-slate-800 pt-3">
-                        <div class="flex justify-between items-center">
-                            <label data-i18n="bg-opacity-label"
-                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Độ mờ của nền che
-                                (Opacity)</label>
-                            <span id="lbl-bg-opacity" class="text-xs text-slate-400 font-mono">100%</span>
-                        </div>
-                        <input type="range" id="style-bg-opacity" min="0" max="100" value="100"
-                            oninput="syncActiveBlockStyle('bgOpacity', parseInt(this.value))"
-                            class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-                    </div>
-
-                    <!-- Text Stroke (Viền chữ) -->
-                    <div class="space-y-2 border-t border-slate-800 pt-3">
-                        <div class="flex justify-between items-center">
-                            <label data-i18n="stroke-label"
-                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Viền chữ
-                                (Stroke)</label>
-                            <span id="lbl-stroke-width" class="text-xs text-indigo-400 font-mono">0px</span>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div class="flex items-center space-x-1.5">
-                                <input type="color" id="style-stroke-color" value="#ffffff"
-                                    oninput="syncStrokeColorHex(this.value)"
-                                    class="w-8 h-8 rounded border border-slate-800 bg-transparent cursor-pointer">
-                                <input type="text" id="style-stroke-color-hex" value="#FFFFFF"
-                                    oninput="syncStrokeColorHex(this.value)"
-                                    class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-300 font-mono focus:outline-none">
-                            </div>
-                            <input type="range" id="style-stroke-width" min="0" max="10" value="0" step="0.5"
-                                oninput="syncActiveBlockStyle('strokeWidth', parseFloat(this.value))"
-                                class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 self-center">
-                        </div>
-                    </div>
-
-                    <!-- Drop Shadow (Bóng đổ chữ) -->
-                    <div class="space-y-2 border-t border-slate-800 pt-3">
-                        <div class="flex justify-between items-center">
-                            <label data-i18n="shadow-label"
-                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bóng đổ (Drop
-                                Shadow)</label>
-                            <span id="lbl-shadow-blur" class="text-xs text-indigo-400 font-mono">0px</span>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div class="flex items-center space-x-1.5">
-                                <input type="color" id="style-shadow-color" value="#000000"
-                                    oninput="syncShadowColorHex(this.value)"
-                                    class="w-8 h-8 rounded border border-slate-800 bg-transparent cursor-pointer">
-                                <input type="text" id="style-shadow-color-hex" value="#000000"
-                                    oninput="syncShadowColorHex(this.value)"
-                                    class="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-300 font-mono focus:outline-none">
-                            </div>
-                            <div class="space-y-1">
-                                <div class="flex justify-between text-[9px] text-slate-500">
-                                    <span>Độ mờ (Blur)</span>
-                                </div>
-                                <input type="range" id="style-shadow-blur" min="0" max="15" value="0"
-                                    oninput="syncActiveBlockStyle('shadowBlur', parseInt(this.value))"
-                                    class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Masking Configurations for Perfect Speech Bubble Erasure -->
-                    <div class="space-y-3 border-t border-slate-800 pt-3">
-                        <label data-i18n="masking-label"
-                            class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Mặt nạ xóa chữ
-                            cũ (Masking)</label>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div class="space-y-1">
-                                <span data-i18n="mask-shape-label" class="text-[10px] text-slate-400">Dáng mặt nạ</span>
-                                <select id="style-mask-shape" onchange="syncActiveBlockStyle('maskShape', this.value)"
-                                    class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
-                                    <option value="bubble-fit" selected>Khớp bong bóng thoại (Bubble Fit)</option>
-                                    <option value="ellipse">Hình bầu dục (Ellipse)</option>
-                                    <option value="rounded">Bo góc tròn (Rounded)</option>
-                                    <option value="rect">Hình chữ nhật (Rectangle)</option>
-                                </select>
-                            </div>
-                            <div class="space-y-1">
-                                <span data-i18n="mask-size-label" class="text-[10px] text-slate-400">Kích cỡ che</span>
-                                <select id="style-mask-size" onchange="syncActiveBlockStyle('maskSize', this.value)"
-                                    class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
-                                    <option value="full">Che hết khung (Đề xuất)</option>
-                                    <option value="snug">Chỉ che khít chữ</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Auto Style Match Quick Action -->
-                        <div class="pt-2">
-                            <button onclick="autoMatchActiveBlockStyle()"
-                                class="w-full py-1.5 px-3 bg-emerald-600/20 border border-emerald-500/40 hover:bg-emerald-600 text-emerald-200 rounded text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-md"
-                                title="Tự động phân tích màu sắc và loại chữ trên tranh để chọn Font, màu chữ & viền phù hợp">
-                                <i class="fa-solid fa-wand-magic-sparkles text-emerald-400"></i> Auto Match Font & Color
+                        <!-- Writing Orientation -->
+                        <div class="flex rounded-lg bg-slate-900 p-0.5 border border-slate-800">
+                            <button id="btn-style-horiz" onclick="syncActiveBlockStyle('vertical', false)" title="Chữ gõ Ngang"
+                                class="flex-1 py-1 text-[10px] rounded bg-indigo-600 text-white font-bold transition-all flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-arrow-right-long text-[9px]"></i> Ngang
+                            </button>
+                            <button id="btn-style-vert" onclick="syncActiveBlockStyle('vertical', true)" title="Chữ gõ Dọc"
+                                class="flex-1 py-1 text-[10px] rounded text-slate-400 hover:text-slate-200 font-bold transition-all flex items-center justify-center gap-1">
+                                <i class="fa-solid fa-arrow-down-long text-[9px]"></i> Dọc
                             </button>
                         </div>
+
+                        <!-- Bold Toggle Button -->
+                        <button id="btn-toggle-bold" onclick="toggleActiveBlockBold()" title="In đậm chữ (Bold)"
+                            class="py-1 px-2 rounded-lg bg-slate-900 border border-slate-800 hover:border-indigo-500/50 text-slate-300 font-bold text-xs flex items-center justify-center gap-1 transition-all">
+                            <i class="fa-solid fa-bold text-indigo-400"></i> Bold
+                        </button>
+                        <input type="checkbox" id="style-bold" onchange="syncActiveBlockStyle('bold', this.checked)" class="hidden">
+                    </div>
+                </div>
+
+                <!-- 2. MÀU SẮC & NỀN CHE (Color & Background Masking) -->
+                <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-3 shadow-sm">
+                    <label class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block border-b border-slate-800/80 pb-2 flex items-center gap-1.5">
+                        <i class="fa-solid fa-palette"></i> <span>Màu sắc & Mặt nạ xóa chữ cũ</span>
+                    </label>
+
+                    <!-- Text Color & Background Color -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="space-y-1">
+                            <span class="text-[10px] text-slate-400">Màu chữ</span>
+                            <div class="flex items-center space-x-1.5">
+                                <input type="color" id="style-text-color" value="#000000" oninput="syncTextColorHex(this.value)" class="w-7 h-7 rounded border border-slate-800 bg-transparent cursor-pointer">
+                                <input type="text" id="style-text-color-hex" value="#000000" oninput="syncTextColorHex(this.value)" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-300 font-mono focus:outline-none">
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <span class="text-[10px] text-slate-400">Màu nền che</span>
+                            <div class="flex items-center space-x-1.5">
+                                <input type="color" id="style-bg-color" value="#ffffff" oninput="syncBgColorHex(this.value)" class="w-7 h-7 rounded border border-slate-800 bg-transparent cursor-pointer">
+                                <input type="text" id="style-bg-color-hex" value="#ffffff" oninput="syncBgColorHex(this.value)" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-300 font-mono focus:outline-none">
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Element Internal Padding -->
-                    <div class="space-y-1 border-t border-slate-800 pt-3">
+                    <!-- Background Opacity & Internal Padding -->
+                    <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-900">
+                        <div class="space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] text-slate-400">Độ mờ nền</span>
+                                <span id="lbl-bg-opacity" class="text-[10px] text-slate-400 font-mono">100%</span>
+                            </div>
+                            <input type="range" id="style-bg-opacity" min="0" max="100" value="100" oninput="syncActiveBlockStyle('bgOpacity', parseInt(this.value))" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] text-slate-400">Đệm lề (Padding)</span>
+                                <span id="lbl-padding" class="text-[10px] text-slate-400 font-mono">4px</span>
+                            </div>
+                            <input type="range" id="style-padding" min="0" max="24" value="4" oninput="syncActiveBlockStyle('padding', parseInt(this.value))" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                        </div>
+                    </div>
+
+                    <!-- Masking Shape & Size -->
+                    <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-900">
+                        <div class="space-y-1">
+                            <span class="text-[10px] text-slate-400">Dáng mặt nạ</span>
+                            <select id="style-mask-shape" onchange="syncActiveBlockStyle('maskShape', this.value)" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none">
+                                <option value="bubble-fit" selected>Khớp bóng thoại (Fit)</option>
+                                <option value="ellipse">Hình bầu dục (Ellipse)</option>
+                                <option value="rounded">Bo tròn góc (Rounded)</option>
+                                <option value="rect">Hình chữ nhật (Rect)</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <span class="text-[10px] text-slate-400">Kích cỡ che</span>
+                            <select id="style-mask-size" onchange="syncActiveBlockStyle('maskSize', this.value)" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none">
+                                <option value="full">Che hết khung</option>
+                                <option value="snug">Chỉ che khít chữ</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Auto Style Match Quick Action -->
+                    <button onclick="autoMatchActiveBlockStyle()"
+                        class="w-full py-1.5 px-3 bg-emerald-600/20 border border-emerald-500/40 hover:bg-emerald-600 text-emerald-200 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-md mt-1"
+                        title="Tự động phân tích màu sắc và loại chữ trên tranh để chọn Font, màu chữ & viền phù hợp">
+                        <i class="fa-solid fa-wand-magic-sparkles text-emerald-400"></i> Auto Match Font & Màu
+                    </button>
+                </div>
+
+                <!-- 3. VIỀN CHỮ & BÓNG ĐỔ (Stroke & Drop Shadow) -->
+                <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-3 shadow-sm">
+                    <label class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block border-b border-slate-800/80 pb-2 flex items-center gap-1.5">
+                        <i class="fa-solid fa-pen-nib"></i> <span>Viền chữ & Bóng đổ</span>
+                    </label>
+
+                    <!-- Text Stroke -->
+                    <div class="space-y-1.5">
                         <div class="flex justify-between items-center">
-                            <label data-i18n="padding-label"
-                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Khoảng đệm chữ
-                                (Padding)</label>
-                            <span id="lbl-padding" class="text-xs text-slate-400 font-mono">4px</span>
+                            <span class="text-[10px] text-slate-400">Viền chữ (Stroke)</span>
+                            <span id="lbl-stroke-width" class="text-xs text-indigo-400 font-mono font-bold">0px</span>
                         </div>
-                        <input type="range" id="style-padding" min="0" max="24" value="4"
-                            oninput="syncActiveBlockStyle('padding', parseInt(this.value))"
-                            class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-                    </div>
-
-                    <!-- Warp & Text Transformation Suite -->
-                    <div class="space-y-3 border-t border-slate-800 pt-3">
-                        <label class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block flex items-center justify-between">
-                            <span class="flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles"></i> Biến dạng & Uốn chữ (Warp Suite)</span>
-                            <button onclick="resetWarpTransformControls()" class="text-[9px] text-slate-500 hover:text-indigo-400 transition-colors" title="Reset Warp về 0">Reset</button>
-                        </label>
-
-                        <!-- Rotation -->
-                        <div class="space-y-1">
-                            <div class="flex justify-between items-center">
-                                <span class="text-[10px] text-slate-400">Góc xoay (Rotate)</span>
-                                <span id="lbl-rotate" class="text-xs text-indigo-400 font-mono">0°</span>
-                            </div>
-                            <input type="range" id="style-rotate" min="-180" max="180" value="0"
-                                oninput="syncActiveBlockStyle('rotate', parseInt(this.value))"
-                                class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-                        </div>
-
-                        <!-- Arc Angle -->
-                        <div class="space-y-1">
-                            <div class="flex justify-between items-center">
-                                <span class="text-[10px] text-slate-400">Độ uốn vòm (Arc)</span>
-                                <span id="lbl-sfx-arc" class="text-xs text-indigo-400 font-mono">0°</span>
-                            </div>
-                            <input type="range" id="slider-sfx-arc" min="-60" max="60" value="0"
-                                oninput="updateSfxArc(this.value)"
-                                class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-                        </div>
-
-                        <!-- Skew X & Skew Y (Nghiêng phối cảnh 3D) -->
                         <div class="grid grid-cols-2 gap-2">
-                            <div class="space-y-1">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] text-slate-400">Nghiêng X (Skew X)</span>
-                                    <span id="lbl-sfx-skew-x" class="text-xs text-indigo-400 font-mono">0°</span>
-                                </div>
-                                <input type="range" id="slider-sfx-skew-x" min="-45" max="45" value="0"
-                                    oninput="updateSfxSkewX(this.value)"
-                                    class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                            <div class="flex items-center space-x-1.5">
+                                <input type="color" id="style-stroke-color" value="#ffffff" oninput="syncStrokeColorHex(this.value)" class="w-7 h-7 rounded border border-slate-800 bg-transparent cursor-pointer">
+                                <input type="text" id="style-stroke-color-hex" value="#FFFFFF" oninput="syncStrokeColorHex(this.value)" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-300 font-mono focus:outline-none">
                             </div>
-                            <div class="space-y-1">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] text-slate-400">Nghiêng Y (Skew Y)</span>
-                                    <span id="lbl-sfx-skew-y" class="text-xs text-indigo-400 font-mono">0°</span>
-                                </div>
-                                <input type="range" id="slider-sfx-skew-y" min="-45" max="45" value="0"
-                                    oninput="updateSfxSkewY(this.value)"
-                                    class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-                            </div>
-                        </div>
-
-                        <!-- Wave & Bulge (Uốn sóng S & Nổ phình chữ) -->
-                        <div class="grid grid-cols-2 gap-2">
-                            <div class="space-y-1">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] text-slate-400">Uốn sóng S (Wave)</span>
-                                    <span id="lbl-sfx-wave" class="text-xs text-indigo-400 font-mono">0</span>
-                                </div>
-                                <input type="range" id="slider-sfx-wave" min="-50" max="50" value="0"
-                                    oninput="updateSfxWave(this.value)"
-                                    class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-                            </div>
-                            <div class="space-y-1">
-                                <div class="flex justify-between items-center">
-                                    <span class="text-[10px] text-slate-400">Phình to (Bulge)</span>
-                                    <span id="lbl-sfx-bulge" class="text-xs text-indigo-400 font-mono">0</span>
-                                </div>
-                                <input type="range" id="slider-sfx-bulge" min="-50" max="50" value="0"
-                                    oninput="updateSfxBulge(this.value)"
-                                    class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-                            </div>
+                            <input type="range" id="style-stroke-width" min="0" max="10" value="0" step="0.5" oninput="syncActiveBlockStyle('strokeWidth', parseFloat(this.value))" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 self-center">
                         </div>
                     </div>
 
+                    <!-- Drop Shadow -->
+                    <div class="space-y-1.5 pt-2 border-t border-slate-900">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] text-slate-400">Bóng đổ (Drop Shadow)</span>
+                            <span id="lbl-shadow-blur" class="text-xs text-indigo-400 font-mono font-bold">0px</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="flex items-center space-x-1.5">
+                                <input type="color" id="style-shadow-color" value="#000000" oninput="syncShadowColorHex(this.value)" class="w-7 h-7 rounded border border-slate-800 bg-transparent cursor-pointer">
+                                <input type="text" id="style-shadow-color-hex" value="#000000" oninput="syncShadowColorHex(this.value)" class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-300 font-mono focus:outline-none">
+                            </div>
+                            <input type="range" id="style-shadow-blur" min="0" max="15" value="0" oninput="syncActiveBlockStyle('shadowBlur', parseInt(this.value))" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500 self-center">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. BIẾN DẠNG & UỐN CHỮ (Warp & Transformation Suite) -->
+                <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-3 shadow-sm">
+                    <label class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block border-b border-slate-800/80 pb-2 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-arrows-spin"></i> Biến dạng & Uốn chữ (Warp Suite)</span>
+                        <button onclick="resetWarpTransformControls()" class="text-[9px] px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 hover:text-indigo-300 hover:border-indigo-500/50 transition-all font-semibold" title="Khôi phục Warp về 0">Reset All</button>
+                    </label>
+
+                    <!-- Rotation -->
+                    <div class="space-y-1">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] text-slate-400">Góc xoay (Rotate)</span>
+                            <span id="lbl-rotate" class="text-xs text-indigo-400 font-mono font-bold">0°</span>
+                        </div>
+                        <input type="range" id="style-rotate" min="-180" max="180" value="0" oninput="syncActiveBlockStyle('rotate', parseInt(this.value))" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                    </div>
+
+                    <!-- Arc Angle -->
+                    <div class="space-y-1 pt-1 border-t border-slate-900">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] text-slate-400">Độ uốn vòm (Arc)</span>
+                            <span id="lbl-sfx-arc" class="text-xs text-indigo-400 font-mono font-bold">0°</span>
+                        </div>
+                        <input type="range" id="slider-sfx-arc" min="-60" max="60" value="0" oninput="updateSfxArc(this.value)" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                    </div>
+
+                    <!-- Skew X & Skew Y -->
+                    <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-900">
+                        <div class="space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] text-slate-400">Nghiêng X (Skew X)</span>
+                                <span id="lbl-sfx-skew-x" class="text-xs text-indigo-400 font-mono font-bold">0°</span>
+                            </div>
+                            <input type="range" id="slider-sfx-skew-x" min="-45" max="45" value="0" oninput="updateSfxSkewX(this.value)" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] text-slate-400">Nghiêng Y (Skew Y)</span>
+                                <span id="lbl-sfx-skew-y" class="text-xs text-indigo-400 font-mono font-bold">0°</span>
+                            </div>
+                            <input type="range" id="slider-sfx-skew-y" min="-45" max="45" value="0" oninput="updateSfxSkewY(this.value)" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                        </div>
+                    </div>
+
+                    <!-- Wave & Bulge -->
+                    <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-900">
+                        <div class="space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] text-slate-400">Uốn sóng S (Wave)</span>
+                                <span id="lbl-sfx-wave" class="text-xs text-indigo-400 font-mono font-bold">0</span>
+                            </div>
+                            <input type="range" id="slider-sfx-wave" min="-50" max="50" value="0" oninput="updateSfxWave(this.value)" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] text-slate-400">Phình to (Bulge)</span>
+                                <span id="lbl-sfx-bulge" class="text-xs text-indigo-400 font-mono font-bold">0</span>
+                            </div>
+                            <input type="range" id="slider-sfx-bulge" min="-50" max="50" value="0" oninput="updateSfxBulge(this.value)" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. MẪU DỊCH NHANH (Style Presets) -->
+                <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-2 shadow-sm">
+                    <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mẫu định dạng nhanh (Presets)</label>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <button data-action="applyStylePreset" data-preset="dialogue" class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded-lg flex items-center justify-center gap-1.5 transition-colors text-xs font-semibold text-slate-200" title="Kiểu bong bóng thoại chuẩn">
+                            <span data-i18n="preset-dialogue">💬 Thoại</span>
+                        </button>
+                        <button data-action="applyStylePreset" data-preset="scream" class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded-lg flex items-center justify-center gap-1.5 transition-colors text-xs font-semibold text-slate-200" title="Kiểu hét lớn hoặc SFX">
+                            <span data-i18n="preset-scream">💥 Hét / SFX</span>
+                        </button>
+                        <button data-action="applyStylePreset" data-preset="whisper" class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded-lg flex items-center justify-center gap-1.5 transition-colors text-xs font-semibold text-slate-200" title="Kiểu nói thầm">
+                            <span data-i18n="preset-whisper">💭 Thầm thì</span>
+                        </button>
+                        <button data-action="applyStylePreset" data-preset="narration" class="py-1.5 px-2 bg-slate-900 border border-slate-800 hover:border-indigo-500/50 rounded-lg flex items-center justify-center gap-1.5 transition-colors text-xs font-semibold text-slate-200" title="Hộp dẫn truyện">
+                            <span data-i18n="preset-narration">📜 Dẫn chuyện</span>
+                        </button>
+                        <button data-action="applyStylePreset" data-preset="transparent-stroke4" class="col-span-2 py-1.5 px-2 bg-purple-950/40 border border-purple-500/30 hover:border-purple-500 hover:bg-purple-900/40 rounded-lg flex items-center justify-center gap-1.5 transition-colors text-xs font-bold text-purple-300" title="Định dạng nhanh: Nền trong suốt Opacity 0% và Viền chữ Stroke 4px">
+                            <i class="fa-solid fa-border-none text-xs"></i> <span>✨ Nền 0% + Viền 4px</span>
+                        </button>
+                    </div>
                 </div>
 
             </div>
