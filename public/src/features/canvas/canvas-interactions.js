@@ -320,6 +320,106 @@ export function addNewBlock() {
     showToast("Đã thêm một ô dịch mới!", "success");
 }
 
+export function triggerAddImageBlock() {
+    if (globalState.activePageIndex === -1) {
+        showToast("Vui lòng tải hoặc mở một trang trước khi chèn ảnh!", "error");
+        return;
+    }
+    const input = document.getElementById('input-add-image-block');
+    if (input) {
+        input.value = '';
+        input.click();
+    }
+}
+
+export function handleImageBlockSelect(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        showToast("Tệp đã chọn không phải định dạng hình ảnh hợp lệ!", "error");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const imageUrl = e.target.result;
+        const img = new Image();
+        img.onload = () => {
+            if (globalState.activePageIndex === -1) return;
+            const page = globalState.pages[globalState.activePageIndex];
+
+            const aspect = img.naturalWidth / Math.max(1, img.naturalHeight);
+            let w = 25;
+            let h = 25 / aspect;
+            if (h > 40) {
+                h = 40;
+                w = 40 * aspect;
+            }
+
+            const newId = `image_block_${Date.now()}`;
+            const newBlock = {
+                id: newId,
+                type: 'image',
+                imageUrl: imageUrl,
+                original: '[IMAGE]',
+                translated: '',
+                box: {
+                    x: Math.max(5, Math.min(70, Math.round((50 - w / 2) * 10) / 10)),
+                    y: Math.max(5, Math.min(70, Math.round((50 - h / 2) * 10) / 10)),
+                    w: Math.round(w * 10) / 10,
+                    h: Math.round(h * 10) / 10
+                },
+                style: {
+                    rotate: 0,
+                    opacity: 100,
+                    fit: 'contain',
+                    borderRadius: 0
+                }
+            };
+
+            pushStateToHistory();
+            page.blocks.push(newBlock);
+            selectBlock(newId);
+            savePageToDB(page);
+            import('./canvas-renderer.js').then(r => r.requestOverlayRender());
+            showToast("Đã chèn ảnh lên trang thành công!", "success");
+        };
+        img.src = imageUrl;
+    };
+    reader.readAsDataURL(file);
+}
+
+export function triggerReplaceImageBlock() {
+    const input = document.getElementById('input-replace-image-block');
+    if (input) {
+        input.value = '';
+        input.click();
+    }
+}
+
+export function handleReplaceImageBlockSelect(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!block || block.type !== 'image') return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        pushStateToHistory();
+        block.imageUrl = e.target.result;
+        savePageToDB(page);
+        import('./canvas-renderer.js').then(r => r.requestOverlayRender());
+        const imgPreview = document.getElementById('img-block-preview');
+        if (imgPreview) imgPreview.src = block.imageUrl;
+        showToast("Đã thay đổi tệp ảnh chèn!", "success");
+    };
+    reader.readAsDataURL(file);
+}
+
 export function initBilingualTooltipEvents() {
     const tooltip = document.getElementById('bilingual-hover-tooltip');
     const container = elements.mangaOverlaysContainer;

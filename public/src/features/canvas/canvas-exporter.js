@@ -78,12 +78,86 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
 
     if (page.blocks && page.blocks.length > 0) {
         for (const block of page.blocks) {
-            if (!block.translated || !block.translated.trim()) continue;
-
             const bx = (block.box.x / 100) * W;
             const by = (block.box.y / 100) * H;
             const bw = (block.box.w / 100) * W;
             const bh = (block.box.h / 100) * H;
+
+            if (block.type === 'image') {
+                if (!block.imageUrl) continue;
+                ctx.save();
+                if (block.style.rotate) {
+                    const cx = bx + bw / 2;
+                    const cy = by + bh / 2;
+                    ctx.translate(cx, cy);
+                    ctx.rotate((block.style.rotate * Math.PI) / 180);
+                    ctx.translate(-cx, -cy);
+                }
+
+                ctx.globalAlpha = (block.style.opacity !== undefined ? block.style.opacity : 100) / 100;
+
+                await new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        if (block.style.borderRadius && block.style.borderRadius > 0) {
+                            const rad = (block.style.borderRadius / 100) * Math.min(bw, bh);
+                            ctx.beginPath();
+                            if (typeof ctx.roundRect === 'function') {
+                                ctx.roundRect(bx, by, bw, bh, rad);
+                            } else {
+                                ctx.rect(bx, by, bw, bh);
+                            }
+                            ctx.clip();
+                        }
+
+                        const fitMode = block.style.fit || 'contain';
+                        const imgW = img.naturalWidth || img.width;
+                        const imgH = img.naturalHeight || img.height;
+
+                        if (!imgW || !imgH || fitMode === 'fill') {
+                            ctx.drawImage(img, bx, by, bw, bh);
+                        } else {
+                            const imgAspect = imgW / imgH;
+                            const boxAspect = bw / bh;
+
+                            if (fitMode === 'cover') {
+                                let sx = 0, sy = 0, sw = imgW, sh = imgH;
+                                if (imgAspect > boxAspect) {
+                                    sh = imgH;
+                                    sw = imgH * boxAspect;
+                                    sx = (imgW - sw) / 2;
+                                } else {
+                                    sw = imgW;
+                                    sh = imgW / boxAspect;
+                                    sy = (imgH - sh) / 2;
+                                }
+                                ctx.drawImage(img, sx, sy, sw, sh, bx, by, bw, bh);
+                            } else {
+                                // Default: contain
+                                let dx = bx, dy = by, dw = bw, dh = bh;
+                                if (imgAspect > boxAspect) {
+                                    dw = bw;
+                                    dh = bw / imgAspect;
+                                    dy = by + (bh - dh) / 2;
+                                } else {
+                                    dh = bh;
+                                    dw = bh * imgAspect;
+                                    dx = bx + (bw - dw) / 2;
+                                }
+                                ctx.drawImage(img, dx, dy, dw, dh);
+                            }
+                        }
+                        resolve();
+                    };
+                    img.onerror = () => resolve();
+                    img.src = block.imageUrl;
+                });
+
+                ctx.restore();
+                continue;
+            }
+
+            if (!block.translated || !block.translated.trim()) continue;
 
             ctx.save();
 

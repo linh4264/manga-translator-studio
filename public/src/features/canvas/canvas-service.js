@@ -24,6 +24,10 @@ import {
 import {
     duplicateActiveBlock,
     addNewBlock,
+    triggerAddImageBlock,
+    handleImageBlockSelect,
+    triggerReplaceImageBlock,
+    handleReplaceImageBlockSelect,
     deleteActiveBlock,
     selectBlock,
     navigateBlocks,
@@ -31,6 +35,7 @@ import {
 } from './canvas-interactions.js';
 
 import { applyDiamondFormat, batchDiamondBalanceAllPages } from './canvas-renderer.js';
+import { updateImageBlockOpacity, updateImageBlockFit, updateImageBlockBorderRadius } from '../../ui/block-editor-ui.js';
 
 // Global window bindings cho inline HTML handlers
 Object.assign(window, {
@@ -42,6 +47,13 @@ Object.assign(window, {
     toggleActiveBlockOrientation,
     applyStylePreset,
     addNewBlock,
+    triggerAddImageBlock,
+    handleImageBlockSelect,
+    triggerReplaceImageBlock,
+    handleReplaceImageBlockSelect,
+    updateImageBlockOpacity,
+    updateImageBlockFit,
+    updateImageBlockBorderRadius,
     deleteActiveBlock,
     toggleAutoFit,
     applyDiamondFormat,

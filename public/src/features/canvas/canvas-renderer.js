@@ -105,159 +105,178 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
         maskContent.style.overflow = 'hidden';
         maskContent.style.boxSizing = 'border-box';
 
-        // ✅ XỬ LÝ FONT FAMILY (Tách biệt Font mặc định vs Font tùy chỉnh người dùng tải lên)
-        const fontStyle = block.style.fontFamily || 'font-comic';
-        const isBuiltInFont = fontStyle.startsWith('font-');
-
-        const currentMaskSize = block.style.maskSize || 'full';
-        if (currentMaskSize === 'full') {
+        if (block.type === 'image') {
             maskContent.style.width = '100%';
             maskContent.style.height = '100%';
             maskContent.style.display = 'flex';
-            if (block.style.vertical) {
-                maskContent.style.justifyContent = 'center';
-                maskContent.style.alignItems = 'center';
-            } else {
-                maskContent.style.alignItems = 'center';
-                maskContent.style.justifyContent = block.style.align === 'left' ? 'flex-start' : block.style.align === 'right' ? 'flex-end' : 'center';
-            }
-            maskContent.className = `${isBuiltInFont ? fontStyle : ''} pointer-events-none`;
-        } else {
-            maskContent.style.display = 'flex';
             maskContent.style.alignItems = 'center';
             maskContent.style.justifyContent = 'center';
-            maskContent.style.width = 'auto';
-            maskContent.style.height = 'auto';
-            maskContent.style.maxWidth = '100%';
-            maskContent.style.maxHeight = '100%';
-            maskContent.className = `${isBuiltInFont ? fontStyle : ''} pointer-events-none`;
-        }
 
-        // Nếu là font tùy chỉnh tải lên, gán trực tiếp style.fontFamily
-        if (!isBuiltInFont) {
-            maskContent.style.fontFamily = `'${fontStyle}', sans-serif`;
+            const imgEl = document.createElement('img');
+            imgEl.src = block.imageUrl || '';
+            imgEl.className = 'w-full h-full pointer-events-none select-none';
+            imgEl.style.objectFit = block.style.fit || 'contain';
+            const rad = block.style.borderRadius || 0;
+            imgEl.style.borderRadius = `${rad}px`;
+            const opacity = (block.style.opacity !== undefined ? block.style.opacity : 100) / 100;
+            imgEl.style.opacity = `${opacity}`;
+
+            maskContent.appendChild(imgEl);
+            bubble.appendChild(maskContent);
         } else {
-            maskContent.style.fontFamily = '';
-        }
+            // ✅ XỬ LÝ FONT FAMILY (Tách biệt Font mặc định vs Font tùy chỉnh người dùng tải lên)
+            const fontStyle = block.style.fontFamily || 'font-comic';
+            const isBuiltInFont = fontStyle.startsWith('font-');
 
-        maskContent.style.wordBreak = 'keep-all';
-        maskContent.style.overflowWrap = 'normal';
-        maskContent.style.hyphens = 'none';
+            const currentMaskSize = block.style.maskSize || 'full';
+            if (currentMaskSize === 'full') {
+                maskContent.style.width = '100%';
+                maskContent.style.height = '100%';
+                maskContent.style.display = 'flex';
+                if (block.style.vertical) {
+                    maskContent.style.justifyContent = 'center';
+                    maskContent.style.alignItems = 'center';
+                } else {
+                    maskContent.style.alignItems = 'center';
+                    maskContent.style.justifyContent = block.style.align === 'left' ? 'flex-start' : block.style.align === 'right' ? 'flex-end' : 'center';
+                }
+                maskContent.className = `${isBuiltInFont ? fontStyle : ''} pointer-events-none`;
+            } else {
+                maskContent.style.display = 'flex';
+                maskContent.style.alignItems = 'center';
+                maskContent.style.justifyContent = 'center';
+                maskContent.style.width = 'auto';
+                maskContent.style.height = 'auto';
+                maskContent.style.maxWidth = '100%';
+                maskContent.style.maxHeight = '100%';
+                maskContent.className = `${isBuiltInFont ? fontStyle : ''} pointer-events-none`;
+            }
 
-        const currentMaskShape = block.style.maskShape || 'bubble-fit';
-        let hasBubbleFitMask = false;
+            // Nếu là font tùy chỉnh tải lên, gán trực tiếp style.fontFamily
+            if (!isBuiltInFont) {
+                maskContent.style.fontFamily = `'${fontStyle}', sans-serif`;
+            } else {
+                maskContent.style.fontFamily = '';
+            }
 
-        if (currentMaskShape === 'bubble-fit') {
-            let dataUrl = block.maskCache ? block.maskCache.dataUrl : null;
-            if (!dataUrl && activeImageData) {
-                const maskCanvas = computeBubbleMask(page, block, activeImageData);
-                if (maskCanvas) {
-                    dataUrl = block.maskCache?.dataUrl || (maskCanvas.toDataURL ? maskCanvas.toDataURL() : null);
+            maskContent.style.wordBreak = 'keep-all';
+            maskContent.style.overflowWrap = 'normal';
+            maskContent.style.hyphens = 'none';
+
+            const currentMaskShape = block.style.maskShape || 'bubble-fit';
+            let hasBubbleFitMask = false;
+
+            if (currentMaskShape === 'bubble-fit') {
+                let dataUrl = block.maskCache ? block.maskCache.dataUrl : null;
+                if (!dataUrl && activeImageData) {
+                    const maskCanvas = computeBubbleMask(page, block, activeImageData);
+                    if (maskCanvas) {
+                        dataUrl = block.maskCache?.dataUrl || (maskCanvas.toDataURL ? maskCanvas.toDataURL() : null);
+                    }
+                }
+                if (dataUrl) {
+                    maskContent.style.backgroundImage = `url(${dataUrl})`;
+                    maskContent.style.backgroundSize = '100% 100%';
+                    maskContent.style.backgroundRepeat = 'no-repeat';
+                    maskContent.style.backgroundColor = 'transparent';
+                    maskContent.style.borderRadius = '0px';
+                    hasBubbleFitMask = true;
                 }
             }
-            if (dataUrl) {
-                maskContent.style.backgroundImage = `url(${dataUrl})`;
-                maskContent.style.backgroundSize = '100% 100%';
-                maskContent.style.backgroundRepeat = 'no-repeat';
-                maskContent.style.backgroundColor = 'transparent';
-                maskContent.style.borderRadius = '0px';
-                hasBubbleFitMask = true;
+
+            if (!hasBubbleFitMask) {
+                maskContent.style.backgroundImage = 'none';
+                const hexBgColor = block.style.bgColor || '#ffffff';
+                const alpha = (block.style.bgOpacity !== undefined ? block.style.bgOpacity : 100) / 100;
+                maskContent.style.backgroundColor = convertHexToRGBA(hexBgColor, alpha);
+
+                if (currentMaskShape === 'ellipse') {
+                    maskContent.style.borderRadius = '50%';
+                } else if (currentMaskShape === 'rounded') {
+                    maskContent.style.borderRadius = '12px';
+                } else {
+                    maskContent.style.borderRadius = '0px';
+                }
             }
-        }
 
-        if (!hasBubbleFitMask) {
-            maskContent.style.backgroundImage = 'none';
-            const hexBgColor = block.style.bgColor || '#ffffff';
-            const alpha = (block.style.bgOpacity !== undefined ? block.style.bgOpacity : 100) / 100;
-            maskContent.style.backgroundColor = convertHexToRGBA(hexBgColor, alpha);
+            maskContent.style.color = block.style.textColor || '#000000';
+            const zoomScale = isMirror ? 1 : ((globalState.zoom || 100) / 100);
+            const padding = block.style.padding !== undefined ? block.style.padding : 4;
+            const displayPadding = forceExportScale !== 1 ? (padding * forceExportScale) : (padding * zoomScale);
+            maskContent.style.padding = `${displayPadding}px`;
+            maskContent.style.textAlign = block.style.align || 'center';
 
-            if (currentMaskShape === 'ellipse') {
-                maskContent.style.borderRadius = '50%';
-            } else if (currentMaskShape === 'rounded') {
-                maskContent.style.borderRadius = '12px';
+            let displayFontSize = block.style.fontSize || 16;
+            if (forceExportScale !== 1) {
+                displayFontSize = displayFontSize * forceExportScale;
             } else {
-                maskContent.style.borderRadius = '0px';
+                displayFontSize = displayFontSize * zoomScale;
             }
+            maskContent.style.fontSize = `${displayFontSize}px`;
+            maskContent.style.lineHeight = block.style.vertical ? '1.12' : '1.18';
+            maskContent.style.letterSpacing = '0';
+            maskContent.style.fontKerning = 'normal';
+            maskContent.style.fontWeight = block.style.bold ? 'bold' : 'normal';
+
+            if (block.style.vertical) {
+                maskContent.classList.add('text-vertical');
+                maskContent.style.writingMode = 'vertical-rl';
+                maskContent.style.textOrientation = 'upright';
+                maskContent.style.lineHeight = '1.12';
+            }
+
+            const strokeWidth = block.style.strokeWidth || 0;
+            const strokeColor = block.style.strokeColor || '#ffffff';
+            if (strokeWidth > 0) {
+                const displayStroke = forceExportScale !== 1 ? strokeWidth * forceExportScale : strokeWidth;
+                maskContent.style.webkitTextStroke = `${displayStroke}px ${strokeColor}`;
+                maskContent.style.paintOrder = 'stroke fill';
+            } else {
+                maskContent.style.webkitTextStroke = '0px transparent';
+            }
+
+            const shadowBlur = block.style.shadowBlur || 0;
+            const shadowColor = block.style.shadowColor || '#000000';
+            if (shadowBlur > 0) {
+                const displayBlur = forceExportScale !== 1 ? shadowBlur * forceExportScale : shadowBlur;
+                maskContent.style.textShadow = `0px 0px ${displayBlur}px ${shadowColor}`;
+            } else {
+                maskContent.style.textShadow = 'none';
+            }
+
+            const innerTextDiv = document.createElement('div');
+            const isCenterAlign = !block.style.align || block.style.align === 'center';
+            if (block.style.vertical) {
+                innerTextDiv.style.writingMode = 'vertical-rl';
+                innerTextDiv.style.textOrientation = 'upright';
+                innerTextDiv.className = `h-full flex flex-row justify-center items-center`;
+            } else {
+                innerTextDiv.className = `w-full flex flex-col ${isCenterAlign ? 'items-center justify-center' : block.style.align === 'right' ? 'items-end' : 'items-start'}`;
+            }
+            innerTextDiv.style.margin = '0';
+            innerTextDiv.style.padding = '0';
+            innerTextDiv.style.lineHeight = block.style.vertical ? '1.12' : '1.18';
+            innerTextDiv.style.textAlign = block.style.align || 'center';
+
+            setMultilineText(innerTextDiv, block.translated);
+
+            if ((globalState.bilingualMode === 'sub' || block.style.bilingualSub) && block.original && block.original.trim()) {
+                const origSub = document.createElement('div');
+                origSub.className = 'text-[0.7em] opacity-75 font-sans tracking-normal mt-0.5 select-none pointer-events-none';
+                origSub.style.color = 'inherit';
+                origSub.style.lineHeight = '1.1';
+                setMultilineText(origSub, block.original);
+                innerTextDiv.appendChild(origSub);
+            }
+
+            innerTextDiv.style.position = 'relative';
+            innerTextDiv.style.zIndex = '1';
+            maskContent.appendChild(innerTextDiv);
+
+            bubble.setAttribute('data-original', block.original || '');
+            bubble.setAttribute('data-translated', block.translated || '');
+            bubble.appendChild(maskContent);
         }
-
-        maskContent.style.color = block.style.textColor || '#000000';
-        const zoomScale = isMirror ? 1 : ((globalState.zoom || 100) / 100);
-        const padding = block.style.padding !== undefined ? block.style.padding : 4;
-        const displayPadding = forceExportScale !== 1 ? (padding * forceExportScale) : (padding * zoomScale);
-        maskContent.style.padding = `${displayPadding}px`;
-        maskContent.style.textAlign = block.style.align || 'center';
-
-        let displayFontSize = block.style.fontSize || 16;
-        if (forceExportScale !== 1) {
-            displayFontSize = displayFontSize * forceExportScale;
-        } else {
-            displayFontSize = displayFontSize * zoomScale;
-        }
-        maskContent.style.fontSize = `${displayFontSize}px`;
-        maskContent.style.lineHeight = block.style.vertical ? '1.12' : '1.18';
-        maskContent.style.letterSpacing = '0';
-        maskContent.style.fontKerning = 'normal';
-
-        maskContent.style.fontWeight = block.style.bold ? 'bold' : 'normal';
-
-        if (block.style.vertical) {
-            maskContent.classList.add('text-vertical');
-            maskContent.style.writingMode = 'vertical-rl';
-            maskContent.style.textOrientation = 'upright';
-            maskContent.style.lineHeight = '1.12';
-        }
-
-        const strokeWidth = block.style.strokeWidth || 0;
-        const strokeColor = block.style.strokeColor || '#ffffff';
-        if (strokeWidth > 0) {
-            const displayStroke = forceExportScale !== 1 ? strokeWidth * forceExportScale : strokeWidth;
-            maskContent.style.webkitTextStroke = `${displayStroke}px ${strokeColor}`;
-            maskContent.style.paintOrder = 'stroke fill';
-        } else {
-            maskContent.style.webkitTextStroke = '0px transparent';
-        }
-
-        const shadowBlur = block.style.shadowBlur || 0;
-        const shadowColor = block.style.shadowColor || '#000000';
-        if (shadowBlur > 0) {
-            const displayBlur = forceExportScale !== 1 ? shadowBlur * forceExportScale : shadowBlur;
-            maskContent.style.textShadow = `0px 0px ${displayBlur}px ${shadowColor}`;
-        } else {
-            maskContent.style.textShadow = 'none';
-        }
-
-        const innerTextDiv = document.createElement('div');
-        const isCenterAlign = !block.style.align || block.style.align === 'center';
-        if (block.style.vertical) {
-            innerTextDiv.style.writingMode = 'vertical-rl';
-            innerTextDiv.style.textOrientation = 'upright';
-            innerTextDiv.className = `h-full flex flex-row justify-center items-center`;
-        } else {
-            innerTextDiv.className = `w-full flex flex-col ${isCenterAlign ? 'items-center justify-center' : block.style.align === 'right' ? 'items-end' : 'items-start'}`;
-        }
-        innerTextDiv.style.margin = '0';
-        innerTextDiv.style.padding = '0';
-        innerTextDiv.style.lineHeight = block.style.vertical ? '1.12' : '1.18';
-        innerTextDiv.style.textAlign = block.style.align || 'center';
-
-        setMultilineText(innerTextDiv, block.translated);
-
-        if ((globalState.bilingualMode === 'sub' || block.style.bilingualSub) && block.original && block.original.trim()) {
-            const origSub = document.createElement('div');
-            origSub.className = 'text-[0.7em] opacity-75 font-sans tracking-normal mt-0.5 select-none pointer-events-none';
-            origSub.style.color = 'inherit';
-            origSub.style.lineHeight = '1.1';
-            setMultilineText(origSub, block.original);
-            innerTextDiv.appendChild(origSub);
-        }
-
-        innerTextDiv.style.position = 'relative';
-        innerTextDiv.style.zIndex = '1';
-        maskContent.appendChild(innerTextDiv);
-
-        bubble.setAttribute('data-original', block.original || '');
-        bubble.setAttribute('data-translated', block.translated || '');
-        bubble.appendChild(maskContent);
 
         if (!isMirror) {
             bubble.addEventListener('mousedown', (e) => startBlockDrag(e, block));

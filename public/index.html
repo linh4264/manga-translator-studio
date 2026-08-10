@@ -615,6 +615,13 @@
                         title="Thêm ô thoại mới">
                         <i class="fa-solid fa-square-plus text-xs"></i> Thêm ô
                     </button>
+                    <button onclick="triggerAddImageBlock()" data-i18n-title="title-add-image-block"
+                        class="py-1.5 rounded bg-sky-600/20 hover:bg-sky-600 border border-sky-500/30 text-sky-300 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
+                        title="Chèn ảnh / Sticker lên trang">
+                        <i class="fa-solid fa-image text-xs"></i> Chèn ảnh
+                    </button>
+                    <input type="file" id="input-add-image-block" accept="image/*" class="hidden" onchange="handleImageBlockSelect(event)">
+                    <input type="file" id="input-replace-image-block" accept="image/*" class="hidden" onchange="handleReplaceImageBlockSelect(event)">
                     <button id="btn-active-translate" onclick="translateActivePage()" disabled data-i18n-title="title-translate-page"
                         class="py-1.5 rounded bg-emerald-600/20 hover:bg-emerald-600 border border-emerald-500/30 text-emerald-300 hover:text-white transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
                         title="Dịch trang hiện tại">
@@ -768,6 +775,50 @@
                             <input type="range" id="slider-sfx-arc" min="0" max="360" value="0"
                                 oninput="updateSfxArc(this.value)"
                                 class="w-full accent-indigo-500 bg-slate-900 h-1.5 rounded cursor-pointer">
+                        </div>
+                    </div>
+
+                    <!-- Image Block Specific Controls -->
+                    <div id="image-controls-container"
+                        class="hidden space-y-3 p-3 bg-slate-950 rounded-lg border border-slate-800">
+                        <h4
+                            class="text-[10px] font-bold text-sky-400 uppercase tracking-wider flex items-center justify-between">
+                            <span><i class="fa-solid fa-image"></i> Tùy chỉnh ảnh chèn</span>
+                            <button onclick="triggerReplaceImageBlock()" class="text-[10px] text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1">
+                                <i class="fa-solid fa-arrows-rotate"></i> Đổi ảnh khác
+                            </button>
+                        </h4>
+                        <div class="flex items-center justify-center bg-slate-900 border border-slate-800 rounded p-2 max-h-32 overflow-hidden">
+                            <img id="img-block-preview" class="max-h-28 object-contain rounded" src="" alt="Image Block Preview">
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-[10px] text-slate-400">
+                                <span>Độ trong suốt (Opacity):</span>
+                                <span id="lbl-image-opacity" class="font-mono text-slate-200">100%</span>
+                            </div>
+                            <input type="range" id="slider-image-opacity" min="0" max="100" value="100"
+                                oninput="updateImageBlockOpacity(this.value)"
+                                class="w-full accent-sky-500 bg-slate-900 h-1.5 rounded cursor-pointer">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Co giãn (Fit)</label>
+                                <select id="select-image-fit" onchange="updateImageBlockFit(this.value)"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-sky-500">
+                                    <option value="contain">Contain (Vừa vặn)</option>
+                                    <option value="cover">Cover (Cắt lấp đầy)</option>
+                                    <option value="fill">Fill (Kéo dãn)</option>
+                                </select>
+                            </div>
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-[10px] text-slate-400">
+                                    <span>Bo góc:</span>
+                                    <span id="lbl-image-border-radius" class="font-mono text-slate-200">0px</span>
+                                </div>
+                                <input type="range" id="slider-image-border-radius" min="0" max="50" value="0"
+                                    oninput="updateImageBlockBorderRadius(this.value)"
+                                    class="w-full accent-sky-500 bg-slate-900 h-1.5 rounded cursor-pointer">
+                            </div>
                         </div>
                     </div>
 

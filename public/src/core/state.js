@@ -178,6 +178,7 @@ export function pushStateToHistory() {
         blocks: page.blocks.map(block => ({
             id: block.id,
             type: block.type,
+            imageUrl: block.imageUrl || null,
             original: block.original,
             translated: block.translated,
             box: { ...block.box },
@@ -215,6 +216,7 @@ export function applyStateFromSnapshot(snapshot) {
             targetPage.blocks = savedPage.blocks.map(b => ({
                 id: b.id,
                 type: b.type,
+                imageUrl: b.imageUrl || null,
                 original: b.original,
                 translated: b.translated,
                 box: { ...b.box },
@@ -258,6 +260,7 @@ export function executeUndo() {
         blocks: page.blocks.map(block => ({
             id: block.id,
             type: block.type,
+            imageUrl: block.imageUrl || null,
             original: block.original,
             translated: block.translated,
             box: { ...block.box },
@@ -283,6 +286,7 @@ export function executeRedo() {
         blocks: page.blocks.map(block => ({
             id: block.id,
             type: block.type,
+            imageUrl: block.imageUrl || null,
             original: block.original,
             translated: block.translated,
             box: { ...block.box },
@@ -365,6 +369,7 @@ export function savePageToDB(page) {
                 const cleanBlock = {
                     id: block.id,
                     type: block.type || 'dialogue',
+                    imageUrl: block.imageUrl || null,
                     original: block.original || '',
                     translated: block.translated || '',
                     box: block.box ? { ...block.box } : { x: 0, y: 0, w: 10, h: 10 },

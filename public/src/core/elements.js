@@ -26,6 +26,15 @@ export const elements = {
     get editOriginalText() { return document.getElementById('edit-original-text'); },
     get editTranslatedText() { return document.getElementById('edit-translated-text'); },
     get lblBlockId() { return document.getElementById('lbl-block-id'); },
+    get inputAddImageBlock() { return document.getElementById('input-add-image-block'); },
+    get inputReplaceImageBlock() { return document.getElementById('input-replace-image-block'); },
+    get imageControlsContainer() { return document.getElementById('image-controls-container'); },
+    get imgBlockPreview() { return document.getElementById('img-block-preview'); },
+    get sliderImageOpacity() { return document.getElementById('slider-image-opacity'); },
+    get lblImageOpacity() { return document.getElementById('lbl-image-opacity'); },
+    get selectImageFit() { return document.getElementById('select-image-fit'); },
+    get sliderImageBorderRadius() { return document.getElementById('slider-image-border-radius'); },
+    get lblImageBorderRadius() { return document.getElementById('lbl-image-border-radius'); },
 
     // Tab Containers
     get tabEdit() { return document.getElementById('tab-edit'); },

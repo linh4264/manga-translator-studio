@@ -42,6 +42,7 @@ export async function getProjectBackupJSON() {
             blocks: page.blocks ? page.blocks.map(b => ({
                 id: b.id,
                 type: b.type,
+                imageUrl: b.imageUrl || null,
                 original: b.original,
                 translated: b.translated,
                 box: { ...b.box },

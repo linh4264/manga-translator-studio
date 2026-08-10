@@ -15,10 +15,81 @@ export function updateActiveBlockEditor() {
     elements.noBlockSelectedState.classList.add('hidden');
     elements.blockEditorContainer.classList.remove('hidden');
 
-    syncBlockTextInputs(activeBlock);
-    syncBlockTypeUI(activeBlock);
-    syncBlockGenderUI(activeBlock);
-    syncBlockStyleInputs(activeBlock);
+    const imageControls = document.getElementById('image-controls-container');
+    const sfxControls = document.getElementById('sfx-controls-container');
+    const textOriginalContainer = elements.editOriginalText?.parentElement;
+    const textTranslatedContainer = elements.editTranslatedText?.parentElement;
+
+    if (elements.lblBlockId) elements.lblBlockId.innerText = activeBlock.id;
+
+    if (activeBlock.type === 'image') {
+        if (imageControls) imageControls.classList.remove('hidden');
+        if (sfxControls) sfxControls.classList.add('hidden');
+        if (textOriginalContainer) textOriginalContainer.classList.add('hidden');
+        if (textTranslatedContainer) textTranslatedContainer.classList.add('hidden');
+
+        const imgPreview = document.getElementById('img-block-preview');
+        const opacitySlider = document.getElementById('slider-image-opacity');
+        const opacityLbl = document.getElementById('lbl-image-opacity');
+        const fitSelect = document.getElementById('select-image-fit');
+        const radiusSlider = document.getElementById('slider-image-border-radius');
+        const radiusLbl = document.getElementById('lbl-image-border-radius');
+
+        if (imgPreview) imgPreview.src = activeBlock.imageUrl || '';
+        const opVal = activeBlock.style?.opacity !== undefined ? activeBlock.style.opacity : 100;
+        if (opacitySlider) opacitySlider.value = opVal;
+        if (opacityLbl) opacityLbl.textContent = `${opVal}%`;
+        if (fitSelect) fitSelect.value = activeBlock.style?.fit || 'contain';
+        const radVal = activeBlock.style?.borderRadius || 0;
+        if (radiusSlider) radiusSlider.value = radVal;
+        if (radiusLbl) radiusLbl.textContent = `${radVal}px`;
+    } else {
+        if (imageControls) imageControls.classList.add('hidden');
+        if (sfxControls) sfxControls.classList.remove('hidden');
+        if (textOriginalContainer) textOriginalContainer.classList.remove('hidden');
+        if (textTranslatedContainer) textTranslatedContainer.classList.remove('hidden');
+
+        syncBlockTextInputs(activeBlock);
+        syncBlockTypeUI(activeBlock);
+        syncBlockGenderUI(activeBlock);
+        syncBlockStyleInputs(activeBlock);
+    }
+}
+
+export function updateImageBlockOpacity(val) {
+    const activeBlock = getActiveBlock();
+    if (!activeBlock || activeBlock.type !== 'image') return;
+    const num = parseInt(val, 10);
+    if (!activeBlock.style) activeBlock.style = {};
+    activeBlock.style.opacity = num;
+    const opacityLbl = document.getElementById('lbl-image-opacity');
+    if (opacityLbl) opacityLbl.textContent = `${num}%`;
+    requestOverlayRender();
+    const page = globalState.pages[globalState.activePageIndex];
+    if (page) savePageToDB(page);
+}
+
+export function updateImageBlockFit(val) {
+    const activeBlock = getActiveBlock();
+    if (!activeBlock || activeBlock.type !== 'image') return;
+    if (!activeBlock.style) activeBlock.style = {};
+    activeBlock.style.fit = val;
+    requestOverlayRender();
+    const page = globalState.pages[globalState.activePageIndex];
+    if (page) savePageToDB(page);
+}
+
+export function updateImageBlockBorderRadius(val) {
+    const activeBlock = getActiveBlock();
+    if (!activeBlock || activeBlock.type !== 'image') return;
+    const num = parseInt(val, 10);
+    if (!activeBlock.style) activeBlock.style = {};
+    activeBlock.style.borderRadius = num;
+    const radiusLbl = document.getElementById('lbl-image-border-radius');
+    if (radiusLbl) radiusLbl.textContent = `${num}px`;
+    requestOverlayRender();
+    const page = globalState.pages[globalState.activePageIndex];
+    if (page) savePageToDB(page);
 }
 
 function resetBlockEditorUI() {

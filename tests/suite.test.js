@@ -6,6 +6,23 @@ const http = require('http');
 const { spawn } = require('child_process');
 
 // Polyfill minimal browser globals for ESM testing under Node environment
+if (typeof globalThis.window === 'undefined') {
+    globalThis.window = globalThis;
+}
+if (typeof globalThis.document === 'undefined') {
+    globalThis.document = {
+        getElementById: () => null,
+        querySelector: () => null,
+        querySelectorAll: () => [],
+        createElement: () => ({
+            style: {},
+            classList: { add: () => {}, remove: () => {}, toggle: () => {} },
+            setAttribute: () => {},
+            appendChild: () => {},
+            addEventListener: () => {}
+        })
+    };
+}
 if (typeof globalThis.localStorage === 'undefined') {
     const store = new Map();
     globalThis.localStorage = {
@@ -123,4 +140,52 @@ test('Chinese to Vietnamese Translation Prompt Master Specification', async () =
     assert.ok(promptText.includes('THUẬT NGỮ CẢNH GIỚI, TU VI & HỆ THỐNG'), 'Should contain Cultivation and system terms rules');
     assert.ok(promptText.includes('TỪ TƯỢNG THANH / TỪ TƯỢNG HÌNH MANHUA'), 'Should contain SFX rules');
 });
+
+// 7. Image Block Overlay Module Functions & Structure Test
+test('Image Block Overlay Structure and Service Functions', async () => {
+    const canvasInteractions = await import('../public/src/features/canvas/canvas-interactions.js');
+    const blockEditorUi = await import('../public/src/ui/block-editor-ui.js');
+
+    assert.strictEqual(typeof canvasInteractions.triggerAddImageBlock, 'function');
+    assert.strictEqual(typeof canvasInteractions.handleImageBlockSelect, 'function');
+    assert.strictEqual(typeof canvasInteractions.triggerReplaceImageBlock, 'function');
+    assert.strictEqual(typeof canvasInteractions.handleReplaceImageBlockSelect, 'function');
+
+    assert.strictEqual(typeof blockEditorUi.updateImageBlockOpacity, 'function');
+    assert.strictEqual(typeof blockEditorUi.updateImageBlockFit, 'function');
+    assert.strictEqual(typeof blockEditorUi.updateImageBlockBorderRadius, 'function');
+
+    // Test Image Block object properties
+    const mockImageBlock = {
+        id: `image_block_${Date.now()}`,
+        type: 'image',
+        imageUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+        original: '[IMAGE]',
+        translated: '',
+        box: { x: 35, y: 35, w: 30, h: 20 },
+        style: {
+            rotate: 0,
+            opacity: 80,
+            fit: 'contain',
+            borderRadius: 8
+        }
+    };
+
+    assert.strictEqual(mockImageBlock.type, 'image');
+    assert.ok(mockImageBlock.imageUrl.startsWith('data:image/'), 'Image URL should be a valid data URI');
+    assert.strictEqual(mockImageBlock.style.opacity, 80);
+    assert.strictEqual(mockImageBlock.style.fit, 'contain');
+    assert.strictEqual(mockImageBlock.style.borderRadius, 8);
+
+    // Test history & DB preservation
+    const { pushStateToHistory, globalState } = await import('../public/src/core/state.js');
+    globalState.pages = [{ id: 'p1', status: 'draft', blocks: [mockImageBlock] }];
+    globalState.activePageIndex = 0;
+    pushStateToHistory();
+
+    const { undoStack } = await import('../public/src/core/state.js');
+    const snapshotBlock = undoStack[undoStack.length - 1].pagesState[0].blocks[0];
+    assert.strictEqual(snapshotBlock.imageUrl, mockImageBlock.imageUrl, 'History snapshot must preserve block imageUrl');
+});
+
 
