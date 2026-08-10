@@ -583,7 +583,7 @@ export function promptExportScript() {
     }
 }
 
-// Xuất kịch bản ra tập tin TXT / JSON
+// Xuất kịch bản ra tập tin TXT / JSON cho toàn bộ chương
 export function exportTranslationScript(format) {
     if (globalState.pages.length === 0) {
         showToast("Không có trang truyện nào để xuất kịch bản.", "error");
@@ -592,12 +592,12 @@ export function exportTranslationScript(format) {
 
     let fileContent = "";
     let mimeType = "text/plain";
-    let fileName = `translation_script_${Date.now()}`;
+    let fileName = `chapter_script_${Date.now()}`;
 
     if (format === 'txt') {
         fileName += ".txt";
         fileContent += `==================================================\n`;
-        fileContent += `  KỊCH BẢN DỊCH THUẬT MANGA - MANGA TRANSLATOR STUDIO\n`;
+        fileContent += `  KỊCH BẢN DỊCH THUẬT MANGA - TOÀN BỘ CHƯƠNG (${globalState.pages.length} TRANG)\n`;
         fileContent += `  Thời gian xuất: ${new Date().toLocaleString()}\n`;
         fileContent += `==================================================\n\n`;
 
@@ -605,25 +605,30 @@ export function exportTranslationScript(format) {
             fileContent += `[TRANG ${index + 1}: ${page.name || 'Không rõ tên'}]\n`;
             fileContent += `--------------------------------------------------\n`;
 
-            const dialogueBlocks = (page.blocks || []).filter(b => b.type === 'dialogue');
-            const otherBlocks = (page.blocks || []).filter(b => b.type !== 'dialogue');
+            const dialogueBlocks = (page.blocks || []).filter(b => b.type === 'dialogue' || !b.type);
+            const otherBlocks = (page.blocks || []).filter(b => b.type && b.type !== 'dialogue');
 
-            fileContent += `* Ô THOẠI (Dialogues):\n`;
+            fileContent += `* LỜI THOẠI (Dialogues):\n`;
             if (dialogueBlocks.length === 0) {
                 fileContent += `  (Không có ô thoại nào)\n`;
             } else {
                 dialogueBlocks.forEach((block, bIdx) => {
-                    fileContent += `  ${bIdx + 1}. [Gốc]: "${block.original || '(Rỗng)'}"\n`;
+                    const speakerInfo = block.speaker ? ` [Nhân vật: ${block.speaker}]` : '';
+                    fileContent += `  ${bIdx + 1}.${speakerInfo} [Gốc]: "${block.original || '(Rỗng)'}"\n`;
                     fileContent += `     [Dịch]: "${block.translated || ''}"\n\n`;
                 });
             }
 
             if (otherBlocks.length > 0) {
-                fileContent += `* DẪN CHUYỆN & SFX:\n`;
+                fileContent += `* DẪN CHUYỆN, SFX & KHÁC:\n`;
                 otherBlocks.forEach((block, bIdx) => {
-                    const typeLabel = block.type === 'narration' ? 'Dẫn truyện' : (block.type === 'sfx' ? 'SFX' : 'Khác');
+                    const typeLabel = block.type === 'narration' ? 'Dẫn truyện' : (block.type === 'sfx' ? 'SFX' : (block.type === 'image' ? 'Ảnh chèn' : 'Khác'));
                     fileContent += `  ${bIdx + 1}. [${typeLabel}] [Gốc]: "${block.original || '(Rỗng)'}"\n`;
-                    fileContent += `     [Dịch]: "${block.translated || ''}"\n\n`;
+                    if (block.type === 'image') {
+                        fileContent += `     [Ảnh]: "${block.imageUrl ? 'Có dữ liệu ảnh' : 'Chưa chọn ảnh'}"\n\n`;
+                    } else {
+                        fileContent += `     [Dịch]: "${block.translated || ''}"\n\n`;
+                    }
                 });
             }
             fileContent += `\n`;
@@ -632,22 +637,35 @@ export function exportTranslationScript(format) {
         fileName += ".json";
         mimeType = "application/json";
 
-        const scriptData = globalState.pages.map((page, index) => ({
-            pageIndex: index,
-            pageName: page.name,
-            blocks: (page.blocks || []).map(b => ({
-                id: b.id,
-                type: b.type,
-                original: b.original,
-                translated: b.translated,
-                positionPercent: {
-                    x: b.box.x,
-                    y: b.box.y,
-                    w: b.box.w,
-                    h: b.box.h
-                }
+        const scriptData = {
+            chapterName: "Manga Translation Script",
+            totalPages: globalState.pages.length,
+            exportedAt: new Date().toISOString(),
+            pages: globalState.pages.map((page, index) => ({
+                pageIndex: index,
+                pageName: page.name,
+                blocks: (page.blocks || []).map(b => {
+                    const blockData = {
+                        id: b.id,
+                        type: b.type || 'dialogue',
+                        original: b.original || '',
+                        translated: b.translated || '',
+                        speaker: b.speaker || undefined,
+                        target: b.target || undefined,
+                        positionPercent: {
+                            x: b.box.x,
+                            y: b.box.y,
+                            w: b.box.w,
+                            h: b.box.h
+                        }
+                    };
+                    if (b.type === 'image') {
+                        blockData.imageUrl = b.imageUrl || null;
+                    }
+                    return blockData;
+                })
             }))
-        }));
+        };
         fileContent = JSON.stringify(scriptData, null, 2);
     }
 

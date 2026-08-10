@@ -169,7 +169,7 @@
                             </button>
                         </div>
                     </div>
-                    <div class="grid grid-cols-4 gap-1">
+                    <div class="grid grid-cols-5 gap-1">
                         <button id="btn-batch-translate" onclick="runBatchTranslation()" disabled data-i18n-title="title-translate-page"
                             class="h-8 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex flex-col items-center justify-center transition-all"
                             title="Dịch tất cả các trang (Auto Translate)">
@@ -187,6 +187,12 @@
                             title="Xuất PDF đọc trên máy tính bảng/Kindle">
                             <i class="fa-solid fa-file-pdf text-[11px]"></i>
                             <span class="text-[8px] font-bold mt-0.5 uppercase" data-i18n="export-pdf-btn">Xuất PDF</span>
+                        </button>
+                        <button id="btn-export-script" onclick="promptExportScript()" disabled data-i18n-title="title-export-script"
+                            class="h-8 rounded bg-slate-955 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex flex-col items-center justify-center transition-all"
+                            title="Xuất kịch bản dịch toàn bộ chương (Văn bản TXT hoặc JSON)">
+                            <i class="fa-solid fa-file-lines text-[11px]"></i>
+                            <span class="text-[8px] font-bold mt-0.5 uppercase" data-i18n="export-script-btn">Kịch bản</span>
                         </button>
                         <button id="btn-preview-mode" onclick="openPreviewMode()" disabled data-i18n-title="title-preview-mode"
                             class="h-8 rounded bg-slate-955 hover:bg-indigo-600 border border-slate-800 text-slate-400 hover:text-white flex flex-col items-center justify-center transition-all"

@@ -207,14 +207,14 @@ export function parseGeminiJsonText(rawText) {
 
     // Thay thế kiểu boolean/null từ Python nếu có
     repaired = repaired.replace(/\bTrue\b/g, 'true')
-                       .replace(/\bFalse\b/g, 'false')
-                       .replace(/\bNone\b/g, 'null');
+        .replace(/\bFalse\b/g, 'false')
+        .replace(/\bNone\b/g, 'null');
 
     // Sửa lỗi thiếu dấu phẩy giữa các object/array liền kề
     repaired = repaired.replace(/\}\s*\{/g, '},{')
-                       .replace(/\]\s*\[/g, '],[')
-                       .replace(/\}\s*\"/g, '},"')
-                       .replace(/\"\s*\{/g, '",{');
+        .replace(/\]\s*\[/g, '],[')
+        .replace(/\}\s*\"/g, '},"')
+        .replace(/\"\s*\{/g, '",{');
 
     // Sửa lỗi thiếu dấu phẩy giữa các phần tử hoặc thuộc tính trên nhiều dòng
     repaired = repaired.replace(/(["\d]|true|false|null)\s*\n\s*(["{])/g, '$1,$2');
