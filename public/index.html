@@ -488,6 +488,11 @@
                     <!-- Canvas Floating Quick Toolbar for Active Block -->
                     <div id="canvas-floating-toolbar"
                         class="hidden absolute z-40 bg-slate-900/95 border border-indigo-500/40 rounded-lg shadow-2xl p-1 flex items-center gap-0.5 backdrop-blur-md transform -translate-x-1/2">
+                        <button onclick="triggerInlineEditActiveBlock()"
+                            class="w-7 h-7 hover:bg-indigo-900/50 rounded text-slate-300 hover:text-white flex items-center justify-center"
+                            title="Sửa chữ trực tiếp trên ô dịch (Double-click / F2 / Enter)">
+                            <i class="fa-solid fa-pen-to-square text-indigo-400 text-xs"></i>
+                        </button>
                         <button onclick="autoMatchActiveBlockStyle()"
                             class="w-7 h-7 hover:bg-indigo-900/50 rounded text-slate-300 hover:text-white flex items-center justify-center"
                             title="Tự động trích xuất & khớp phông chữ/màu sắc từ ảnh gốc">

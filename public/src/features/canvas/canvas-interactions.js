@@ -8,6 +8,7 @@ import { duplicateActiveBlock as duplicateActiveBlockLogic } from './canvas-acti
 
 export function startBlockDrag(e, block) {
     if (e.target.classList.contains('resize-handle')) return;
+    if (e.target.isContentEditable || block._isEditingInline) return;
 
     e.preventDefault();
     pushStateToHistory();

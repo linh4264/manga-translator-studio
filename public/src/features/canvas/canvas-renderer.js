@@ -279,12 +279,43 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
         }
 
         if (!isMirror) {
-            bubble.addEventListener('mousedown', (e) => startBlockDrag(e, block));
-            bubble.addEventListener('touchstart', (e) => startBlockDrag(e, block), { passive: false });
-            bubble.addEventListener('dblclick', () => {
-                uiSetRightTab('edit');
-                elements.editTranslatedText.focus();
+            let lastMousedownTime = 0;
+            bubble.addEventListener('mousedown', (e) => {
+                const now = Date.now();
+                if (now - lastMousedownTime < 350) {
+                    lastMousedownTime = 0;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (block.type !== 'image') {
+                        startInlineEditing(block, bubble, maskContent, innerTextDiv);
+                    } else {
+                        uiSetRightTab('edit');
+                        elements.editTranslatedText.focus();
+                    }
+                    return;
+                }
+                lastMousedownTime = now;
+                startBlockDrag(e, block);
             });
+
+            let lastTouchTime = 0;
+            bubble.addEventListener('touchstart', (e) => {
+                const now = Date.now();
+                if (now - lastTouchTime < 350) {
+                    lastTouchTime = 0;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (block.type !== 'image') {
+                        startInlineEditing(block, bubble, maskContent, innerTextDiv);
+                    } else {
+                        uiSetRightTab('edit');
+                        elements.editTranslatedText.focus();
+                    }
+                    return;
+                }
+                lastTouchTime = now;
+                startBlockDrag(e, block);
+            }, { passive: false });
 
             const handleSW = document.createElement('div');
             handleSW.className = "resize-handle resize-sw";
@@ -517,3 +548,112 @@ export function batchDiamondBalanceAllPages() {
     uiUpdateActiveBlockEditor();
     showToast(`⚡ Đã tự động cân đối layout Diamond cho ${totalBalanced} ô thoại trên toàn chương!`, "success");
 }
+
+export function startInlineEditing(block, bubble, maskContent, innerTextDiv) {
+    if (!block || block.type === 'image') return;
+    if (block._isEditingInline) return;
+
+    block._isEditingInline = true;
+    uiSetRightTab('edit');
+
+    maskContent.style.pointerEvents = 'auto';
+    innerTextDiv.style.pointerEvents = 'auto';
+    innerTextDiv.contentEditable = 'true';
+    innerTextDiv.style.outline = '2px dashed #6366f1';
+    innerTextDiv.style.outlineOffset = '2px';
+    innerTextDiv.style.borderRadius = '4px';
+    innerTextDiv.style.cursor = 'text';
+    bubble.classList.add('editing-inline');
+
+    innerTextDiv.focus();
+    try {
+        const range = document.createRange();
+        range.selectNodeContents(innerTextDiv);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+    } catch (err) { }
+
+    let isComposing = false;
+
+    function handleInput() {
+        if (isComposing) return;
+        let newText = innerTextDiv.innerText || innerTextDiv.textContent || '';
+        newText = newText.replace(/\r\n/g, '\n');
+        if (newText.endsWith('\n') && !(block.translated || '').endsWith('\n')) {
+            newText = newText.slice(0, -1);
+        }
+
+        block.translated = newText;
+        bubble.setAttribute('data-translated', newText);
+
+        if (elements.editTranslatedText) {
+            elements.editTranslatedText.value = newText;
+        }
+
+        if (globalState.autoFitEnabled) {
+            const page = globalState.pages[globalState.activePageIndex];
+            if (page) {
+                const imgElement = elements.mangaBgImage;
+                autoFitBlock(page, block, imgElement);
+                const zoomScale = (globalState.zoom || 100) / 100;
+                maskContent.style.fontSize = `${(block.style.fontSize || 16) * zoomScale}px`;
+            }
+        }
+    }
+
+    function stopInlineEditing() {
+        if (!block._isEditingInline) return;
+        block._isEditingInline = false;
+        innerTextDiv.contentEditable = 'false';
+        innerTextDiv.style.outline = 'none';
+        innerTextDiv.style.cursor = '';
+        maskContent.style.pointerEvents = 'none';
+        innerTextDiv.style.pointerEvents = 'none';
+        bubble.classList.remove('editing-inline');
+
+        innerTextDiv.removeEventListener('input', handleInput);
+        innerTextDiv.removeEventListener('blur', stopInlineEditing);
+        innerTextDiv.removeEventListener('keydown', handleKeydown);
+
+        const page = globalState.pages[globalState.activePageIndex];
+        if (page) {
+            savePageToDB(page);
+        }
+        requestOverlayRender();
+    }
+
+    function handleKeydown(e) {
+        if (e.key === 'Escape' || (e.ctrlKey && e.key === 'Enter')) {
+            e.preventDefault();
+            e.stopPropagation();
+            stopInlineEditing();
+        }
+    }
+
+    innerTextDiv.addEventListener('compositionstart', () => { isComposing = true; });
+    innerTextDiv.addEventListener('compositionend', () => {
+        isComposing = false;
+        handleInput();
+    });
+    innerTextDiv.addEventListener('input', handleInput);
+    innerTextDiv.addEventListener('blur', stopInlineEditing);
+    innerTextDiv.addEventListener('keydown', handleKeydown);
+}
+
+export function triggerInlineEditActiveBlock() {
+    if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    const block = page ? page.blocks.find(b => b.id === globalState.selectedBlockId) : null;
+    if (!block || block.type === 'image') return;
+
+    const bubble = document.getElementById(block.id);
+    if (!bubble) return;
+    const maskContent = bubble.firstElementChild;
+    const innerTextDiv = maskContent ? maskContent.firstElementChild : null;
+    if (maskContent && innerTextDiv) {
+        startInlineEditing(block, bubble, maskContent, innerTextDiv);
+    }
+}
+
+window.triggerInlineEditActiveBlock = triggerInlineEditActiveBlock;

@@ -238,13 +238,19 @@ export function initEventListeners() {
             }
         }
 
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
 
         if (globalState.selectedBlockId !== null) {
             const activePage = globalState.pages[globalState.activePageIndex];
             if (!activePage) return;
             const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
             if (!block) return;
+
+            if (e.key === 'F2' || e.key === 'Enter') {
+                e.preventDefault();
+                import('../features/canvas/canvas-renderer.js').then(canvas => canvas.triggerInlineEditActiveBlock());
+                return;
+            }
 
             if (e.key === '[') {
                 e.preventDefault();
