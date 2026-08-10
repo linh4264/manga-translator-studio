@@ -105,7 +105,7 @@ export const elements = {
     get btnExportPage() { return document.getElementById('btn-export-page'); },
     get btnUndo() { return document.getElementById('btn-undo'); },
     get btnRedo() { return document.getElementById('btn-redo'); },
-    get btnEraserMode() { return document.getElementById('btn-eraser-mode'); },
+    get btnEraserMode() { return document.getElementById('btn-eraser-mode-floating') || document.getElementById('btn-eraser-mode'); },
     get eraserSettingsPanel() { return document.getElementById('eraser-settings-panel'); },
     get eraserCanvas() { return document.getElementById('eraser-canvas'); },
     get eraserBrushSize() { return document.getElementById('eraser-brush-size'); },

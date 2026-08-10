@@ -24,10 +24,10 @@ export async function selectPage(index) {
     updatePageListUI();
 
     elements.workspaceEmptyState.classList.add('hidden');
-    elements.btnActiveTranslate.disabled = false;
+    if (elements.btnActiveTranslate) elements.btnActiveTranslate.disabled = false;
     if (elements.btnAiErasePage) elements.btnAiErasePage.disabled = false;
-    elements.btnExportPage.disabled = false;
-    elements.btnEraserMode.disabled = false;
+    if (elements.btnExportPage) elements.btnExportPage.disabled = false;
+    if (elements.btnEraserMode) elements.btnEraserMode.disabled = false;
     const btnReplace = document.getElementById('btn-replace-bg-image');
     if (btnReplace) btnReplace.disabled = false;
 
@@ -78,10 +78,10 @@ export async function removePage(index) {
         elements.mangaCanvasContainer.classList.add('hidden');
         elements.workspaceSplitWrapper.classList.add('hidden');
         elements.workspaceEmptyState.classList.remove('hidden');
-        elements.btnActiveTranslate.disabled = true;
+        if (elements.btnActiveTranslate) elements.btnActiveTranslate.disabled = true;
         if (elements.btnAiErasePage) elements.btnAiErasePage.disabled = true;
-        elements.btnExportPage.disabled = true;
-        elements.btnEraserMode.disabled = true;
+        if (elements.btnExportPage) elements.btnExportPage.disabled = true;
+        if (elements.btnEraserMode) elements.btnEraserMode.disabled = true;
         const btnReplace = document.getElementById('btn-replace-bg-image');
         if (btnReplace) btnReplace.disabled = true;
     } else if (globalState.activePageIndex > index) {
