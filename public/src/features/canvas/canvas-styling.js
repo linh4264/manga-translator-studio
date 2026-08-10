@@ -615,19 +615,102 @@ export function updateSfxArc(val) {
     const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
     if (!block) return;
 
+    if (!block.style) block.style = {};
     block.style.arcAngle = arc;
     const lbl = document.getElementById('lbl-sfx-arc');
     if (lbl) lbl.textContent = `${arc}°`;
     requestOverlayRender();
 }
 
-export function resetSfxAngleControls() {
+export function updateSfxSkewX(val) {
+    const skew = parseInt(val, 10) || 0;
+    const activePage = globalState.pages[globalState.activePageIndex];
+    if (!activePage || !globalState.selectedBlockId) return;
+    const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!block) return;
+
+    if (!block.style) block.style = {};
+    block.style.skewX = skew;
+    const lbl = document.getElementById('lbl-sfx-skew-x');
+    if (lbl) lbl.textContent = `${skew}°`;
+    requestOverlayRender();
+}
+
+export function updateSfxSkewY(val) {
+    const skew = parseInt(val, 10) || 0;
+    const activePage = globalState.pages[globalState.activePageIndex];
+    if (!activePage || !globalState.selectedBlockId) return;
+    const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!block) return;
+
+    if (!block.style) block.style = {};
+    block.style.skewY = skew;
+    const lbl = document.getElementById('lbl-sfx-skew-y');
+    if (lbl) lbl.textContent = `${skew}°`;
+    requestOverlayRender();
+}
+
+export function updateSfxWave(val) {
+    const wave = parseInt(val, 10) || 0;
+    const activePage = globalState.pages[globalState.activePageIndex];
+    if (!activePage || !globalState.selectedBlockId) return;
+    const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!block) return;
+
+    if (!block.style) block.style = {};
+    block.style.warpWave = wave;
+    const lbl = document.getElementById('lbl-sfx-wave');
+    if (lbl) lbl.textContent = `${wave}`;
+    requestOverlayRender();
+}
+
+export function updateSfxBulge(val) {
+    const bulge = parseInt(val, 10) || 0;
+    const activePage = globalState.pages[globalState.activePageIndex];
+    if (!activePage || !globalState.selectedBlockId) return;
+    const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!block) return;
+
+    if (!block.style) block.style = {};
+    block.style.warpBulge = bulge;
+    const lbl = document.getElementById('lbl-sfx-bulge');
+    if (lbl) lbl.textContent = `${bulge}`;
+    requestOverlayRender();
+}
+
+export function resetWarpTransformControls() {
     updateSfxRotate(0);
     updateSfxArc(0);
-    const rSlider = document.getElementById('slider-sfx-rotate');
+    updateSfxSkewX(0);
+    updateSfxSkewY(0);
+    updateSfxWave(0);
+    updateSfxBulge(0);
+
+    const rSlider = document.getElementById('slider-sfx-rotate') || document.getElementById('style-rotate');
     const aSlider = document.getElementById('slider-sfx-arc');
+    const sxSlider = document.getElementById('slider-sfx-skew-x');
+    const sySlider = document.getElementById('slider-sfx-skew-y');
+    const wSlider = document.getElementById('slider-sfx-wave');
+    const bSlider = document.getElementById('slider-sfx-bulge');
+
     if (rSlider) rSlider.value = 0;
     if (aSlider) aSlider.value = 0;
+    if (sxSlider) sxSlider.value = 0;
+    if (sySlider) sySlider.value = 0;
+    if (wSlider) wSlider.value = 0;
+    if (bSlider) bSlider.value = 0;
+}
+
+export function resetSfxAngleControls() {
+    resetWarpTransformControls();
 }
 
 window.applyStylePreset = applyStylePreset;
+window.updateSfxSkewX = updateSfxSkewX;
+window.updateSfxSkewY = updateSfxSkewY;
+window.updateSfxWave = updateSfxWave;
+window.updateSfxBulge = updateSfxBulge;
+window.updateSfxArc = updateSfxArc;
+window.updateSfxRotate = updateSfxRotate;
+window.resetWarpTransformControls = resetWarpTransformControls;
+window.resetSfxAngleControls = resetSfxAngleControls;

@@ -146,17 +146,39 @@ function syncBlockGenderUI(block) {
 }
 
 function syncBlockStyleInputs(block) {
-    // SFX Specific Sliders (if needed, otherwise this can be moved to syncSFXStyle)
     const currentRotate = block.style.rotate || 0;
     const currentArc = block.style.arcAngle || 0;
-    const sfxRotateSlider = document.getElementById('slider-sfx-rotate');
-    const sfxRotateLbl = document.getElementById('lbl-sfx-rotate');
+    const currentSkewX = block.style.skewX || 0;
+    const currentSkewY = block.style.skewY || 0;
+    const currentWave = block.style.warpWave || 0;
+    const currentBulge = block.style.warpBulge || 0;
+
+    const sfxRotateSlider = document.getElementById('slider-sfx-rotate') || elements.styleRotate;
+    const sfxRotateLbl = document.getElementById('lbl-sfx-rotate') || elements.lblRotate;
     const sfxArcSlider = document.getElementById('slider-sfx-arc');
     const sfxArcLbl = document.getElementById('lbl-sfx-arc');
+    const sfxSkewXSlider = document.getElementById('slider-sfx-skew-x');
+    const sfxSkewXLbl = document.getElementById('lbl-sfx-skew-x');
+    const sfxSkewYSlider = document.getElementById('slider-sfx-skew-y');
+    const sfxSkewYLbl = document.getElementById('lbl-sfx-skew-y');
+    const sfxWaveSlider = document.getElementById('slider-sfx-wave');
+    const sfxWaveLbl = document.getElementById('lbl-sfx-wave');
+    const sfxBulgeSlider = document.getElementById('slider-sfx-bulge');
+    const sfxBulgeLbl = document.getElementById('lbl-sfx-bulge');
+
     if (sfxRotateSlider) sfxRotateSlider.value = currentRotate;
     if (sfxRotateLbl) sfxRotateLbl.textContent = `${currentRotate}°`;
     if (sfxArcSlider) sfxArcSlider.value = currentArc;
     if (sfxArcLbl) sfxArcLbl.textContent = `${currentArc}°`;
+    if (sfxSkewXSlider) sfxSkewXSlider.value = currentSkewX;
+    if (sfxSkewXLbl) sfxSkewXLbl.textContent = `${currentSkewX}°`;
+    if (sfxSkewYSlider) sfxSkewYSlider.value = currentSkewY;
+    if (sfxSkewYLbl) sfxSkewYLbl.textContent = `${currentSkewY}°`;
+    if (sfxWaveSlider) sfxWaveSlider.value = currentWave;
+    if (sfxWaveLbl) sfxWaveLbl.textContent = `${currentWave}`;
+    if (sfxBulgeSlider) sfxBulgeSlider.value = currentBulge;
+    if (sfxBulgeLbl) sfxBulgeLbl.textContent = `${currentBulge}`;
+
     const btnSfxRestore = document.getElementById('btn-sfx-restore');
     if (btnSfxRestore) btnSfxRestore.classList.toggle('hidden', !block.originalBackgroundBackup);
 

@@ -258,14 +258,21 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
             innerTextDiv.style.lineHeight = block.style.vertical ? '1.12' : '1.18';
             innerTextDiv.style.textAlign = block.style.align || 'center';
 
-            setMultilineText(innerTextDiv, block.translated, block.style.arcAngle || 0);
+            const warpOpts = {
+                arcAngle: block.style.arcAngle || 0,
+                skewX: block.style.skewX || 0,
+                skewY: block.style.skewY || 0,
+                warpWave: block.style.warpWave || 0,
+                warpBulge: block.style.warpBulge || 0
+            };
+            setMultilineText(innerTextDiv, block.translated, warpOpts);
 
             if ((globalState.bilingualMode === 'sub' || block.style.bilingualSub) && block.original && block.original.trim()) {
                 const origSub = document.createElement('div');
                 origSub.className = 'text-[0.7em] opacity-75 font-sans tracking-normal mt-0.5 select-none pointer-events-none';
                 origSub.style.color = 'inherit';
                 origSub.style.lineHeight = '1.1';
-                setMultilineText(origSub, block.original, block.style.arcAngle || 0);
+                setMultilineText(origSub, block.original, warpOpts);
                 innerTextDiv.appendChild(origSub);
             }
 
@@ -423,7 +430,10 @@ export function wrapCanvasVerticalText(text, maxHeight, fontSizePx) {
             continue;
         }
 
-        const chars = Array.from(para.trim());
+        const normPara = String(para.trim() || '').normalize('NFC');
+        const chars = (typeof Intl !== 'undefined' && Intl.Segmenter)
+            ? Array.from(new Intl.Segmenter().segment(normPara)).map(s => s.segment)
+            : Array.from(normPara);
         let currentCol = [];
 
         for (const char of chars) {

@@ -7,6 +7,7 @@ import { renderOverlays, convertHexToRGBA, wrapCanvasText, wrapCanvasVerticalTex
 // Helper mapper cho phông chữ canvas kết xuất
 function getFontFamilyName(fontClass) {
     const fontMap = {
+        'font-comic': "'Patrick Hand', cursive",
         'font-manga': "'Nunito', sans-serif",
         'font-vietnamese': "'Be Vietnam Pro', 'Inter', sans-serif",
         'font-comicneue': "'Comic Neue', cursive",
@@ -169,10 +170,6 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                 ctx.translate(-cx, -cy);
             }
 
-            ctx.beginPath();
-            ctx.rect(bx - 0.5, by - 0.5, bw + 1, bh + 1);
-            ctx.clip();
-
             const fontName = getFontFamilyName(block.style.fontFamily);
             let displayWidth = page.lastDisplayWidth;
             if (!displayWidth && imgElement) {
@@ -184,7 +181,14 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
             const fontSizePx = (block.style.fontSize || 16) * scaleFactor;
             const fontWeight = block.style.bold ? 'bold' : 'normal';
 
-            ctx.font = `${fontWeight} ${fontSizePx}px ${fontName}`;
+            const fontSpec = `${fontWeight} ${fontSizePx}px ${fontName}`;
+            ctx.font = fontSpec;
+            try {
+                if (document.fonts && document.fonts.load) {
+                    await document.fonts.load(fontSpec);
+                    ctx.font = fontSpec;
+                }
+            } catch (e) {}
             ctx.fillStyle = block.style.textColor || '#000000';
 
             const paddingPx = (block.style.padding !== undefined ? block.style.padding : 4) * scaleFactor;
@@ -264,19 +268,13 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                     computeBubbleMask(page, block, activeImageData);
                 }
                 const maskCanvasObj = block.maskCache ? (block.maskCache.canvas || block.maskCache) : null;
-                const maskDataUrl = block.maskCache ? block.maskCache.dataUrl : (maskCanvasObj && maskCanvasObj.toDataURL ? maskCanvasObj.toDataURL() : null);
-
-                if (maskDataUrl) {
-                    await new Promise((resolve) => {
-                        const maskImg = new Image();
-                        maskImg.onload = () => {
-                            ctx.drawImage(maskImg, bx, by, bw, bh);
-                            maskDrawn = true;
-                            resolve();
-                        };
-                        maskImg.onerror = resolve;
-                        maskImg.src = maskDataUrl;
-                    });
+                if (maskCanvasObj && typeof ctx.drawImage === 'function') {
+                    try {
+                        ctx.drawImage(maskCanvasObj, bx, by, bw, bh);
+                        maskDrawn = true;
+                    } catch (e) {
+                        maskDrawn = false;
+                    }
                 }
             }
 
@@ -287,9 +285,9 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                     ctx.ellipse(fillBx + fillBw / 2, fillBy + fillBh / 2, fillBw / 2, fillBh / 2, 0, 0, 2 * Math.PI);
                     ctx.fill();
                 } else if (maskShape === 'rounded') {
-                    const r = Math.min(16, fillBw / 4, fillBh / 4);
+                    const r = Math.min(16 * scaleFactor, fillBw / 4, fillBh / 4);
                     ctx.beginPath();
-                    if (ctx.roundRect) {
+                    if (typeof ctx.roundRect === 'function') {
                         ctx.roundRect(fillBx, fillBy, fillBw, fillBh, r);
                     } else {
                         ctx.rect(fillBx, fillBy, fillBw, fillBh);
@@ -303,12 +301,19 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
             ctx.font = `${fontWeight} ${fontSizePx}px ${fontName}`;
             ctx.fillStyle = block.style.textColor || '#000000';
 
+            const arcAngle = block.style.arcAngle || 0;
+            const skewX = block.style.skewX || 0;
+            const skewY = block.style.skewY || 0;
+            const warpWave = block.style.warpWave || 0;
+            const warpBulge = block.style.warpBulge || 0;
+
+            const hasSkew = (skewX !== 0 || skewY !== 0);
+            const hasCharWarp = (arcAngle !== 0) || (warpWave !== 0) || (warpBulge !== 0);
+
             if (block.style.vertical) {
                 const colStep = fontSizePx * 1.12;
                 const charStep = fontSizePx * 1.12;
                 let rightX = bx + bw / 2 + totalTextWidth / 2 - colStep / 2;
-
-                const arcAngle = block.style.arcAngle || 0;
 
                 for (let j = 0; j < columns.length; j++) {
                     const colChars = columns[j];
@@ -321,25 +326,45 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
 
+                    ctx.save();
+                    if (hasSkew) {
+                        const radX = (skewX * Math.PI) / 180;
+                        const radY = (skewY * Math.PI) / 180;
+                        ctx.translate(colX, by + bh / 2);
+                        ctx.transform(1, Math.tan(radY), Math.tan(radX), 1, 0, 0);
+                        ctx.translate(-colX, -(by + bh / 2));
+                    }
+
                     for (let k = 0; k < colChars.length; k++) {
                         const char = colChars[k];
                         let charY = startY + (k * charStep);
                         let charX = colX;
                         let rotRad = 0;
+                        let bulgeScale = 1;
 
-                        if (arcAngle && Math.abs(arcAngle) > 0 && colChars.length > 1) {
+                        if (hasCharWarp && colChars.length > 1) {
                             const count = colChars.length;
-                            const depth = (arcAngle / 45) * fontSizePx * 0.4;
+                            const arcDepth = (arcAngle / 45) * 8 * scaleFactor;
+                            const waveAmp = (warpWave / 50) * 10 * scaleFactor;
+                            const bulgeFactor = (warpBulge / 50) * 0.4;
+
                             const t = count > 1 ? (k - (count - 1) / 2) / ((count - 1) / 2) : 0;
-                            const offsetX = (1 - t * t) * -depth;
+                            const arcOffset = (1 - t * t) * -arcDepth;
+                            const waveOffset = Math.sin(t * Math.PI) * waveAmp;
+                            const totalOffsetX = arcOffset + waveOffset;
+
                             rotRad = t * (arcAngle * 0.35) * (Math.PI / 180);
-                            charX += offsetX;
+                            bulgeScale = 1 + (1 - t * t) * bulgeFactor;
+                            charX += totalOffsetX;
                         }
+
+                        ctx.save();
+                        ctx.translate(charX, charY);
+                        if (rotRad !== 0) ctx.rotate(rotRad);
+                        if (bulgeScale !== 1) ctx.scale(bulgeScale, bulgeScale);
 
                         if (strokeWidth > 0) {
                             ctx.save();
-                            ctx.translate(charX, charY);
-                            if (rotRad !== 0) ctx.rotate(rotRad);
                             if (shadowBlur > 0) {
                                 ctx.shadowColor = shadowColor;
                                 ctx.shadowBlur = shadowBlurPx;
@@ -355,8 +380,6 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                         }
 
                         ctx.save();
-                        ctx.translate(charX, charY);
-                        if (rotRad !== 0) ctx.rotate(rotRad);
                         if (strokeWidth === 0 && shadowBlur > 0) {
                             ctx.shadowColor = shadowColor;
                             ctx.shadowBlur = shadowBlurPx;
@@ -366,11 +389,14 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                         ctx.fillStyle = block.style.textColor || '#000000';
                         ctx.fillText(char, 0, 0);
                         ctx.restore();
+
+                        ctx.restore();
                     }
+                    ctx.restore();
                 }
             } else {
                 const lineHeight = fontSizePx * 1.18;
-                let startY = by + (bh / 2) - (totalTextHeight / 2) + (lineHeight / 2);
+                let startY = by + (bh / 2) - (totalTextHeight / 2) + (lineHeight / 2) - (fontSizePx * 0.05);
                 const minStartY = by + paddingPx + (lineHeight / 2);
                 if (startY < minStartY) startY = minStartY;
 
@@ -379,16 +405,30 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                 else if (block.style.align === 'right') startX = bx + bw - paddingPx;
 
                 ctx.textBaseline = 'middle';
-                const arcAngle = block.style.arcAngle || 0;
 
                 for (let i = 0; i < textLines.length; i++) {
                     const lineText = textLines[i];
+                    const normLineText = String(lineText || '').normalize('NFC');
                     const lineY = startY + (i * lineHeight);
 
-                    if (arcAngle && Math.abs(arcAngle) > 0 && lineText.length > 1) {
-                        const chars = Array.from(lineText);
+                    ctx.save();
+                    if (hasSkew) {
+                        const radX = (skewX * Math.PI) / 180;
+                        const radY = (skewY * Math.PI) / 180;
+                        ctx.translate(startX, lineY);
+                        ctx.transform(1, Math.tan(radY), Math.tan(radX), 1, 0, 0);
+                        ctx.translate(-startX, -lineY);
+                    }
+
+                    if (hasCharWarp && normLineText.length > 1) {
+                        const chars = (typeof Intl !== 'undefined' && Intl.Segmenter)
+                            ? Array.from(new Intl.Segmenter().segment(normLineText)).map(s => s.segment)
+                            : Array.from(normLineText);
                         const count = chars.length;
-                        const depth = (arcAngle / 45) * fontSizePx * 0.4;
+                        const arcDepth = (arcAngle / 45) * 8 * scaleFactor;
+                        const waveAmp = (warpWave / 50) * 10 * scaleFactor;
+                        const bulgeFactor = (warpBulge / 50) * 0.4;
+
                         let lineW = 0;
                         chars.forEach(c => lineW += ctx.measureText(c).width);
 
@@ -404,13 +444,21 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                             const cw = ctx.measureText(char).width;
                             const charCenterX = curX + (cw / 2);
                             const t = count > 1 ? (k - (count - 1) / 2) / ((count - 1) / 2) : 0;
-                            const offsetY = (1 - t * t) * -depth;
+
+                            const arcOffset = (1 - t * t) * -arcDepth;
+                            const waveOffset = Math.sin(t * Math.PI) * waveAmp;
+                            const totalOffsetY = arcOffset + waveOffset;
+
                             const rotRad = t * (arcAngle * 0.35) * (Math.PI / 180);
+                            const bulgeScale = 1 + (1 - t * t) * bulgeFactor;
+
+                            ctx.save();
+                            ctx.translate(charCenterX, lineY + totalOffsetY);
+                            if (rotRad !== 0) ctx.rotate(rotRad);
+                            if (bulgeScale !== 1) ctx.scale(bulgeScale, bulgeScale);
 
                             if (strokeWidth > 0) {
                                 ctx.save();
-                                ctx.translate(charCenterX, lineY + offsetY);
-                                ctx.rotate(rotRad);
                                 if (shadowBlur > 0) {
                                     ctx.shadowColor = shadowColor;
                                     ctx.shadowBlur = shadowBlurPx;
@@ -426,8 +474,6 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                             }
 
                             ctx.save();
-                            ctx.translate(charCenterX, lineY + offsetY);
-                            ctx.rotate(rotRad);
                             if (strokeWidth === 0 && shadowBlur > 0) {
                                 ctx.shadowColor = shadowColor;
                                 ctx.shadowBlur = shadowBlurPx;
@@ -436,6 +482,8 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                             }
                             ctx.fillStyle = block.style.textColor || '#000000';
                             ctx.fillText(char, 0, 0);
+                            ctx.restore();
+
                             ctx.restore();
 
                             curX += cw;
@@ -469,6 +517,7 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                         ctx.fillText(lineText, startX, lineY);
                         ctx.restore();
                     }
+                    ctx.restore();
                 }
             }
 

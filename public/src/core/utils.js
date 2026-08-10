@@ -10,11 +10,18 @@ export function escapeHTML(value) {
         .replace(/'/g, '&#039;');
 }
 
-export function setMultilineText(target, value, arcAngle = 0) {
+export function setMultilineText(target, value, warpOptions = {}) {
     if (!target) return;
     target.textContent = '';
     const isVertical = target.style.writingMode === 'vertical-rl';
     const lines = String(value ?? '').split('\n');
+
+    const opts = typeof warpOptions === 'object' && warpOptions !== null ? warpOptions : { arcAngle: Number(warpOptions) || 0 };
+    const arcAngle = opts.arcAngle || 0;
+    const skewX = opts.skewX || 0;
+    const skewY = opts.skewY || 0;
+    const warpWave = opts.warpWave || 0;
+    const warpBulge = opts.warpBulge || 0;
 
     lines.forEach((line) => {
         const lineDiv = document.createElement('div');
@@ -43,10 +50,21 @@ export function setMultilineText(target, value, arcAngle = 0) {
         lineDiv.style.overflowWrap = 'normal';
         lineDiv.style.hyphens = 'none';
 
-        if (arcAngle && Math.abs(arcAngle) > 0 && line.length > 1) {
-            const chars = Array.from(line);
+        if (skewX !== 0 || skewY !== 0) {
+            lineDiv.style.transform = `skew(${skewX}deg, ${skewY}deg)`;
+        }
+
+        const normLine = String(line || '').normalize('NFC');
+        const hasCharWarp = (arcAngle !== 0) || (warpWave !== 0) || (warpBulge !== 0);
+
+        if (hasCharWarp && normLine.length > 1) {
+            const chars = (typeof Intl !== 'undefined' && Intl.Segmenter)
+                ? Array.from(new Intl.Segmenter().segment(normLine)).map(s => s.segment)
+                : Array.from(normLine);
             const count = chars.length;
-            const depth = (arcAngle / 45) * 8;
+            const arcDepth = (arcAngle / 45) * 8;
+            const waveAmp = (warpWave / 50) * 10;
+            const bulgeFactor = (warpBulge / 50) * 0.4;
 
             chars.forEach((ch, idx) => {
                 const span = document.createElement('span');
@@ -55,13 +73,16 @@ export function setMultilineText(target, value, arcAngle = 0) {
                 span.textContent = ch;
 
                 const t = count > 1 ? (idx - (count - 1) / 2) / ((count - 1) / 2) : 0;
-                const offset = (1 - t * t) * -depth;
+                const arcOffset = (1 - t * t) * -arcDepth;
+                const waveOffset = Math.sin(t * Math.PI) * waveAmp;
+                const totalOffset = arcOffset + waveOffset;
                 const rot = t * (arcAngle * 0.35);
+                const scale = 1 + (1 - t * t) * bulgeFactor;
 
                 if (isVertical) {
-                    span.style.transform = `translateX(${offset}px) rotate(${rot}deg)`;
+                    span.style.transform = `translateX(${totalOffset}px) rotate(${rot}deg) scale(${scale})`;
                 } else {
-                    span.style.transform = `translateY(${offset}px) rotate(${rot}deg)`;
+                    span.style.transform = `translateY(${totalOffset}px) rotate(${rot}deg) scale(${scale})`;
                 }
                 lineDiv.appendChild(span);
             });

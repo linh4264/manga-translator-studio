@@ -1121,26 +1121,77 @@
                             class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
                     </div>
 
-                    <!-- Element Rotation (Xoay block thoại) -->
-                    <div class="space-y-1 border-t border-slate-800 pt-3">
-                        <div class="flex justify-between items-center">
-                            <label data-i18n="rotation-label"
-                                class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Xoay ô dịch
-                                (Rotation)</label>
-                            <span id="lbl-rotate" class="text-xs text-indigo-400 font-mono">0°</span>
+                    <!-- Warp & Text Transformation Suite -->
+                    <div class="space-y-3 border-t border-slate-800 pt-3">
+                        <label class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block flex items-center justify-between">
+                            <span class="flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles"></i> Biến dạng & Uốn chữ (Warp Suite)</span>
+                            <button onclick="resetWarpTransformControls()" class="text-[9px] text-slate-500 hover:text-indigo-400 transition-colors" title="Reset Warp về 0">Reset</button>
+                        </label>
+
+                        <!-- Rotation -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] text-slate-400">Góc xoay (Rotate)</span>
+                                <span id="lbl-rotate" class="text-xs text-indigo-400 font-mono">0°</span>
+                            </div>
+                            <input type="range" id="style-rotate" min="-180" max="180" value="0"
+                                oninput="syncActiveBlockStyle('rotate', parseInt(this.value))"
+                                class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
                         </div>
-                        <input type="range" id="style-rotate" min="-180" max="180" value="0"
-                            oninput="syncActiveBlockStyle('rotate', parseInt(this.value))"
-                            class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
-                        <div class="grid grid-cols-4 gap-1 mt-1">
-                            <button onclick="syncActiveBlockStyle('rotate', 0)"
-                                class="py-0.5 text-[10px] rounded bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 font-semibold">0°</button>
-                            <button onclick="syncActiveBlockStyle('rotate', 90)"
-                                class="py-0.5 text-[10px] rounded bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 font-semibold">90°</button>
-                            <button onclick="syncActiveBlockStyle('rotate', -90)"
-                                class="py-0.5 text-[10px] rounded bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 font-semibold">-90°</button>
-                            <button onclick="syncActiveBlockStyle('rotate', 180)"
-                                class="py-0.5 text-[10px] rounded bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800 font-semibold">180°</button>
+
+                        <!-- Arc Angle -->
+                        <div class="space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] text-slate-400">Độ uốn vòm (Arc)</span>
+                                <span id="lbl-sfx-arc" class="text-xs text-indigo-400 font-mono">0°</span>
+                            </div>
+                            <input type="range" id="slider-sfx-arc" min="-60" max="60" value="0"
+                                oninput="updateSfxArc(this.value)"
+                                class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                        </div>
+
+                        <!-- Skew X & Skew Y (Nghiêng phối cảnh 3D) -->
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="space-y-1">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] text-slate-400">Nghiêng X (Skew X)</span>
+                                    <span id="lbl-sfx-skew-x" class="text-xs text-indigo-400 font-mono">0°</span>
+                                </div>
+                                <input type="range" id="slider-sfx-skew-x" min="-45" max="45" value="0"
+                                    oninput="updateSfxSkewX(this.value)"
+                                    class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                            </div>
+                            <div class="space-y-1">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] text-slate-400">Nghiêng Y (Skew Y)</span>
+                                    <span id="lbl-sfx-skew-y" class="text-xs text-indigo-400 font-mono">0°</span>
+                                </div>
+                                <input type="range" id="slider-sfx-skew-y" min="-45" max="45" value="0"
+                                    oninput="updateSfxSkewY(this.value)"
+                                    class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                            </div>
+                        </div>
+
+                        <!-- Wave & Bulge (Uốn sóng S & Nổ phình chữ) -->
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="space-y-1">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] text-slate-400">Uốn sóng S (Wave)</span>
+                                    <span id="lbl-sfx-wave" class="text-xs text-indigo-400 font-mono">0</span>
+                                </div>
+                                <input type="range" id="slider-sfx-wave" min="-50" max="50" value="0"
+                                    oninput="updateSfxWave(this.value)"
+                                    class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                            </div>
+                            <div class="space-y-1">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[10px] text-slate-400">Phình to (Bulge)</span>
+                                    <span id="lbl-sfx-bulge" class="text-xs text-indigo-400 font-mono">0</span>
+                                </div>
+                                <input type="range" id="slider-sfx-bulge" min="-50" max="50" value="0"
+                                    oninput="updateSfxBulge(this.value)"
+                                    class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                            </div>
                         </div>
                     </div>
 
