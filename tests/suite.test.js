@@ -212,5 +212,17 @@ test('Per-Block Auto-Fit Toggle Functions', async () => {
     assert.strictEqual(canvasStyling.isBlockAutoFit(testBlockDefault), true, 'isBlockAutoFit must fallback to global state if undefined');
 });
 
+// 10. Arc Text Curved Rendering Test
+test('Arc Text Curved Rendering in setMultilineText', async () => {
+    const { setMultilineText } = await import('../public/src/core/utils.js');
+    assert.strictEqual(typeof setMultilineText, 'function');
+
+    const dummyContainer = { textContent: '', style: {}, appendChild(el) { this.children.push(el); }, children: [] };
+    setMultilineText(dummyContainer, 'TEST CHỮ UỐN CONG', 30);
+    assert.strictEqual(dummyContainer.children.length, 1, 'Container should contain line div');
+    const lineDiv = dummyContainer.children[0];
+    assert.strictEqual(lineDiv.children.length, 17, 'Line div should contain 17 character spans for arc rendering');
+});
+
 
 

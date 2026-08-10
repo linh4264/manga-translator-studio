@@ -10,29 +10,65 @@ export function escapeHTML(value) {
         .replace(/'/g, '&#039;');
 }
 
-export function setMultilineText(target, value) {
+export function setMultilineText(target, value, arcAngle = 0) {
     if (!target) return;
     target.textContent = '';
     const isVertical = target.style.writingMode === 'vertical-rl';
-    String(value ?? '').split('\n').forEach((line) => {
+    const lines = String(value ?? '').split('\n');
+
+    lines.forEach((line) => {
         const lineDiv = document.createElement('div');
         if (isVertical) {
             lineDiv.style.height = '100%';
             lineDiv.style.width = 'auto';
-            lineDiv.style.minWidth = '1.1em'; // Keep column width if empty
+            lineDiv.style.minWidth = '1.1em';
             lineDiv.style.minHeight = 'auto';
+            lineDiv.style.display = 'flex';
+            lineDiv.style.flexDirection = 'column';
+            lineDiv.style.alignItems = 'center';
+            lineDiv.style.justifyContent = 'center';
         } else {
             lineDiv.style.width = '100%';
             lineDiv.style.height = 'auto';
-            lineDiv.style.minHeight = '1em'; // Giữ chiều cao nếu dòng trống
+            lineDiv.style.minHeight = '1em';
             lineDiv.style.minWidth = 'auto';
+            lineDiv.style.display = 'flex';
+            lineDiv.style.flexDirection = 'row';
+            lineDiv.style.alignItems = 'center';
+            lineDiv.style.justifyContent = 'center';
         }
         lineDiv.style.margin = '0';
         lineDiv.style.padding = '0';
         lineDiv.style.wordBreak = 'keep-all';
         lineDiv.style.overflowWrap = 'normal';
         lineDiv.style.hyphens = 'none';
-        lineDiv.appendChild(document.createTextNode(line || ' '));
+
+        if (arcAngle && Math.abs(arcAngle) > 0 && line.length > 1) {
+            const chars = Array.from(line);
+            const count = chars.length;
+            const depth = (arcAngle / 45) * 8;
+
+            chars.forEach((ch, idx) => {
+                const span = document.createElement('span');
+                span.style.display = 'inline-block';
+                span.style.whiteSpace = 'pre';
+                span.textContent = ch;
+
+                const t = count > 1 ? (idx - (count - 1) / 2) / ((count - 1) / 2) : 0;
+                const offset = (1 - t * t) * -depth;
+                const rot = t * (arcAngle * 0.35);
+
+                if (isVertical) {
+                    span.style.transform = `translateX(${offset}px) rotate(${rot}deg)`;
+                } else {
+                    span.style.transform = `translateY(${offset}px) rotate(${rot}deg)`;
+                }
+                lineDiv.appendChild(span);
+            });
+        } else {
+            lineDiv.appendChild(document.createTextNode(line || ' '));
+        }
+
         target.appendChild(lineDiv);
     });
 }

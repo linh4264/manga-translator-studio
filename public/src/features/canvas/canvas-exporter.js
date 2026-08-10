@@ -308,6 +308,8 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                 const charStep = fontSizePx * 1.12;
                 let rightX = bx + bw / 2 + totalTextWidth / 2 - colStep / 2;
 
+                const arcAngle = block.style.arcAngle || 0;
+
                 for (let j = 0; j < columns.length; j++) {
                     const colChars = columns[j];
                     const colX = rightX - (j * colStep);
@@ -321,10 +323,23 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
 
                     for (let k = 0; k < colChars.length; k++) {
                         const char = colChars[k];
-                        const charY = startY + (k * charStep);
+                        let charY = startY + (k * charStep);
+                        let charX = colX;
+                        let rotRad = 0;
+
+                        if (arcAngle && Math.abs(arcAngle) > 0 && colChars.length > 1) {
+                            const count = colChars.length;
+                            const depth = (arcAngle / 45) * fontSizePx * 0.4;
+                            const t = count > 1 ? (k - (count - 1) / 2) / ((count - 1) / 2) : 0;
+                            const offsetX = (1 - t * t) * -depth;
+                            rotRad = t * (arcAngle * 0.35) * (Math.PI / 180);
+                            charX += offsetX;
+                        }
 
                         if (strokeWidth > 0) {
                             ctx.save();
+                            ctx.translate(charX, charY);
+                            if (rotRad !== 0) ctx.rotate(rotRad);
                             if (shadowBlur > 0) {
                                 ctx.shadowColor = shadowColor;
                                 ctx.shadowBlur = shadowBlurPx;
@@ -335,11 +350,13 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                             ctx.strokeStyle = strokeColor;
                             ctx.lineJoin = 'round';
                             ctx.miterLimit = 2;
-                            ctx.strokeText(char, colX, charY);
+                            ctx.strokeText(char, 0, 0);
                             ctx.restore();
                         }
 
                         ctx.save();
+                        ctx.translate(charX, charY);
+                        if (rotRad !== 0) ctx.rotate(rotRad);
                         if (strokeWidth === 0 && shadowBlur > 0) {
                             ctx.shadowColor = shadowColor;
                             ctx.shadowBlur = shadowBlurPx;
@@ -347,7 +364,7 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                             ctx.shadowOffsetY = 0;
                         }
                         ctx.fillStyle = block.style.textColor || '#000000';
-                        ctx.fillText(char, colX, charY);
+                        ctx.fillText(char, 0, 0);
                         ctx.restore();
                     }
                 }
@@ -361,39 +378,97 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                 if (block.style.align === 'left') startX = bx + paddingPx;
                 else if (block.style.align === 'right') startX = bx + bw - paddingPx;
 
-                ctx.textAlign = block.style.align || 'center';
                 ctx.textBaseline = 'middle';
+                const arcAngle = block.style.arcAngle || 0;
 
                 for (let i = 0; i < textLines.length; i++) {
                     const lineText = textLines[i];
                     const lineY = startY + (i * lineHeight);
 
-                    if (strokeWidth > 0) {
+                    if (arcAngle && Math.abs(arcAngle) > 0 && lineText.length > 1) {
+                        const chars = Array.from(lineText);
+                        const count = chars.length;
+                        const depth = (arcAngle / 45) * fontSizePx * 0.4;
+                        let lineW = 0;
+                        chars.forEach(c => lineW += ctx.measureText(c).width);
+
+                        let startCharX = startX - (lineW / 2);
+                        if (block.style.align === 'left') startCharX = bx + paddingPx;
+                        else if (block.style.align === 'right') startCharX = bx + bw - paddingPx - lineW;
+
+                        let curX = startCharX;
+                        ctx.textAlign = 'center';
+
+                        for (let k = 0; k < count; k++) {
+                            const char = chars[k];
+                            const cw = ctx.measureText(char).width;
+                            const charCenterX = curX + (cw / 2);
+                            const t = count > 1 ? (k - (count - 1) / 2) / ((count - 1) / 2) : 0;
+                            const offsetY = (1 - t * t) * -depth;
+                            const rotRad = t * (arcAngle * 0.35) * (Math.PI / 180);
+
+                            if (strokeWidth > 0) {
+                                ctx.save();
+                                ctx.translate(charCenterX, lineY + offsetY);
+                                ctx.rotate(rotRad);
+                                if (shadowBlur > 0) {
+                                    ctx.shadowColor = shadowColor;
+                                    ctx.shadowBlur = shadowBlurPx;
+                                    ctx.shadowOffsetX = 0;
+                                    ctx.shadowOffsetY = 0;
+                                }
+                                ctx.lineWidth = strokeWidthPx;
+                                ctx.strokeStyle = strokeColor;
+                                ctx.lineJoin = 'round';
+                                ctx.miterLimit = 2;
+                                ctx.strokeText(char, 0, 0);
+                                ctx.restore();
+                            }
+
+                            ctx.save();
+                            ctx.translate(charCenterX, lineY + offsetY);
+                            ctx.rotate(rotRad);
+                            if (strokeWidth === 0 && shadowBlur > 0) {
+                                ctx.shadowColor = shadowColor;
+                                ctx.shadowBlur = shadowBlurPx;
+                                ctx.shadowOffsetX = 0;
+                                ctx.shadowOffsetY = 0;
+                            }
+                            ctx.fillStyle = block.style.textColor || '#000000';
+                            ctx.fillText(char, 0, 0);
+                            ctx.restore();
+
+                            curX += cw;
+                        }
+                    } else {
+                        ctx.textAlign = block.style.align || 'center';
+                        if (strokeWidth > 0) {
+                            ctx.save();
+                            if (shadowBlur > 0) {
+                                ctx.shadowColor = shadowColor;
+                                ctx.shadowBlur = shadowBlurPx;
+                                ctx.shadowOffsetX = 0;
+                                ctx.shadowOffsetY = 0;
+                            }
+                            ctx.lineWidth = strokeWidthPx;
+                            ctx.strokeStyle = strokeColor;
+                            ctx.lineJoin = 'round';
+                            ctx.miterLimit = 2;
+                            ctx.strokeText(lineText, startX, lineY);
+                            ctx.restore();
+                        }
+
                         ctx.save();
-                        if (shadowBlur > 0) {
+                        if (strokeWidth === 0 && shadowBlur > 0) {
                             ctx.shadowColor = shadowColor;
                             ctx.shadowBlur = shadowBlurPx;
                             ctx.shadowOffsetX = 0;
                             ctx.shadowOffsetY = 0;
                         }
-                        ctx.lineWidth = strokeWidthPx;
-                        ctx.strokeStyle = strokeColor;
-                        ctx.lineJoin = 'round';
-                        ctx.miterLimit = 2;
-                        ctx.strokeText(lineText, startX, lineY);
+                        ctx.fillStyle = block.style.textColor || '#000000';
+                        ctx.fillText(lineText, startX, lineY);
                         ctx.restore();
                     }
-
-                    ctx.save();
-                    if (strokeWidth === 0 && shadowBlur > 0) {
-                        ctx.shadowColor = shadowColor;
-                        ctx.shadowBlur = shadowBlurPx;
-                        ctx.shadowOffsetX = 0;
-                        ctx.shadowOffsetY = 0;
-                    }
-                    ctx.fillStyle = block.style.textColor || '#000000';
-                    ctx.fillText(lineText, startX, lineY);
-                    ctx.restore();
                 }
             }
 

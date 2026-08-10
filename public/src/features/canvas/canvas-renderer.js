@@ -258,14 +258,14 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
             innerTextDiv.style.lineHeight = block.style.vertical ? '1.12' : '1.18';
             innerTextDiv.style.textAlign = block.style.align || 'center';
 
-            setMultilineText(innerTextDiv, block.translated);
+            setMultilineText(innerTextDiv, block.translated, block.style.arcAngle || 0);
 
             if ((globalState.bilingualMode === 'sub' || block.style.bilingualSub) && block.original && block.original.trim()) {
                 const origSub = document.createElement('div');
                 origSub.className = 'text-[0.7em] opacity-75 font-sans tracking-normal mt-0.5 select-none pointer-events-none';
                 origSub.style.color = 'inherit';
                 origSub.style.lineHeight = '1.1';
-                setMultilineText(origSub, block.original);
+                setMultilineText(origSub, block.original, block.style.arcAngle || 0);
                 innerTextDiv.appendChild(origSub);
             }
 
