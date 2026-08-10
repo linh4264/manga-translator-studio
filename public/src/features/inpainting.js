@@ -102,14 +102,18 @@ export function toggleEraserMode() {
 
     isEraserModeActive = !isEraserModeActive;
 
-    const trigger = document.getElementById('btn-eraser-floating-trigger');
+    const floatingBtn = document.getElementById('btn-eraser-mode-floating');
 
     if (isEraserModeActive) {
-        elements.eraserSettingsPanel.classList.remove('hidden');
-        if (trigger) trigger.classList.add('hidden');
-        
-        elements.btnEraserMode.classList.add('bg-indigo-600', 'text-white');
-        elements.btnEraserMode.classList.remove('bg-slate-800', 'text-slate-300');
+        if (elements.eraserSettingsPanel) elements.eraserSettingsPanel.classList.remove('hidden');
+        if (elements.btnEraserMode) {
+            elements.btnEraserMode.classList.add('bg-indigo-600', 'text-white');
+            elements.btnEraserMode.classList.remove('bg-slate-800', 'text-slate-300');
+        }
+        if (floatingBtn) {
+            floatingBtn.classList.add('bg-indigo-600', 'text-white', 'border-indigo-500');
+            floatingBtn.classList.remove('bg-slate-900', 'text-slate-300');
+        }
 
         elements.eraserCanvas.classList.add('drawing-active');
         elements.mangaOverlaysContainer.classList.add('pointer-events-none');
@@ -117,11 +121,15 @@ export function toggleEraserMode() {
         initEraserDrawingEvents();
         showToast("Đã bật chế độ cọ tẩy. Dùng chuột/bút vẽ trực tiếp lên ảnh để xóa.", "info");
     } else {
-        elements.eraserSettingsPanel.classList.add('hidden');
-        if (trigger) trigger.classList.add('hidden');
-
-        elements.btnEraserMode.classList.remove('bg-indigo-600', 'text-white');
-        elements.btnEraserMode.classList.add('bg-slate-800', 'text-slate-300');
+        if (elements.eraserSettingsPanel) elements.eraserSettingsPanel.classList.add('hidden');
+        if (elements.btnEraserMode) {
+            elements.btnEraserMode.classList.remove('bg-indigo-600', 'text-white');
+            elements.btnEraserMode.classList.add('bg-slate-800', 'text-slate-300');
+        }
+        if (floatingBtn) {
+            floatingBtn.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-500');
+            floatingBtn.classList.add('bg-slate-900', 'text-slate-300');
+        }
 
         elements.eraserCanvas.classList.remove('drawing-active');
         elements.mangaOverlaysContainer.classList.remove('pointer-events-none');
