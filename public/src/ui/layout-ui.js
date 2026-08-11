@@ -131,7 +131,7 @@ export function updateSplitView() {
 export function changeZoom(amount, mouseEvent = null) {
     const viewport = document.getElementById('workspace-viewport');
     const oldZoom = globalState.zoom;
-    const newZoom = Math.max(25, Math.min(250, oldZoom + amount));
+    const newZoom = Math.max(25, Math.min(500, oldZoom + amount));
     if (newZoom === oldZoom) return;
 
     let targetEl = null;
