@@ -73,9 +73,15 @@ const server = http.createServer((req, res) => {
     const safePath = path.normalize(urlPath);
     let filePath = path.join(rootPath, safePath === '/' || safePath === '.' ? 'index.html' : safePath);
 
-    // If target is directory, append index.html
+    // If target is directory or missing extension, check index.html or .html
     fs.stat(filePath, (err, stats) => {
-        if (!err && stats.isDirectory()) {
+        if (err && !path.extname(filePath)) {
+            if (fs.existsSync(filePath + '.html')) {
+                filePath = filePath + '.html';
+            } else if (fs.existsSync(path.join(filePath, 'index.html'))) {
+                filePath = path.join(filePath, 'index.html');
+            }
+        } else if (!err && stats.isDirectory()) {
             filePath = path.join(filePath, 'index.html');
         }
 

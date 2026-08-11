@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bộ Công cụ Hữu ích - PDF sang PNG & Cắt Ảnh Dọc | Manga Translator Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#1e293b',
+                            950: '#0b0f19',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- PDF.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- JSZip CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- TOP NAVIGATION HEADER -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 px-4 py-3 flex items-center justify-between shadow-xl">
+        <div class="flex items-center gap-3">
+            <a href="/" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all shadow-sm group">
+                <i class="fa-solid fa-arrow-left text-slate-400 group-hover:-translate-x-0.5 transition-transform"></i>
+                <span>Về Manga Studio</span>
+            </a>
+            <div class="h-4 w-px bg-slate-800 hidden sm:block"></div>
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                    <i class="fa-solid fa-toolbox text-sm"></i>
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold text-slate-100 leading-none">Bộ Công cụ Hữu ích</h1>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Xử lý PDF, cắt ảnh Manga/Webtoon hoàn toàn miễn phí & bảo mật</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOOL SWITCHER TABS -->
+        <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner">
+            <button id="tab-btn-pdf" onclick="switchToolTab('pdf')"
+                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 bg-indigo-600 text-white shadow-sm">
+                <i class="fa-solid fa-file-pdf"></i> PDF sang PNG
+            </button>
+            <button id="tab-btn-slicer" onclick="switchToolTab('slicer')"
+                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-scissors"></i> Cắt Ảnh Dọc Đều
+            </button>
+        </div>
+
+        <div class="hidden md:flex items-center gap-2">
+            <span class="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Offline 100% (Client-side)
+            </span>
+        </div>
+    </header>
+
+    <!-- MAIN WORKSPACE -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
+
+        <!-- ================= TOOL 1: PDF TO PNG ================= -->
+        <section id="tool-section-pdf" class="flex flex-col gap-6">
+            <!-- HERO / UPLOAD ZONE -->
+            <div id="pdf-upload-zone"
+                class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all duration-200 text-center flex flex-col items-center justify-center gap-4 cursor-pointer relative group shadow-2xl">
+                <input type="file" id="pdf-file-input" accept="application/pdf" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10">
+
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-600/20 transition-all shadow-lg">
+                    <i class="fa-solid fa-file-pdf text-3xl"></i>
+                </div>
+
+                <div>
+                    <h2 class="text-base font-bold text-slate-200 group-hover:text-indigo-300 transition-colors">
+                        Kéo & Thả tệp PDF vào đây hoặc <span class="text-indigo-400 underline decoration-indigo-500/40">Chọn từ máy tính</span>
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Hỗ trợ mọi định dạng tài liệu PDF, chuyển đổi từng trang thành ảnh PNG chất lượng cao</p>
+                </div>
+
+                <div class="flex items-center gap-4 text-[11px] text-slate-500 mt-2 font-medium">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-shield-halved text-indigo-400"></i> Không tải lên server</span>
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-bolt text-amber-400"></i> Xử lý cực nhanh</span>
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-file-image text-emerald-400"></i> Độ phân giải cực nét</span>
+                </div>
+            </div>
+
+            <!-- CONTROLS PANEL -->
+            <div id="pdf-controls-panel" class="hidden bg-slate-900/90 border border-slate-800 rounded-2xl p-4 md:p-5 shadow-2xl flex flex-col gap-4">
+                <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shrink-0">
+                            <i class="fa-solid fa-file-pdf text-lg"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 id="lbl-pdf-filename" class="text-sm font-bold text-slate-200 truncate max-w-xs md:max-w-md">filename.pdf</h3>
+                            <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5 font-mono">
+                                <span id="lbl-pdf-page-count">0 trang</span>
+                                <span>•</span>
+                                <span id="lbl-pdf-filesize">0 MB</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="document.getElementById('pdf-file-input').click()"
+                            class="px-3 py-2 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-semibold transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-arrow-up-from-bracket text-slate-400"></i> Chọn PDF khác
+                        </button>
+                        <button onclick="exportPdfPagesZip()"
+                            class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-600/25 flex items-center gap-2">
+                            <i class="fa-solid fa-file-zipper"></i> Tải Tất Cả (File ZIP)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none flex items-center justify-between">
+                            <span>Độ nét (DPI / Tỷ lệ)</span>
+                            <span id="lbl-dpi-badge" class="text-indigo-400 font-mono">150 DPI (2x)</span>
+                        </label>
+                        <select id="select-scale" onchange="renderPdfPages()"
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
+                            <option value="1.0">72 DPI (Standard 1x - Nhẹ)</option>
+                            <option value="1.5">110 DPI (HD 1.5x - Cân bằng)</option>
+                            <option value="2.0" selected>150 DPI (Full HD 2x - Khuyên dùng)</option>
+                            <option value="3.0">225 DPI (Ultra HD 3x - Nét)</option>
+                            <option value="4.0">300 DPI (4K Super Sharp 4x - Cực nét)</option>
+                        </select>
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none flex items-center justify-between">
+                            <span>Lọc trang xuất</span>
+                            <span class="text-slate-500 font-normal">VD: 1-5, 8, 10</span>
+                        </label>
+                        <input type="text" id="txt-page-range" placeholder="Tất cả trang (vd: 1-10)" onchange="renderPdfPages()"
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono">
+                    </div>
+
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none">
+                            <span>Thao tác hàng loạt</span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <button onclick="selectAllPdfPages(true)" class="flex-1 px-3 py-2 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-semibold">Chọn tất cả</button>
+                            <button onclick="selectAllPdfPages(false)" class="flex-1 px-3 py-2 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-semibold">Bỏ chọn</button>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-1.5 justify-end">
+                        <div id="pdf-status" class="text-xs text-slate-400 flex items-center gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800 font-mono truncate">
+                            <i class="fa-solid fa-circle-check text-emerald-400"></i> Sẵn sàng xuất ảnh
+                        </div>
+                    </div>
+                </div>
+
+                <div id="pdf-progress-container" class="hidden flex-col gap-1.5 pt-2">
+                    <div class="flex items-center justify-between text-xs font-mono">
+                        <span id="lbl-pdf-progress-status" class="text-indigo-400">Đang xuất tệp ZIP...</span>
+                        <span id="lbl-pdf-progress-percent" class="text-slate-300 font-bold">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                        <div id="pdf-progress-bar" class="bg-indigo-600 h-full w-0 transition-all duration-150"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PDF PAGES GRID -->
+            <div id="pdf-pages-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"></div>
+        </section>
+
+
+        <!-- ================= TOOL 2: VERTICAL IMAGE SLICER ================= -->
+        <section id="tool-section-slicer" class="hidden flex-col gap-6">
+            <!-- SLICER UPLOAD ZONE -->
+            <div id="slicer-upload-zone"
+                class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all duration-200 text-center flex flex-col items-center justify-center gap-4 cursor-pointer relative group shadow-2xl">
+                <input type="file" id="slicer-file-input" accept="image/png, image/jpeg, image/webp" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10">
+
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-600/20 transition-all shadow-lg">
+                    <i class="fa-solid fa-scissors text-3xl"></i>
+                </div>
+
+                <div>
+                    <h2 class="text-base font-bold text-slate-200 group-hover:text-indigo-300 transition-colors">
+                        Kéo & Thả ảnh Webtoon / Manga vào đây hoặc <span class="text-indigo-400 underline decoration-indigo-500/40">Chọn ảnh từ máy tính</span>
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">Cắt ảnh dài (Long Strip / Webtoon) thành nhiều ảnh nhỏ bằng nhau theo chiều dọc dễ đọc & đăng truyện</p>
+                </div>
+
+                <div class="flex items-center gap-4 text-[11px] text-slate-500 mt-2 font-medium">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-border-all text-indigo-400"></i> Chia số lượng ảnh đều nhau</span>
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-file-zipper text-amber-400"></i> Đóng gói ZIP 1-click</span>
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles text-emerald-400"></i> Tự động tính chiều cao</span>
+                </div>
+            </div>
+
+            <!-- SLICER CONTROLS PANEL -->
+            <div id="slicer-controls-panel" class="hidden bg-slate-900/90 border border-slate-800 rounded-2xl p-4 md:p-5 shadow-2xl flex flex-col gap-4">
+                <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
+                            <i class="fa-solid fa-image text-lg"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 id="lbl-slicer-filename" class="text-sm font-bold text-slate-200 truncate max-w-xs md:max-w-md">image.png</h3>
+                            <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5 font-mono">
+                                <span id="lbl-slicer-dim">0 x 0 px</span>
+                                <span>•</span>
+                                <span id="lbl-slicer-slice-height">Mỗi ảnh ~0px</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="document.getElementById('slicer-file-input').click()"
+                            class="px-3 py-2 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-semibold transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-arrow-up-from-bracket text-slate-400"></i> Chọn ảnh khác
+                        </button>
+                        <button onclick="exportSlicedZip()"
+                            class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-600/25 flex items-center gap-2">
+                            <i class="fa-solid fa-file-zipper"></i> Cắt & Tải File ZIP
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+                    <!-- Slice count input -->
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none flex items-center justify-between">
+                            <span>Số lượng ảnh muốn cắt</span>
+                            <span id="lbl-slice-count-val" class="text-indigo-400 font-mono font-bold">4 ảnh</span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <input type="number" id="num-slice-count" min="2" max="100" value="4" oninput="processImageSlicing()"
+                                class="w-24 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 text-center font-bold">
+                            <div class="flex items-center gap-1 flex-1">
+                                <button onclick="setSliceCountPreset(2)" class="px-2 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 text-[10px] font-mono text-slate-300 border border-slate-750">2</button>
+                                <button onclick="setSliceCountPreset(3)" class="px-2 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 text-[10px] font-mono text-slate-300 border border-slate-750">3</button>
+                                <button onclick="setSliceCountPreset(4)" class="px-2 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 text-[10px] font-mono text-slate-300 border border-slate-750">4</button>
+                                <button onclick="setSliceCountPreset(5)" class="px-2 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 text-[10px] font-mono text-slate-300 border border-slate-750">5</button>
+                                <button onclick="setSliceCountPreset(8)" class="px-2 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 text-[10px] font-mono text-slate-300 border border-slate-750">8</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Output Format -->
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none">
+                            <span>Định dạng đầu ra</span>
+                        </label>
+                        <select id="select-slice-format" onchange="processImageSlicing()"
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
+                            <option value="image/png" selected>PNG (Gốc - Không suy hao nét)</option>
+                            <option value="image/jpeg">JPG (Nhẹ - Tốc độ nhanh)</option>
+                        </select>
+                    </div>
+
+                    <!-- Prefix Name -->
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none">
+                            <span>Tiền tố tên ảnh</span>
+                        </label>
+                        <input type="text" id="txt-slice-prefix" placeholder="Tên tệp (vd: page_01)" value="slice"
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500">
+                    </div>
+
+                    <!-- Status indicator -->
+                    <div class="flex flex-col gap-1.5 justify-end">
+                        <div id="slicer-status" class="text-xs text-slate-400 flex items-center gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800 font-mono truncate">
+                            <i class="fa-solid fa-circle-check text-emerald-400"></i> Đã tính toán thông số cắt
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLICED SEGMENTS GRID PREVIEW -->
+            <div id="slicer-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"></div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500 mt-auto">
+        <span>Powered by <strong class="text-slate-400">Manga Translator Studio Tools Engine</strong> • 100% Client-side HTML5 Canvas Processing</span>
+    </footer>
+
+    <!-- LIGHTBOX MODAL -->
+    <div id="preview-modal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4" onclick="closePreviewModal()">
+        <div class="relative max-w-5xl max-h-[90vh] flex flex-col items-center" onclick="event.stopPropagation()">
+            <button onclick="closePreviewModal()" class="absolute -top-10 right-0 text-slate-400 hover:text-white text-xl">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <img id="modal-img" src="" class="max-h-[85vh] max-w-full object-contain rounded-xl border border-slate-800 shadow-2xl" alt="Preview">
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // --- TAB SWITCHER LOGIC ---
+        function switchToolTab(tab) {
+            const btnPdf = document.getElementById('tab-btn-pdf');
+            const btnSlicer = document.getElementById('tab-btn-slicer');
+            const secPdf = document.getElementById('tool-section-pdf');
+            const secSlicer = document.getElementById('tool-section-slicer');
+
+            if (tab === 'pdf') {
+                btnPdf.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 bg-indigo-600 text-white shadow-sm";
+                btnSlicer.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200";
+                secPdf.classList.remove('hidden');
+                secSlicer.classList.add('hidden');
+            } else {
+                btnSlicer.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 bg-indigo-600 text-white shadow-sm";
+                btnPdf.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200";
+                secSlicer.classList.remove('hidden');
+                secPdf.classList.add('hidden');
+            }
+        }
+
+        // =========================================================================
+        // TOOL 1: PDF TO PNG LOGIC
+        // =========================================================================
+        let activePdfDoc = null;
+        let pdfFileName = '';
+        let pdfPageDataMap = new Map();
+
+        document.getElementById('pdf-file-input').addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) handlePdfFile(e.target.files[0]);
+        });
+
+        async function handlePdfFile(file) {
+            if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+                alert('Vui lòng chọn tệp PDF hợp lệ.');
+                return;
+            }
+
+            pdfFileName = file.name;
+            document.getElementById('lbl-pdf-filename').innerText = file.name;
+            document.getElementById('lbl-pdf-filesize').innerText = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                activePdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+                document.getElementById('lbl-pdf-page-count').innerText = `${activePdfDoc.numPages} trang`;
+                document.getElementById('pdf-upload-zone').classList.add('hidden');
+                document.getElementById('pdf-controls-panel').classList.remove('hidden');
+
+                await renderPdfPages();
+            } catch (err) {
+                console.error("Lỗi đọc PDF:", err);
+                alert("Không thể đọc tệp PDF. Tệp có thể bị khóa hoặc lỗi.");
+            }
+        }
+
+        function parsePageRange(rangeStr, totalPages) {
+            if (!rangeStr || !rangeStr.trim()) {
+                return Array.from({ length: totalPages }, (_, i) => i + 1);
+            }
+            const pages = new Set();
+            const parts = rangeStr.split(',');
+            for (let part of parts) {
+                part = part.trim();
+                if (part.includes('-')) {
+                    const [start, end] = part.split('-').map(n => parseInt(n.trim()));
+                    if (!isNaN(start) && !isNaN(end)) {
+                        for (let p = Math.max(1, start); p <= Math.min(totalPages, end); p++) pages.add(p);
+                    }
+                } else {
+                    const pageNum = parseInt(part);
+                    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) pages.add(pageNum);
+                }
+            }
+            return Array.from(pages).sort((a, b) => a - b);
+        }
+
+        async function renderPdfPages() {
+            if (!activePdfDoc) return;
+
+            const scale = parseFloat(document.getElementById('select-scale').value) || 2.0;
+            const dpiText = scale === 1.0 ? '72 DPI (1x)' : scale === 1.5 ? '110 DPI (1.5x)' : scale === 2.0 ? '150 DPI (2x)' : scale === 3.0 ? '225 DPI (3x)' : '300 DPI (4x)';
+            document.getElementById('lbl-dpi-badge').innerText = dpiText;
+
+            const rangeStr = document.getElementById('txt-page-range').value;
+            const pagesToRender = parsePageRange(rangeStr, activePdfDoc.numPages);
+
+            const grid = document.getElementById('pdf-pages-grid');
+            grid.innerHTML = '';
+            pdfPageDataMap.clear();
+
+            const statusElem = document.getElementById('pdf-status');
+            statusElem.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-indigo-400"></i> Đang trích xuất ${pagesToRender.length} trang...`;
+
+            for (let i = 0; i < pagesToRender.length; i++) {
+                const pageNum = pagesToRender[i];
+                const page = await activePdfDoc.getPage(pageNum);
+                const viewport = page.getViewport({ scale });
+
+                const canvas = document.createElement('canvas');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                const ctx = canvas.getContext('2d');
+
+                await page.render({ canvasContext: ctx, viewport }).promise;
+                pdfPageDataMap.set(pageNum, { canvas, selected: true });
+
+                const card = document.createElement('div');
+                card.id = `card-pdf-page-${pageNum}`;
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl hover:border-indigo-500/50 transition-all flex flex-col group relative";
+
+                const dataUrl = canvas.toDataURL('image/png');
+
+                card.innerHTML = `
+                    <div class="relative bg-slate-950 p-2 flex items-center justify-center min-h-[200px] overflow-hidden group/img">
+                        <img src="${dataUrl}" class="max-h-72 w-auto object-contain rounded shadow cursor-pointer transition-transform group-hover/img:scale-105" onclick="openPreviewModal('${dataUrl}')" alt="Trang ${pageNum}">
+                        <div class="absolute top-3 left-3 bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[10px] font-mono font-bold text-slate-300 shadow">
+                            Trang ${pageNum}
+                        </div>
+                        <label class="absolute top-3 right-3 flex items-center cursor-pointer">
+                            <input type="checkbox" checked onchange="togglePdfPageSelection(${pageNum}, this.checked)" class="w-4 h-4 accent-indigo-600 rounded cursor-pointer">
+                        </label>
+                    </div>
+                    <div class="p-3 border-t border-slate-800 bg-slate-900/60 flex items-center justify-between gap-2 mt-auto">
+                        <span class="text-[10px] text-slate-400 font-mono">${viewport.width} x ${viewport.height} px</span>
+                        <button onclick="downloadSinglePdfPage(${pageNum})" class="px-2.5 py-1.5 rounded-lg bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white text-xs font-semibold border border-indigo-500/20 transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-download text-[10px]"></i> Tải PNG
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            }
+
+            statusElem.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Đã xử lý xong ${pagesToRender.length} trang`;
+        }
+
+        function togglePdfPageSelection(pageNum, isSelected) {
+            const data = pdfPageDataMap.get(pageNum);
+            if (data) data.selected = isSelected;
+        }
+
+        function selectAllPdfPages(isSelected) {
+            pdfPageDataMap.forEach((data, pageNum) => {
+                data.selected = isSelected;
+                const card = document.getElementById(`card-pdf-page-${pageNum}`);
+                if (card) {
+                    const cb = card.querySelector('input[type="checkbox"]');
+                    if (cb) cb.checked = isSelected;
+                }
+            });
+        }
+
+        function downloadSinglePdfPage(pageNum) {
+            const data = pdfPageDataMap.get(pageNum);
+            if (!data) return;
+            const baseName = pdfFileName.replace(/\.pdf$/i, '');
+            const a = document.createElement('a');
+            a.href = data.canvas.toDataURL('image/png');
+            a.download = `${baseName}_trang_${pageNum}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        async function exportPdfPagesZip() {
+            const selectedPages = [];
+            pdfPageDataMap.forEach((data, pageNum) => {
+                if (data.selected) selectedPages.push({ pageNum, canvas: data.canvas });
+            });
+
+            if (selectedPages.length === 0) {
+                alert("Vui lòng chọn ít nhất 1 trang để xuất tệp ZIP.");
+                return;
+            }
+
+            const zip = new JSZip();
+            const baseName = pdfFileName.replace(/\.pdf$/i, '');
+            const pContainer = document.getElementById('pdf-progress-container');
+            const pBar = document.getElementById('pdf-progress-bar');
+            const lblPercent = document.getElementById('lbl-pdf-progress-percent');
+            const lblStatus = document.getElementById('lbl-pdf-progress-status');
+
+            pContainer.classList.remove('hidden');
+            lblStatus.innerText = `Đang nén ${selectedPages.length} trang...`;
+
+            for (let i = 0; i < selectedPages.length; i++) {
+                const { pageNum, canvas } = selectedPages[i];
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                const paddedNum = String(pageNum).padStart(3, '0');
+                zip.file(`${baseName}_page_${paddedNum}.png`, blob);
+
+                const percent = Math.round(((i + 1) / selectedPages.length) * 100);
+                pBar.style.width = `${percent}%`;
+                lblPercent.innerText = `${percent}%`;
+            }
+
+            lblStatus.innerText = "Đang tạo tập tin tải xuống...";
+            const zipContent = await zip.generateAsync({ type: 'blob' });
+
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(zipContent);
+            a.download = `${baseName}_PNG_Pages.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            setTimeout(() => {
+                pContainer.classList.add('hidden');
+                pBar.style.width = '0%';
+            }, 2000);
+        }
+
+
+        // =========================================================================
+        // TOOL 2: VERTICAL IMAGE SLICER LOGIC
+        // =========================================================================
+        let loadedSliceImage = null;
+        let slicerFileName = '';
+        let slicedDataList = []; // [{ partNum, dataUrl, blob, w, h }]
+
+        document.getElementById('slicer-file-input').addEventListener('change', (e) => {
+            if (e.target.files && e.target.files[0]) handleSlicerImageFile(e.target.files[0]);
+        });
+
+        function handleSlicerImageFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Vui lòng chọn định dạng tệp ảnh hợp lệ (PNG, JPG, WebP).');
+                return;
+            }
+
+            slicerFileName = file.name;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    loadedSliceImage = img;
+                    document.getElementById('lbl-slicer-filename').innerText = file.name;
+                    document.getElementById('lbl-slicer-dim').innerText = `${img.naturalWidth} x ${img.naturalHeight} px`;
+
+                    document.getElementById('slicer-upload-zone').classList.add('hidden');
+                    document.getElementById('slicer-controls-panel').classList.remove('hidden');
+
+                    processImageSlicing();
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function setSliceCountPreset(count) {
+            document.getElementById('num-slice-count').value = count;
+            processImageSlicing();
+        }
+
+        async function processImageSlicing() {
+            if (!loadedSliceImage) return;
+
+            const sliceCountInput = document.getElementById('num-slice-count');
+            let count = parseInt(sliceCountInput.value) || 4;
+            count = Math.max(2, Math.min(100, count));
+            sliceCountInput.value = count;
+            document.getElementById('lbl-slice-count-val').innerText = `${count} ảnh`;
+
+            const format = document.getElementById('select-slice-format').value;
+            const ext = format === 'image/jpeg' ? 'jpg' : 'png';
+
+            const W = loadedSliceImage.naturalWidth;
+            const H = loadedSliceImage.naturalHeight;
+            const sliceH = Math.floor(H / count);
+
+            document.getElementById('lbl-slicer-slice-height').innerText = `Mỗi ảnh ~${sliceH}px chiều cao`;
+
+            const grid = document.getElementById('slicer-grid');
+            grid.innerHTML = '';
+            slicedDataList = [];
+
+            const statusElem = document.getElementById('slicer-status');
+            statusElem.innerHTML = `<i class="fa-solid fa-scissors text-indigo-400 animate-bounce"></i> Đang cắt ảnh thành ${count} mảnh...`;
+
+            for (let i = 0; i < count; i++) {
+                const sy = i * sliceH;
+                const sh = (i === count - 1) ? (H - sy) : sliceH;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = W;
+                canvas.height = sh;
+                const ctx = canvas.getContext('2d');
+
+                ctx.drawImage(loadedSliceImage, 0, sy, W, sh, 0, 0, W, sh);
+
+                const dataUrl = canvas.toDataURL(format, 0.92);
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, format, 0.92));
+
+                slicedDataList.push({
+                    partNum: i + 1,
+                    dataUrl,
+                    blob,
+                    w: W,
+                    h: sh,
+                    ext
+                });
+
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl hover:border-indigo-500/50 transition-all flex flex-col group relative";
+
+                card.innerHTML = `
+                    <div class="relative bg-slate-950 p-2 flex items-center justify-center min-h-[160px] overflow-hidden group/img">
+                        <img src="${dataUrl}" class="max-h-60 w-auto object-contain rounded shadow cursor-pointer transition-transform group-hover/img:scale-105" onclick="openPreviewModal('${dataUrl}')" alt="Mảnh ${i + 1}">
+                        <div class="absolute top-3 left-3 bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[10px] font-mono font-bold text-indigo-400 shadow">
+                            Mảnh ${i + 1}/${count}
+                        </div>
+                    </div>
+                    <div class="p-3 border-t border-slate-800 bg-slate-900/60 flex items-center justify-between gap-2 mt-auto">
+                        <span class="text-[10px] text-slate-400 font-mono">${W} x ${sh} px</span>
+                        <button onclick="downloadSingleSlice(${i})" class="px-2.5 py-1.5 rounded-lg bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white text-xs font-semibold border border-indigo-500/20 transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-download text-[10px]"></i> Tải mảnh ${i + 1}
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            }
+
+            statusElem.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Đã cắt hoàn tất ${count} mảnh đều nhau`;
+        }
+
+        function downloadSingleSlice(index) {
+            const item = slicedDataList[index];
+            if (!item) return;
+
+            const prefixInput = document.getElementById('txt-slice-prefix').value.trim() || 'slice';
+            const baseName = slicerFileName.replace(/\.[^/.]+$/, '');
+            const paddedNum = String(item.partNum).padStart(2, '0');
+
+            const a = document.createElement('a');
+            a.href = item.dataUrl;
+            a.download = `${prefixInput}_${baseName}_part_${paddedNum}.${item.ext}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        async function exportSlicedZip() {
+            if (!slicedDataList || slicedDataList.length === 0) {
+                alert("Chưa có mảnh cắt nào để nén.");
+                return;
+            }
+
+            const zip = new JSZip();
+            const prefixInput = document.getElementById('txt-slice-prefix').value.trim() || 'slice';
+            const baseName = slicerFileName.replace(/\.[^/.]+$/, '');
+
+            for (let item of slicedDataList) {
+                const paddedNum = String(item.partNum).padStart(2, '0');
+                zip.file(`${prefixInput}_${baseName}_part_${paddedNum}.${item.ext}`, item.blob);
+            }
+
+            const zipContent = await zip.generateAsync({ type: 'blob' });
+
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(zipContent);
+            a.download = `${baseName}_Sliced_${slicedDataList.length}_Parts.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+
+        // Common Modal Preview
+        function openPreviewModal(imgUrl) {
+            document.getElementById('modal-img').src = imgUrl;
+            document.getElementById('preview-modal').classList.remove('hidden');
+        }
+
+        function closePreviewModal() {
+            document.getElementById('preview-modal').classList.add('hidden');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closePreviewModal();
+        });
+    </script>
+</body>
+
+</html>
