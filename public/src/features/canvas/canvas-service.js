@@ -66,5 +66,6 @@ Object.assign(window, {
     navigateBlocks,
     autoMatchActiveBlockStyle,
     autoMatchBlockStyle,
-    initBilingualTooltipEvents
+    initBilingualTooltipEvents,
+    alignActiveBlockPosition
 });

@@ -334,11 +334,6 @@
                             title="Sửa chữ trực tiếp trên ô dịch (Double-click / F2 / Enter)">
                             <i class="fa-solid fa-pen-to-square text-indigo-400 text-xs"></i>
                         </button>
-                        <button onclick="autoMatchActiveBlockStyle()"
-                            class="w-7 h-7 hover:bg-indigo-900/50 rounded text-slate-300 hover:text-white flex items-center justify-center"
-                            title="Tự động trích xuất & khớp phông chữ/màu sắc từ ảnh gốc">
-                            <i class="fa-solid fa-wand-magic-sparkles text-emerald-400 text-xs"></i>
-                        </button>
                         <button data-action="copyBlockStyle"
                             class="w-7 h-7 hover:bg-slate-800 rounded text-slate-300 hover:text-white flex items-center justify-center"
                             title="Sao chép định dạng (Ctrl+Shift+C)">
@@ -937,6 +932,39 @@
                             <i class="fa-solid fa-bold text-indigo-400"></i> Bold
                         </button>
                         <input type="checkbox" id="style-bold" onchange="syncActiveBlockStyle('bold', this.checked)" class="hidden">
+                    </div>
+
+                    <!-- Layer Position Alignment to Canvas -->
+                    <div class="pt-2 border-t border-slate-900 space-y-1">
+                        <span class="text-[10px] text-slate-400 font-medium flex items-center justify-between">
+                            <span>Vị trí Layer trên Trang (Align Layer)</span>
+                        </span>
+                        <div class="grid grid-cols-6 gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                            <button onclick="alignActiveBlockPosition('left')" title="Căn mép Trái trang"
+                                class="py-1 text-[10px] rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center">
+                                <i class="fa-solid fa-align-left"></i>
+                            </button>
+                            <button onclick="alignActiveBlockPosition('center-h')" title="Căn giữa Ngang trang (Center H)"
+                                class="py-1 text-[10px] rounded hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 font-bold transition-all flex items-center justify-center">
+                                <i class="fa-solid fa-align-center"></i>
+                            </button>
+                            <button onclick="alignActiveBlockPosition('right')" title="Căn mép Phải trang"
+                                class="py-1 text-[10px] rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center">
+                                <i class="fa-solid fa-align-right"></i>
+                            </button>
+                            <button onclick="alignActiveBlockPosition('top')" title="Căn mép Trên trang (Top)"
+                                class="py-1 text-[10px] rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center">
+                                <i class="fa-solid fa-turn-up text-[9px] -rotate-90"></i>
+                            </button>
+                            <button onclick="alignActiveBlockPosition('center-v')" title="Căn giữa Dọc trang (Center V)"
+                                class="py-1 text-[10px] rounded hover:bg-slate-800 text-indigo-400 hover:text-indigo-300 font-bold transition-all flex items-center justify-center">
+                                <i class="fa-solid fa-grip-lines-vertical text-[10px]"></i>
+                            </button>
+                            <button onclick="alignActiveBlockPosition('bottom')" title="Căn mép Dưới trang (Bottom)"
+                                class="py-1 text-[10px] rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center">
+                                <i class="fa-solid fa-turn-down text-[9px] -rotate-90"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
 

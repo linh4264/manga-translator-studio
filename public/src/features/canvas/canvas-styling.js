@@ -676,6 +676,41 @@ export function toggleActiveBlockBold() {
     syncActiveBlockStyle('bold', newBold);
 }
 
+export function alignActiveBlockPosition(mode) {
+    if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    if (!page) return;
+
+    const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!block || !block.box) return;
+
+    pushStateToHistory();
+
+    const round1 = (val) => Math.round(val * 10) / 10;
+
+    if (mode === 'left') {
+        block.box.x = 0;
+    } else if (mode === 'center-h') {
+        block.box.x = Math.max(0, round1((100 - block.box.w) / 2));
+    } else if (mode === 'right') {
+        block.box.x = Math.max(0, round1(100 - block.box.w));
+    } else if (mode === 'top') {
+        block.box.y = 0;
+    } else if (mode === 'center-v') {
+        block.box.y = Math.max(0, round1((100 - block.box.h) / 2));
+    } else if (mode === 'bottom') {
+        block.box.y = Math.max(0, round1(100 - block.box.h));
+    }
+
+    block.maskCache = null;
+    block.autoFitCache = null;
+
+    requestOverlayRender();
+    uiUpdateActiveBlockEditor();
+    updateFloatingToolbarPosition();
+    savePageToDB(page);
+}
+
 export function resetSfxAngleControls() {
     resetWarpTransformControls();
 }
@@ -690,3 +725,4 @@ window.updateSfxRotate = updateSfxRotate;
 window.resetWarpTransformControls = resetWarpTransformControls;
 window.resetSfxAngleControls = resetSfxAngleControls;
 window.toggleActiveBlockBold = toggleActiveBlockBold;
+window.alignActiveBlockPosition = alignActiveBlockPosition;
