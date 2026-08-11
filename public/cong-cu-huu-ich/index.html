@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bộ Công cụ Hữu ích - PDF sang PNG & Cắt Ảnh Dọc | Manga Translator Studio</title>
+    <title>Bộ Công cụ Hữu ích Toàn năng | Manga Translator Studio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -26,36 +26,24 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-    <!-- PDF.js CDN -->
+    <!-- Third-party Client-Side Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- JSZip CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #0f172a;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #475569;
-        }
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
     </style>
 </head>
 
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
 
     <!-- TOP NAVIGATION HEADER -->
-    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 px-4 py-3 flex items-center justify-between shadow-xl">
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-40 px-4 py-3 flex items-center justify-between shadow-2xl">
         <div class="flex items-center gap-3">
             <a href="/" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all shadow-sm group">
                 <i class="fa-solid fa-arrow-left text-slate-400 group-hover:-translate-x-0.5 transition-transform"></i>
@@ -67,655 +55,777 @@
                     <i class="fa-solid fa-toolbox text-sm"></i>
                 </div>
                 <div>
-                    <h1 class="text-sm font-bold text-slate-100 leading-none">Bộ Công cụ Hữu ích</h1>
-                    <p class="text-[10px] text-slate-400 mt-0.5">Xử lý PDF, cắt ảnh Manga/Webtoon hoàn toàn miễn phí & bảo mật</p>
+                    <h1 class="text-sm font-bold text-slate-100 leading-none">Bộ Công Cụ Hữu Ích Toàn Năng</h1>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Xử lý PDF, Gộp/Cắt Webtoon, Nén ảnh, Chuyển định dạng & OCR 100% Offline</p>
                 </div>
             </div>
         </div>
 
-        <!-- TOOL SWITCHER TABS -->
-        <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner">
-            <button id="tab-btn-pdf" onclick="switchToolTab('pdf')"
-                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 bg-indigo-600 text-white shadow-sm">
-                <i class="fa-solid fa-file-pdf"></i> PDF sang PNG
-            </button>
-            <button id="tab-btn-slicer" onclick="switchToolTab('slicer')"
-                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
-                <i class="fa-solid fa-scissors"></i> Cắt Ảnh Dọc Đều
-            </button>
-        </div>
-
-        <div class="hidden md:flex items-center gap-2">
+        <div class="hidden lg:flex items-center gap-2">
             <span class="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Offline 100% (Client-side)
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Offline 100% (Bảo mật tuyệt đối)
             </span>
         </div>
     </header>
 
-    <!-- MAIN WORKSPACE -->
+    <!-- SUB-HEADER TOOL NAVIGATION TABS -->
+    <div class="bg-slate-900/60 border-b border-slate-800 px-4 py-2 overflow-x-auto custom-scrollbar sticky top-[57px] z-30 shadow-md">
+        <div class="max-w-7xl mx-auto flex items-center gap-2 min-w-max">
+            <button id="btn-tab-pdf" onclick="switchTab('pdf')" class="tab-btn active px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 bg-indigo-600 text-white shadow-sm">
+                <i class="fa-solid fa-file-pdf"></i> PDF sang PNG
+            </button>
+            <button id="btn-tab-slice" onclick="switchTab('slice')" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-scissors"></i> Cắt Ảnh Dọc
+            </button>
+            <button id="btn-tab-merge" onclick="switchTab('merge')" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-link"></i> Gộp Nối Ảnh Dài
+            </button>
+            <button id="btn-tab-compress" onclick="switchTab('compress')" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-compress"></i> Nén & Tối Ưu
+            </button>
+            <button id="btn-tab-convert" onclick="switchTab('convert')" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-repeat"></i> Đổi Đuôi Định Dạng
+            </button>
+            <button id="btn-tab-enhance" onclick="switchTab('enhance')" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Tăng Độ Nét
+            </button>
+            <button id="btn-tab-ocr" onclick="switchTab('ocr')" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-quote-left"></i> Trích Xuất Chữ AI
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
     <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
 
-        <!-- ================= TOOL 1: PDF TO PNG ================= -->
-        <section id="tool-section-pdf" class="flex flex-col gap-6">
-            <!-- HERO / UPLOAD ZONE -->
-            <div id="pdf-upload-zone"
-                class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all duration-200 text-center flex flex-col items-center justify-center gap-4 cursor-pointer relative group shadow-2xl">
-                <input type="file" id="pdf-file-input" accept="application/pdf" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10">
-
-                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-600/20 transition-all shadow-lg">
-                    <i class="fa-solid fa-file-pdf text-3xl"></i>
-                </div>
-
-                <div>
-                    <h2 class="text-base font-bold text-slate-200 group-hover:text-indigo-300 transition-colors">
-                        Kéo & Thả tệp PDF vào đây hoặc <span class="text-indigo-400 underline decoration-indigo-500/40">Chọn từ máy tính</span>
-                    </h2>
-                    <p class="text-xs text-slate-400 mt-1">Hỗ trợ mọi định dạng tài liệu PDF, chuyển đổi từng trang thành ảnh PNG chất lượng cao</p>
-                </div>
-
-                <div class="flex items-center gap-4 text-[11px] text-slate-500 mt-2 font-medium">
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-shield-halved text-indigo-400"></i> Không tải lên server</span>
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-bolt text-amber-400"></i> Xử lý cực nhanh</span>
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-file-image text-emerald-400"></i> Độ phân giải cực nét</span>
-                </div>
+        <!-- ================================================================= -->
+        <!-- 1. PDF TO PNG -->
+        <!-- ================================================================= -->
+        <section id="sec-pdf" class="tool-sec flex flex-col gap-6">
+            <div id="pdf-upload" onclick="document.getElementById('pdf-file').click()" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all text-center flex flex-col items-center justify-center gap-3 cursor-pointer group shadow-xl relative">
+                <input type="file" id="pdf-file" accept="application/pdf" class="hidden">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform"><i class="fa-solid fa-file-pdf text-3xl"></i></div>
+                <h2 class="text-base font-bold text-slate-200">Kéo thả tệp PDF vào đây hoặc <span class="text-indigo-400 underline">Chọn tệp</span></h2>
+                <p class="text-xs text-slate-400">Trích xuất mọi trang PDF thành ảnh PNG sắc nét từng trang một hoặc đóng gói ZIP</p>
             </div>
-
-            <!-- CONTROLS PANEL -->
-            <div id="pdf-controls-panel" class="hidden bg-slate-900/90 border border-slate-800 rounded-2xl p-4 md:p-5 shadow-2xl flex flex-col gap-4">
-                <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div id="pdf-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-800">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shrink-0">
-                            <i class="fa-solid fa-file-pdf text-lg"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <h3 id="lbl-pdf-filename" class="text-sm font-bold text-slate-200 truncate max-w-xs md:max-w-md">filename.pdf</h3>
-                            <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5 font-mono">
-                                <span id="lbl-pdf-page-count">0 trang</span>
-                                <span>•</span>
-                                <span id="lbl-pdf-filesize">0 MB</span>
-                            </div>
-                        </div>
+                        <i class="fa-solid fa-file-pdf text-2xl text-red-400"></i>
+                        <div><h3 id="pdf-name" class="text-sm font-bold text-slate-200">file.pdf</h3><p id="pdf-info" class="text-xs font-mono text-slate-400">0 trang</p></div>
                     </div>
-
                     <div class="flex items-center gap-2">
-                        <button onclick="document.getElementById('pdf-file-input').click()"
-                            class="px-3 py-2 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-semibold transition-all flex items-center gap-1.5">
-                            <i class="fa-solid fa-arrow-up-from-bracket text-slate-400"></i> Chọn PDF khác
-                        </button>
-                        <button onclick="exportPdfPagesZip()"
-                            class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-600/25 flex items-center gap-2">
-                            <i class="fa-solid fa-file-zipper"></i> Tải Tất Cả (File ZIP)
-                        </button>
+                        <button onclick="document.getElementById('pdf-file').click()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">Chọn PDF khác</button>
+                        <button onclick="downloadPdfZip()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg"><i class="fa-solid fa-file-zipper"></i> Tải Tất Cả (ZIP)</button>
                     </div>
                 </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none flex items-center justify-between">
-                            <span>Độ nét (DPI / Tỷ lệ)</span>
-                            <span id="lbl-dpi-badge" class="text-indigo-400 font-mono">150 DPI (2x)</span>
-                        </label>
-                        <select id="select-scale" onchange="renderPdfPages()"
-                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
-                            <option value="1.0">72 DPI (Standard 1x - Nhẹ)</option>
-                            <option value="1.5">110 DPI (HD 1.5x - Cân bằng)</option>
-                            <option value="2.0" selected>150 DPI (Full HD 2x - Khuyên dùng)</option>
-                            <option value="3.0">225 DPI (Ultra HD 3x - Nét)</option>
-                            <option value="4.0">300 DPI (4K Super Sharp 4x - Cực nét)</option>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400">Độ phân giải (DPI)</label>
+                        <select id="pdf-scale" onchange="renderPdfPages()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200">
+                            <option value="1.0">72 DPI (Standard 1x)</option>
+                            <option value="1.5">110 DPI (HD 1.5x)</option>
+                            <option value="2.0" selected>150 DPI (Full HD 2x)</option>
+                            <option value="3.0">225 DPI (3x)</option>
+                            <option value="4.0">300 DPI (4K 4x)</option>
                         </select>
                     </div>
-
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none flex items-center justify-between">
-                            <span>Lọc trang xuất</span>
-                            <span class="text-slate-500 font-normal">VD: 1-5, 8, 10</span>
-                        </label>
-                        <input type="text" id="txt-page-range" placeholder="Tất cả trang (vd: 1-10)" onchange="renderPdfPages()"
-                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-mono">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400">Dải trang xuất (VD: 1-5, 8)</label>
+                        <input type="text" id="pdf-range" placeholder="Tất cả trang" onchange="renderPdfPages()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono">
                     </div>
-
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none">
-                            <span>Thao tác hàng loạt</span>
-                        </label>
-                        <div class="flex items-center gap-2">
-                            <button onclick="selectAllPdfPages(true)" class="flex-1 px-3 py-2 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-semibold">Chọn tất cả</button>
-                            <button onclick="selectAllPdfPages(false)" class="flex-1 px-3 py-2 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-semibold">Bỏ chọn</button>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-col gap-1.5 justify-end">
-                        <div id="pdf-status" class="text-xs text-slate-400 flex items-center gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800 font-mono truncate">
-                            <i class="fa-solid fa-circle-check text-emerald-400"></i> Sẵn sàng xuất ảnh
-                        </div>
-                    </div>
-                </div>
-
-                <div id="pdf-progress-container" class="hidden flex-col gap-1.5 pt-2">
-                    <div class="flex items-center justify-between text-xs font-mono">
-                        <span id="lbl-pdf-progress-status" class="text-indigo-400">Đang xuất tệp ZIP...</span>
-                        <span id="lbl-pdf-progress-percent" class="text-slate-300 font-bold">0%</span>
-                    </div>
-                    <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
-                        <div id="pdf-progress-bar" class="bg-indigo-600 h-full w-0 transition-all duration-150"></div>
-                    </div>
+                    <div id="pdf-status" class="text-xs text-slate-400 bg-slate-950 p-2.5 rounded-xl border border-slate-800 font-mono"><i class="fa-solid fa-circle-check text-emerald-400"></i> Sẵn sàng</div>
                 </div>
             </div>
-
-            <!-- PDF PAGES GRID -->
-            <div id="pdf-pages-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"></div>
+            <div id="pdf-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"></div>
         </section>
 
 
-        <!-- ================= TOOL 2: VERTICAL IMAGE SLICER ================= -->
-        <section id="tool-section-slicer" class="hidden flex-col gap-6">
-            <!-- SLICER UPLOAD ZONE -->
-            <div id="slicer-upload-zone"
-                class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all duration-200 text-center flex flex-col items-center justify-center gap-4 cursor-pointer relative group shadow-2xl">
-                <input type="file" id="slicer-file-input" accept="image/png, image/jpeg, image/webp" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10">
-
-                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-600/20 transition-all shadow-lg">
-                    <i class="fa-solid fa-scissors text-3xl"></i>
-                </div>
-
-                <div>
-                    <h2 class="text-base font-bold text-slate-200 group-hover:text-indigo-300 transition-colors">
-                        Kéo & Thả ảnh Webtoon / Manga vào đây hoặc <span class="text-indigo-400 underline decoration-indigo-500/40">Chọn ảnh từ máy tính</span>
-                    </h2>
-                    <p class="text-xs text-slate-400 mt-1">Cắt ảnh dài (Long Strip / Webtoon) thành nhiều ảnh nhỏ bằng nhau theo chiều dọc dễ đọc & đăng truyện</p>
-                </div>
-
-                <div class="flex items-center gap-4 text-[11px] text-slate-500 mt-2 font-medium">
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-border-all text-indigo-400"></i> Chia số lượng ảnh đều nhau</span>
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-file-zipper text-amber-400"></i> Đóng gói ZIP 1-click</span>
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-wand-magic-sparkles text-emerald-400"></i> Tự động tính chiều cao</span>
-                </div>
+        <!-- ================================================================= -->
+        <!-- 2. VERTICAL IMAGE SLICER -->
+        <!-- ================================================================= -->
+        <section id="sec-slice" class="tool-sec hidden flex-col gap-6">
+            <div id="slice-upload" onclick="document.getElementById('slice-file').click()" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all text-center flex flex-col items-center justify-center gap-3 cursor-pointer group shadow-xl relative">
+                <input type="file" id="slice-file" accept="image/*" class="hidden">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform"><i class="fa-solid fa-scissors text-3xl"></i></div>
+                <h2 class="text-base font-bold text-slate-200">Kéo thả ảnh Webtoon/Manga vào đây hoặc <span class="text-indigo-400 underline">Chọn ảnh</span></h2>
+                <p class="text-xs text-slate-400">Cắt ảnh dọc dải dài thành nhiều phần bằng nhau theo nhu cầu đọc & đăng tải</p>
             </div>
-
-            <!-- SLICER CONTROLS PANEL -->
-            <div id="slicer-controls-panel" class="hidden bg-slate-900/90 border border-slate-800 rounded-2xl p-4 md:p-5 shadow-2xl flex flex-col gap-4">
-                <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div id="slice-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-800">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 shrink-0">
-                            <i class="fa-solid fa-image text-lg"></i>
-                        </div>
-                        <div class="min-w-0">
-                            <h3 id="lbl-slicer-filename" class="text-sm font-bold text-slate-200 truncate max-w-xs md:max-w-md">image.png</h3>
-                            <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5 font-mono">
-                                <span id="lbl-slicer-dim">0 x 0 px</span>
-                                <span>•</span>
-                                <span id="lbl-slicer-slice-height">Mỗi ảnh ~0px</span>
-                            </div>
-                        </div>
+                        <i class="fa-solid fa-image text-2xl text-indigo-400"></i>
+                        <div><h3 id="slice-filename" class="text-sm font-bold text-slate-200">image.png</h3><p id="slice-dim" class="text-xs font-mono text-slate-400">0 x 0 px</p></div>
                     </div>
-
                     <div class="flex items-center gap-2">
-                        <button onclick="document.getElementById('slicer-file-input').click()"
-                            class="px-3 py-2 rounded-xl bg-slate-850 hover:bg-slate-800 border border-slate-700 text-slate-300 text-xs font-semibold transition-all flex items-center gap-1.5">
-                            <i class="fa-solid fa-arrow-up-from-bracket text-slate-400"></i> Chọn ảnh khác
-                        </button>
-                        <button onclick="exportSlicedZip()"
-                            class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-600/25 flex items-center gap-2">
-                            <i class="fa-solid fa-file-zipper"></i> Cắt & Tải File ZIP
-                        </button>
+                        <button onclick="document.getElementById('slice-file').click()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">Chọn ảnh khác</button>
+                        <button onclick="downloadSlicedZip()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg"><i class="fa-solid fa-file-zipper"></i> Cắt & Tải ZIP</button>
                     </div>
                 </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
-                    <!-- Slice count input -->
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none flex items-center justify-between">
-                            <span>Số lượng ảnh muốn cắt</span>
-                            <span id="lbl-slice-count-val" class="text-indigo-400 font-mono font-bold">4 ảnh</span>
-                        </label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" id="num-slice-count" min="2" max="100" value="4" oninput="processImageSlicing()"
-                                class="w-24 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 text-center font-bold">
-                            <div class="flex items-center gap-1 flex-1">
-                                <button onclick="setSliceCountPreset(2)" class="px-2 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 text-[10px] font-mono text-slate-300 border border-slate-750">2</button>
-                                <button onclick="setSliceCountPreset(3)" class="px-2 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 text-[10px] font-mono text-slate-300 border border-slate-750">3</button>
-                                <button onclick="setSliceCountPreset(4)" class="px-2 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 text-[10px] font-mono text-slate-300 border border-slate-750">4</button>
-                                <button onclick="setSliceCountPreset(5)" class="px-2 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 text-[10px] font-mono text-slate-300 border border-slate-750">5</button>
-                                <button onclick="setSliceCountPreset(8)" class="px-2 py-1.5 rounded-lg bg-slate-850 hover:bg-slate-800 text-[10px] font-mono text-slate-300 border border-slate-750">8</button>
-                            </div>
-                        </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400">Số mảnh cắt</label>
+                        <input type="number" id="slice-count" min="2" max="100" value="4" oninput="processSlicing()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono text-center font-bold">
                     </div>
-
-                    <!-- Output Format -->
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none">
-                            <span>Định dạng đầu ra</span>
-                        </label>
-                        <select id="select-slice-format" onchange="processImageSlicing()"
-                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
-                            <option value="image/png" selected>PNG (Gốc - Không suy hao nét)</option>
-                            <option value="image/jpeg">JPG (Nhẹ - Tốc độ nhanh)</option>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400">Định dạng ảnh xuất</label>
+                        <select id="slice-format" onchange="processSlicing()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200">
+                            <option value="image/png" selected>PNG (Gốc nét)</option>
+                            <option value="image/jpeg">JPG (Nhẹ)</option>
                         </select>
                     </div>
+                    <div id="slice-info-box" class="text-xs text-slate-400 bg-slate-950 p-2.5 rounded-xl border border-slate-800 font-mono">Mỗi mảnh ~0px</div>
+                </div>
+            </div>
+            <div id="slice-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"></div>
+        </section>
 
-                    <!-- Prefix Name -->
-                    <div class="flex flex-col gap-1.5">
-                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none">
-                            <span>Tiền tố tên ảnh</span>
-                        </label>
-                        <input type="text" id="txt-slice-prefix" placeholder="Tên tệp (vd: page_01)" value="slice"
-                            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500">
+
+        <!-- ================================================================= -->
+        <!-- 3. WEBTOON / LONG STRIP MERGER -->
+        <!-- ================================================================= -->
+        <section id="sec-merge" class="tool-sec hidden flex-col gap-6">
+            <div id="merge-upload" onclick="document.getElementById('merge-files').click()" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all text-center flex flex-col items-center justify-center gap-3 cursor-pointer group shadow-xl relative">
+                <input type="file" id="merge-files" accept="image/*" multiple class="hidden">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform"><i class="fa-solid fa-link text-3xl"></i></div>
+                <h2 class="text-base font-bold text-slate-200">Kéo thả nhiều tệp ảnh vào đây hoặc <span class="text-indigo-400 underline">Chọn nhiều ảnh</span></h2>
+                <p class="text-xs text-slate-400">Gộp nối hàng loạt ảnh đơn lẻ thành 1 ảnh dọc duy nhất (Dạng dải dài Webtoon)</p>
+            </div>
+            <div id="merge-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-800">
+                    <div><h3 class="text-sm font-bold text-slate-200">Danh sách ảnh ghép nối</h3><p id="merge-count" class="text-xs font-mono text-slate-400">Đã chọn 0 ảnh</p></div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="document.getElementById('merge-files').click()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">+ Thêm ảnh</button>
+                        <button onclick="executeMergeImages()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg"><i class="fa-solid fa-file-image"></i> Gộp & Tải Ảnh</button>
                     </div>
+                </div>
+                <div id="merge-list" class="flex flex-col gap-2 max-h-80 overflow-y-auto custom-scrollbar p-1"></div>
+            </div>
+        </section>
 
-                    <!-- Status indicator -->
-                    <div class="flex flex-col gap-1.5 justify-end">
-                        <div id="slicer-status" class="text-xs text-slate-400 flex items-center gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800 font-mono truncate">
-                            <i class="fa-solid fa-circle-check text-emerald-400"></i> Đã tính toán thông số cắt
-                        </div>
+
+        <!-- ================================================================= -->
+        <!-- 4. BATCH IMAGE COMPRESSOR -->
+        <!-- ================================================================= -->
+        <section id="sec-compress" class="tool-sec hidden flex-col gap-6">
+            <div id="compress-upload" onclick="document.getElementById('compress-files').click()" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all text-center flex flex-col items-center justify-center gap-3 cursor-pointer group shadow-xl relative">
+                <input type="file" id="compress-files" accept="image/*" multiple class="hidden">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform"><i class="fa-solid fa-compress text-3xl"></i></div>
+                <h2 class="text-base font-bold text-slate-200">Kéo thả ảnh cần nén vào đây hoặc <span class="text-indigo-400 underline">Chọn ảnh hàng loạt</span></h2>
+                <p class="text-xs text-slate-400">Tối ưu dung lượng giảm từ 50% - 80% mà giữ nét nét vẽ tranh Manga</p>
+            </div>
+            <div id="compress-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-800">
+                    <div><h3 class="text-sm font-bold text-slate-200">Thiết lập nén hàng loạt</h3><p id="compress-total-saved" class="text-xs font-mono text-emerald-400">Tiết kiệm: 0 KB</p></div>
+                    <button onclick="downloadCompressedZip()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg"><i class="fa-solid fa-file-zipper"></i> Tải Tất Cả ZIP</button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400 flex justify-between"><span>Mức chất lượng ảnh</span><span id="lbl-compress-q" class="text-indigo-400 font-mono font-bold">75%</span></label>
+                        <input type="range" id="compress-quality" min="10" max="95" value="75" oninput="document.getElementById('lbl-compress-q').innerText=this.value+'%'; processCompressBatch();" class="w-full accent-indigo-500">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400">Định dạng nén</label>
+                        <select id="compress-format" onchange="processCompressBatch()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200">
+                            <option value="image/webp" selected>WEBP (Tốt nhất - Siêu nhẹ)</option>
+                            <option value="image/jpeg">JPG (Tiêu chuẩn)</option>
+                        </select>
                     </div>
                 </div>
             </div>
+            <div id="compress-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+        </section>
 
-            <!-- SLICED SEGMENTS GRID PREVIEW -->
-            <div id="slicer-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"></div>
+
+        <!-- ================================================================= -->
+        <!-- 5. FORMAT CONVERTER -->
+        <!-- ================================================================= -->
+        <section id="sec-convert" class="tool-sec hidden flex-col gap-6">
+            <div id="convert-upload" onclick="document.getElementById('convert-files').click()" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all text-center flex flex-col items-center justify-center gap-3 cursor-pointer group shadow-xl relative">
+                <input type="file" id="convert-files" accept="image/*" multiple class="hidden">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform"><i class="fa-solid fa-repeat text-3xl"></i></div>
+                <h2 class="text-base font-bold text-slate-200">Kéo thả ảnh vào đây hoặc <span class="text-indigo-400 underline">Chọn ảnh cần đổi đuôi</span></h2>
+                <p class="text-xs text-slate-400">Chuyển đổi qua lại linh hoạt giữa WEBP ↔ PNG ↔ JPG hoàn toàn miễn phí</p>
+            </div>
+            <div id="convert-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-bold text-slate-300">Đích đến:</span>
+                        <select id="convert-target" onchange="processConvertBatch()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-indigo-400 font-bold">
+                            <option value="image/png">Chuyển sang PNG</option>
+                            <option value="image/jpeg">Chuyển sang JPG</option>
+                            <option value="image/webp">Chuyển sang WEBP</option>
+                        </select>
+                    </div>
+                    <button onclick="downloadConvertedZip()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg"><i class="fa-solid fa-file-zipper"></i> Tải Đổi Đuôi ZIP</button>
+                </div>
+            </div>
+            <div id="convert-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"></div>
+        </section>
+
+
+        <!-- ================================================================= -->
+        <!-- 6. IMAGE SHARPEN & ENHANCE -->
+        <!-- ================================================================= -->
+        <section id="sec-enhance" class="tool-sec hidden flex-col gap-6">
+            <div id="enhance-upload" onclick="document.getElementById('enhance-file').click()" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all text-center flex flex-col items-center justify-center gap-3 cursor-pointer group shadow-xl relative">
+                <input type="file" id="enhance-file" accept="image/*" class="hidden">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform"><i class="fa-solid fa-wand-magic-sparkles text-3xl"></i></div>
+                <h2 class="text-base font-bold text-slate-200">Kéo thả ảnh bị mờ nét vào đây hoặc <span class="text-indigo-400 underline">Chọn ảnh</span></h2>
+                <p class="text-xs text-slate-400">Tăng độ nét nét vẽ Manga & độ tương phản cho chữ thoại dễ đọc hơn</p>
+            </div>
+            <div id="enhance-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center pb-3 border-b border-slate-800">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400 flex justify-between"><span>Độ sắc nét (Sharpen)</span><span id="lbl-sharp-val" class="text-indigo-400 font-mono">1.5</span></label>
+                        <input type="range" id="enhance-sharp" min="0" max="4" step="0.5" value="1.5" oninput="document.getElementById('lbl-sharp-val').innerText=this.value; processEnhance();" class="accent-indigo-500">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400 flex justify-between"><span>Độ tương phản (Contrast)</span><span id="lbl-contrast-val" class="text-indigo-400 font-mono">120%</span></label>
+                        <input type="range" id="enhance-contrast" min="80" max="200" step="5" value="120" oninput="document.getElementById('lbl-contrast-val').innerText=this.value+'%'; processEnhance();" class="accent-indigo-500">
+                    </div>
+                    <button onclick="downloadEnhancedImage()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg self-end"><i class="fa-solid fa-download"></i> Tải Ảnh Nét</button>
+                </div>
+                <div class="flex justify-center p-2 bg-slate-950 rounded-xl border border-slate-800"><canvas id="enhance-canvas" class="max-h-[60vh] object-contain rounded shadow"></canvas></div>
+            </div>
+        </section>
+
+
+        <!-- ================================================================= -->
+        <!-- 7. OCR TEXT EXTRACTOR -->
+        <!-- ================================================================= -->
+        <section id="sec-ocr" class="tool-sec hidden flex-col gap-6">
+            <div id="ocr-upload" onclick="document.getElementById('ocr-file').click()" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all text-center flex flex-col items-center justify-center gap-3 cursor-pointer group shadow-xl relative">
+                <input type="file" id="ocr-file" accept="image/*" class="hidden">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform"><i class="fa-solid fa-quote-left text-3xl"></i></div>
+                <h2 class="text-base font-bold text-slate-200">Kéo thả ảnh cần bóc chữ vào đây hoặc <span class="text-indigo-400 underline">Chọn ảnh</span></h2>
+                <p class="text-xs text-slate-400">Trích xuất toàn bộ văn bản tiếng Nhật / Trung / Hàn / Anh có trong ảnh tức thì</p>
+            </div>
+            <div id="ocr-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-slate-300">Ngôn ngữ ảnh:</span>
+                        <select id="ocr-lang" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-indigo-400 font-bold">
+                            <option value="jpn">Tiếng Nhật (Japanese)</option>
+                            <option value="chi_sim">Tiếng Trung Giản Thể (Chinese)</option>
+                            <option value="kor">Tiếng Hàn (Korean)</option>
+                            <option value="eng" selected>Tiếng Anh (English)</option>
+                        </select>
+                        <button onclick="runOcrExtraction()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white"><i class="fa-solid fa-magnifying-glass"></i> Bắt đầu nhận diện</button>
+                    </div>
+                    <button onclick="copyOcrText()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200"><i class="fa-solid fa-copy"></i> Sao chép tất cả</button>
+                </div>
+                <div id="ocr-status-bar" class="hidden text-xs text-indigo-400 bg-slate-950 p-2.5 rounded-xl font-mono"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải mô hình AI OCR...</div>
+                <textarea id="ocr-result-text" rows="10" placeholder="Kết quả văn bản trích xuất sẽ hiển thị ở đây..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 custom-scrollbar"></textarea>
+            </div>
         </section>
 
     </main>
 
     <!-- FOOTER -->
     <footer class="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500 mt-auto">
-        <span>Powered by <strong class="text-slate-400">Manga Translator Studio Tools Engine</strong> • 100% Client-side HTML5 Canvas Processing</span>
+        <span>Powered by <strong class="text-slate-400">Manga Translator Studio Engine</strong> • Complete Client-Side HTML5 Tools</span>
     </footer>
 
     <!-- LIGHTBOX MODAL -->
     <div id="preview-modal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4" onclick="closePreviewModal()">
         <div class="relative max-w-5xl max-h-[90vh] flex flex-col items-center" onclick="event.stopPropagation()">
-            <button onclick="closePreviewModal()" class="absolute -top-10 right-0 text-slate-400 hover:text-white text-xl">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
+            <button onclick="closePreviewModal()" class="absolute -top-10 right-0 text-slate-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
             <img id="modal-img" src="" class="max-h-[85vh] max-w-full object-contain rounded-xl border border-slate-800 shadow-2xl" alt="Preview">
         </div>
     </div>
 
-    <!-- MAIN JAVASCRIPT LOGIC -->
+    <!-- SCRIPT LOGIC -->
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         // --- TAB SWITCHER LOGIC ---
-        function switchToolTab(tab) {
-            const btnPdf = document.getElementById('tab-btn-pdf');
-            const btnSlicer = document.getElementById('tab-btn-slicer');
-            const secPdf = document.getElementById('tool-section-pdf');
-            const secSlicer = document.getElementById('tool-section-slicer');
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = "tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200";
+            });
+            const activeBtn = document.getElementById(`btn-tab-${tabId}`);
+            if (activeBtn) activeBtn.className = "tab-btn active px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 bg-indigo-600 text-white shadow-sm";
 
-            if (tab === 'pdf') {
-                btnPdf.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 bg-indigo-600 text-white shadow-sm";
-                btnSlicer.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200";
-                secPdf.classList.remove('hidden');
-                secSlicer.classList.add('hidden');
-            } else {
-                btnSlicer.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 bg-indigo-600 text-white shadow-sm";
-                btnPdf.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200";
-                secSlicer.classList.remove('hidden');
-                secPdf.classList.add('hidden');
-            }
+            document.querySelectorAll('.tool-sec').forEach(sec => sec.classList.add('hidden'));
+            const activeSec = document.getElementById(`sec-${tabId}`);
+            if (activeSec) activeSec.classList.remove('hidden');
         }
 
-        // =========================================================================
-        // TOOL 1: PDF TO PNG LOGIC
-        // =========================================================================
-        let activePdfDoc = null;
-        let pdfFileName = '';
-        let pdfPageDataMap = new Map();
 
-        document.getElementById('pdf-file-input').addEventListener('change', (e) => {
-            if (e.target.files && e.target.files[0]) handlePdfFile(e.target.files[0]);
+        // =========================================================================
+        // 1. PDF TO PNG
+        // =========================================================================
+        let pdfDoc = null, pdfName = '', pdfMap = new Map();
+        document.getElementById('pdf-file').addEventListener('change', async (e) => {
+            if (!e.target.files[0]) return;
+            const file = e.target.files[0];
+            pdfName = file.name;
+            document.getElementById('pdf-name').innerText = file.name;
+            const buffer = await file.arrayBuffer();
+            pdfDoc = await pdfjsLib.getDocument({ data: buffer }).promise;
+            document.getElementById('pdf-info').innerText = `${pdfDoc.numPages} trang • ${(file.size/(1024*1024)).toFixed(2)} MB`;
+            document.getElementById('pdf-upload').classList.add('hidden');
+            document.getElementById('pdf-panel').classList.remove('hidden');
+            renderPdfPages();
         });
-
-        async function handlePdfFile(file) {
-            if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
-                alert('Vui lòng chọn tệp PDF hợp lệ.');
-                return;
-            }
-
-            pdfFileName = file.name;
-            document.getElementById('lbl-pdf-filename').innerText = file.name;
-            document.getElementById('lbl-pdf-filesize').innerText = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
-
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                activePdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
-                document.getElementById('lbl-pdf-page-count').innerText = `${activePdfDoc.numPages} trang`;
-                document.getElementById('pdf-upload-zone').classList.add('hidden');
-                document.getElementById('pdf-controls-panel').classList.remove('hidden');
-
-                await renderPdfPages();
-            } catch (err) {
-                console.error("Lỗi đọc PDF:", err);
-                alert("Không thể đọc tệp PDF. Tệp có thể bị khóa hoặc lỗi.");
-            }
-        }
-
-        function parsePageRange(rangeStr, totalPages) {
-            if (!rangeStr || !rangeStr.trim()) {
-                return Array.from({ length: totalPages }, (_, i) => i + 1);
-            }
-            const pages = new Set();
-            const parts = rangeStr.split(',');
-            for (let part of parts) {
-                part = part.trim();
-                if (part.includes('-')) {
-                    const [start, end] = part.split('-').map(n => parseInt(n.trim()));
-                    if (!isNaN(start) && !isNaN(end)) {
-                        for (let p = Math.max(1, start); p <= Math.min(totalPages, end); p++) pages.add(p);
-                    }
-                } else {
-                    const pageNum = parseInt(part);
-                    if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= totalPages) pages.add(pageNum);
-                }
-            }
-            return Array.from(pages).sort((a, b) => a - b);
-        }
 
         async function renderPdfPages() {
-            if (!activePdfDoc) return;
-
-            const scale = parseFloat(document.getElementById('select-scale').value) || 2.0;
-            const dpiText = scale === 1.0 ? '72 DPI (1x)' : scale === 1.5 ? '110 DPI (1.5x)' : scale === 2.0 ? '150 DPI (2x)' : scale === 3.0 ? '225 DPI (3x)' : '300 DPI (4x)';
-            document.getElementById('lbl-dpi-badge').innerText = dpiText;
-
-            const rangeStr = document.getElementById('txt-page-range').value;
-            const pagesToRender = parsePageRange(rangeStr, activePdfDoc.numPages);
-
-            const grid = document.getElementById('pdf-pages-grid');
-            grid.innerHTML = '';
-            pdfPageDataMap.clear();
-
-            const statusElem = document.getElementById('pdf-status');
-            statusElem.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin text-indigo-400"></i> Đang trích xuất ${pagesToRender.length} trang...`;
-
-            for (let i = 0; i < pagesToRender.length; i++) {
-                const pageNum = pagesToRender[i];
-                const page = await activePdfDoc.getPage(pageNum);
-                const viewport = page.getViewport({ scale });
-
+            if (!pdfDoc) return;
+            const scale = parseFloat(document.getElementById('pdf-scale').value) || 2.0;
+            const grid = document.getElementById('pdf-grid');
+            grid.innerHTML = ''; pdfMap.clear();
+            for (let p = 1; p <= pdfDoc.numPages; p++) {
+                const page = await pdfDoc.getPage(p);
+                const vp = page.getViewport({ scale });
                 const canvas = document.createElement('canvas');
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                const ctx = canvas.getContext('2d');
-
-                await page.render({ canvasContext: ctx, viewport }).promise;
-                pdfPageDataMap.set(pageNum, { canvas, selected: true });
-
-                const card = document.createElement('div');
-                card.id = `card-pdf-page-${pageNum}`;
-                card.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl hover:border-indigo-500/50 transition-all flex flex-col group relative";
-
+                canvas.width = vp.width; canvas.height = vp.height;
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+                pdfMap.set(p, canvas);
                 const dataUrl = canvas.toDataURL('image/png');
-
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow flex flex-col p-2";
                 card.innerHTML = `
-                    <div class="relative bg-slate-950 p-2 flex items-center justify-center min-h-[200px] overflow-hidden group/img">
-                        <img src="${dataUrl}" class="max-h-72 w-auto object-contain rounded shadow cursor-pointer transition-transform group-hover/img:scale-105" onclick="openPreviewModal('${dataUrl}')" alt="Trang ${pageNum}">
-                        <div class="absolute top-3 left-3 bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[10px] font-mono font-bold text-slate-300 shadow">
-                            Trang ${pageNum}
-                        </div>
-                        <label class="absolute top-3 right-3 flex items-center cursor-pointer">
-                            <input type="checkbox" checked onchange="togglePdfPageSelection(${pageNum}, this.checked)" class="w-4 h-4 accent-indigo-600 rounded cursor-pointer">
-                        </label>
-                    </div>
-                    <div class="p-3 border-t border-slate-800 bg-slate-900/60 flex items-center justify-between gap-2 mt-auto">
-                        <span class="text-[10px] text-slate-400 font-mono">${viewport.width} x ${viewport.height} px</span>
-                        <button onclick="downloadSinglePdfPage(${pageNum})" class="px-2.5 py-1.5 rounded-lg bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white text-xs font-semibold border border-indigo-500/20 transition-all flex items-center gap-1.5">
-                            <i class="fa-solid fa-download text-[10px]"></i> Tải PNG
-                        </button>
+                    <img src="${dataUrl}" class="max-h-60 object-contain rounded cursor-pointer" onclick="openPreviewModal('${dataUrl}')">
+                    <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-800 text-xs font-mono">
+                        <span>Trang ${p}</span>
+                        <a href="${dataUrl}" download="${pdfName}_trang_${p}.png" class="text-indigo-400 hover:underline">Tải PNG</a>
                     </div>
                 `;
                 grid.appendChild(card);
             }
-
-            statusElem.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Đã xử lý xong ${pagesToRender.length} trang`;
         }
-
-        function togglePdfPageSelection(pageNum, isSelected) {
-            const data = pdfPageDataMap.get(pageNum);
-            if (data) data.selected = isSelected;
-        }
-
-        function selectAllPdfPages(isSelected) {
-            pdfPageDataMap.forEach((data, pageNum) => {
-                data.selected = isSelected;
-                const card = document.getElementById(`card-pdf-page-${pageNum}`);
-                if (card) {
-                    const cb = card.querySelector('input[type="checkbox"]');
-                    if (cb) cb.checked = isSelected;
-                }
-            });
-        }
-
-        function downloadSinglePdfPage(pageNum) {
-            const data = pdfPageDataMap.get(pageNum);
-            if (!data) return;
-            const baseName = pdfFileName.replace(/\.pdf$/i, '');
-            const a = document.createElement('a');
-            a.href = data.canvas.toDataURL('image/png');
-            a.download = `${baseName}_trang_${pageNum}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-
-        async function exportPdfPagesZip() {
-            const selectedPages = [];
-            pdfPageDataMap.forEach((data, pageNum) => {
-                if (data.selected) selectedPages.push({ pageNum, canvas: data.canvas });
-            });
-
-            if (selectedPages.length === 0) {
-                alert("Vui lòng chọn ít nhất 1 trang để xuất tệp ZIP.");
-                return;
-            }
-
+        async function downloadPdfZip() {
+            if (pdfMap.size === 0) return;
             const zip = new JSZip();
-            const baseName = pdfFileName.replace(/\.pdf$/i, '');
-            const pContainer = document.getElementById('pdf-progress-container');
-            const pBar = document.getElementById('pdf-progress-bar');
-            const lblPercent = document.getElementById('lbl-pdf-progress-percent');
-            const lblStatus = document.getElementById('lbl-pdf-progress-status');
-
-            pContainer.classList.remove('hidden');
-            lblStatus.innerText = `Đang nén ${selectedPages.length} trang...`;
-
-            for (let i = 0; i < selectedPages.length; i++) {
-                const { pageNum, canvas } = selectedPages[i];
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-                const paddedNum = String(pageNum).padStart(3, '0');
-                zip.file(`${baseName}_page_${paddedNum}.png`, blob);
-
-                const percent = Math.round(((i + 1) / selectedPages.length) * 100);
-                pBar.style.width = `${percent}%`;
-                lblPercent.innerText = `${percent}%`;
-            }
-
-            lblStatus.innerText = "Đang tạo tập tin tải xuống...";
-            const zipContent = await zip.generateAsync({ type: 'blob' });
-
+            pdfMap.forEach((canvas, p) => {
+                const base64 = canvas.toDataURL('image/png').replace(/^data:image\/png;base64,/, '');
+                zip.file(`trang_${String(p).padStart(3,'0')}.png`, base64, {base64: true});
+            });
+            const content = await zip.generateAsync({type: 'blob'});
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(zipContent);
-            a.download = `${baseName}_PNG_Pages.zip`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-
-            setTimeout(() => {
-                pContainer.classList.add('hidden');
-                pBar.style.width = '0%';
-            }, 2000);
+            a.href = URL.createObjectURL(content);
+            a.download = `${pdfName}_Pages.zip`; a.click();
         }
 
 
         // =========================================================================
-        // TOOL 2: VERTICAL IMAGE SLICER LOGIC
+        // 2. VERTICAL IMAGE SLICER
         // =========================================================================
-        let loadedSliceImage = null;
-        let slicerFileName = '';
-        let slicedDataList = []; // [{ partNum, dataUrl, blob, w, h }]
-
-        document.getElementById('slicer-file-input').addEventListener('change', (e) => {
-            if (e.target.files && e.target.files[0]) handleSlicerImageFile(e.target.files[0]);
-        });
-
-        function handleSlicerImageFile(file) {
-            if (!file.type.startsWith('image/')) {
-                alert('Vui lòng chọn định dạng tệp ảnh hợp lệ (PNG, JPG, WebP).');
-                return;
-            }
-
-            slicerFileName = file.name;
+        let sliceImg = null, sliceName = '', sliceList = [];
+        document.getElementById('slice-file').addEventListener('change', (e) => {
+            if (!e.target.files[0]) return;
+            const file = e.target.files[0];
+            sliceName = file.name;
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = (evt) => {
                 const img = new Image();
                 img.onload = () => {
-                    loadedSliceImage = img;
-                    document.getElementById('lbl-slicer-filename').innerText = file.name;
-                    document.getElementById('lbl-slicer-dim').innerText = `${img.naturalWidth} x ${img.naturalHeight} px`;
-
-                    document.getElementById('slicer-upload-zone').classList.add('hidden');
-                    document.getElementById('slicer-controls-panel').classList.remove('hidden');
-
-                    processImageSlicing();
+                    sliceImg = img;
+                    document.getElementById('slice-filename').innerText = file.name;
+                    document.getElementById('slice-dim').innerText = `${img.naturalWidth} x ${img.naturalHeight} px`;
+                    document.getElementById('slice-upload').classList.add('hidden');
+                    document.getElementById('slice-panel').classList.remove('hidden');
+                    processSlicing();
                 };
-                img.src = e.target.result;
+                img.src = evt.target.result;
             };
             reader.readAsDataURL(file);
-        }
+        });
 
-        function setSliceCountPreset(count) {
-            document.getElementById('num-slice-count').value = count;
-            processImageSlicing();
-        }
-
-        async function processImageSlicing() {
-            if (!loadedSliceImage) return;
-
-            const sliceCountInput = document.getElementById('num-slice-count');
-            let count = parseInt(sliceCountInput.value) || 4;
-            count = Math.max(2, Math.min(100, count));
-            sliceCountInput.value = count;
-            document.getElementById('lbl-slice-count-val').innerText = `${count} ảnh`;
-
-            const format = document.getElementById('select-slice-format').value;
+        async function processSlicing() {
+            if (!sliceImg) return;
+            const count = parseInt(document.getElementById('slice-count').value) || 4;
+            const format = document.getElementById('slice-format').value;
             const ext = format === 'image/jpeg' ? 'jpg' : 'png';
+            const W = sliceImg.naturalWidth, H = sliceImg.naturalHeight;
+            const h = Math.floor(H / count);
+            document.getElementById('slice-info-box').innerText = `Mỗi mảnh ~${h}px chiều cao`;
 
-            const W = loadedSliceImage.naturalWidth;
-            const H = loadedSliceImage.naturalHeight;
-            const sliceH = Math.floor(H / count);
-
-            document.getElementById('lbl-slicer-slice-height').innerText = `Mỗi ảnh ~${sliceH}px chiều cao`;
-
-            const grid = document.getElementById('slicer-grid');
-            grid.innerHTML = '';
-            slicedDataList = [];
-
-            const statusElem = document.getElementById('slicer-status');
-            statusElem.innerHTML = `<i class="fa-solid fa-scissors text-indigo-400 animate-bounce"></i> Đang cắt ảnh thành ${count} mảnh...`;
+            const grid = document.getElementById('slice-grid');
+            grid.innerHTML = ''; sliceList = [];
 
             for (let i = 0; i < count; i++) {
-                const sy = i * sliceH;
-                const sh = (i === count - 1) ? (H - sy) : sliceH;
-
+                const sy = i * h;
+                const sh = (i === count - 1) ? (H - sy) : h;
                 const canvas = document.createElement('canvas');
-                canvas.width = W;
-                canvas.height = sh;
-                const ctx = canvas.getContext('2d');
-
-                ctx.drawImage(loadedSliceImage, 0, sy, W, sh, 0, 0, W, sh);
-
+                canvas.width = W; canvas.height = sh;
+                canvas.getContext('2d').drawImage(sliceImg, 0, sy, W, sh, 0, 0, W, sh);
                 const dataUrl = canvas.toDataURL(format, 0.92);
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, format, 0.92));
-
-                slicedDataList.push({
-                    partNum: i + 1,
-                    dataUrl,
-                    blob,
-                    w: W,
-                    h: sh,
-                    ext
-                });
+                const blob = await new Promise(res => canvas.toBlob(res, format, 0.92));
+                sliceList.push({ idx: i + 1, dataUrl, blob, ext });
 
                 const card = document.createElement('div');
-                card.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl hover:border-indigo-500/50 transition-all flex flex-col group relative";
-
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-2 flex flex-col";
                 card.innerHTML = `
-                    <div class="relative bg-slate-950 p-2 flex items-center justify-center min-h-[160px] overflow-hidden group/img">
-                        <img src="${dataUrl}" class="max-h-60 w-auto object-contain rounded shadow cursor-pointer transition-transform group-hover/img:scale-105" onclick="openPreviewModal('${dataUrl}')" alt="Mảnh ${i + 1}">
-                        <div class="absolute top-3 left-3 bg-slate-900/90 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[10px] font-mono font-bold text-indigo-400 shadow">
-                            Mảnh ${i + 1}/${count}
-                        </div>
+                    <img src="${dataUrl}" class="max-h-60 object-contain rounded cursor-pointer" onclick="openPreviewModal('${dataUrl}')">
+                    <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-800 text-xs font-mono">
+                        <span>Mảnh ${i+1}/${count}</span>
+                        <a href="${dataUrl}" download="slice_${i+1}.${ext}" class="text-indigo-400 hover:underline">Tải về</a>
                     </div>
-                    <div class="p-3 border-t border-slate-800 bg-slate-900/60 flex items-center justify-between gap-2 mt-auto">
-                        <span class="text-[10px] text-slate-400 font-mono">${W} x ${sh} px</span>
-                        <button onclick="downloadSingleSlice(${i})" class="px-2.5 py-1.5 rounded-lg bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white text-xs font-semibold border border-indigo-500/20 transition-all flex items-center gap-1.5">
-                            <i class="fa-solid fa-download text-[10px]"></i> Tải mảnh ${i + 1}
-                        </button>
+                `;
+                grid.appendChild(card);
+            }
+        }
+        async function downloadSlicedZip() {
+            if (sliceList.length === 0) return;
+            const zip = new JSZip();
+            sliceList.forEach(item => zip.file(`manh_${String(item.idx).padStart(2,'0')}.${item.ext}`, item.blob));
+            const content = await zip.generateAsync({type: 'blob'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(content);
+            a.download = `${sliceName}_Sliced.zip`; a.click();
+        }
+
+
+        // =========================================================================
+        // 3. WEBTOON / LONG STRIP MERGER
+        // =========================================================================
+        let mergeImgs = [];
+        document.getElementById('merge-files').addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            document.getElementById('merge-upload').classList.add('hidden');
+            document.getElementById('merge-panel').classList.remove('hidden');
+            
+            files.forEach(f => {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        mergeImgs.push({ name: f.name, img });
+                        renderMergeList();
+                    };
+                    img.src = evt.target.result;
+                };
+                reader.readAsDataURL(f);
+            });
+        });
+
+        function renderMergeList() {
+            const list = document.getElementById('merge-list');
+            document.getElementById('merge-count').innerText = `Đã chọn ${mergeImgs.length} ảnh`;
+            list.innerHTML = '';
+            mergeImgs.forEach((item, idx) => {
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between bg-slate-950 p-2 rounded-xl border border-slate-800 text-xs font-mono";
+                row.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="text-slate-500">#${idx+1}</span>
+                        <span class="text-slate-200 font-bold truncate max-w-xs">${item.name}</span>
+                        <span class="text-slate-400">(${item.img.naturalWidth}x${item.img.naturalHeight}px)</span>
+                    </div>
+                    <button onclick="mergeImgs.splice(${idx},1); renderMergeList();" class="text-red-400 hover:text-red-300"><i class="fa-solid fa-trash"></i></button>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        async function executeMergeImages() {
+            if (mergeImgs.length === 0) return;
+            const maxW = Math.max(...mergeImgs.map(i => i.img.naturalWidth));
+            let totalH = 0;
+            mergeImgs.forEach(i => {
+                const scaledH = Math.round(i.img.naturalHeight * (maxW / i.img.naturalWidth));
+                totalH += scaledH;
+            });
+
+            const canvas = document.createElement('canvas');
+            canvas.width = maxW; canvas.height = totalH;
+            const ctx = canvas.getContext('2d');
+
+            let currentY = 0;
+            mergeImgs.forEach(i => {
+                const scaledH = Math.round(i.img.naturalHeight * (maxW / i.img.naturalWidth));
+                ctx.drawImage(i.img, 0, currentY, maxW, scaledH);
+                currentY += scaledH;
+            });
+
+            const dataUrl = canvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = dataUrl; a.download = `Merged_Webtoon_Strip.png`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        }
+
+
+        // =========================================================================
+        // 4. BATCH IMAGE COMPRESSOR
+        // =========================================================================
+        let compressList = [];
+        document.getElementById('compress-files').addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            document.getElementById('compress-upload').classList.add('hidden');
+            document.getElementById('compress-panel').classList.remove('hidden');
+
+            compressList = [];
+            files.forEach(f => {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        compressList.push({ file: f, img, originalSize: f.size });
+                        processCompressBatch();
+                    };
+                    img.src = evt.target.result;
+                };
+                reader.readAsDataURL(f);
+            });
+        });
+
+        async function processCompressBatch() {
+            if (compressList.length === 0) return;
+            const q = parseFloat(document.getElementById('compress-quality').value) / 100;
+            const format = document.getElementById('compress-format').value;
+            const ext = format === 'image/webp' ? 'webp' : 'jpg';
+
+            const grid = document.getElementById('compress-grid');
+            grid.innerHTML = '';
+            let totalSavedBytes = 0;
+
+            for (let i = 0; i < compressList.length; i++) {
+                const item = compressList[i];
+                const canvas = document.createElement('canvas');
+                canvas.width = item.img.naturalWidth;
+                canvas.height = item.img.naturalHeight;
+                canvas.getContext('2d').drawImage(item.img, 0, 0);
+
+                const blob = await new Promise(res => canvas.toBlob(res, format, q));
+                item.compressedBlob = blob;
+                item.compressedSize = blob.size;
+
+                const savedBytes = Math.max(0, item.originalSize - blob.size);
+                totalSavedBytes += savedBytes;
+
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col gap-2";
+                card.innerHTML = `
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-200">
+                        <span class="truncate max-w-[150px]">${item.file.name}</span>
+                        <span class="text-emerald-400 font-mono">-${Math.round((savedBytes/item.originalSize)*100)}%</span>
+                    </div>
+                    <div class="text-[10px] text-slate-400 font-mono flex justify-between">
+                        <span>Gốc: ${(item.originalSize/1024).toFixed(1)} KB</span>
+                        <span class="text-indigo-400 font-bold">Nén: ${(blob.size/1024).toFixed(1)} KB</span>
                     </div>
                 `;
                 grid.appendChild(card);
             }
 
-            statusElem.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Đã cắt hoàn tất ${count} mảnh đều nhau`;
+            document.getElementById('compress-total-saved').innerText = `Tổng tiết kiệm: ${(totalSavedBytes/1024).toFixed(1)} KB`;
         }
 
-        function downloadSingleSlice(index) {
-            const item = slicedDataList[index];
-            if (!item) return;
-
-            const prefixInput = document.getElementById('txt-slice-prefix').value.trim() || 'slice';
-            const baseName = slicerFileName.replace(/\.[^/.]+$/, '');
-            const paddedNum = String(item.partNum).padStart(2, '0');
-
-            const a = document.createElement('a');
-            a.href = item.dataUrl;
-            a.download = `${prefixInput}_${baseName}_part_${paddedNum}.${item.ext}`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-
-        async function exportSlicedZip() {
-            if (!slicedDataList || slicedDataList.length === 0) {
-                alert("Chưa có mảnh cắt nào để nén.");
-                return;
-            }
-
+        async function downloadCompressedZip() {
+            if (compressList.length === 0) return;
             const zip = new JSZip();
-            const prefixInput = document.getElementById('txt-slice-prefix').value.trim() || 'slice';
-            const baseName = slicerFileName.replace(/\.[^/.]+$/, '');
+            const format = document.getElementById('compress-format').value;
+            const ext = format === 'image/webp' ? 'webp' : 'jpg';
 
-            for (let item of slicedDataList) {
-                const paddedNum = String(item.partNum).padStart(2, '0');
-                zip.file(`${prefixInput}_${baseName}_part_${paddedNum}.${item.ext}`, item.blob);
-            }
+            compressList.forEach(item => {
+                const base = item.file.name.replace(/\.[^/.]+$/, '');
+                zip.file(`${base}_compressed.${ext}`, item.compressedBlob);
+            });
 
-            const zipContent = await zip.generateAsync({ type: 'blob' });
-
+            const content = await zip.generateAsync({type: 'blob'});
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(zipContent);
-            a.download = `${baseName}_Sliced_${slicedDataList.length}_Parts.zip`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            a.href = URL.createObjectURL(content);
+            a.download = `Compressed_Images.zip`; a.click();
         }
 
 
-        // Common Modal Preview
+        // =========================================================================
+        // 5. FORMAT CONVERTER
+        // =========================================================================
+        let convertList = [];
+        document.getElementById('convert-files').addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            document.getElementById('convert-upload').classList.add('hidden');
+            document.getElementById('convert-panel').classList.remove('hidden');
+
+            convertList = [];
+            files.forEach(f => {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        convertList.push({ file: f, img });
+                        processConvertBatch();
+                    };
+                    img.src = evt.target.result;
+                };
+                reader.readAsDataURL(f);
+            });
+        });
+
+        async function processConvertBatch() {
+            if (convertList.length === 0) return;
+            const targetFormat = document.getElementById('convert-target').value;
+            const ext = targetFormat === 'image/png' ? 'png' : targetFormat === 'image/jpeg' ? 'jpg' : 'webp';
+
+            const grid = document.getElementById('convert-grid');
+            grid.innerHTML = '';
+
+            for (let item of convertList) {
+                const canvas = document.createElement('canvas');
+                canvas.width = item.img.naturalWidth; canvas.height = item.img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                if (targetFormat === 'image/jpeg') {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+                ctx.drawImage(item.img, 0, 0);
+
+                const dataUrl = canvas.toDataURL(targetFormat, 0.92);
+                const blob = await new Promise(res => canvas.toBlob(res, targetFormat, 0.92));
+                item.convertedBlob = blob;
+                item.convertedExt = ext;
+
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-2 flex flex-col text-xs font-mono";
+                card.innerHTML = `
+                    <img src="${dataUrl}" class="max-h-40 object-contain rounded">
+                    <div class="flex items-center justify-between mt-2 pt-1 border-t border-slate-800">
+                        <span class="truncate max-w-[100px] text-slate-300">${item.file.name}</span>
+                        <a href="${dataUrl}" download="${item.file.name.replace(/\.[^/.]+$/, '')}.${ext}" class="text-indigo-400 hover:underline font-bold">.${ext.toUpperCase()}</a>
+                    </div>
+                `;
+                grid.appendChild(card);
+            }
+        }
+
+        async function downloadConvertedZip() {
+            if (convertList.length === 0) return;
+            const zip = new JSZip();
+            convertList.forEach(item => {
+                const base = item.file.name.replace(/\.[^/.]+$/, '');
+                zip.file(`${base}.${item.convertedExt}`, item.convertedBlob);
+            });
+            const content = await zip.generateAsync({type: 'blob'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(content);
+            a.download = `Converted_Format_Images.zip`; a.click();
+        }
+
+
+        // =========================================================================
+        // 6. IMAGE SHARPEN & ENHANCE
+        // =========================================================================
+        let enhanceImg = null;
+        document.getElementById('enhance-file').addEventListener('change', (e) => {
+            if (!e.target.files[0]) return;
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const img = new Image();
+                img.onload = () => {
+                    enhanceImg = img;
+                    document.getElementById('enhance-upload').classList.add('hidden');
+                    document.getElementById('enhance-panel').classList.remove('hidden');
+                    processEnhance();
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function processEnhance() {
+            if (!enhanceImg) return;
+            const canvas = document.getElementById('enhance-canvas');
+            canvas.width = enhanceImg.naturalWidth;
+            canvas.height = enhanceImg.naturalHeight;
+            const ctx = canvas.getContext('2d');
+
+            const contrast = parseFloat(document.getElementById('enhance-contrast').value) / 100;
+            ctx.filter = `contrast(${contrast})`;
+            ctx.drawImage(enhanceImg, 0, 0);
+
+            // Simple Sharpen Filter convolution matrix
+            const sharpAmount = parseFloat(document.getElementById('enhance-sharp').value);
+            if (sharpAmount > 0) {
+                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imgData.data;
+                const w = canvas.width, h = canvas.height;
+                const copy = new Uint8ClampedArray(data);
+
+                const k = sharpAmount;
+                for (let y = 1; y < h - 1; y++) {
+                    for (let x = 1; x < w - 1; x++) {
+                        const idx = (y * w + x) * 4;
+                        for (let c = 0; c < 3; c++) {
+                            const val = (1 + 4 * k) * copy[idx + c]
+                                - k * copy[((y - 1) * w + x) * 4 + c]
+                                - k * copy[((y + 1) * w + x) * 4 + c]
+                                - k * copy[(y * w + x - 1) * 4 + c]
+                                - k * copy[(y * w + x + 1) * 4 + c];
+                            data[idx + c] = Math.min(255, Math.max(0, val));
+                        }
+                    }
+                }
+                ctx.putImageData(imgData, 0, 0);
+            }
+        }
+
+        function downloadEnhancedImage() {
+            const canvas = document.getElementById('enhance-canvas');
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = `Enhanced_Sharpened_Image.png`;
+            a.click();
+        }
+
+
+        // =========================================================================
+        // 7. OCR TEXT EXTRACTOR
+        // =========================================================================
+        let ocrFileBlob = null;
+        document.getElementById('ocr-file').addEventListener('change', (e) => {
+            if (!e.target.files[0]) return;
+            ocrFileBlob = e.target.files[0];
+            document.getElementById('ocr-upload').classList.add('hidden');
+            document.getElementById('ocr-panel').classList.remove('hidden');
+            runOcrExtraction();
+        });
+
+        async function runOcrExtraction() {
+            if (!ocrFileBlob) return;
+            const lang = document.getElementById('ocr-lang').value;
+            const statusBar = document.getElementById('ocr-status-bar');
+            const resultText = document.getElementById('ocr-result-text');
+
+            statusBar.classList.remove('hidden');
+            statusBar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang khởi tạo trí tuệ nhân tạo OCR (${lang})...`;
+
+            try {
+                const worker = await Tesseract.createWorker(lang);
+                statusBar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang quét và bóc tách chữ từ ảnh...`;
+                const ret = await worker.recognize(ocrFileBlob);
+                resultText.value = ret.data.text;
+                statusBar.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Đã trích xuất thành công ${ret.data.words.length} từ!`;
+                await worker.terminate();
+            } catch (err) {
+                console.error("OCR Error:", err);
+                statusBar.innerHTML = `<i class="fa-solid fa-circle-exclamation text-red-400"></i> Lỗi nhận diện OCR: ${err.message}`;
+            }
+        }
+
+        function copyOcrText() {
+            const text = document.getElementById('ocr-result-text').value;
+            if (!text) return;
+            navigator.clipboard.writeText(text);
+            alert("Đã sao chép toàn bộ văn bản bóc tách vào khay nhớ tạm!");
+        }
+
+
+        // Lightbox Modal
         function openPreviewModal(imgUrl) {
             document.getElementById('modal-img').src = imgUrl;
             document.getElementById('preview-modal').classList.remove('hidden');
         }
-
         function closePreviewModal() {
             document.getElementById('preview-modal').classList.add('hidden');
         }
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closePreviewModal();
-        });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePreviewModal(); });
     </script>
 </body>
 
