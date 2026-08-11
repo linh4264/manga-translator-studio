@@ -12,7 +12,19 @@ export function startBlockDrag(e, block) {
 
     e.preventDefault();
     pushStateToHistory();
-    selectBlock(block.id);
+
+    const isMulti = e.shiftKey || e.ctrlKey || e.metaKey;
+    selectBlock(block.id, isMulti);
+
+    const activePage = globalState.pages[globalState.activePageIndex];
+    const isGroupDrag = activePage && globalState.selectedBlockIds && globalState.selectedBlockIds.length > 1 && globalState.selectedBlockIds.includes(block.id);
+
+    const groupStartCoords = isGroupDrag
+        ? globalState.selectedBlockIds.map(id => {
+            const b = activePage.blocks.find(bk => bk.id === id);
+            return { id, x: b?.box?.x || 0, y: b?.box?.y || 0, w: b?.box?.w || 0, h: b?.box?.h || 0 };
+        })
+        : [];
 
     const isTouch = e.type.startsWith('touch');
     const clientX = isTouch ? e.touches[0].clientX : e.clientX;
@@ -38,13 +50,28 @@ export function startBlockDrag(e, block) {
         const deltaPercentX = (deltaX / containerWidth) * 100;
         const deltaPercentY = (deltaY / containerHeight) * 100;
 
-        block.box.x = Math.max(0, Math.min(100 - block.box.w, startPercentX + deltaPercentX));
-        block.box.y = Math.max(0, Math.min(100 - block.box.h, startPercentY + deltaPercentY));
+        if (isGroupDrag && activePage) {
+            groupStartCoords.forEach(item => {
+                const b = activePage.blocks.find(bk => bk.id === item.id);
+                if (b && b.box) {
+                    b.box.x = Math.max(0, Math.min(100 - item.w, item.x + deltaPercentX));
+                    b.box.y = Math.max(0, Math.min(100 - item.h, item.y + deltaPercentY));
+                    const elem = document.getElementById(item.id);
+                    if (elem) {
+                        elem.style.left = `${b.box.x}%`;
+                        elem.style.top = `${b.box.y}%`;
+                    }
+                }
+            });
+        } else {
+            block.box.x = Math.max(0, Math.min(100 - block.box.w, startPercentX + deltaPercentX));
+            block.box.y = Math.max(0, Math.min(100 - block.box.h, startPercentY + deltaPercentY));
 
-        const blockElem = document.getElementById(block.id);
-        if (blockElem) {
-            blockElem.style.left = `${block.box.x}%`;
-            blockElem.style.top = `${block.box.y}%`;
+            const blockElem = document.getElementById(block.id);
+            if (blockElem) {
+                blockElem.style.left = `${block.box.x}%`;
+                blockElem.style.top = `${block.box.y}%`;
+            }
         }
 
         updateFloatingToolbarPosition();
@@ -178,31 +205,66 @@ export function startBlockResize(e, block, handleDir) {
     document.addEventListener('touchend', onResizeEnd);
 }
 
-export function selectBlock(blockId) {
-    const prevSelectedBlockId = globalState.selectedBlockId;
-    globalState.selectedBlockId = blockId;
-
-    if (prevSelectedBlockId && prevSelectedBlockId !== blockId) {
-        const prevEl = document.getElementById(prevSelectedBlockId);
-        if (prevEl) prevEl.classList.remove('active');
+export function updateBlockSelectionDOM() {
+    if (!globalState.selectedBlockIds) globalState.selectedBlockIds = [];
+    const overlays = elements.mangaOverlaysContainer?.children;
+    if (overlays) {
+        Array.from(overlays).forEach(el => {
+            if (globalState.selectedBlockIds.includes(el.id)) {
+                el.classList.add('active');
+            } else {
+                el.classList.remove('active');
+            }
+        });
     }
-    const nextEl = document.getElementById(blockId);
-    if (nextEl) {
-        nextEl.classList.add('active');
+}
+
+export function selectBlock(blockId, isMultiSelect = false) {
+    if (!globalState.selectedBlockIds) globalState.selectedBlockIds = [];
+
+    if (!blockId) {
+        globalState.selectedBlockIds = [];
+        globalState.selectedBlockId = null;
+    } else if (isMultiSelect) {
+        const idx = globalState.selectedBlockIds.indexOf(blockId);
+        if (idx !== -1 && globalState.selectedBlockIds.length > 1) {
+            globalState.selectedBlockIds.splice(idx, 1);
+        } else if (idx === -1) {
+            globalState.selectedBlockIds.push(blockId);
+        }
+        globalState.selectedBlockId = globalState.selectedBlockIds.length > 0
+            ? globalState.selectedBlockIds[globalState.selectedBlockIds.length - 1]
+            : null;
     } else {
-        requestOverlayRender();
+        globalState.selectedBlockIds = [blockId];
+        globalState.selectedBlockId = blockId;
     }
 
+    updateBlockSelectionDOM();
     uiUpdateActiveBlockEditor();
 
-    if (elements.btnCopyStyle) elements.btnCopyStyle.disabled = false;
-    if (elements.btnPasteStyle) elements.btnPasteStyle.disabled = !copiedStyle;
+    if (elements.btnCopyStyle) elements.btnCopyStyle.disabled = !globalState.selectedBlockId;
+    if (elements.btnPasteStyle) elements.btnPasteStyle.disabled = !copiedStyle || !globalState.selectedBlockId;
 
     if (globalState.viewMode === 'split') {
         uiUpdateSplitView();
     }
 
     updateFloatingToolbarPosition();
+}
+
+export function selectAllBlocksOnPage() {
+    if (globalState.activePageIndex === -1) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    if (!page || !page.blocks || page.blocks.length === 0) return;
+
+    globalState.selectedBlockIds = page.blocks.map(b => b.id);
+    globalState.selectedBlockId = page.blocks[page.blocks.length - 1].id;
+
+    updateBlockSelectionDOM();
+    uiUpdateActiveBlockEditor();
+    updateFloatingToolbarPosition();
+    showToast(`Đã chọn tất cả ${page.blocks.length} ô thoại trên trang.`, 'info');
 }
 
 export function navigateBlocks(direction) {

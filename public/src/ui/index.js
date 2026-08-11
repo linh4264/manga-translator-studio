@@ -43,7 +43,7 @@ import { globalState, stateEvents } from '../core/state.js';
 import { CUSTOM_MODEL_VALUE } from '../config/constants.js';
 import { globalBus } from '../core/events.js';
 import { elements } from '../core/elements.js';
-import { copyBlockStyle, pasteBlockStyle, navigateBlocks, syncActiveBlockStyle } from '../features/canvas/canvas-service.js';
+import { copyBlockStyle, pasteBlockStyle, navigateBlocks, syncActiveBlockStyle, selectAllBlocksOnPage } from '../features/canvas/canvas-service.js';
 import { safeSetLocalStorage } from '../core/utils/storage.js';
 
 export {
@@ -279,6 +279,12 @@ export function initEventListeners() {
         }
 
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+            e.preventDefault();
+            selectAllBlocksOnPage();
+            return;
+        }
 
         if (globalState.selectedBlockId !== null) {
             const activePage = globalState.pages[globalState.activePageIndex];

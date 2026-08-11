@@ -30,6 +30,7 @@ import {
     handleReplaceImageBlockSelect,
     deleteActiveBlock,
     selectBlock,
+    selectAllBlocksOnPage,
     navigateBlocks,
     initBilingualTooltipEvents
 } from './canvas-interactions.js';
@@ -59,6 +60,7 @@ Object.assign(window, {
     applyDiamondFormat,
     batchDiamondBalanceAllPages,
     selectBlock,
+    selectAllBlocksOnPage,
     syncActiveBlockStyle,
     syncActiveBlockTranslation,
     copyBlockStyle,

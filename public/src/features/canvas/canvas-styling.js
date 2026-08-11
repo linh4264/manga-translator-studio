@@ -677,33 +677,67 @@ export function toggleActiveBlockBold() {
 }
 
 export function alignActiveBlockPosition(mode) {
-    if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) return;
+    if (globalState.activePageIndex === -1) return;
     const page = globalState.pages[globalState.activePageIndex];
-    if (!page) return;
+    if (!page || !page.blocks || page.blocks.length === 0) return;
 
-    const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
-    if (!block || !block.box) return;
+    let targetBlocks = [];
+    const selectedIds = globalState.selectedBlockIds && globalState.selectedBlockIds.length > 0
+        ? globalState.selectedBlockIds
+        : (globalState.selectedBlockId ? [globalState.selectedBlockId] : []);
+
+    targetBlocks = page.blocks.filter(b => selectedIds.includes(b.id));
+    if (targetBlocks.length === 0) return;
 
     pushStateToHistory();
 
     const round1 = (val) => Math.round(val * 10) / 10;
 
-    if (mode === 'left') {
-        block.box.x = 0;
-    } else if (mode === 'center-h') {
-        block.box.x = Math.max(0, round1((100 - block.box.w) / 2));
-    } else if (mode === 'right') {
-        block.box.x = Math.max(0, round1(100 - block.box.w));
-    } else if (mode === 'top') {
-        block.box.y = 0;
-    } else if (mode === 'center-v') {
-        block.box.y = Math.max(0, round1((100 - block.box.h) / 2));
-    } else if (mode === 'bottom') {
-        block.box.y = Math.max(0, round1(100 - block.box.h));
-    }
+    if (targetBlocks.length === 1) {
+        // Single block alignment relative to Canvas (0%, 50%, 100%)
+        const block = targetBlocks[0];
+        if (mode === 'left') {
+            block.box.x = 0;
+        } else if (mode === 'center-h') {
+            block.box.x = Math.max(0, round1((100 - block.box.w) / 2));
+        } else if (mode === 'right') {
+            block.box.x = Math.max(0, round1(100 - block.box.w));
+        } else if (mode === 'top') {
+            block.box.y = 0;
+        } else if (mode === 'center-v') {
+            block.box.y = Math.max(0, round1((100 - block.box.h) / 2));
+        } else if (mode === 'bottom') {
+            block.box.y = Math.max(0, round1(100 - block.box.h));
+        }
+        block.maskCache = null;
+        block.autoFitCache = null;
+    } else {
+        // Multi-block alignment relative to Group Bounding Box
+        const minX = Math.min(...targetBlocks.map(b => b.box.x));
+        const maxX = Math.max(...targetBlocks.map(b => b.box.x + b.box.w));
+        const minY = Math.min(...targetBlocks.map(b => b.box.y));
+        const maxY = Math.max(...targetBlocks.map(b => b.box.y + b.box.h));
+        const groupCenterX = minX + (maxX - minX) / 2;
+        const groupCenterY = minY + (maxY - minY) / 2;
 
-    block.maskCache = null;
-    block.autoFitCache = null;
+        targetBlocks.forEach(block => {
+            if (mode === 'left') {
+                block.box.x = minX;
+            } else if (mode === 'center-h') {
+                block.box.x = Math.max(0, round1(groupCenterX - block.box.w / 2));
+            } else if (mode === 'right') {
+                block.box.x = Math.max(0, round1(maxX - block.box.w));
+            } else if (mode === 'top') {
+                block.box.y = minY;
+            } else if (mode === 'center-v') {
+                block.box.y = Math.max(0, round1(groupCenterY - block.box.h / 2));
+            } else if (mode === 'bottom') {
+                block.box.y = Math.max(0, round1(maxY - block.box.h));
+            }
+            block.maskCache = null;
+            block.autoFitCache = null;
+        });
+    }
 
     requestOverlayRender();
     uiUpdateActiveBlockEditor();

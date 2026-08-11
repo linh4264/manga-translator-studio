@@ -69,6 +69,7 @@ export const globalState = {
     pages: [],
     activePageIndex: -1,
     selectedBlockId: null,
+    selectedBlockIds: [],
     viewMode: 'overlay', // 'overlay' | 'split' | 'original'
     zoom: 100,
     activeTab: 'edit', // 'edit' | 'style'
