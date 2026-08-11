@@ -662,44 +662,6 @@
                 </div>
 
                 <div id="block-editor-container" class="hidden space-y-4">
-                    <!-- Block Type Selector -->
-                    <div class="space-y-1">
-                        <label data-i18n="block-type-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phân loại khung thoại</label>
-                        <div class="grid grid-cols-2 gap-1.5 bg-slate-950 p-1 rounded-lg border border-slate-800">
-                            <button id="btn-block-type-dialogue" onclick="setActiveBlockType('dialogue')"
-                                class="py-1.5 px-2 text-[11px] font-semibold rounded bg-indigo-600 text-white flex items-center justify-center gap-1.5 transition-all">
-                                <i class="fa-regular fa-comment"></i> <span data-i18n="block-type-dialogue">💬 Lời thoại</span>
-                            </button>
-                            <button id="btn-block-type-sfx" onclick="setActiveBlockType('sfx')"
-                                class="py-1.5 px-2 text-[11px] font-semibold rounded text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5 transition-all">
-                                <i class="fa-solid fa-bolt"></i> <span data-i18n="block-type-sfx">💥 Hiệu ứng (SFX)</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Voice Gender Assignment for Block -->
-                    <div class="space-y-1">
-                        <label data-i18n="voice-gender-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Giọng đọc Audio Drama</label>
-                        <div class="grid grid-cols-3 gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
-                            <button id="btn-block-gender-male" onclick="setActiveBlockGender('male')"
-                                class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center gap-1 transition-all"
-                                title="Gán giọng Nam cho ô thoại này">
-                                <span data-i18n="voice-gender-male">👨 Nam</span>
-                            </button>
-                            <button id="btn-block-gender-female" onclick="setActiveBlockGender('female')"
-                                class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center gap-1 transition-all"
-                                title="Gán giọng Nữ cho ô thoại này">
-                                <span data-i18n="voice-gender-female">👩 Nữ</span>
-                            </button>
-                            <button id="btn-block-gender-neutral" onclick="setActiveBlockGender('neutral')"
-                                class="py-1 px-1.5 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-white flex items-center justify-center gap-1 transition-all"
-                                title="Gán giọng Dẫn chuyện">
-                                <span data-i18n="voice-gender-neutral">🎙️ Dẫn chuyện</span>
-                            </button>
-                        </div>
-                    </div>
-
-
                     <!-- Text Area Original JP -->
                     <div class="space-y-1">
                         <label data-i18n="original-text-label"
