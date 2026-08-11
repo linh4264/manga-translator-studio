@@ -175,6 +175,7 @@ export function pushStateToHistory() {
     const currentState = globalState.pages.map(page => ({
         id: page.id,
         status: page.status,
+        eraserLayerBlob: page.eraserLayerBlob || null,
         blocks: page.blocks.map(block => ({
             id: block.id,
             type: block.type,
@@ -213,6 +214,7 @@ export function applyStateFromSnapshot(snapshot) {
         const targetPage = globalState.pages.find(p => p.id === savedPage.id);
         if (targetPage) {
             targetPage.status = savedPage.status;
+            targetPage.eraserLayerBlob = savedPage.eraserLayerBlob || null;
             targetPage.blocks = savedPage.blocks.map(b => ({
                 id: b.id,
                 type: b.type,
@@ -257,6 +259,7 @@ export function executeUndo() {
     const currentState = globalState.pages.map(page => ({
         id: page.id,
         status: page.status,
+        eraserLayerBlob: page.eraserLayerBlob || null,
         blocks: page.blocks.map(block => ({
             id: block.id,
             type: block.type,
@@ -283,6 +286,7 @@ export function executeRedo() {
     const currentState = globalState.pages.map(page => ({
         id: page.id,
         status: page.status,
+        eraserLayerBlob: page.eraserLayerBlob || null,
         blocks: page.blocks.map(block => ({
             id: block.id,
             type: block.type,

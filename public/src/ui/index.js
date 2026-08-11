@@ -249,7 +249,7 @@ export function initEventListeners() {
     }, { passive: false });
 
     document.addEventListener('keydown', (e) => {
-        // Ctrl + Shortcuts for zooming
+        // Ctrl + Shortcuts for zooming and Undo/Redo
         if (e.ctrlKey || e.metaKey) {
             if (e.key === '=' || e.key === '+') {
                 e.preventDefault();
@@ -264,6 +264,16 @@ export function initEventListeners() {
             if (e.key === '0') {
                 e.preventDefault();
                 resetZoom();
+                return;
+            }
+            if (!e.shiftKey && e.key.toLowerCase() === 'z') {
+                e.preventDefault();
+                import('../core/state.js').then(s => s.executeUndo());
+                return;
+            }
+            if (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z')) {
+                e.preventDefault();
+                import('../core/state.js').then(s => s.executeRedo());
                 return;
             }
         }

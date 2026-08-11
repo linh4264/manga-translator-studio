@@ -416,9 +416,14 @@
                     <span class="text-[10px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-1.5 select-none">
                         <i class="fa-solid fa-paintbrush text-amber-400 animate-pulse"></i> Tẩy chữ thô
                     </span>
-                    <button onclick="toggleEraserMode()" class="text-slate-500 hover:text-slate-300 transition-colors" title="Tắt chế độ cọ tẩy">
-                        <i class="fa-solid fa-xmark text-xs"></i>
-                    </button>
+                    <div class="flex items-center space-x-1 select-none">
+                        <button onclick="minimizeEraserPanel()" class="w-5 h-5 rounded hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors" title="Ẩn hộp công cụ">
+                            <i class="fa-solid fa-minus text-[10px]"></i>
+                        </button>
+                        <button onclick="toggleEraserMode()" class="w-5 h-5 rounded hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors" title="Tắt chế độ cọ tẩy">
+                            <i class="fa-solid fa-xmark text-xs"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Mode Select Segmented Control (Pills 2x2 Grid) -->

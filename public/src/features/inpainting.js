@@ -739,7 +739,10 @@ export function initEraserDrawingEvents() {
     };
 
     const stopDraw = () => {
-        isDrawingOnEraser = false;
+        if (isDrawingOnEraser) {
+            isDrawingOnEraser = false;
+            saveEraserDrawingToPage();
+        }
     };
 
     canvas.onmousedown = startDraw;
