@@ -465,13 +465,18 @@ export function syncActiveBlockStyle(property, value) {
             if (elements.styleAutoFit) elements.styleAutoFit.checked = false;
         }
 
-        const rangeProperties = ['fontSize', 'bgOpacity', 'padding', 'rotate'];
+        const rangeProperties = [
+            'fontSize', 'bgOpacity', 'padding', 'rotate',
+            'strokeWidth', 'shadowBlur', 'arcAngle', 'skewX', 'skewY', 'warpWave', 'warpBulge'
+        ];
         if (rangeProperties.includes(property)) {
             if (!isCurrentlySliding) {
                 isCurrentlySliding = true;
                 pushStateToHistory();
                 const stopSlide = () => {
                     isCurrentlySliding = false;
+                    uiUpdateActiveBlockEditor();
+                    updateFloatingToolbarPosition();
                     window.removeEventListener('mouseup', stopSlide);
                     window.removeEventListener('touchend', stopSlide);
                 };
@@ -485,12 +490,12 @@ export function syncActiveBlockStyle(property, value) {
         block.style[property] = value;
 
         if (property === 'fontSize') {
-            elements.lblFontSize.innerText = `${value}px`;
-            elements.styleFontSize.value = value;
+            if (elements.lblFontSize) elements.lblFontSize.innerText = `${value}px`;
+            if (elements.styleFontSize) elements.styleFontSize.value = value;
         } else if (property === 'bgOpacity') {
-            elements.lblBgOpacity.innerText = `${value}%`;
+            if (elements.lblBgOpacity) elements.lblBgOpacity.innerText = `${value}%`;
         } else if (property === 'padding') {
-            elements.lblPadding.innerText = `${value}px`;
+            if (elements.lblPadding) elements.lblPadding.innerText = `${value}px`;
         } else if (property === 'rotate') {
             if (elements.lblRotate) elements.lblRotate.innerText = `${value}°`;
             if (elements.styleRotate) elements.styleRotate.value = value;
@@ -506,8 +511,10 @@ export function syncActiveBlockStyle(property, value) {
         block.autoFitCache = null;
         markPageAutoFitDirty(page);
         requestOverlayRender();
-        uiUpdateActiveBlockEditor();
-        updateFloatingToolbarPosition();
+        if (!isCurrentlySliding) {
+            uiUpdateActiveBlockEditor();
+            updateFloatingToolbarPosition();
+        }
         debounceSavePage(page);
     }
 }
@@ -597,85 +604,44 @@ export function normalizeAllBlocksToHorizontal() {
 
 export function updateSfxRotate(val) {
     const angle = parseInt(val, 10) || 0;
-    const activePage = globalState.pages[globalState.activePageIndex];
-    if (!activePage || !globalState.selectedBlockId) return;
-    const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
-    if (!block) return;
-
-    block.style.rotate = angle;
     const lbl = document.getElementById('lbl-sfx-rotate');
     if (lbl) lbl.textContent = `${angle}°`;
-    requestOverlayRender();
+    syncActiveBlockStyle('rotate', angle);
 }
 
 export function updateSfxArc(val) {
     const arc = parseInt(val, 10) || 0;
-    const activePage = globalState.pages[globalState.activePageIndex];
-    if (!activePage || !globalState.selectedBlockId) return;
-    const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
-    if (!block) return;
-
-    if (!block.style) block.style = {};
-    block.style.arcAngle = arc;
     const lbl = document.getElementById('lbl-sfx-arc');
     if (lbl) lbl.textContent = `${arc}°`;
-    requestOverlayRender();
+    syncActiveBlockStyle('arcAngle', arc);
 }
 
 export function updateSfxSkewX(val) {
     const skew = parseInt(val, 10) || 0;
-    const activePage = globalState.pages[globalState.activePageIndex];
-    if (!activePage || !globalState.selectedBlockId) return;
-    const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
-    if (!block) return;
-
-    if (!block.style) block.style = {};
-    block.style.skewX = skew;
     const lbl = document.getElementById('lbl-sfx-skew-x');
     if (lbl) lbl.textContent = `${skew}°`;
-    requestOverlayRender();
+    syncActiveBlockStyle('skewX', skew);
 }
 
 export function updateSfxSkewY(val) {
     const skew = parseInt(val, 10) || 0;
-    const activePage = globalState.pages[globalState.activePageIndex];
-    if (!activePage || !globalState.selectedBlockId) return;
-    const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
-    if (!block) return;
-
-    if (!block.style) block.style = {};
-    block.style.skewY = skew;
     const lbl = document.getElementById('lbl-sfx-skew-y');
     if (lbl) lbl.textContent = `${skew}°`;
-    requestOverlayRender();
+    syncActiveBlockStyle('skewY', skew);
 }
 
 export function updateSfxWave(val) {
     const wave = parseInt(val, 10) || 0;
-    const activePage = globalState.pages[globalState.activePageIndex];
-    if (!activePage || !globalState.selectedBlockId) return;
-    const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
-    if (!block) return;
-
-    if (!block.style) block.style = {};
-    block.style.warpWave = wave;
     const lbl = document.getElementById('lbl-sfx-wave');
     if (lbl) lbl.textContent = `${wave}`;
-    requestOverlayRender();
+    syncActiveBlockStyle('warpWave', wave);
 }
 
 export function updateSfxBulge(val) {
     const bulge = parseInt(val, 10) || 0;
-    const activePage = globalState.pages[globalState.activePageIndex];
-    if (!activePage || !globalState.selectedBlockId) return;
-    const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
-    if (!block) return;
-
-    if (!block.style) block.style = {};
-    block.style.warpBulge = bulge;
     const lbl = document.getElementById('lbl-sfx-bulge');
     if (lbl) lbl.textContent = `${bulge}`;
-    requestOverlayRender();
+    syncActiveBlockStyle('warpBulge', bulge);
 }
 
 export function resetWarpTransformControls() {
