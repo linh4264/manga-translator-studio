@@ -166,6 +166,15 @@ export function changeZoom(amount, mouseEvent = null) {
     elements.mangaCanvasContainer.style.maxHeight = 'none';
     elements.mangaCanvasContainer.style.width = 'auto';
     elements.workspaceSplitWrapper.style.transform = `scale(${globalState.zoom / 100})`;
+
+    if (newZoom > 100) {
+        elements.mangaCanvasContainer.classList.remove('m-auto');
+        elements.mangaCanvasContainer.classList.add('my-auto', 'mx-0');
+    } else {
+        elements.mangaCanvasContainer.classList.remove('my-auto', 'mx-0');
+        elements.mangaCanvasContainer.classList.add('m-auto');
+    }
+
     renderOverlays();
 
     if (mouseEvent && viewport && targetEl && vRect) {
@@ -179,8 +188,8 @@ export function changeZoom(amount, mouseEvent = null) {
         const newTargetViewportLeft = mxInViewport - mouseXOnTargetNew;
         const newTargetViewportTop = myInViewport - mouseYOnTargetNew;
 
-        viewport.scrollLeft = targetContentLeft - newTargetViewportLeft;
-        viewport.scrollTop = targetContentTop - newTargetViewportTop;
+        viewport.scrollLeft = Math.max(0, targetContentLeft - newTargetViewportLeft);
+        viewport.scrollTop = Math.max(0, targetContentTop - newTargetViewportTop);
     }
 }
 
@@ -190,6 +199,8 @@ export function resetZoom() {
     elements.mangaCanvasContainer.style.height = '100%';
     elements.mangaCanvasContainer.style.maxHeight = '100%';
     elements.mangaCanvasContainer.style.width = 'auto';
+    elements.mangaCanvasContainer.classList.remove('my-auto', 'mx-0');
+    elements.mangaCanvasContainer.classList.add('m-auto');
     elements.workspaceSplitWrapper.style.transform = 'scale(1)';
     renderOverlays();
 }

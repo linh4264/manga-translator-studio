@@ -91,6 +91,11 @@ select:focus {
 }
 
 /* Workspace Grid and Overlays */
+#workspace-viewport {
+    justify-content: safe center;
+    align-items: safe center;
+}
+
 .manga-container {
     position: relative;
     user-select: none;

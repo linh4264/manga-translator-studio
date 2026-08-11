@@ -156,7 +156,9 @@ The zero-dependency static file server will launch and automatically open the ap
 | :--- | :--- |
 | `Ctrl + Z` / `Cmd + Z` | Undo the last action |
 | `Ctrl + Y` / `Cmd + Y` | Redo the last action |
-| `Ctrl + Scroll` | Zoom in / Zoom out of the workspace viewport |
+| `Scroll` | Vertical scroll workspace |
+| `Ctrl + Scroll` | Horizontal scroll workspace |
+| `Alt + Scroll` | Zoom in / Zoom out centered at mouse cursor position |
 | `Ctrl + +` / `Ctrl + =` | Zoom in to workspace |
 | `Ctrl + -` | Zoom out of workspace |
 | `Ctrl + 0` | Reset workspace zoom to 100% |

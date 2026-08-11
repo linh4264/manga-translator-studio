@@ -206,13 +206,45 @@ export function initEventListeners() {
         checkbox.addEventListener('change', () => updateTranslationGenrePreset());
     });
 
-    // Direct Mouse Wheel Zoom centered at cursor position (bound to window with passive:false to block default browser scroll)
+    // Mouse Wheel Interactions: Scroll = Vertical, Ctrl + Scroll = Horizontal (bounded to left edge), Alt + Scroll = Zoom at Cursor
     window.addEventListener('wheel', (e) => {
         const isInsideViewport = e.target && e.target.closest && e.target.closest('#workspace-viewport');
         if (isInsideViewport) {
-            e.preventDefault();
-            const amount = e.deltaY < 0 ? 10 : -10;
-            changeZoom(amount, e);
+            const viewport = document.getElementById('workspace-viewport');
+            if (e.altKey) {
+                // Alt + Scroll = Zoom centered at cursor position
+                e.preventDefault();
+                const amount = e.deltaY < 0 ? 10 : -10;
+                changeZoom(amount, e);
+            } else if (e.ctrlKey || e.metaKey) {
+                // Ctrl + Scroll = Horizontal Scroll
+                e.preventDefault();
+                if (viewport) {
+                    const delta = e.deltaY || e.deltaX;
+                    const target = (elements.workspaceSplitWrapper && !elements.workspaceSplitWrapper.classList.contains('hidden'))
+                        ? elements.workspaceSplitWrapper
+                        : elements.mangaCanvasContainer;
+
+                    if (target && delta < 0) {
+                        // Scrolling Left towards left edge of image
+                        const vRect = viewport.getBoundingClientRect();
+                        const tRect = target.getBoundingClientRect();
+                        const currentLeftOffset = tRect.left - vRect.left;
+
+                        if (currentLeftOffset >= 0) {
+                            // Left edge of image is already at or to the right of left sidebar edge
+                            return;
+                        }
+
+                        // Limit scroll so left edge of image aligns with left sidebar edge
+                        const deltaToApply = Math.max(delta, currentLeftOffset);
+                        viewport.scrollLeft += deltaToApply;
+                    } else {
+                        viewport.scrollLeft += delta;
+                    }
+                }
+            }
+            // Standard Scroll = Native Vertical Scroll (no preventDefault needed)
         }
     }, { passive: false });
 

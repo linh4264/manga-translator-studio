@@ -154,7 +154,9 @@ Máy chủ tĩnh zero-dependency sẽ khởi chạy và tự động mở trình
 | :--- | :--- |
 | `Ctrl + Z` / `Cmd + Z` | Hoàn tác (Undo) thao tác vừa thực hiện |
 | `Ctrl + Y` / `Cmd + Y` | Làm lại (Redo) |
-| `Ctrl + Scroll` | Thu phóng (Zoom in / Zoom out) màn hình làm việc |
+| `Scroll` | Cuộn dọc màn hình làm việc (Vertical Scroll) |
+| `Ctrl + Scroll` | Cuộn ngang màn hình làm việc (Horizontal Scroll) |
+| `Alt + Scroll` | Thu phóng (Zoom in / Zoom out) theo tâm vị trí chuột |
 | `Ctrl + +` / `Ctrl + =` | Phóng to màn hình làm việc (Zoom In) |
 | `Ctrl + -` | Thu nhỏ màn hình làm việc (Zoom Out) |
 | `Ctrl + 0` | Đặt lại tỷ lệ thu phóng gốc (Reset Zoom 100%) |
