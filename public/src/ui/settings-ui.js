@@ -189,11 +189,13 @@ export function updateModelLockingUI() {
     }
 }
 
+import { ensureModalElement } from '../core/component-loader.js';
+
 export function mountSettingsModal() { }
 
-export function openSettingsModal() {
+export async function openSettingsModal() {
     mountSettingsModal();
-    const modal = elements.settingsModal || document.getElementById('settings-modal');
+    const modal = await ensureModalElement('settings-modal');
     if (modal) modal.classList.remove('hidden');
 
     if (elements.uiLangSelect) elements.uiLangSelect.value = globalState.uiLanguage || 'vi';

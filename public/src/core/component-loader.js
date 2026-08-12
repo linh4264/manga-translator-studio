@@ -1,32 +1,62 @@
-export async function loadUIComponents() {
-    const container = document.getElementById('modals-container');
-    if (!container) return;
+let componentsLoadedPromise = null;
 
-    // Danh sách các component HTML nhỏ cần nạp
-    const componentUrls = [
-        './src/components/settings-modal.html',
-        './src/components/lorebook-modal.html',
-        './src/components/gdrive-modal.html',
-        './src/components/audio-modal.html',
-        './src/components/srs-modal.html',
-        './src/components/find-replace-modal.html',
-        './src/components/export-modal.html',
-        './src/components/preview-modal.html'
-    ];
+export function loadUIComponents() {
+    if (!componentsLoadedPromise) {
+        componentsLoadedPromise = (async () => {
+            let container = document.getElementById('modals-container');
+            if (!container) {
+                if (document.readyState === 'loading') {
+                    await new Promise(r => document.addEventListener('DOMContentLoaded', r, { once: true }));
+                }
+                container = document.getElementById('modals-container');
+            }
+            if (!container) return;
 
-    try {
-        const htmlChunks = await Promise.all(
-            componentUrls.map(url =>
-                fetch(url).then(res => {
-                    if (!res.ok) throw new Error(`Không thể nạp component: ${url}`);
-                    return res.text();
+            if (container.children.length > 0) return;
+
+            const componentUrls = [
+                './src/components/settings-modal.html',
+                './src/components/lorebook-modal.html',
+                './src/components/gdrive-modal.html',
+                './src/components/audio-modal.html',
+                './src/components/srs-modal.html',
+                './src/components/find-replace-modal.html',
+                './src/components/export-modal.html',
+                './src/components/preview-modal.html'
+            ];
+
+            const htmlChunks = await Promise.all(
+                componentUrls.map(async (url) => {
+                    try {
+                        const res = await fetch(url);
+                        if (!res.ok) {
+                            console.warn(`Không thể nạp component HTML (${res.status}): ${url}`);
+                            return '';
+                        }
+                        return await res.text();
+                    } catch (e) {
+                        console.warn(`Lỗi nạp component HTML: ${url}`, e);
+                        return '';
+                    }
                 })
-            )
-        );
+            );
 
-        // Chèn toàn bộ HTML Modals vào hộp chứa
-        container.innerHTML = htmlChunks.join('\n');
-    } catch (err) {
-        console.error("Lỗi khi nạp UI Components:", err);
+            const validHtml = htmlChunks.filter(Boolean).join('\n');
+            if (validHtml) {
+                container.innerHTML = validHtml;
+            }
+        })();
     }
+    return componentsLoadedPromise;
 }
+
+export async function ensureModalElement(modalId) {
+    let el = document.getElementById(modalId);
+    if (el) return el;
+
+    await loadUIComponents();
+    return document.getElementById(modalId);
+}
+
+// Auto-trigger loading as soon as module is imported
+loadUIComponents();

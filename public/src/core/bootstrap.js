@@ -49,6 +49,14 @@ export async function initApplication() {
     // Register actions for global event delegation router
     registerAction('openSettingsModal', openSettingsModal);
     registerAction('closeSettingsModal', closeSettingsModal);
+    registerAction('openLorebookModal', () => import('../ui/lorebook-ui.js').then(m => m.openLorebookModal()));
+    registerAction('closeLorebookModal', () => import('../ui/lorebook-ui.js').then(m => m.closeLorebookModal()));
+    registerAction('openGDriveModal', () => import('../features/gdrive.js').then(m => m.openGDriveModal()));
+    registerAction('closeGDriveModal', () => import('../features/gdrive.js').then(m => m.closeGDriveModal()));
+    registerAction('openFindReplaceModal', () => import('../features/io.js').then(m => m.openFindReplaceModal()));
+    registerAction('closeFindReplaceModal', () => import('../features/io.js').then(m => m.closeFindReplaceModal()));
+    registerAction('openSrsReviewModal', () => import('../features/toeic.js').then(m => m.openSrsReviewModal()));
+    registerAction('closeSrsReviewModal', () => import('../features/toeic.js').then(m => m.closeSrsReviewModal()));
     registerAction('openAudioSettingsModal', openAudioSettingsModal);
     registerAction('closeAudioSettingsModal', closeAudioSettingsModal);
     registerAction('openPreviewMode', openPreviewMode);

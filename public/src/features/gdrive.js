@@ -487,8 +487,10 @@ export function loginWithGoogleOAuth() {
     showToast("Đã mở OAuth Playground. Chọn Drive API v3 (drive.file) để lấy Access Token!", "info");
 }
 
-export function openGDriveModal() {
-    const modal = document.getElementById('gdrive-modal');
+import { ensureModalElement } from '../core/component-loader.js';
+
+export async function openGDriveModal() {
+    const modal = await ensureModalElement('gdrive-modal');
     if (modal) {
         modal.classList.remove('hidden');
         const tokenInput = document.getElementById('gdrive-token-input');

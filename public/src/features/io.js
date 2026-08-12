@@ -1107,9 +1107,11 @@ export async function clearCurrentProject() {
     showToast('Đã xóa toàn bộ dự án. Sẵn sàng tạo dự án mới!', 'success');
 }
 
+import { ensureModalElement } from '../core/component-loader.js';
+
 // Mở modal Tìm & Thay thế
-export function openFindReplaceModal() {
-    const modal = document.getElementById('find-replace-modal');
+export async function openFindReplaceModal() {
+    const modal = await ensureModalElement('find-replace-modal');
     if (modal) {
         modal.classList.remove('hidden');
         const findInput = document.getElementById('find-input');

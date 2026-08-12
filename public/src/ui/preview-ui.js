@@ -12,17 +12,24 @@ export function openPreviewMode() {
     }
 
     previewCurrentPage = globalState.activePageIndex >= 0 ? globalState.activePageIndex : 0;
-    elements.previewModal.classList.remove('hidden');
+    if (elements.previewModal) {
+        elements.previewModal.classList.remove('hidden');
+    }
     document.body.style.overflow = 'hidden';
 
     renderPreviewPage();
+    document.removeEventListener('keydown', previewKeyHandler);
     document.addEventListener('keydown', previewKeyHandler);
 }
 
 export function closePreviewMode() {
-    elements.previewModal.classList.add('hidden');
+    if (elements.previewModal) {
+        elements.previewModal.classList.add('hidden');
+    }
     document.body.style.overflow = '';
-    elements.previewBody.innerHTML = '';
+    if (elements.previewBody) {
+        elements.previewBody.innerHTML = '';
+    }
     document.removeEventListener('keydown', previewKeyHandler);
     garbageCollectPageCaches();
 }
@@ -60,17 +67,19 @@ export async function renderPreviewPage() {
     const page = globalState.pages[previewCurrentPage];
     if (!page) return;
 
-    if (!page.src && (page.originalFile || page.file)) {
-        const fileObj = page.originalFile || page.file;
-        if (fileObj instanceof Blob) {
-            page.src = URL.createObjectURL(fileObj);
-        }
-    }
-
     await activatePage(page);
     garbageCollectPageCaches(previewCurrentPage);
 
-    elements.previewPageIndicator.textContent = `Trang ${previewCurrentPage + 1}/${globalState.pages.length}`;
+    if (!page.src) {
+        showToast("Không thể nạp dữ liệu hình ảnh của trang truyện này.", "error");
+        return;
+    }
+
+    if (elements.previewPageIndicator) {
+        elements.previewPageIndicator.textContent = `Trang ${previewCurrentPage + 1}/${globalState.pages.length}`;
+    }
+    if (!elements.previewBody) return;
+
     elements.previewBody.innerHTML = '';
 
     const pageContainer = document.createElement('div');
@@ -138,6 +147,10 @@ export async function renderPreviewPage() {
         onImageLoaded();
     } else {
         bgImg.onload = onImageLoaded;
+        bgImg.onerror = () => {
+            console.error("Lỗi nạp ảnh xem trước:", page.src);
+            showToast("Lỗi nạp ảnh xem trước.", "error");
+        };
     }
 
     bgImg.src = page.src;

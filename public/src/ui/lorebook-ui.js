@@ -1,8 +1,7 @@
-import { globalState, saveProjectMeta } from '../core/state.js';
-import { showToast, escapeHTML } from '../core/utils.js';
+import { ensureModalElement } from '../core/component-loader.js';
 
-export function openLorebookModal() {
-    const modal = document.getElementById('lorebook-dossier-modal');
+export async function openLorebookModal() {
+    const modal = await ensureModalElement('lorebook-dossier-modal');
     if (modal) {
         modal.classList.remove('hidden');
         renderCharacterDossierUI();

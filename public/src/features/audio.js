@@ -420,8 +420,10 @@ export function updateAudioSettingsFromUI() {
     saveAudioSettings();
 }
 
-export function openAudioSettingsModal() {
-    const modal = document.getElementById('audio-settings-modal');
+import { ensureModalElement } from '../core/component-loader.js';
+
+export async function openAudioSettingsModal() {
+    const modal = await ensureModalElement('audio-settings-modal');
     if (modal) {
         populateVoiceSelectorsUI();
         modal.classList.remove('hidden');

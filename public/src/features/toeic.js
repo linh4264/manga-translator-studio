@@ -4,6 +4,7 @@ import { elements } from '../core/elements.js';
 import { showToast, escapeHTML, parseGeminiJsonText } from '../core/utils.js';
 import { getGeminiApiKey } from './ai/ai-service.js';
 import { getGeminiGenerateContentUrl, getConfiguredAiProvider } from './ai/ai-config.js';
+import { ensureModalElement } from '../core/component-loader.js';
 
 let srsReviewQueue = [];
 let srsCurrentIndex = 0;
@@ -410,7 +411,7 @@ export function updateToeicNotebookUI() {
 }
 
 // --- SRS FLASHCARD REVIEW CONTROLLER ---
-export function openSrsReviewModal() {
+export async function openSrsReviewModal() {
     const dueWords = getDueSrsWords();
     const allWords = globalState.toeicSavedWords || [];
 
@@ -423,7 +424,7 @@ export function openSrsReviewModal() {
     srsCurrentIndex = 0;
     isSrsCardFlipped = false;
 
-    const modal = document.getElementById('srs-review-modal');
+    const modal = await ensureModalElement('srs-review-modal');
     if (modal) {
         modal.classList.remove('hidden');
         renderSrsCurrentCard();
