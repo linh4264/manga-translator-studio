@@ -524,7 +524,8 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
         isBackgroundMode ? progressVal : 20
     );
 
-    let attempts = globalState.maxRetries !== undefined ? globalState.maxRetries : 5; // Thử lại tối đa maxRetries lần nếu gặp lỗi 429 hoặc 503
+    const maxRetriesConfig = globalState.maxRetries !== undefined && globalState.maxRetries !== null ? Number(globalState.maxRetries) : 3;
+    let attempts = Math.max(1, maxRetriesConfig); // Theo đúng cài đặt hệ thống "Số lần thử lại"
     let retryDelay = 10000; // Khởi đầu chờ 10 giây, tăng dần theo luỳ thừa
 
     while (attempts > 0) {
@@ -783,9 +784,10 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
                 : result.candidates?.[0]?.content?.parts?.[0]?.text;
 
-            if (!jsonText) throw new Error("Không nhận được dữ liệu phản hồi từ AI.");
-
             const data = parseGeminiJsonText(jsonText);
+            if (!data || !Array.isArray(data.blocks)) {
+                throw new Error("Phản hồi từ AI bị lỗi định dạng JSON hoặc bị ngắt câu. Đang tự động gửi lại để dịch lại...");
+            }
 
             let pageImageData = page.imageDataCache || null;
             if (!pageImageData) {

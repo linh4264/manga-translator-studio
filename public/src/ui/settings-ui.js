@@ -350,7 +350,8 @@ export function updateApiDelay(value) {
 }
 
 export function updateMaxRetries(value) {
-    globalState.maxRetries = parseInt(value, 10) || 5;
+    const val = parseInt(value, 10);
+    globalState.maxRetries = !isNaN(val) && val >= 0 ? val : 3;
     safeSetLocalStorage('gemini_manga_max_retries', globalState.maxRetries);
 }
 

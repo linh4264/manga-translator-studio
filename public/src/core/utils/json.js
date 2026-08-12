@@ -1,5 +1,3 @@
-// JSON Cleanup and Repair Utilities for AI Output
-
 export function sanitizeUnescapedNewlinesInJson(jsonStr) {
     let result = '';
     let inString = false;
@@ -11,6 +9,8 @@ export function sanitizeUnescapedNewlinesInJson(jsonStr) {
             result += char;
         } else if (inString && (char === '\n' || char === '\r')) {
             result += char === '\n' ? '\\n' : '\\r';
+        } else if (inString && char === '\t') {
+            result += '\\t';
         } else {
             result += char;
         }
@@ -41,15 +41,47 @@ export function balanceJsonBrackets(jsonStr) {
     return s;
 }
 
+export function extractJsonFromText(text) {
+    if (!text) return "";
+    let cleaned = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+    // Extract content between first { and last }
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+    }
+    return cleaned;
+}
+
+export function repairJsonString(jsonStr) {
+    let cleaned = extractJsonFromText(jsonStr);
+
+    // Remove trailing commas before } or ]
+    cleaned = cleaned.replace(/,\s*([\}\]])/g, '$1');
+
+    // Fix unescaped control characters
+    cleaned = sanitizeUnescapedNewlinesInJson(cleaned);
+
+    // Balance unclosed brackets
+    cleaned = balanceJsonBrackets(cleaned);
+
+    return cleaned;
+}
+
 export function parseGeminiJsonText(text) {
     if (!text) return null;
-    let cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
-    cleaned = sanitizeUnescapedNewlinesInJson(cleaned);
-    cleaned = balanceJsonBrackets(cleaned);
+
+    const cleaned = repairJsonString(text);
+
     try {
-        return JSON.parse(cleaned);
+        const parsed = JSON.parse(cleaned);
+        if (parsed && Array.isArray(parsed.blocks)) {
+            return parsed;
+        }
     } catch (e) {
-        console.error("Failed to parse AI JSON:", e, cleaned);
-        return null;
+        console.warn("JSON parse failed for AI output:", e, cleaned);
     }
+
+    return null;
 }
