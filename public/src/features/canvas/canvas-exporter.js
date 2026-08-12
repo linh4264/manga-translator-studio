@@ -214,11 +214,8 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
             let fillBw = Math.max(1, bw - (insetPad * 2));
             let fillBh = Math.max(1, bh - (insetPad * 2));
 
-            const strokeExtra = strokeWidthPx > 0 ? (strokeWidthPx * 1.2) : 0;
-            const safetyMargin = Math.max(2, Math.round(scaleFactor * 2));
-
             if (block.style.vertical) {
-                const maxColHeight = Math.max(10, bh - (paddingPx * 2) - strokeExtra - safetyMargin);
+                const maxColHeight = Math.max(10, bh - (paddingPx * 2));
                 columns = wrapCanvasVerticalText(block.translated, maxColHeight, fontSizePx);
                 const colStep = fontSizePx * 1.12;
                 const charStep = fontSizePx * 1.12;
@@ -236,7 +233,7 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                     fillBh = snugH;
                 }
             } else {
-                const maxTextWidth = Math.max(10, bw - (paddingPx * 2) - strokeExtra - safetyMargin);
+                const maxTextWidth = Math.max(10, bw - (paddingPx * 2));
                 textLines = wrapCanvasText(ctx, block.translated, maxTextWidth);
                 const lineHeight = fontSizePx * 1.18;
                 totalTextHeight = textLines.length * lineHeight;
