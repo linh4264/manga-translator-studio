@@ -1,6 +1,63 @@
 // OCR Processing & Bubble Snap to Contours
-import { isWeakTranslationModel, isFlash31LiteModel } from '../../core/state.js';
+import { isWeakTranslationModel, isFlash31LiteModel, globalState, pushStateToHistory, savePageToDB, uiUpdateProcessingOverlay } from '../../core/state.js';
 import { DEFAULT_AI_BLOCK_BOX } from '../../config/constants.js';
+import { detectLocalTextRegions } from './local-ocr.js';
+import { elements } from '../../core/elements.js';
+import { showToast } from '../../core/utils/dom.js';
+import { requestOverlayRender } from '../canvas/canvas-service.js';
+
+export async function runLocalOcrDetectionOnPage() {
+    const activePage = globalState.pages[globalState.activePageIndex];
+    if (!activePage) {
+        showToast("Vui lòng tải hoặc chọn trang truyện để quét khung thoại.", "warn");
+        return;
+    }
+
+    const imgElement = elements.mangaBgImage;
+    if (!imgElement || !imgElement.naturalWidth || !imgElement.naturalHeight) {
+        showToast("Ảnh trang truyện chưa sẵn sàng.", "error");
+        return;
+    }
+
+    uiUpdateProcessingOverlay(true, "Đang quét khung thoại Cục bộ...", "Thuật toán offline đang nhận diện vị trí các bong bóng thoại...", 30);
+
+    try {
+        pushStateToHistory();
+
+        const canvas = document.createElement('canvas');
+        canvas.width = imgElement.naturalWidth;
+        canvas.height = imgElement.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(imgElement, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        const localBlocks = detectLocalTextRegions(imageData);
+
+        if (!localBlocks || localBlocks.length === 0) {
+            showToast("Không tìm thấy khung thoại mới bằng OCR Cục bộ. Bạn có thể tự thêm ô thoại thủ công.", "info");
+        } else {
+            activePage.blocks = [...(activePage.blocks || []), ...localBlocks];
+            activePage.status = 'draft';
+            savePageToDB(activePage);
+
+            if (globalState.viewMode === 'original') {
+                globalState.viewMode = 'overlay';
+            }
+
+            if (localBlocks[0]) {
+                globalState.selectedBlockId = localBlocks[0].id;
+            }
+
+            requestOverlayRender();
+            showToast(`Đã tự động khoanh vùng ${localBlocks.length} khung thoại trên trang!`, "success");
+        }
+    } catch (err) {
+        console.error("Lỗi quét OCR Cục bộ:", err);
+        showToast(`Lỗi quét OCR Cục bộ: ${err.message}`, "error");
+    } finally {
+        uiUpdateProcessingOverlay(false);
+    }
+}
 
 const AI_EDGE_SAFETY_MARGIN = 4;
 

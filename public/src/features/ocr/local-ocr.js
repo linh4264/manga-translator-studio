@@ -8,8 +8,8 @@ export function detectLocalTextRegions(imageData) {
     const H = imageData.height;
     const data = imageData.data;
 
-    // 1. Calculate luminance and binarize low-brightness text/border pixels
-    const gridScale = Math.max(1, Math.floor(Math.min(W, H) / 400));
+    // 1. Calculate luminance and binarize low-brightness text pixels
+    const gridScale = Math.max(1, Math.floor(Math.min(W, H) / 600));
     const sampleW = Math.floor(W / gridScale);
     const sampleH = Math.floor(H / gridScale);
     const binaryMap = new Uint8Array(sampleW * sampleH);
@@ -24,16 +24,16 @@ export function detectLocalTextRegions(imageData) {
             const b = data[idx + 2];
             const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
 
-            // Dark ink text or bubble outline threshold
-            if (luminance < 110) {
+            // Dark ink text pixels (threshold <= 145 to capture gray/anti-aliased text)
+            if (luminance <= 145) {
                 binaryMap[sy * sampleW + sx] = 1;
             }
         }
     }
 
-    // 2. Connected Component Labeling & Bounding Box Clustering
+    // 2. Connected Component Labeling
     const visited = new Uint8Array(sampleW * sampleH);
-    const rawBoxes = [];
+    const glyphComponents = [];
 
     for (let sy = 0; sy < sampleH; sy++) {
         for (let sx = 0; sx < sampleW; sx++) {
@@ -56,7 +56,6 @@ export function detectLocalTextRegions(imageData) {
                     if (cy < minY) minY = cy;
                     if (cy > maxY) maxY = cy;
 
-                    // 4-way connectivity search
                     const neighbors = [
                         cy > 0 ? curr - sampleW : -1,
                         cy < sampleH - 1 ? curr + sampleW : -1,
@@ -72,27 +71,32 @@ export function detectLocalTextRegions(imageData) {
                     }
                 }
 
-                const boxW = (maxX - minX + 1) * gridScale;
-                const boxH = (maxY - minY + 1) * gridScale;
-                const boxX = minX * gridScale;
-                const boxY = minY * gridScale;
+                const compW = (maxX - minX + 1) * gridScale;
+                const compH = (maxY - minY + 1) * gridScale;
 
-                // Filter out tiny noise and full-page borders
-                if (pixelCount >= 12 && boxW >= 20 && boxH >= 20 && boxW < W * 0.9 && boxH < H * 0.9) {
-                    rawBoxes.push({
-                        x: (boxX / W) * 100,
-                        y: (boxY / H) * 100,
-                        w: (boxW / W) * 100,
-                        h: (boxH / H) * 100
+                // Filter out thin panel border lines (very wide or very tall thin lines) and giant background frames
+                const isBorderLine = (compW > W * 0.45 && compH < 20) || (compH > H * 0.45 && compW < 20);
+                const isPageFrame = compW > W * 0.7 && compH > H * 0.7;
+
+                if (!isBorderLine && !isPageFrame && pixelCount >= 2 && compW >= 4 && compH >= 4 && compW < W * 0.6 && compH < H * 0.6) {
+                    glyphComponents.push({
+                        x: (minX * gridScale / W) * 100,
+                        y: (minY * gridScale / H) * 100,
+                        w: (compW / W) * 100,
+                        h: (compH / H) * 100
                     });
                 }
             }
         }
     }
 
-    // 3. Merge overlapping or closely adjacent text regions
-    const mergedBoxes = mergeAdjacentBoxes(rawBoxes, 3);
-    return mergedBoxes.map(b => normalizeAiBlockBox(b));
+    // 3. Merge adjacent glyph components into full speech bubble text regions (4.5% proximity margin)
+    const mergedBlocks = mergeAdjacentBoxes(glyphComponents, 4.5);
+
+    // Filter final merged blocks (min 0.8% width/height)
+    const validBlocks = mergedBlocks.filter(b => b.w >= 0.8 && b.h >= 0.8 && b.w <= 75 && b.h <= 75);
+
+    return validBlocks.map(b => normalizeAiBlockBox(b));
 }
 
 function mergeAdjacentBoxes(boxes, paddingPct) {

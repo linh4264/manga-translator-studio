@@ -82,6 +82,7 @@ export async function initApplication() {
         applyStylePreset(preset);
     });
     registerAction('triggerReplaceBgImage', () => import('../ui/pages-ui.js').then(m => m.triggerReplaceBgImage()));
+    registerAction('runLocalOcrDetectionOnPage', () => import('../features/ocr/ocr-service.js').then(m => m.runLocalOcrDetectionOnPage()));
     initEventDelegation();
 
     mountSettingsModal();

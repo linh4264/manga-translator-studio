@@ -378,8 +378,17 @@ export function addNewBlock() {
 
     pushStateToHistory();
     page.blocks.push(newBlock);
-    selectBlock(newId);
-    savePageToDB(page);
+
+    if (globalState.viewMode === 'original') {
+        globalState.viewMode = 'overlay';
+    }
+
+    import('./canvas-renderer.js').then(r => {
+        r.renderOverlays();
+        selectBlock(newId);
+        savePageToDB(page);
+    });
+
     showToast("Đã thêm một ô dịch mới!", "success");
 }
 

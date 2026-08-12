@@ -46,6 +46,7 @@ import { globalBus } from '../core/events.js';
 import { elements } from '../core/elements.js';
 import { copyBlockStyle, pasteBlockStyle, navigateBlocks, syncActiveBlockStyle, selectAllBlocksOnPage } from '../features/canvas/canvas-service.js';
 import { safeSetLocalStorage } from '../core/utils/storage.js';
+import { runLocalOcrDetectionOnPage } from '../features/ocr/ocr-service.js';
 
 export {
     setRightTab, updateProcessingOverlay, updateBackgroundTaskOverlay,
@@ -416,5 +417,6 @@ Object.assign(window, {
     importLorebookJSON,
     filterPagesList,
     setBilingualMode,
-    setActiveBlockGender
+    setActiveBlockGender,
+    runLocalOcrDetectionOnPage
 });
