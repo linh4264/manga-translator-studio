@@ -132,7 +132,11 @@ export async function compressAndResizeImage(img, originalName) {
 // Xử lý nạp ảnh đơn lẻ & ZIP manga
 export function handleUploadedFiles(filesList) {
     const incomingFiles = Array.from(filesList);
-    const imageFiles = incomingFiles.filter(file => file.type.startsWith('image/'));
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+    const imageFiles = incomingFiles
+        .filter(file => file.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(file.name))
+        .sort((a, b) => collator.compare(a.name, b.name));
+
     const skippedCount = incomingFiles.length - imageFiles.length;
 
     if (imageFiles.length === 0) {
@@ -152,12 +156,12 @@ export function handleUploadedFiles(filesList) {
     const finishOne = () => {
         loaded++;
         if (loaded === addedCount) {
-            updatePageListUI();
+            sortPagesByName();
             if (successCount > 0) {
                 showToast(`Đã tải và nén tối ưu thành công ${successCount} trang truyện!`, 'success');
 
-                if (globalState.activePageIndex === -1) {
-                    selectPage(firstNewPageIndex);
+                if (globalState.activePageIndex === -1 && globalState.pages.length > 0) {
+                    selectPage(0);
                 }
 
                 const pageIds = globalState.pages.map(p => p.id);
