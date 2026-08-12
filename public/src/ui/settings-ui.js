@@ -86,17 +86,18 @@ export function updateModelDropdown(fetchedModels) {
     };
 
     modelSelect.innerHTML = "";
+
+    const customOpt = document.createElement('option');
+    customOpt.value = CUSTOM_MODEL_VALUE;
+    customOpt.textContent = (globalState.uiLanguage === 'en') ? "✍️ Enter custom model..." : "✍️ Tự nhập model (Custom Model)...";
+    modelSelect.appendChild(customOpt);
+
     sortedModels.forEach(modelId => {
         const opt = document.createElement('option');
         opt.value = modelId;
         opt.textContent = getFriendlyName(modelId);
         modelSelect.appendChild(opt);
     });
-
-    const customOpt = document.createElement('option');
-    customOpt.value = CUSTOM_MODEL_VALUE;
-    customOpt.textContent = (globalState.uiLanguage === 'en') ? "Enter custom model..." : "Tự nhập model...";
-    modelSelect.appendChild(customOpt);
 
     if (allModels.has(currentSelection)) {
         modelSelect.value = currentSelection;
@@ -204,10 +205,7 @@ export function openSettingsModal() {
     const endpointInput = document.getElementById('api-endpoint-input');
     if (endpointInput) endpointInput.value = globalState.apiEndpoint || '';
 
-    const endpointContainer = document.getElementById('api-endpoint-container');
-    if (endpointContainer) {
-        endpointContainer.classList.toggle('hidden', globalState.aiProvider !== 'custom');
-    }
+    syncAiProviderUI(globalState.aiProvider || 'gemini');
 
     const modelSelect = document.getElementById('model-select');
     if (modelSelect && globalState.selectedModel) {
@@ -356,14 +354,34 @@ export function updateMaxRetries(value) {
     safeSetLocalStorage('gemini_manga_max_retries', globalState.maxRetries);
 }
 
-export function updateAiProvider(provider) {
-    globalState.aiProvider = provider;
-    safeSetLocalStorage('gemini_manga_ai_provider', provider);
-
+export function syncAiProviderUI(provider = globalState.aiProvider || 'gemini') {
     const endpointContainer = document.getElementById('api-endpoint-container');
     if (endpointContainer) {
         endpointContainer.classList.toggle('hidden', provider !== 'custom');
     }
+
+    const apiKeyContainer = document.getElementById('api-key-container');
+    const apiKeyLabel = document.getElementById('api-key-label');
+
+    if (apiKeyContainer) {
+        if (provider === 'custom') {
+            apiKeyContainer.classList.add('hidden');
+        } else {
+            apiKeyContainer.classList.remove('hidden');
+            if (apiKeyLabel) {
+                if (provider === 'openai') apiKeyLabel.innerText = "OpenAI API Key";
+                else if (provider === 'claude') apiKeyLabel.innerText = "Claude API Key";
+                else apiKeyLabel.innerText = "Gemini API Key";
+            }
+        }
+    }
+}
+
+export function updateAiProvider(provider) {
+    globalState.aiProvider = provider;
+    safeSetLocalStorage('gemini_manga_ai_provider', provider);
+
+    syncAiProviderUI(provider);
 
     showToast(`Đã chuyển AI Provider sang: ${provider.toUpperCase()}`, "info");
 }

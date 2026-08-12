@@ -72,7 +72,7 @@
                         LM Studio: http://localhost:1234/v1</p>
                 </div>
 
-                <div class="space-y-1">
+                <div id="api-key-container" class="space-y-1">
                     <label id="api-key-label" data-i18n="api-key-label"
                         class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gemini API
                         Key</label>
@@ -100,6 +100,7 @@
                     </div>
                     <select id="model-select" onchange="updateSelectedModel(this.value)"
                         class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
+                        <option value="__custom__">✍️ Tự nhập model (Custom Model)...</option>
                         <option value="gemini-3.5-flash">Gemini 3.5 Flash (Mới nhất)</option>
                         <option value="gemini-3-flash-preview">Gemini 3 Flash Preview (mạnh, preview)</option>
                         <option value="gemini-3.1-flash-lite" selected>Gemini 3.1 Flash-Lite (Khuyến nghị,
@@ -108,7 +109,6 @@
                         <option value="gemini-2.5-flash">Gemini 2.5 Flash (ổn định)</option>
                         <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (rẻ/nhanh)</option>
                         <option value="gemini-2.5-pro">Gemini 2.5 Pro (chất lượng cao)</option>
-                        <option value="__custom__">Tự nhập model...</option>
                     </select>
                     <input id="custom-model-input" type="text" placeholder="gemini-3.5-flash-lite"
                         class="hidden w-full mt-2 bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
