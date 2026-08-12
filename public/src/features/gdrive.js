@@ -1,6 +1,7 @@
 // Google Drive Cloud Sync & Team Collaboration Module
 import { globalState, savePageToDB, saveProjectMeta, getPageDataURL, clearProjectDB } from '../core/state.js';
 import { showToast, escapeHTML, getCleanFileBaseName } from '../core/utils.js';
+import { ensureModalElement } from '../core/component-loader.js';
 import { dataURLtoBlob } from './io.js';
 import { updatePageListUI, selectPage, updateSourceLanguage, updateTargetLanguage, updatePronounMatrix, updateGlossary, togglePreserveNames } from '../ui/index.js';
 
@@ -486,8 +487,6 @@ export function loginWithGoogleOAuth() {
     window.open('https://developers.google.com/oauthplayground/', '_blank');
     showToast("Đã mở OAuth Playground. Chọn Drive API v3 (drive.file) để lấy Access Token!", "info");
 }
-
-import { ensureModalElement } from '../core/component-loader.js';
 
 export async function openGDriveModal() {
     const modal = await ensureModalElement('gdrive-modal');

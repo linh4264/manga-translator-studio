@@ -15,6 +15,7 @@ import {
 } from '../core/state.js';
 import { elements } from '../core/elements.js';
 import { showToast, getCleanFileBaseName, waitForNextPaint, escapeHTML, waitForImageReady } from '../core/utils.js';
+import { ensureModalElement } from '../core/component-loader.js';
 import { renderPageToCanvas2D, renderOverlays, selectBlock } from './canvas/canvas-service.js';
 import { restorePageEraserDrawing } from './inpainting.js';
 import {
@@ -1106,8 +1107,6 @@ export async function clearCurrentProject() {
 
     showToast('Đã xóa toàn bộ dự án. Sẵn sàng tạo dự án mới!', 'success');
 }
-
-import { ensureModalElement } from '../core/component-loader.js';
 
 // Mở modal Tìm & Thay thế
 export async function openFindReplaceModal() {

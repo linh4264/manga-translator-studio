@@ -5,6 +5,7 @@ import { elements } from '../core/elements.js';
 import { showToast } from '../core/utils.js';
 import { safeSetLocalStorage } from '../core/utils/storage.js';
 import { getGeminiModelsUrl } from '../features/ai/ai-config.js';
+import { ensureModalElement } from '../core/component-loader.js';
 
 export function toggleApiKeyVisibility() {
     const eyeBtn = document.getElementById('api-key-eye');
@@ -188,8 +189,6 @@ export function updateModelLockingUI() {
         customModelInput.disabled = !isCustomSelected;
     }
 }
-
-import { ensureModalElement } from '../core/component-loader.js';
 
 export function mountSettingsModal() { }
 

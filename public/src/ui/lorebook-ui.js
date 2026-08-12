@@ -1,3 +1,5 @@
+import { globalState, saveProjectMeta } from '../core/state.js';
+import { showToast, escapeHTML } from '../core/utils.js';
 import { ensureModalElement } from '../core/component-loader.js';
 
 export async function openLorebookModal() {

@@ -1,6 +1,7 @@
 // Manga Audio Drama Generator & Advanced Speech Synthesis Engine
 import { globalState } from '../core/state.js';
 import { showToast, escapeHTML } from '../core/utils.js';
+import { ensureModalElement } from '../core/component-loader.js';
 import { elements } from '../core/elements.js';
 
 let audioState = {
@@ -419,8 +420,6 @@ export function updateAudioSettingsFromUI() {
     
     saveAudioSettings();
 }
-
-import { ensureModalElement } from '../core/component-loader.js';
 
 export async function openAudioSettingsModal() {
     const modal = await ensureModalElement('audio-settings-modal');
