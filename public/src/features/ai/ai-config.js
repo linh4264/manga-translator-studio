@@ -7,7 +7,10 @@ export function getConfiguredAiProvider() {
 }
 
 export function getConfiguredApiEndpoint() {
-    return (globalState.apiEndpoint || DEFAULT_GEMINI_ENDPOINT).trim().replace(/\/$/, '');
+    if (globalState.aiProvider === 'custom' && globalState.apiEndpoint && globalState.apiEndpoint.trim()) {
+        return globalState.apiEndpoint.trim().replace(/\/$/, '');
+    }
+    return DEFAULT_GEMINI_ENDPOINT;
 }
 
 export function getConfiguredApiKey() {

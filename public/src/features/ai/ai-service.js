@@ -28,7 +28,7 @@ import { parseGeminiJsonText } from '../../core/utils/json.js';
 import { refineAiBlockBox } from '../ocr/ocr-service.js';
 import { requestOverlayRender } from '../canvas/canvas-service.js';
 import { compilePronounMatrixPrompt } from '../pronoun.js';
-import { getConfiguredApiKey, getGeminiGenerateContentUrl, getConfiguredAiProvider } from './ai-config.js';
+import { getConfiguredApiKey, getGeminiGenerateContentUrl, getConfiguredAiProvider, getConfiguredApiEndpoint } from './ai-config.js';
 
 export let cancelTranslationFlag = false;
 export let isBatchTranslating = false;
@@ -494,10 +494,11 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
     await activatePage(page);
 
     // Check for API key (use global or custom)
-    const keyToUse = getGeminiApiKey();
-    if (!keyToUse) {
+    const provider = getConfiguredAiProvider();
+    const keyToUse = getGeminiApiKey() || (provider === 'custom' ? 'local' : '');
+    if (!keyToUse && provider !== 'custom') {
         showToast("Vui lòng nhập Gemini API Key trước khi dịch.", "error");
-        elements.apiKeyInput.focus();
+        if (elements.apiKeyInput) elements.apiKeyInput.focus();
         return false;
     }
 
@@ -664,18 +665,68 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 isBackgroundMode ? progressVal : 50
             );
 
-            const apiUrl = getGeminiGenerateContentUrl(globalState.selectedModel, keyToUse);
-            if (getConfiguredAiProvider() !== 'gemini') {
-                throw new Error('Provider hiện tại chưa có adapter thực thi cho pipeline OCR/translation này.');
+            const provider = getConfiguredAiProvider();
+            const endpoint = getConfiguredApiEndpoint();
+            const selectedModel = globalState.selectedModel || 'gemini-3.1-flash-lite';
+            
+            let apiUrl = '';
+            let requestHeaders = { 'Content-Type': 'application/json' };
+            let requestBody = null;
+
+            const isOpenAiFormat = provider === 'openai' || (provider === 'custom' && !endpoint.includes('generateContent'));
+            const hasExistingBlocks = page.blocks && page.blocks.length > 0;
+
+            if (isOpenAiFormat) {
+                apiUrl = `${endpoint.replace(/\/$/, '')}/chat/completions`;
+                if (keyToUse) {
+                    requestHeaders['Authorization'] = `Bearer ${keyToUse}`;
+                }
+
+                let openAiUserContent;
+
+                if (hasExistingBlocks) {
+                    const blockItems = page.blocks.map(b => ({ id: b.id, original: b.original || '', box: b.box || { x: 0, y: 0, w: 100, h: 100 } }));
+                    openAiUserContent = [
+                        { type: "text", text: `Translate the following text blocks into natural ${targetLangName} manga dialogue while keeping the same IDs. Return JSON matching schema {"blocks": [{"id": "...", "translated": "...", "original": "...", "box": {"x":0,"y":0,"w":100,"h":100},"positionKnown":true}]}:\n${JSON.stringify(blockItems, null, 2)}` }
+                    ];
+                } else {
+                    openAiUserContent = [
+                        { type: "text", text: `Detect all speech bubbles, narration boxes, SFX sound effects, and signs/labels. Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` }
+                    ];
+                    if (prevPageContext) {
+                        openAiUserContent.push({ type: "text", text: prevPageContext });
+                    }
+                    openAiUserContent.push({
+                        type: "image_url",
+                        image_url: { url: `data:${mimeType};base64,${rawBase64}` }
+                    });
+                }
+
+                requestBody = JSON.stringify({
+                    model: selectedModel,
+                    messages: [
+                        { role: "system", content: systemInstruction },
+                        { role: "user", content: openAiUserContent }
+                    ],
+                    temperature: 0.3,
+                    max_tokens: 4096,
+                    response_format: { type: "json_object" },
+                    options: {
+                        num_ctx: 16384
+                    }
+                });
+            } else {
+                apiUrl = getGeminiGenerateContentUrl(selectedModel, keyToUse);
+                requestBody = JSON.stringify(payload);
             }
 
             const controller = new AbortController();
-            timeoutId = setTimeout(() => controller.abort(), 45000); // 45 giây timeout
+            timeoutId = setTimeout(() => controller.abort(), 60000); // 60 giây timeout
 
             const response = await fetch(apiUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
+                headers: requestHeaders,
+                body: requestBody,
                 signal: controller.signal
             });
             clearTimeout(timeoutId);
@@ -684,7 +735,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 attempts--;
                 if (attempts > 0) {
                     const errorTypeLabel = response.status === 429 ? "Quá tải giới hạn lượt gọi (429)" :
-                        response.status === 503 ? "Server Google đang bận/quá tải (503)" :
+                        response.status === 503 ? "Server bận/quá tải (503)" :
                             `Lỗi hệ thống tạm thời (${response.status})`;
 
                     showToast(`API bận ở trang ${pageIndex + 1}: ${errorTypeLabel}. Tự động chờ ${retryDelay / 1000}s rồi thử lại...`, "warn");
@@ -703,7 +754,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                     retryDelay *= 2;
                     continue;
                 } else {
-                    throw new Error(response.status === 503 ? "Máy chủ Google hiện đang quá tải cực nặng (Lỗi 503). Vui lòng thử lại sau vài phút." : `API tạm thời ngắt kết nối (Lỗi ${response.status}).`);
+                    throw new Error(response.status === 503 ? "Máy chủ hiện đang quá tải (Lỗi 503). Vui lòng thử lại sau." : `API tạm thời ngắt kết nối (Lỗi ${response.status}).`);
                 }
             }
 
@@ -711,8 +762,13 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 let errorDetail = "";
                 try {
                     const errorJson = await response.json();
-                    errorDetail = errorJson.error?.message || "";
+                    errorDetail = errorJson.error?.message || errorJson.message || "";
                 } catch (e) { }
+
+                if (errorDetail.includes('does not support multimodal') || errorDetail.includes('multimodal')) {
+                    throw new Error(`Model '${selectedModel}' là model thuần văn bản (Text-only), không đọc được hình ảnh. Bạn hãy cào model Vision như 'ollama run qwen2-vl:7b' hoặc 'ollama run llava' để quét ảnh!`);
+                }
+
                 throw new Error(errorDetail ? `Lỗi API (${response.status}): ${errorDetail}` : `API Error: ${response.status} ${response.statusText || "Yêu cầu không hợp lệ"}`);
             }
 
@@ -723,8 +779,11 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 isBackgroundMode ? progressVal : 85
             );
 
-            const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (!jsonText) throw new Error("Không nhận được dữ liệu phản hữu dụng từ AI.");
+            const jsonText = isOpenAiFormat 
+                ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
+                : result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (!jsonText) throw new Error("Không nhận được dữ liệu phản hồi từ AI.");
 
             const data = parseGeminiJsonText(jsonText);
 
@@ -874,9 +933,11 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
 
 export async function runBatchTranslation() {
     if (globalState.pages.length === 0) return;
-    if (!getGeminiApiKey()) {
-        showToast("Vui lòng nhập Gemini API Key trước khi dịch.", "error");
-        elements.apiKeyInput.focus();
+    const provider = getConfiguredAiProvider();
+    const keyToUse = getGeminiApiKey() || (provider === 'custom' ? 'local' : '');
+    if (!keyToUse && provider !== 'custom') {
+        showToast("Vui lòng nhập API Key trước khi dịch.", "error");
+        if (elements.apiKeyInput) elements.apiKeyInput.focus();
         return;
     }
 
@@ -1060,9 +1121,10 @@ export async function runAIEraseTextPage() {
         return;
     }
 
-    const keyToUse = getGeminiApiKey();
-    if (!keyToUse) {
-        showToast("Vui lòng cấu hình Gemini API Key trước khi sử dụng AI.", "warn");
+    const provider = getConfiguredAiProvider();
+    const keyToUse = getGeminiApiKey() || (provider === 'custom' ? 'local' : '');
+    if (!keyToUse && provider !== 'custom') {
+        showToast("Vui lòng cấu hình API Key trước khi sử dụng AI.", "warn");
         return;
     }
 

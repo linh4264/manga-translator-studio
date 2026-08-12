@@ -383,6 +383,15 @@ export function updateAiProvider(provider) {
 
     syncAiProviderUI(provider);
 
+    if (provider === 'gemini') {
+        if (!VALID_MODEL_IDS.includes(globalState.selectedModel)) {
+            globalState.selectedModel = DEFAULT_MODEL;
+            safeSetLocalStorage('gemini_manga_model', DEFAULT_MODEL);
+            const modelSelect = document.getElementById('model-select');
+            if (modelSelect) modelSelect.value = DEFAULT_MODEL;
+        }
+    }
+
     showToast(`Đã chuyển AI Provider sang: ${provider.toUpperCase()}`, "info");
 }
 
