@@ -217,6 +217,16 @@ export function openSettingsModal() {
     const maxRetries = document.getElementById('max-retries-input');
     if (maxRetries) maxRetries.value = globalState.maxRetries || 3;
 
+    const exportFormatSelect = document.getElementById('export-format-select');
+    const storedFormat = localStorage.getItem('manga_export_format') || globalState.exportFormat || 'auto';
+    globalState.exportFormat = storedFormat;
+    if (exportFormatSelect) exportFormatSelect.value = storedFormat;
+
+    const exportPdfQualitySelect = document.getElementById('export-pdf-quality-select');
+    const storedPdfQuality = localStorage.getItem('manga_pdf_quality') || globalState.pdfQuality || 'hd';
+    globalState.pdfQuality = storedPdfQuality;
+    if (exportPdfQualitySelect) exportPdfQualitySelect.value = storedPdfQuality;
+
     fetchGeminiModels();
     updateModelLockingUI();
 
@@ -344,4 +354,16 @@ export function updateAiProvider(provider) {
 export function updateApiEndpoint(val) {
     globalState.apiEndpoint = val;
     safeSetLocalStorage('gemini_manga_api_endpoint', val);
+}
+
+export function updateExportFormat(value) {
+    globalState.exportFormat = value || 'auto';
+    safeSetLocalStorage('manga_export_format', globalState.exportFormat);
+    showToast(`Đã đổi định dạng xuất ZIP sang: ${value.toUpperCase()}`, 'info');
+}
+
+export function updateExportPdfQuality(value) {
+    globalState.pdfQuality = value || 'hd';
+    safeSetLocalStorage('manga_pdf_quality', globalState.pdfQuality);
+    showToast(`Đã đổi chất lượng PDF sang: ${value.toUpperCase()}`, 'info');
 }

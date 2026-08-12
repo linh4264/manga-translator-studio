@@ -88,6 +88,8 @@ export const globalState = {
     sourceLanguage: 'auto', // Ngôn ngữ nguồn ('ja' | 'zh' | 'ko' | 'en' | 'auto')
     targetLanguage: 'vi', // Ngôn ngữ đích mặc định ('vi' | 'en' | 'es' | ...)
     uiLanguage: 'vi',     // Ngôn ngữ giao diện ('vi' | 'en')
+    exportFormat: localStorage.getItem('manga_export_format') || 'auto', // 'auto' | 'png' | 'jpg' | 'webp'
+    pdfQuality: localStorage.getItem('manga_pdf_quality') || 'hd',     // 'hd' | 'standard' | 'max'
     pronounMatrix: '',   // Ma trận xưng hô 2 chiều giữa các nhân vật
     ocrEnhanceEnabled: true, // Tiền xử lý tương phản ảnh trước khi gửi OCR
     translationGenrePresets: ['quality'], // Mẫu prompt theo thể loại
@@ -134,8 +136,9 @@ export function initializeStateFromStorage() {
         'manga_default_dialogue_font': 'defaultDialogueFont',
         'manga_default_sfx_font': 'defaultSfxFont',
         'manga_default_narration_font': 'defaultNarrationFont',
-        'gemini_manga_audio_settings': 'audioSettings',
-        'manga_default_font': 'defaultFont'
+        'manga_default_font': 'defaultFont',
+        'manga_export_format': 'exportFormat',
+        'manga_pdf_quality': 'pdfQuality'
     };
 
     Object.entries(keysToLoad).forEach(([storageKey, stateKey]) => {

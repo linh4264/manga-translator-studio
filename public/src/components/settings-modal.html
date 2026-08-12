@@ -412,8 +412,36 @@
                         <button onclick="clearStoryMemory()" data-i18n="clear-memory-btn"
                             class="text-red-400 hover:text-red-300 font-medium"><i
                                 class="fa-solid fa-trash-can text-[9px]"></i> Xóa bộ nhớ</button>
+                </div>
+
+                <!-- Export Settings Section -->
+                <div class="pt-2 border-t border-slate-800/70 space-y-2">
+                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-export text-indigo-400"></i> Cấu hình Đóng gói & Xuất Ảnh / PDF
+                    </h4>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-semibold text-slate-400">Định dạng nén ZIP:</label>
+                            <select id="export-format-select" onchange="updateExportFormat(this.value)"
+                                class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
+                                <option value="auto" selected>⚡ Tự động (Theo file gốc)</option>
+                                <option value="png">🎨 PNG (Sắc nét gốc 100%)</option>
+                                <option value="jpg">🚀 JPG (Xuất cực nhanh, nhẹ)</option>
+                                <option value="webp">🌐 WEBP (Tối ưu web)</option>
+                            </select>
+                        </div>
+                        <div class="space-y-1">
+                            <label class="block text-[10px] font-semibold text-slate-400">Chất lượng trang PDF:</label>
+                            <select id="export-pdf-quality-select" onchange="updateExportPdfQuality(this.value)"
+                                class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
+                                <option value="hd" selected>🌟 Siêu nét HD (JPEG 98%)</option>
+                                <option value="standard">⚡ Tiêu chuẩn (JPEG 90%)</option>
+                                <option value="max">💎 Nét gốc tuyệt đối (PNG 100%)</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
+
                 <div class="pt-2 border-t border-slate-800/70 space-y-2">
                     <h4 data-i18n="api-limit-title"
                         class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">

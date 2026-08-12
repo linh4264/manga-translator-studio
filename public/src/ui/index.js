@@ -21,7 +21,8 @@ import {
     updateSourceLanguage, updateTargetLanguage, updatePronounMatrix, updateGlossary,
     toggleStoryMemory, updateStoryMemoryBadge, togglePreserveNames, syncGenrePresetCheckboxes,
     saveTranslationGenrePresets, updateTranslationGenrePreset, updateTranslationContextPrompt,
-    updateApiDelay, updateMaxRetries, updateAiProvider, updateApiEndpoint
+    updateApiDelay, updateMaxRetries, updateAiProvider, updateApiEndpoint,
+    updateExportFormat, updateExportPdfQuality
 } from './settings-ui.js';
 
 import {
@@ -62,6 +63,7 @@ export {
     toggleStoryMemory, updateStoryMemoryBadge, togglePreserveNames, syncGenrePresetCheckboxes,
     saveTranslationGenrePresets, updateTranslationGenrePreset, updateTranslationContextPrompt,
     updateApiDelay, updateMaxRetries, updateAiProvider, updateApiEndpoint,
+    updateExportFormat, updateExportPdfQuality,
     previewCurrentPage, openPreviewMode, closePreviewMode,
     previewKeyHandler, previewPrevPage, previewNextPage, renderPreviewPage,
     populateCustomFontsDropdown, registerCustomFont, uploadCustomFonts,
@@ -377,6 +379,8 @@ Object.assign(window, {
     updateAiProvider,
     updateDefaultFont,
     updateApiEndpoint,
+    updateExportFormat,
+    updateExportPdfQuality,
     toggleSidebarToolsMenu,
     toggleMobileSidebar,
     syncMobileMenuState,

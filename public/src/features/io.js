@@ -35,6 +35,17 @@ import {
 
 // Xác định MIME type và đuôi file tốt nhất cho xuất ảnh dựa trên file gốc
 export function getPageExportMimeType(page) {
+    const formatOverride = globalState.exportFormat || 'auto';
+    if (formatOverride === 'png') {
+        return { mimeType: 'image/png', quality: undefined, ext: 'png' };
+    }
+    if (formatOverride === 'jpg') {
+        return { mimeType: 'image/jpeg', quality: 0.92, ext: 'jpg' };
+    }
+    if (formatOverride === 'webp') {
+        return { mimeType: 'image/webp', quality: 0.92, ext: 'webp' };
+    }
+
     let mimeType = 'image/png';
     let quality = undefined;
     let ext = 'png';
@@ -542,7 +553,20 @@ export async function runPdfExport() {
                 });
             }
 
-            const imgData = canvas.toDataURL('image/jpeg', 0.90);
+            const pdfQualityMode = globalState.pdfQuality || 'hd';
+            let imgData;
+            let imgFormat = 'JPEG';
+            if (pdfQualityMode === 'max') {
+                imgData = canvas.toDataURL('image/png');
+                imgFormat = 'PNG';
+            } else if (pdfQualityMode === 'standard') {
+                imgData = canvas.toDataURL('image/jpeg', 0.90);
+                imgFormat = 'JPEG';
+            } else { // 'hd'
+                imgData = canvas.toDataURL('image/jpeg', 0.98);
+                imgFormat = 'JPEG';
+            }
+
             const naturalW = canvas.width || 800;
             const naturalH = canvas.height || 1200;
             const orientation = naturalW > naturalH ? 'landscape' : 'portrait';
@@ -553,10 +577,10 @@ export async function runPdfExport() {
                     unit: 'px',
                     format: [naturalW, naturalH]
                 });
-                pdf.addImage(imgData, 'JPEG', 0, 0, naturalW, naturalH);
+                pdf.addImage(imgData, imgFormat, 0, 0, naturalW, naturalH);
             } else {
                 pdf.addPage([naturalW, naturalH], orientation);
-                pdf.addImage(imgData, 'JPEG', 0, 0, naturalW, naturalH);
+                pdf.addImage(imgData, imgFormat, 0, 0, naturalW, naturalH);
             }
         }
 
