@@ -198,6 +198,17 @@ export function openSettingsModal() {
     if (elements.uiLangSelect) elements.uiLangSelect.value = globalState.uiLanguage || 'vi';
     if (elements.apiKeyInput) elements.apiKeyInput.value = globalState.apiKey || '';
 
+    const providerSelect = document.getElementById('ai-provider-select');
+    if (providerSelect) providerSelect.value = globalState.aiProvider || 'gemini';
+
+    const endpointInput = document.getElementById('api-endpoint-input');
+    if (endpointInput) endpointInput.value = globalState.apiEndpoint || '';
+
+    const endpointContainer = document.getElementById('api-endpoint-container');
+    if (endpointContainer) {
+        endpointContainer.classList.toggle('hidden', globalState.aiProvider !== 'custom');
+    }
+
     const modelSelect = document.getElementById('model-select');
     if (modelSelect && globalState.selectedModel) {
         if (Array.from(modelSelect.options).some(opt => opt.value === globalState.selectedModel)) {
@@ -348,6 +359,12 @@ export function updateMaxRetries(value) {
 export function updateAiProvider(provider) {
     globalState.aiProvider = provider;
     safeSetLocalStorage('gemini_manga_ai_provider', provider);
+
+    const endpointContainer = document.getElementById('api-endpoint-container');
+    if (endpointContainer) {
+        endpointContainer.classList.toggle('hidden', provider !== 'custom');
+    }
+
     showToast(`Đã chuyển AI Provider sang: ${provider.toUpperCase()}`, "info");
 }
 
