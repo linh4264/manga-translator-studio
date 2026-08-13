@@ -131,16 +131,31 @@ body {
     color: #ffffff !important;
 }
 
+/* Color Swatches & Presets Immunity */
+.bg-white,
+button.bg-white,
+[onclick*="setEraserColor('#ffffff')"] {
+    background-color: #ffffff !important;
+    border: 2px solid #000000 !important;
+}
+
+.bg-black,
+button.bg-black,
+[onclick*="setEraserColor('#000000')"] {
+    background-color: #000000 !important;
+    border: 2px solid #ffffff !important;
+}
+
 /* Sidebar Action Button & Tab Contrast */
-#left-panel button:not(.bg-indigo-600):not(.bg-indigo-500):not(.bg-pink-500):not(.bg-amber-500):not(.page-item-active):not(.bg-pink-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-orange-600):not(.bg-purple-600),
-#right-panel button:not(.bg-indigo-600):not(.bg-indigo-500):not(.bg-pink-500):not(.bg-amber-500):not(.bg-pink-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-orange-600):not(.bg-purple-600) {
+#left-panel button:not(.bg-indigo-600):not(.bg-indigo-500):not(.bg-pink-500):not(.bg-amber-500):not(.page-item-active):not(.bg-pink-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-orange-600):not(.bg-purple-600):not(.bg-white):not(.bg-black),
+#right-panel button:not(.bg-indigo-600):not(.bg-indigo-500):not(.bg-pink-500):not(.bg-amber-500):not(.bg-pink-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-orange-600):not(.bg-purple-600):not(.bg-white):not(.bg-black) {
     background-color: #1e293b !important;
     color: #f8fafc !important;
     border: 2px solid #000000 !important;
 }
 
-#left-panel button:hover:not(.bg-pink-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-orange-600):not(.bg-purple-600),
-#right-panel button:hover:not(.bg-pink-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-orange-600):not(.bg-purple-600) {
+#left-panel button:hover:not(.bg-pink-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-orange-600):not(.bg-purple-600):not(.bg-white):not(.bg-black),
+#right-panel button:hover:not(.bg-pink-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-orange-600):not(.bg-purple-600):not(.bg-white):not(.bg-black) {
     background-color: #0284c7 !important;
     color: #ffffff !important;
 }

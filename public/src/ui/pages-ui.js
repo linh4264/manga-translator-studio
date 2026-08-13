@@ -237,15 +237,15 @@ export function updatePageListUI() {
 
         let statusBadge = '';
         if (page.status === 'draft') {
-            statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-slate-800 text-slate-400">Bản nháp</span>`;
+            statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-700 text-slate-100 border border-black shadow-[1px_1px_0px_#000]">Bản nháp</span>`;
         } else if (page.status === 'queued') {
-            statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-indigo-950 text-indigo-300 animate-pulse">Chờ dịch...</span>`;
+            statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-600 text-white border border-black shadow-[1.5px_1.5px_0px_#000] animate-pulse">Chờ dịch...</span>`;
         } else if (page.status === 'processing') {
-            statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-amber-950 text-amber-300 flex items-center gap-1"><i class="fa-solid fa-circle-notch animate-spin text-[8px]"></i> Đang dịch</span>`;
+            statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500 text-black border border-black shadow-[1.5px_1.5px_0px_#000] flex items-center gap-1"><i class="fa-solid fa-circle-notch animate-spin text-[8px]"></i> Đang dịch</span>`;
         } else if (page.status === 'done') {
-            statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-emerald-950 text-emerald-300 flex items-center gap-0.5"><i class="fa-solid fa-check text-[8px]"></i> Hoàn thành</span>`;
+            statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500 text-white border border-black shadow-[1.5px_1.5px_0px_#000] flex items-center gap-1 shrink-0"><i class="fa-solid fa-check text-[9px] text-yellow-300"></i> H.thành</span>`;
         } else if (page.status === 'error') {
-            statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-red-950 text-red-300">Lỗi</span>`;
+            statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-600 text-white border border-black shadow-[1.5px_1.5px_0px_#000]">Lỗi</span>`;
         }
 
         const pageItem = document.createElement('div');
@@ -255,7 +255,7 @@ export function updatePageListUI() {
         pageItem.dataset.pageIndex = String(index);
 
         const activeBadge = isActive 
-            ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-pink-500 text-white border border-black flex items-center gap-1 shadow-[1px_1px_0px_#000]"><i class="fa-solid fa-eye text-[8px]"></i> Đang sửa</span>`
+            ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-pink-500 text-white border border-black flex items-center gap-1 shadow-[1px_1px_0px_#000] shrink-0"><i class="fa-solid fa-eye text-[8px]"></i> Đang sửa</span>`
             : '';
 
         pageItem.innerHTML = `
