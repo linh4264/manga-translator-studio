@@ -81,8 +81,14 @@ body {
 #pages-list .border-indigo-500 {
     background-color: #0284c7 !important;
     color: #ffffff !important;
-    border: 2px solid #000000 !important;
-    box-shadow: 3px 3px 0px #000000 !important;
+    border: 2.5px solid #000000 !important;
+    box-shadow: 4px 4px 0px #000000 !important;
+    transform: translate(-1px, -1px);
+}
+
+.page-item-active .thumb-frame {
+    border: 2px solid #ff2a85 !important;
+    box-shadow: 2px 2px 0px #ff2a85 !important;
 }
 
 .page-item-active span,

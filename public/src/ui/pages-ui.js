@@ -249,29 +249,34 @@ export function updatePageListUI() {
         }
 
         const pageItem = document.createElement('div');
-        pageItem.className = `group flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all ${isActive ? 'bg-indigo-600/20 border border-indigo-500/50' : 'bg-slate-950 hover:bg-slate-900 border border-transparent'
-            }`;
+        pageItem.className = `group flex items-center justify-between p-2 rounded-lg cursor-pointer transition-all ${
+            isActive ? 'page-item-active bg-sky-600 text-white border-2 border-black shadow-[3.5px_3.5px_0px_#000]' : 'bg-slate-800 hover:bg-slate-750 border-2 border-black shadow-[2px_2px_0px_#000]'
+        }`;
         pageItem.dataset.pageIndex = String(index);
+
+        const activeBadge = isActive 
+            ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-pink-500 text-white border border-black flex items-center gap-1 shadow-[1px_1px_0px_#000]"><i class="fa-solid fa-eye text-[8px]"></i> Đang sửa</span>`
+            : '';
 
         pageItem.innerHTML = `
             <div class="flex items-center space-x-2.5 min-w-0 flex-1">
-                <div class="relative w-10 h-12 bg-slate-900 rounded overflow-hidden shrink-0 border border-slate-800">
+                <div class="relative w-10 h-12 bg-slate-900 rounded overflow-hidden shrink-0 thumb-frame ${isActive ? 'border-2 border-pink-400 ring-2 ring-pink-500 shadow-[2px_2px_0px_#ff2a85]' : 'border border-slate-700'}">
                     <img id="thumb-${page.id}" src="${page.thumbnailSrc || ''}" class="w-full h-full object-cover select-none">
-                    <div class="absolute bottom-0 inset-x-0 bg-slate-950/80 text-[8px] text-center text-slate-400 font-mono py-0.5">${index + 1}</div>
+                    <div class="absolute bottom-0 inset-x-0 ${isActive ? 'bg-pink-500 text-white' : 'bg-slate-950/80 text-slate-400'} text-[8px] text-center font-mono py-0.5 font-bold">${index + 1}</div>
                 </div>
                 <div class="min-w-0 flex-1">
-                    <p class="text-xs font-semibold text-slate-200 truncate pr-2" title="${safePageName}">${safePageName}</p>
-                    <div class="flex items-center space-x-1.5 mt-1.5">${statusBadge}</div>
+                    <p class="text-xs font-bold truncate pr-2 ${isActive ? 'text-white' : 'text-slate-200'}" title="${safePageName}">${safePageName}</p>
+                    <div class="flex items-center space-x-1.5 mt-1.5 flex-wrap gap-1">${activeBadge}${statusBadge}</div>
                 </div>
             </div>
             <div class="flex items-center space-x-1 shrink-0 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                <button data-action="replace-bg-page" data-index="${index}" title="Đổi ảnh gốc (Giữ nguyên ô thoại)" class="w-6 h-6 rounded bg-slate-900 hover:bg-amber-600 border border-slate-800 hover:border-amber-500 text-slate-400 hover:text-white flex items-center justify-center transition-all">
+                <button data-action="replace-bg-page" data-index="${index}" title="Đổi ảnh gốc (Giữ nguyên ô thoại)" class="w-6 h-6 rounded bg-slate-900 hover:bg-amber-500 border border-black text-slate-300 hover:text-white flex items-center justify-center transition-all">
                     <i class="fa-solid fa-file-image text-[10px]"></i>
                 </button>
-                <button data-action="translate-page" data-index="${index}" title="Dịch trang này" class="w-6 h-6 rounded bg-slate-900 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 text-slate-400 hover:text-white flex items-center justify-center transition-all">
+                <button data-action="translate-page" data-index="${index}" title="Dịch trang này" class="w-6 h-6 rounded bg-slate-900 hover:bg-sky-500 border border-black text-slate-300 hover:text-white flex items-center justify-center transition-all">
                     <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
                 </button>
-                <button data-action="remove-page" data-index="${index}" title="Xóa" class="w-6 h-6 rounded bg-slate-900 hover:bg-red-600 border border-slate-800 hover:border-red-500 text-slate-400 hover:text-white flex items-center justify-center transition-all">
+                <button data-action="remove-page" data-index="${index}" title="Xóa" class="w-6 h-6 rounded bg-slate-900 hover:bg-red-500 border border-black text-slate-300 hover:text-white flex items-center justify-center transition-all">
                     <i class="fa-solid fa-trash-can text-[10px]"></i>
                 </button>
             </div>
