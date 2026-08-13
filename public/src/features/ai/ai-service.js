@@ -29,7 +29,7 @@ import { elements } from '../../core/elements.js';
 import { showToast } from '../../core/utils/dom.js';
 import { parseGeminiJsonText } from '../../core/utils/json.js';
 import { refineAiBlockBox } from '../ocr/ocr-service.js';
-import { requestOverlayRender } from '../canvas/canvas-service.js';
+import { requestOverlayRender, autoMatchBlockStyle } from '../canvas/canvas-service.js';
 import { compilePronounMatrixPrompt } from '../pronoun.js';
 import { getConfiguredApiKey, getGeminiGenerateContentUrl, getConfiguredAiProvider, getConfiguredApiEndpoint } from './ai-config.js';
 
@@ -419,7 +419,7 @@ export async function getBase64(file) {
     }
 }
 
-// OCR Image Pre-processing (High Contrast & Sharpness Boost for better OCR accuracy)
+// OCR Image Pre-processing (GPU Hardware-Accelerated Contrast Boost for better OCR accuracy)
 export async function enhanceImageForOcr(file) {
     if (!file || !globalState.ocrEnhanceEnabled) {
         return file;
@@ -434,25 +434,9 @@ export async function enhanceImageForOcr(file) {
             canvas.height = img.height;
             const ctx = canvas.getContext('2d');
 
+            // 🚀 GPU Hardware-Accelerated Contrast & Brightness Enhancement (Eliminates CPU pixel loop & main thread lag)
+            ctx.filter = 'contrast(125%) brightness(102%) grayscale(100%)';
             ctx.drawImage(img, 0, 0);
-
-            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imgData.data;
-
-            const contrast = 1.20; // 20% contrast boost
-            const factor = (259 * (contrast * 255 + 255)) / (255 * (259 - contrast * 255));
-
-            for (let i = 0; i < data.length; i += 4) {
-                const gray = (0.299 * data[i]) + (0.587 * data[i + 1]) + (0.114 * data[i + 2]);
-                const enhanced = factor * (gray - 128) + 128;
-                const clamped = Math.max(0, Math.min(255, enhanced));
-
-                data[i] = clamped;
-                data[i + 1] = clamped;
-                data[i + 2] = clamped;
-            }
-
-            ctx.putImageData(imgData, 0, 0);
 
             canvas.toBlob((blob) => {
                 if (blob) {
@@ -489,6 +473,7 @@ async function executeOcrVisionStep({
         "MANGA READING ORDER: Order detected blocks strictly in natural manga reading flow: Top-Right to Bottom-Left across panels (start from the top-right panel, read right-to-left within each panel, then move downward to lower panels). This guarantees dialogue sequence is coherent for translation.",
         "NO FURIGANA DUPLICATION: In Japanese manga, kanji characters often have tiny ruby text / furigana annotations above or beside them. Transcribe ONLY the primary kanji word itself. NEVER duplicate the furigana phonetic reading into the transcript (e.g. transcribe 運命, NEVER 運命さだめ or 運命(さだめ)).",
         "CLEAN RAW TRANSCRIPTION: Read and transcribe the exact raw original text (Japanese, Korean, Chinese, or English) inside each region. Preserve original punctuation (?, !, ..., ♪, ♡) faithfully. Do not add commentary, explanations, or translations in this step.",
+        "IF NO TEXT PRESENT: If this page is pure artwork, a splash illustration, or contains no readable dialogue/SFX, return an empty array: {\"blocks\": []}.",
         "COORDINATE FORMULA: All box coordinates (x, y, w, h) MUST use integer scale 0 to 1000 (where top-left corner is x=0, y=0 and bottom-right corner is x=1000, y=1000). Set x = xmin (left edge), y = ymin (top edge), w = (xmax - xmin) (box width), h = (ymax - ymin) (box height). DO NOT return xmax as w or ymax as h. Example: A bubble spanning from xmin=200 to xmax=500 and ymin=100 to ymax=300 MUST return x=200, y=100, w=300, h=200.",
         "For speech bubbles and narration boxes, use a box covering the entire inner blank space of the bubble so translated text fits easily. For SFX and signs, use the tightest box covering the characters.",
         "IMPORTANT RULE FOR CONNECTED BUBBLES: When multiple speech bubbles are attached/connected together (such as double-bubbles, stacked connected lobes, or chained bubbles), treat EACH individual bubble lobe/section as a SEPARATE block with its own bounding box.",
@@ -571,51 +556,82 @@ async function executeOcrVisionStep({
         });
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
+    const maxRetries = 2;
+    let lastError = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        if (cancelTranslationFlag) break;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            try {
+                controller.abort(new Error("Yêu cầu OCR AI quá hạn (Timeout 120s). Vui lòng thử lại."));
+            } catch (e) {
+                controller.abort();
+            }
+        }, 120000);
+
         try {
-            controller.abort(new Error("Yêu cầu OCR AI quá hạn (Timeout 120s). Vui lòng thử lại."));
-        } catch (e) {
-            controller.abort();
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: requestHeaders,
+                body: requestBody,
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                let errorDetail = "";
+                try {
+                    const errorJson = await response.json();
+                    errorDetail = errorJson.error?.message || errorJson.message || "";
+                } catch (e) { }
+                throw new Error(errorDetail ? `Lỗi OCR (${response.status}): ${errorDetail}` : `Lỗi OCR API: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const jsonText = isOpenAiFormat
+                ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
+                : result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            const data = parseGeminiJsonText(jsonText);
+            if (Array.isArray(data)) {
+                return data;
+            }
+            if (data && Array.isArray(data.blocks)) {
+                return data.blocks;
+            }
+            if (data && Array.isArray(data.dialogues)) {
+                return data.dialogues;
+            }
+            if (data && Array.isArray(data.regions)) {
+                return data.regions;
+            }
+            if (data && Array.isArray(data.items)) {
+                return data.items;
+            }
+            if (data && typeof data === 'object') {
+                return [];
+            }
+            return [];
+        } catch (fetchErr) {
+            clearTimeout(timeoutId);
+            lastError = fetchErr;
+
+            const isRetryable = fetchErr.name === 'AbortError' || fetchErr.name === 'TimeoutError' ||
+                (fetchErr.message && (fetchErr.message.includes('429') || fetchErr.message.includes('503') || fetchErr.message.includes('500') || fetchErr.message.includes('Timeout') || fetchErr.message.includes('aborted') || fetchErr.message.includes('Failed to fetch')));
+
+            if (isRetryable && attempt < maxRetries) {
+                const waitSec = (attempt + 1) * 2;
+                await new Promise(r => setTimeout(r, waitSec * 1000));
+                continue;
+            }
+            throw fetchErr;
         }
-    }, 120000);
-
-    let response;
-    try {
-        response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: requestHeaders,
-            body: requestBody,
-            signal: controller.signal
-        });
-    } catch (fetchErr) {
-        if (fetchErr.name === 'AbortError' || fetchErr.name === 'TimeoutError' || (fetchErr.message && fetchErr.message.includes('aborted'))) {
-            throw new Error("Kết nối OCR AI quá hạn (Timeout 120s). Đang tự động thử lại...");
-        }
-        throw fetchErr;
-    } finally {
-        clearTimeout(timeoutId);
     }
 
-    if (!response.ok) {
-        let errorDetail = "";
-        try {
-            const errorJson = await response.json();
-            errorDetail = errorJson.error?.message || errorJson.message || "";
-        } catch (e) { }
-        throw new Error(errorDetail ? `Lỗi OCR (${response.status}): ${errorDetail}` : `Lỗi OCR API: ${response.status}`);
-    }
-
-    const result = await response.json();
-    const jsonText = isOpenAiFormat
-        ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
-        : result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    const data = parseGeminiJsonText(jsonText);
-    if (!data || !Array.isArray(data.blocks)) {
-        throw new Error("Phản hồi OCR từ AI không đúng định dạng JSON.");
-    }
-    return data.blocks;
+    throw lastError || new Error("Không thể hoàn tất OCR.");
 }
 
 /**
@@ -1352,7 +1368,6 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
             const imgEl = elements.mangaBgImage;
             if (imgEl && imgEl.naturalWidth) {
                 try {
-                    const { autoMatchBlockStyle } = await import('../canvas/canvas-service.js');
                     page.blocks.forEach(b => autoMatchBlockStyle(b, imgEl));
                 } catch (e) { }
             }
@@ -1677,9 +1692,7 @@ export async function runBatchTranslation() {
                                 const imgEl = elements.mangaBgImage;
                                 if (imgEl && imgEl.naturalWidth && i === globalState.activePageIndex) {
                                     try {
-                                        import('../canvas/canvas-service.js').then(({ autoMatchBlockStyle }) => {
-                                            p.blocks.forEach(b => autoMatchBlockStyle(b, imgEl));
-                                        });
+                                        p.blocks.forEach(b => autoMatchBlockStyle(b, imgEl));
                                     } catch (e) { }
                                 }
 
