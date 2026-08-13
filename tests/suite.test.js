@@ -236,5 +236,40 @@ test('Arc and Full Warp Suite Rendering in setMultilineText', async () => {
     assert.strictEqual(lineDiv.children.length, 17, 'Line div should contain 17 character spans for arc & warp rendering');
 });
 
+// 11. Format Converter Helper Functions Test
+test('Format Extension Converter Helper Functions', () => {
+    const getTargetFormatExt = (mimeType) => {
+        if (mimeType === 'image/png') return 'png';
+        if (mimeType === 'image/jpeg') return 'jpg';
+        if (mimeType === 'image/webp') return 'webp';
+        return 'png';
+    };
+
+    const formatFileSize = (bytes) => {
+        if (!bytes || bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    };
+
+    assert.strictEqual(getTargetFormatExt('image/png'), 'png');
+    assert.strictEqual(getTargetFormatExt('image/jpeg'), 'jpg');
+    assert.strictEqual(getTargetFormatExt('image/webp'), 'webp');
+    assert.strictEqual(getTargetFormatExt('unknown'), 'png');
+
+    assert.strictEqual(formatFileSize(0), '0 B');
+    assert.strictEqual(formatFileSize(512), '512 B');
+    assert.strictEqual(formatFileSize(1024), '1 KB');
+    assert.strictEqual(formatFileSize(1572864), '1.5 MB');
+
+    // Filename extension replacement check
+    const filename = 'chapter_01_page_05.PNG';
+    const targetExt = getTargetFormatExt('image/webp');
+    const newFilename = `${filename.replace(/\.[^/.]+$/, '')}.${targetExt}`;
+    assert.strictEqual(newFilename, 'chapter_01_page_05.webp');
+});
+
+
 
 
