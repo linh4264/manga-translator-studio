@@ -372,3 +372,32 @@ test('Default Font Synchronization and Application for AI Translation', async ()
     assert.strictEqual(globalState.defaultFont, 'font-manga');
     assert.strictEqual(globalState.globalStyle.fontFamily, 'font-manga');
 });
+
+// 17. Immediate Auto-Fit Execution Test (No Manual Resizing Required)
+test('Immediate Auto-Fit Execution on Newly Translated Blocks', async () => {
+    const { autoFitAllBlocksOnPage, autoFitBlock, isBlockAutoFit } = await import('../public/src/features/canvas/canvas-styling.js');
+    const { globalState } = await import('../public/src/core/state.js');
+
+    globalState.autoFitEnabled = true;
+
+    const mockPage = {
+        blocks: [
+            {
+                id: 'p1_b1',
+                type: 'dialogue',
+                translated: 'Một đoạn văn bản dài cần được tự động tính toán cỡ chữ vừa vặn ngay lập tức mà không cần co giãn.',
+                box: { x: 20, y: 20, w: 40, h: 30 },
+                style: { fontFamily: 'font-manga', fontSize: 13, padding: 4 }
+            }
+        ]
+    };
+
+    assert.strictEqual(isBlockAutoFit(mockPage.blocks[0]), true, 'Block must have Auto-Fit enabled');
+
+    // Run autoFitAllBlocksOnPage
+    autoFitAllBlocksOnPage(mockPage);
+
+    // Verify block style fontSize was processed
+    assert.ok(mockPage.blocks[0].style.fontSize >= 8, 'Font size must be computed automatically');
+    assert.ok(mockPage.blocks[0].autoFitCache !== null, 'Block must store autoFitCache');
+});

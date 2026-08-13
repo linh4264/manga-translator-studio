@@ -33,25 +33,7 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
     }
 
     if (globalState.autoFitEnabled) {
-        const zoomScale = isMirror ? 1 : ((globalState.zoom || 100) / 100);
-        const currentDisplayWidth = (imgElement?.clientWidth
-            || elements.mangaCanvasContainer?.clientWidth
-            || elements.workspaceViewport?.clientWidth
-            || 800) / zoomScale;
-        const currentDisplayHeight = (imgElement?.clientHeight
-            || elements.mangaCanvasContainer?.clientHeight
-            || elements.workspaceViewport?.clientHeight
-            || Math.round((currentDisplayWidth * zoomScale) * ((imgElement?.naturalHeight || 1200) / Math.max(1, imgElement?.naturalWidth || 800)))) / zoomScale;
-        const currentRevision = page.autoFitRevision || 0;
-
-        if (page._lastAutoFitRevision !== currentRevision ||
-            Math.abs(page._lastAutoFitDisplayWidth - currentDisplayWidth) > 2 ||
-            Math.abs(page._lastAutoFitDisplayHeight - currentDisplayHeight) > 2) {
-            autoFitAllBlocksOnPage(page, customImgElement, forceExportScale);
-            page._lastAutoFitRevision = currentRevision;
-            page._lastAutoFitDisplayWidth = currentDisplayWidth;
-            page._lastAutoFitDisplayHeight = currentDisplayHeight;
-        }
+        autoFitAllBlocksOnPage(page, customImgElement, forceExportScale);
     }
 
     let activeImageData = page.imageDataCache || null;
@@ -686,13 +668,13 @@ export function startInlineEditing(block, bubble, maskContent, innerTextDiv) {
         }
 
         if (globalState.autoFitEnabled) {
-            const page = globalState.pages[globalState.activePageIndex];
-            if (page) {
-                const imgElement = elements.mangaBgImage;
-                autoFitBlock(page, block, imgElement);
-                const zoomScale = (globalState.zoom || 100) / 100;
-                maskContent.style.fontSize = `${(block.style.fontSize || 16) * zoomScale}px`;
-            }
+            const imgElement = elements.mangaBgImage;
+            block.autoFitCache = null;
+            autoFitBlock(block, imgElement);
+            const zoomScale = (globalState.zoom || 100) / 100;
+            maskContent.style.fontSize = `${(block.style.fontSize || 16) * zoomScale}px`;
+            if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px`;
+            if (elements.styleFontSize) elements.styleFontSize.value = block.style.fontSize;
         }
     }
 

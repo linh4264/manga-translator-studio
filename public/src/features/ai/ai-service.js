@@ -1355,6 +1355,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 } catch (e) { }
             }
 
+            page.blocks.forEach(b => { b.autoFitCache = null; });
             page.status = 'done';
             recordPageToStoryMemory(pageIndex, page.blocks);
             uiUpdatePageListUI();
@@ -1667,6 +1668,7 @@ export async function runBatchTranslation() {
                                                    lookupMap.get(expectedId) ||
                                                    lookupMap.get(expectedId.toLowerCase()) ||
                                                    b.translated || '';
+                                    b.autoFitCache = null;
                                 });
 
                                 // Tự động so khớp font & màu sắc
