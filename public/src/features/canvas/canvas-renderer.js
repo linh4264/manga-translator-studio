@@ -26,8 +26,6 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
 
     if (globalState.viewMode === 'original' && !isMirror) return;
 
-    const fragment = document.createDocumentFragment();
-
     const imgElement = customImgElement || elements.mangaBgImage;
     if (imgElement && imgElement.clientWidth > 0) {
         const zoomScale = (globalState.zoom || 100) / 100;
@@ -73,7 +71,142 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
         }
     }
 
+    // 🌟 KHỞI TẠO 2 LAYER ĐỘC LẬP: LỚP NỀN CHE (COVERS) Ở DƯỚI, LỚP VĂN BẢN (TEXTS) Ở TRÊN
+    const coversLayer = document.createElement('div');
+    coversLayer.className = 'manga-covers-layer absolute inset-0 pointer-events-none z-10';
+    coversLayer.style.position = 'absolute';
+    coversLayer.style.top = '0';
+    coversLayer.style.left = '0';
+    coversLayer.style.width = '100%';
+    coversLayer.style.height = '100%';
+    coversLayer.style.zIndex = '1';
+    coversLayer.style.pointerEvents = 'none';
+
+    const textsLayer = document.createElement('div');
+    textsLayer.className = 'manga-texts-layer absolute inset-0 z-20';
+    textsLayer.style.position = 'absolute';
+    textsLayer.style.top = '0';
+    textsLayer.style.left = '0';
+    textsLayer.style.width = '100%';
+    textsLayer.style.height = '100%';
+    textsLayer.style.zIndex = '2';
+
     page.blocks.forEach((block) => {
+        // --- 1. TẠO PHẦN NỀN CHE (BACKGROUND COVER) TRÊN COVERS LAYER ---
+        const coverEl = document.createElement('div');
+        coverEl.id = isMirror ? `mirror-cover-${block.id}` : `cover-${block.id}`;
+        coverEl.style.position = 'absolute';
+        coverEl.style.top = `${block.box.y}%`;
+        coverEl.style.left = `${block.box.x}%`;
+        coverEl.style.width = `${block.box.w}%`;
+        coverEl.style.height = `${block.box.h}%`;
+        coverEl.style.pointerEvents = 'none';
+
+        if (block.style.rotate) {
+            coverEl.style.transform = `rotate(${block.style.rotate}deg)`;
+        }
+
+        coverEl.style.display = 'flex';
+        coverEl.style.alignItems = 'center';
+        if (block.style.align === 'left') {
+            coverEl.style.justifyContent = 'flex-start';
+        } else if (block.style.align === 'right') {
+            coverEl.style.justifyContent = 'flex-end';
+        } else {
+            coverEl.style.justifyContent = 'center';
+        }
+
+        const coverMaskContent = document.createElement('div');
+        coverMaskContent.style.position = 'relative';
+        coverMaskContent.style.overflow = 'hidden';
+        coverMaskContent.style.boxSizing = 'border-box';
+
+        if (block.type === 'image') {
+            coverMaskContent.style.width = '100%';
+            coverMaskContent.style.height = '100%';
+            coverMaskContent.style.display = 'flex';
+            coverMaskContent.style.alignItems = 'center';
+            coverMaskContent.style.justifyContent = 'center';
+
+            const imgEl = document.createElement('img');
+            imgEl.src = block.imageUrl || '';
+            imgEl.className = 'w-full h-full pointer-events-none select-none';
+            imgEl.style.objectFit = block.style.fit || 'contain';
+            const rad = block.style.borderRadius || 0;
+            imgEl.style.borderRadius = `${rad}px`;
+            const opacity = (block.style.opacity !== undefined ? block.style.opacity : 100) / 100;
+            imgEl.style.opacity = `${opacity}`;
+
+            coverMaskContent.appendChild(imgEl);
+            coverEl.appendChild(coverMaskContent);
+        } else {
+            const fontStyle = block.style.fontFamily || 'font-comic';
+            const isBuiltInFont = fontStyle.startsWith('font-');
+
+            const currentMaskSize = block.style.maskSize || 'full';
+            if (currentMaskSize === 'full') {
+                coverMaskContent.style.width = '100%';
+                coverMaskContent.style.height = '100%';
+                coverMaskContent.style.display = 'flex';
+                if (block.style.vertical) {
+                    coverMaskContent.style.justifyContent = 'center';
+                    coverMaskContent.style.alignItems = 'center';
+                } else {
+                    coverMaskContent.style.alignItems = 'center';
+                    coverMaskContent.style.justifyContent = block.style.align === 'left' ? 'flex-start' : block.style.align === 'right' ? 'flex-end' : 'center';
+                }
+                coverMaskContent.className = `${isBuiltInFont ? fontStyle : ''} pointer-events-none`;
+            } else {
+                coverMaskContent.style.display = 'flex';
+                coverMaskContent.style.alignItems = 'center';
+                coverMaskContent.style.justifyContent = 'center';
+                coverMaskContent.style.width = 'auto';
+                coverMaskContent.style.height = 'auto';
+                coverMaskContent.style.maxWidth = '100%';
+                coverMaskContent.style.maxHeight = '100%';
+                coverMaskContent.className = `${isBuiltInFont ? fontStyle : ''} pointer-events-none`;
+            }
+
+            const currentMaskShape = block.style.maskShape || 'bubble-fit';
+            let hasBubbleFitMask = false;
+
+            if (currentMaskShape === 'bubble-fit') {
+                let dataUrl = block.maskCache ? block.maskCache.dataUrl : null;
+                if (!dataUrl && activeImageData) {
+                    const maskCanvas = computeBubbleMask(page, block, activeImageData);
+                    if (maskCanvas) {
+                        dataUrl = block.maskCache?.dataUrl || (maskCanvas.toDataURL ? maskCanvas.toDataURL() : null);
+                    }
+                }
+                if (dataUrl) {
+                    coverMaskContent.style.backgroundImage = `url(${dataUrl})`;
+                    coverMaskContent.style.backgroundSize = '100% 100%';
+                    coverMaskContent.style.backgroundRepeat = 'no-repeat';
+                    coverMaskContent.style.backgroundColor = 'transparent';
+                    coverMaskContent.style.borderRadius = '0px';
+                    hasBubbleFitMask = true;
+                }
+            }
+
+            if (!hasBubbleFitMask) {
+                coverMaskContent.style.backgroundImage = 'none';
+                const hexBgColor = block.style.bgColor || '#ffffff';
+                const alpha = (block.style.bgOpacity !== undefined ? block.style.bgOpacity : 100) / 100;
+                coverMaskContent.style.backgroundColor = convertHexToRGBA(hexBgColor, alpha);
+
+                if (currentMaskShape === 'ellipse') {
+                    coverMaskContent.style.borderRadius = '50%';
+                } else if (currentMaskShape === 'rounded') {
+                    coverMaskContent.style.borderRadius = '12px';
+                } else {
+                    coverMaskContent.style.borderRadius = '0px';
+                }
+            }
+            coverEl.appendChild(coverMaskContent);
+        }
+        coversLayer.appendChild(coverEl);
+
+        // --- 2. TẠO PHẦN CHỮ VÀ TƯƠNG TÁC (TEXT & OVERLAY) TRÊN TEXTS LAYER ---
         const bubble = document.createElement('div');
         bubble.id = isMirror ? `mirror-${block.id}` : block.id;
 
@@ -104,27 +237,10 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
         maskContent.style.position = 'relative';
         maskContent.style.overflow = 'hidden';
         maskContent.style.boxSizing = 'border-box';
+        maskContent.style.backgroundColor = 'transparent';
+        maskContent.style.backgroundImage = 'none';
 
-        if (block.type === 'image') {
-            maskContent.style.width = '100%';
-            maskContent.style.height = '100%';
-            maskContent.style.display = 'flex';
-            maskContent.style.alignItems = 'center';
-            maskContent.style.justifyContent = 'center';
-
-            const imgEl = document.createElement('img');
-            imgEl.src = block.imageUrl || '';
-            imgEl.className = 'w-full h-full pointer-events-none select-none';
-            imgEl.style.objectFit = block.style.fit || 'contain';
-            const rad = block.style.borderRadius || 0;
-            imgEl.style.borderRadius = `${rad}px`;
-            const opacity = (block.style.opacity !== undefined ? block.style.opacity : 100) / 100;
-            imgEl.style.opacity = `${opacity}`;
-
-            maskContent.appendChild(imgEl);
-            bubble.appendChild(maskContent);
-        } else {
-            // ✅ XỬ LÝ FONT FAMILY (Tách biệt Font mặc định vs Font tùy chỉnh người dùng tải lên)
+        if (block.type !== 'image') {
             const fontStyle = block.style.fontFamily || 'font-comic';
             const isBuiltInFont = fontStyle.startsWith('font-');
 
@@ -152,7 +268,6 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
                 maskContent.className = `${isBuiltInFont ? fontStyle : ''} pointer-events-none`;
             }
 
-            // Nếu là font tùy chỉnh tải lên, gán trực tiếp style.fontFamily
             if (!isBuiltInFont) {
                 maskContent.style.fontFamily = `'${fontStyle}', sans-serif`;
             } else {
@@ -162,42 +277,6 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
             maskContent.style.wordBreak = 'keep-all';
             maskContent.style.overflowWrap = 'normal';
             maskContent.style.hyphens = 'none';
-
-            const currentMaskShape = block.style.maskShape || 'bubble-fit';
-            let hasBubbleFitMask = false;
-
-            if (currentMaskShape === 'bubble-fit') {
-                let dataUrl = block.maskCache ? block.maskCache.dataUrl : null;
-                if (!dataUrl && activeImageData) {
-                    const maskCanvas = computeBubbleMask(page, block, activeImageData);
-                    if (maskCanvas) {
-                        dataUrl = block.maskCache?.dataUrl || (maskCanvas.toDataURL ? maskCanvas.toDataURL() : null);
-                    }
-                }
-                if (dataUrl) {
-                    maskContent.style.backgroundImage = `url(${dataUrl})`;
-                    maskContent.style.backgroundSize = '100% 100%';
-                    maskContent.style.backgroundRepeat = 'no-repeat';
-                    maskContent.style.backgroundColor = 'transparent';
-                    maskContent.style.borderRadius = '0px';
-                    hasBubbleFitMask = true;
-                }
-            }
-
-            if (!hasBubbleFitMask) {
-                maskContent.style.backgroundImage = 'none';
-                const hexBgColor = block.style.bgColor || '#ffffff';
-                const alpha = (block.style.bgOpacity !== undefined ? block.style.bgOpacity : 100) / 100;
-                maskContent.style.backgroundColor = convertHexToRGBA(hexBgColor, alpha);
-
-                if (currentMaskShape === 'ellipse') {
-                    maskContent.style.borderRadius = '50%';
-                } else if (currentMaskShape === 'rounded') {
-                    maskContent.style.borderRadius = '12px';
-                } else {
-                    maskContent.style.borderRadius = '0px';
-                }
-            }
 
             maskContent.style.color = block.style.textColor || '#000000';
             const zoomScale = isMirror ? 1 : ((globalState.zoom || 100) / 100);
@@ -350,10 +429,11 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
             bubble.appendChild(handleNE);
         }
 
-        fragment.appendChild(bubble);
+        textsLayer.appendChild(bubble);
     });
 
-    container.appendChild(fragment);
+    container.appendChild(coversLayer);
+    container.appendChild(textsLayer);
 }
 
 export function convertHexToRGBA(hex, alpha) {

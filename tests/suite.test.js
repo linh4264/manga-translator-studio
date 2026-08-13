@@ -83,7 +83,8 @@ test('Offline Local Text Detection Engine', async () => {
 // 3. Server Security & Path Traversal Test
 test('Server Path Traversal Prevention', async () => {
     const serverPath = path.join(__dirname, '../server/server.js');
-    const serverProc = spawn('node', [serverPath], { stdio: 'pipe' });
+    const nodeBin = process.execPath || 'node';
+    const serverProc = spawn(nodeBin, [serverPath], { stdio: 'pipe' });
 
     // Wait for server startup
     await new Promise((resolve) => setTimeout(resolve, 1500));

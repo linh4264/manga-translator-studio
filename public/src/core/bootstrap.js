@@ -49,6 +49,8 @@ export async function initApplication() {
     // Register actions for global event delegation router
     registerAction('openSettingsModal', openSettingsModal);
     registerAction('closeSettingsModal', closeSettingsModal);
+    registerAction('openHelpModal', () => import('../ui/layout-ui.js').then(m => m.openHelpModal()));
+    registerAction('closeHelpModal', () => import('../ui/layout-ui.js').then(m => m.closeHelpModal()));
     registerAction('openLorebookModal', () => import('../ui/lorebook-ui.js').then(m => m.openLorebookModal()));
     registerAction('closeLorebookModal', () => import('../ui/lorebook-ui.js').then(m => m.closeLorebookModal()));
     registerAction('openGDriveModal', () => import('../features/gdrive.js').then(m => m.openGDriveModal()));

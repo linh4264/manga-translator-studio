@@ -3,7 +3,8 @@ import {
     setRightTab, updateProcessingOverlay, updateBackgroundTaskOverlay,
     setViewMode, updateSplitView, changeZoom, resetZoom,
     toggleSidebarToolsMenu, toggleMobileSidebar, syncMobileMenuState, syncMobileToolbarState,
-    closeMobileMenus, toggleLeftSidebar, toggleRightSidebar, toggleQuickBilingualMode, toggleQuickAudioDrama
+    closeMobileMenus, toggleLeftSidebar, toggleRightSidebar, toggleQuickBilingualMode, toggleQuickAudioDrama,
+    openHelpModal, closeHelpModal, switchHelpTab
 } from './layout-ui.js';
 
 import { selectPage, removePage, updatePageListUI, filterPagesList, toggleExportRangeInputs, validateExportRange, setExportRangeToCurrent } from './pages-ui.js';
@@ -321,6 +322,11 @@ export function initEventListeners() {
 
         if (e.key === 'Escape') {
             e.preventDefault();
+            const helpModal = document.getElementById('help-modal');
+            if (helpModal && !helpModal.classList.contains('hidden')) {
+                closeHelpModal();
+                return;
+            }
             if (globalState.selectedBlockId) {
                 const prevEl = document.getElementById(globalState.selectedBlockId);
                 if (prevEl) prevEl.classList.remove('active');
@@ -367,6 +373,9 @@ Object.assign(window, {
     updateSelectedModel,
     openSettingsModal,
     closeSettingsModal,
+    openHelpModal,
+    closeHelpModal,
+    switchHelpTab,
     updateSourceLanguage,
     updateTargetLanguage,
     updatePronounMatrix,

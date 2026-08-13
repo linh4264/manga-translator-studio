@@ -61,6 +61,16 @@ export function startBlockDrag(e, block) {
                         elem.style.left = `${b.box.x}%`;
                         elem.style.top = `${b.box.y}%`;
                     }
+                    const coverEl = document.getElementById(`cover-${item.id}`);
+                    if (coverEl) {
+                        coverEl.style.left = `${b.box.x}%`;
+                        coverEl.style.top = `${b.box.y}%`;
+                    }
+                    const mirrorCoverEl = document.getElementById(`mirror-cover-${item.id}`);
+                    if (mirrorCoverEl) {
+                        mirrorCoverEl.style.left = `${b.box.x}%`;
+                        mirrorCoverEl.style.top = `${b.box.y}%`;
+                    }
                 }
             });
         } else {
@@ -71,6 +81,16 @@ export function startBlockDrag(e, block) {
             if (blockElem) {
                 blockElem.style.left = `${block.box.x}%`;
                 blockElem.style.top = `${block.box.y}%`;
+            }
+            const coverEl = document.getElementById(`cover-${block.id}`);
+            if (coverEl) {
+                coverEl.style.left = `${block.box.x}%`;
+                coverEl.style.top = `${block.box.y}%`;
+            }
+            const mirrorCoverEl = document.getElementById(`mirror-cover-${block.id}`);
+            if (mirrorCoverEl) {
+                mirrorCoverEl.style.left = `${block.box.x}%`;
+                mirrorCoverEl.style.top = `${block.box.y}%`;
             }
         }
 
@@ -160,23 +180,37 @@ export function startBlockResize(e, block, handleDir) {
             blockElem.style.top = `${block.box.y}%`;
             blockElem.style.width = `${block.box.w}%`;
             blockElem.style.height = `${block.box.h}%`;
+        }
+        const coverEl = document.getElementById(`cover-${block.id}`);
+        if (coverEl) {
+            coverEl.style.left = `${block.box.x}%`;
+            coverEl.style.top = `${block.box.y}%`;
+            coverEl.style.width = `${block.box.w}%`;
+            coverEl.style.height = `${block.box.h}%`;
+        }
+        const mirrorCoverEl = document.getElementById(`mirror-cover-${block.id}`);
+        if (mirrorCoverEl) {
+            mirrorCoverEl.style.left = `${block.box.x}%`;
+            mirrorCoverEl.style.top = `${block.box.y}%`;
+            mirrorCoverEl.style.width = `${block.box.w}%`;
+            mirrorCoverEl.style.height = `${block.box.h}%`;
+        }
 
-            updateFloatingToolbarPosition();
+        updateFloatingToolbarPosition();
 
-            if (globalState.autoFitEnabled) {
-                if (!resizeRafId) {
-                    resizeRafId = requestAnimationFrame(() => {
-                        resizeRafId = null;
-                        block.autoFitCache = null;
-                        autoFitBlock(block);
-                        const maskElem = blockElem.firstElementChild;
-                        if (maskElem) {
-                            maskElem.style.fontSize = `${block.style.fontSize}px`;
-                        }
-                        if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px`;
-                        if (elements.styleFontSize) elements.styleFontSize.value = block.style.fontSize;
-                    });
-                }
+        if (globalState.autoFitEnabled) {
+            if (!resizeRafId) {
+                resizeRafId = requestAnimationFrame(() => {
+                    resizeRafId = null;
+                    block.autoFitCache = null;
+                    autoFitBlock(block);
+                    const maskElem = blockElem?.firstElementChild;
+                    if (maskElem) {
+                        maskElem.style.fontSize = `${block.style.fontSize}px`;
+                    }
+                    if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px`;
+                    if (elements.styleFontSize) elements.styleFontSize.value = block.style.fontSize;
+                });
             }
         }
     }

@@ -301,3 +301,37 @@ export function toggleQuickAudioDrama() {
         import('../core/utils/dom.js').then(m => m.showToast("Bắt đầu phát Audio Drama...", "info"));
     }
 }
+
+export function openHelpModal() {
+    const modal = document.getElementById('help-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        switchHelpTab('shortcuts');
+    }
+}
+
+export function closeHelpModal() {
+    const modal = document.getElementById('help-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+export function switchHelpTab(tabName) {
+    const tabs = ['shortcuts', 'features'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`help-tab-btn-${t}`);
+        const content = document.getElementById(`help-tab-content-${t}`);
+        if (t === tabName) {
+            if (btn) {
+                btn.className = "help-tab-btn pb-2.5 px-1 text-xs font-bold border-b-2 border-indigo-500 text-indigo-400 transition-all flex items-center gap-2";
+            }
+            if (content) content.classList.remove('hidden');
+        } else {
+            if (btn) {
+                btn.className = "help-tab-btn pb-2.5 px-1 text-xs font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all flex items-center gap-2";
+            }
+            if (content) content.classList.add('hidden');
+        }
+    });
+}

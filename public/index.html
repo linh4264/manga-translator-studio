@@ -76,11 +76,19 @@
         <aside id="left-panel" class="w-80 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 min-h-0">
             <!-- Header: Project Info & Quick Actions -->
             <div class="p-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/40 shrink-0">
-                <a href="./cong-cu-huu-ich/" target="_blank" rel="noopener noreferrer"
-                    class="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors hover:underline flex items-center gap-1.5"
-                    title="Mở trang Công cụ hữu ích trong thẻ mới">
-                    <i class="fa-solid fa-toolbox text-amber-400"></i> Công cụ hữu ích
-                </a>
+                <div class="flex items-center gap-1.5">
+                    <button data-action="openHelpModal"
+                        class="h-7 px-2.5 text-xs font-semibold rounded bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/40 text-indigo-300 hover:text-white flex items-center gap-1.5 transition-all shrink-0"
+                        title="Phím tắt & Tóm tắt chức năng ứng dụng">
+                        <i class="fa-solid fa-keyboard text-indigo-400"></i>
+                        <span>Phím tắt</span>
+                    </button>
+                    <a href="./cong-cu-huu-ich/" target="_blank" rel="noopener noreferrer"
+                        class="text-xs font-bold text-slate-400 hover:text-indigo-300 transition-colors hover:underline flex items-center gap-1"
+                        title="Mở trang Công cụ hữu ích trong thẻ mới">
+                        <i class="fa-solid fa-toolbox text-amber-400"></i>
+                    </a>
+                </div>
                 <div class="flex items-center gap-1">
                     <button onclick="closeMobileMenus()"
                         class="md:hidden shrink-0 h-7 w-7 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white flex items-center justify-center transition-colors"
@@ -2582,6 +2590,169 @@
         </div>
         <div id="bilingual-tooltip-orig" class="text-xs text-slate-100 font-semibold leading-relaxed"></div>
         <div id="bilingual-tooltip-trans" class="text-[11px] text-indigo-300 italic border-t border-slate-800/80 pt-1">
+        </div>
+    </div>
+
+    <!-- HELP & KEYBOARD SHORTCUTS MODAL -->
+    <div id="help-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                        <i class="fa-solid fa-circle-question text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-white leading-tight">Phím Tắt & Tóm Tắt Chức Năng</h3>
+                        <p class="text-xs text-slate-400">Hướng dẫn thao tác nhanh & tổng quan hệ thống Manga Translator Studio</p>
+                    </div>
+                </div>
+                <button data-action="closeHelpModal" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Modal Navigation Tabs -->
+            <div class="flex border-b border-slate-800 bg-slate-950/30 px-6 pt-2 gap-4">
+                <button onclick="switchHelpTab('shortcuts')" id="help-tab-btn-shortcuts"
+                    class="help-tab-btn pb-2.5 px-1 text-xs font-bold border-b-2 border-indigo-500 text-indigo-400 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-keyboard"></i>
+                    <span>Bảng Phím Tắt</span>
+                </button>
+                <button onclick="switchHelpTab('features')" id="help-tab-btn-features"
+                    class="help-tab-btn pb-2.5 px-1 text-xs font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-rocket"></i>
+                    <span>Tóm Tắt Chức Năng</span>
+                </button>
+            </div>
+
+            <!-- Modal Body Content -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                <!-- TAB 1: KEYBOARD SHORTCUTS -->
+                <div id="help-tab-content-shortcuts" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-medium">Hoàn tác (Undo)</span>
+                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Ctrl + Z</kbd>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-medium">Làm lại (Redo)</span>
+                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Ctrl + Y / Ctrl+Shift+Z</kbd>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-medium">Chọn tất cả ô thoại</span>
+                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Ctrl + A</kbd>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-medium">Sửa chữ trực tiếp (Inline Edit)</span>
+                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Enter / F2</kbd>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-medium">Chuyển ô thoại kế tiếp / trước</span>
+                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Tab / Shift + Tab</kbd>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-medium">Tăng / Giảm phông chữ</span>
+                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">[ / ]</kbd>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-medium">Xóa ô thoại chọn</span>
+                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-red-400 font-bold">Delete / Backspace</kbd>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-medium">Sao chép kiểu dáng (Style)</span>
+                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Ctrl + Shift + C</kbd>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-medium">Dán kiểu dáng (Style)</span>
+                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Ctrl + Shift + V</kbd>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-medium">Bỏ chọn / Đóng Inline Edit</span>
+                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-amber-300 font-bold">Esc</kbd>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-medium">Chuyển trang truyện trước / sau</span>
+                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-sky-300 font-bold">PageUp / PageDown</kbd>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-medium">Phóng to / Thu nhỏ / Zoom 100%</span>
+                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-sky-300 font-bold">Ctrl + (+ / - / 0)</kbd>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-medium">Zoom tại vị trí con trỏ chuột</span>
+                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-emerald-300 font-bold">Alt + Cuộn chuột</kbd>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
+                            <span class="text-xs text-slate-300 font-medium">Cuộn ngang Viewport</span>
+                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-emerald-300 font-bold">Ctrl + Cuộn chuột</kbd>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: FEATURES SUMMARY -->
+                <div id="help-tab-content-features" class="hidden space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                            <div class="flex items-center gap-2 text-sm font-bold text-indigo-400">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                <span>1. Dịch thuật & OCR Vision AI</span>
+                            </div>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                Tự động nhận diện vùng thoại và dịch theo ngữ cảnh truyện tranh chuyên nghiệp. Hỗ trợ Gemini 3.5/3.0/2.5 Flash/Pro, OpenAI GPT-4o, Claude & Custom Endpoints.
+                            </p>
+                        </div>
+
+                        <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                            <div class="flex items-center gap-2 text-sm font-bold text-emerald-400">
+                                <i class="fa-solid fa-address-card"></i>
+                                <span>2. Lorebook & Hồ sơ nhân vật</span>
+                            </div>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                Quản lý đại từ xưng hô (mày-tao, cậu-tớ, anh-em...) và các thuật ngữ thế giới. Tự động ép AI dùng nhất quán từ ngữ trên toàn chương truyện.
+                            </p>
+                        </div>
+
+                        <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                            <div class="flex items-center gap-2 text-sm font-bold text-amber-400">
+                                <i class="fa-solid fa-font"></i>
+                                <span>3. Typesetting & Cân đối Diamond</span>
+                            </div>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                Hỗ trợ chữ dọc (Vertical RL), phông chữ tùy chỉnh (Upload Font ttf/woff2), khớp mặt nạ bong bóng (Bubble-fit mask) và tự động cân đối bố cục kim cương 1-click.
+                            </p>
+                        </div>
+
+                        <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                            <div class="flex items-center gap-2 text-sm font-bold text-sky-400">
+                                <i class="fa-solid fa-eraser"></i>
+                                <span>4. Cọ xóa chữ Inpainting Smart</span>
+                            </div>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                Xóa nhanh các văn bản/họa tiết thừa trên trang bằng cọ vẽ thông minh, hỗ trợ tự động khôi phục hoặc làm sạch nền bong bóng thoại tức thì.
+                            </p>
+                        </div>
+
+                        <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 col-span-1 md:col-span-2 space-y-2">
+                            <div class="flex items-center gap-2 text-sm font-bold text-purple-400">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                <span>5. Quản lý dự án & Xuất dữ liệu đa dạng</span>
+                            </div>
+                            <p class="text-xs text-slate-300 leading-relaxed">
+                                Nhập chương từ file ảnh, ZIP, CBZ hoặc thư mục. Tích hợp đồng bộ Google Drive 1-Click. Xuất ảnh sắc nét (PNG/JPG/WebP), xuất file PDF truyện HD và đóng gói ZIP dự án hoàn chỉnh.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-6 py-3 border-t border-slate-800 bg-slate-950/50 flex items-center justify-between text-xs text-slate-400">
+                <span><i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i> Mẹo: Nhấn <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-indigo-300">Esc</kbd> để đóng cửa sổ trợ giúp</span>
+                <button data-action="closeHelpModal" class="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-colors">
+                    Đóng
+                </button>
+            </div>
         </div>
     </div>
 

@@ -78,6 +78,7 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
     }
 
     if (page.blocks && page.blocks.length > 0) {
+        // 🌟 PASS 1: VẼ TẤT CẢ NỀN CHE (BACKGROUND COVERS) VÀ ẢNH CHÈN (IMAGE BLOCKS) LÊN CANVAS
         for (const block of page.blocks) {
             const bx = (block.box.x / 100) * W;
             const by = (block.box.y / 100) * H;
@@ -134,7 +135,6 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                                 }
                                 ctx.drawImage(img, sx, sy, sw, sh, bx, by, bw, bh);
                             } else {
-                                // Default: contain
                                 let dx = bx, dy = by, dw = bw, dh = bh;
                                 if (imgAspect > boxAspect) {
                                     dw = bw;
@@ -158,8 +158,7 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                 continue;
             }
 
-            if (!block.translated || !block.translated.trim()) continue;
-
+            // Vẽ Nền che cho Block Chữ
             ctx.save();
 
             if (block.style.rotate) {
@@ -170,7 +169,6 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                 ctx.translate(-cx, -cy);
             }
 
-            const fontName = getFontFamilyName(block.style.fontFamily);
             let displayWidth = page.lastDisplayWidth;
             if (!displayWidth && imgElement) {
                 const zoomScale = (globalState.zoom || 100) / 100;
@@ -179,34 +177,10 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
             if (!displayWidth || isNaN(displayWidth)) displayWidth = 800;
             const scaleFactor = W / Math.max(1, displayWidth);
             const fontSizePx = (block.style.fontSize || 16) * scaleFactor;
-            const fontWeight = block.style.bold ? 'bold' : 'normal';
-
-            const fontSpec = `${fontWeight} ${fontSizePx}px ${fontName}`;
-            ctx.font = fontSpec;
-            try {
-                if (document.fonts && document.fonts.load) {
-                    await document.fonts.load(fontSpec);
-                    ctx.font = fontSpec;
-                }
-            } catch (e) {}
-            ctx.fillStyle = block.style.textColor || '#000000';
-
             const paddingPx = (block.style.padding !== undefined ? block.style.padding : 4) * scaleFactor;
-            const strokeWidth = parseFloat(block.style.strokeWidth) || 0;
-            const strokeColor = block.style.strokeColor || '#ffffff';
-            const strokeWidthPx = strokeWidth * scaleFactor;
-
-            const shadowBlur = parseFloat(block.style.shadowBlur) || 0;
-            const shadowColor = block.style.shadowColor || '#000000';
-            const shadowBlurPx = shadowBlur * scaleFactor;
 
             const maskShape = block.style.maskShape || 'bubble-fit';
             const maskSize = block.style.maskSize || 'full';
-
-            let textLines = [];
-            let columns = [];
-            let totalTextWidth = 0;
-            let totalTextHeight = 0;
 
             const insetPad = Math.max(1, Math.round(scaleFactor * 0.8));
             let fillBx = bx + insetPad;
@@ -214,37 +188,35 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
             let fillBw = Math.max(1, bw - (insetPad * 2));
             let fillBh = Math.max(1, bh - (insetPad * 2));
 
-            if (block.style.vertical) {
-                const maxColHeight = Math.max(10, bh - (paddingPx * 2));
-                columns = wrapCanvasVerticalText(block.translated, maxColHeight, fontSizePx);
-                const colStep = fontSizePx * 1.12;
-                const charStep = fontSizePx * 1.12;
-                totalTextWidth = columns.length * colStep;
-                let maxColLength = 0;
-                columns.forEach(c => { if (c.length > maxColLength) maxColLength = c.length; });
-                totalTextHeight = maxColLength * charStep;
+            if (maskSize === 'snug' && block.translated && block.translated.trim()) {
+                if (block.style.vertical) {
+                    const maxColHeight = Math.max(10, bh - (paddingPx * 2));
+                    const cols = wrapCanvasVerticalText(block.translated, maxColHeight, fontSizePx);
+                    const colStep = fontSizePx * 1.12;
+                    const charStep = fontSizePx * 1.12;
+                    const totalTextWidth = cols.length * colStep;
+                    let maxColLength = 0;
+                    cols.forEach(c => { if (c.length > maxColLength) maxColLength = c.length; });
+                    const totalTextHeight = maxColLength * charStep;
 
-                if (maskSize === 'snug') {
                     const snugW = Math.min(fillBw, totalTextWidth + (paddingPx * 2));
                     const snugH = Math.min(fillBh, totalTextHeight + (paddingPx * 2));
                     fillBx = bx + (bw - snugW) / 2;
                     fillBy = by + (bh - snugH) / 2;
                     fillBw = snugW;
                     fillBh = snugH;
-                }
-            } else {
-                const maxTextWidth = Math.max(10, bw - (paddingPx * 2));
-                textLines = wrapCanvasText(ctx, block.translated, maxTextWidth);
-                const lineHeight = fontSizePx * 1.18;
-                totalTextHeight = textLines.length * lineHeight;
-                let maxLineWidth = 0;
-                textLines.forEach(line => {
-                    const w = ctx.measureText(line).width;
-                    if (w > maxLineWidth) maxLineWidth = w;
-                });
-                totalTextWidth = maxLineWidth;
+                } else {
+                    const maxTextWidth = Math.max(10, bw - (paddingPx * 2));
+                    const textLines = wrapCanvasText(ctx, block.translated, maxTextWidth);
+                    const lineHeight = fontSizePx * 1.18;
+                    const totalTextHeight = textLines.length * lineHeight;
+                    let maxLineWidth = 0;
+                    textLines.forEach(line => {
+                        const w = ctx.measureText(line).width;
+                        if (w > maxLineWidth) maxLineWidth = w;
+                    });
+                    const totalTextWidth = maxLineWidth;
 
-                if (maskSize === 'snug') {
                     const snugW = Math.min(fillBw, totalTextWidth + (paddingPx * 2));
                     const snugH = Math.min(fillBh, totalTextHeight + (paddingPx * 2));
                     fillBx = bx + (bw - snugW) / 2;
@@ -293,6 +265,86 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                 } else {
                     ctx.fillRect(fillBx, fillBy, fillBw, fillBh);
                 }
+            }
+
+            ctx.restore();
+        }
+
+        // 🌟 PASS 2: VẼ TẤT CẢ VĂN BẢN (TEXT RENDERING) ĐÈ LÊN TRÊN TẤT CẢ NỀN CHE
+        for (const block of page.blocks) {
+            if (block.type === 'image') continue;
+            if (!block.translated || !block.translated.trim()) continue;
+
+            const bx = (block.box.x / 100) * W;
+            const by = (block.box.y / 100) * H;
+            const bw = (block.box.w / 100) * W;
+            const bh = (block.box.h / 100) * H;
+
+            ctx.save();
+
+            if (block.style.rotate) {
+                const cx = bx + bw / 2;
+                const cy = by + bh / 2;
+                ctx.translate(cx, cy);
+                ctx.rotate((block.style.rotate * Math.PI) / 180);
+                ctx.translate(-cx, -cy);
+            }
+
+            const fontName = getFontFamilyName(block.style.fontFamily);
+            let displayWidth = page.lastDisplayWidth;
+            if (!displayWidth && imgElement) {
+                const zoomScale = (globalState.zoom || 100) / 100;
+                displayWidth = imgElement.clientWidth / zoomScale;
+            }
+            if (!displayWidth || isNaN(displayWidth)) displayWidth = 800;
+            const scaleFactor = W / Math.max(1, displayWidth);
+            const fontSizePx = (block.style.fontSize || 16) * scaleFactor;
+            const fontWeight = block.style.bold ? 'bold' : 'normal';
+
+            const fontSpec = `${fontWeight} ${fontSizePx}px ${fontName}`;
+            ctx.font = fontSpec;
+            try {
+                if (document.fonts && document.fonts.load) {
+                    await document.fonts.load(fontSpec);
+                    ctx.font = fontSpec;
+                }
+            } catch (e) {}
+            ctx.fillStyle = block.style.textColor || '#000000';
+
+            const paddingPx = (block.style.padding !== undefined ? block.style.padding : 4) * scaleFactor;
+            const strokeWidth = parseFloat(block.style.strokeWidth) || 0;
+            const strokeColor = block.style.strokeColor || '#ffffff';
+            const strokeWidthPx = strokeWidth * scaleFactor;
+
+            const shadowBlur = parseFloat(block.style.shadowBlur) || 0;
+            const shadowColor = block.style.shadowColor || '#000000';
+            const shadowBlurPx = shadowBlur * scaleFactor;
+
+            let textLines = [];
+            let columns = [];
+            let totalTextWidth = 0;
+            let totalTextHeight = 0;
+
+            if (block.style.vertical) {
+                const maxColHeight = Math.max(10, bh - (paddingPx * 2));
+                columns = wrapCanvasVerticalText(block.translated, maxColHeight, fontSizePx);
+                const colStep = fontSizePx * 1.12;
+                const charStep = fontSizePx * 1.12;
+                totalTextWidth = columns.length * colStep;
+                let maxColLength = 0;
+                columns.forEach(c => { if (c.length > maxColLength) maxColLength = c.length; });
+                totalTextHeight = maxColLength * charStep;
+            } else {
+                const maxTextWidth = Math.max(10, bw - (paddingPx * 2));
+                textLines = wrapCanvasText(ctx, block.translated, maxTextWidth);
+                const lineHeight = fontSizePx * 1.18;
+                totalTextHeight = textLines.length * lineHeight;
+                let maxLineWidth = 0;
+                textLines.forEach(line => {
+                    const w = ctx.measureText(line).width;
+                    if (w > maxLineWidth) maxLineWidth = w;
+                });
+                totalTextWidth = maxLineWidth;
             }
 
             ctx.font = `${fontWeight} ${fontSizePx}px ${fontName}`;
