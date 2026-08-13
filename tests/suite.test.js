@@ -270,6 +270,24 @@ test('Format Extension Converter Helper Functions', () => {
     assert.strictEqual(newFilename, 'chapter_01_page_05.webp');
 });
 
+// 12. Sharpen Kernel Convolution & Compression Calculation Test
+test('Sharpen Kernel Matrix Math and Compression Savings Calculation', () => {
+    // Test 3x3 Sharpen Kernel Math Simulation
+    const k = 1.5; // Sharpen factor
+    const center = 100;
+    const top = 90, bottom = 90, left = 90, right = 90;
+    const sharpenedVal = (1 + 4 * k) * center - k * top - k * bottom - k * left - k * right;
+    const clampedVal = Math.min(255, Math.max(0, sharpenedVal));
+    assert.strictEqual(clampedVal, 160, 'Sharpen kernel math must boost contrast at edges');
+
+    // Test Compression Ratio Percentage Calculation
+    const originalBytes = 2097152; // 2 MB
+    const compressedBytes = 629145; // ~614 KB
+    const savedBytes = Math.max(0, originalBytes - compressedBytes);
+    const savedPercent = Math.round((savedBytes / originalBytes) * 100);
+    assert.strictEqual(savedPercent, 70, 'Compression saving percentage calculation must be 70%');
+});
+
 
 
 

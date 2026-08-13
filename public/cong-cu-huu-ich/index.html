@@ -241,24 +241,39 @@
                 <input type="file" id="compress-files" accept="image/*" multiple class="hidden">
                 <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform"><i class="fa-solid fa-compress text-3xl"></i></div>
                 <h2 class="text-base font-bold text-slate-200">Kéo thả ảnh cần nén vào đây hoặc <span class="text-indigo-400 underline">Chọn ảnh hàng loạt</span></h2>
-                <p class="text-xs text-slate-400">Tối ưu dung lượng giảm từ 50% - 80% mà giữ nét nét vẽ tranh Manga</p>
+                <p class="text-xs text-slate-400">Tối ưu dung lượng giảm từ 50% - 80% mà giữ nét nét vẽ tranh Manga & thoại lời dịch</p>
             </div>
             <div id="compress-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
                 <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-800">
-                    <div><h3 class="text-sm font-bold text-slate-200">Thiết lập nén hàng loạt</h3><p id="compress-total-saved" class="text-xs font-mono text-emerald-400">Tiết kiệm: 0 KB</p></div>
-                    <button onclick="downloadCompressedZip()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg"><i class="fa-solid fa-file-zipper"></i> Tải Tất Cả ZIP</button>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <h3 class="text-sm font-bold text-slate-200">Thiết lập nén hàng loạt</h3>
+                        <p id="compress-total-saved" class="text-xs font-mono text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">Tiết kiệm: 0 KB</p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button onclick="addMoreCompressFiles()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 shadow transition-colors"><i class="fa-solid fa-plus"></i> Thêm ảnh</button>
+                        <button onclick="resetCompressBatch()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-400 hover:text-red-400 shadow transition-colors"><i class="fa-solid fa-rotate-left"></i> Chọn lại</button>
+                        <button onclick="downloadCompressedZip()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg transition-colors"><i class="fa-solid fa-file-zipper"></i> Tải Tất Cả ZIP</button>
+                    </div>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
                     <div class="flex flex-col gap-1">
                         <label class="text-[11px] font-bold text-slate-400 flex justify-between"><span>Mức chất lượng ảnh</span><span id="lbl-compress-q" class="text-indigo-400 font-mono font-bold">75%</span></label>
                         <input type="range" id="compress-quality" min="10" max="95" value="75" oninput="document.getElementById('lbl-compress-q').innerText=this.value+'%'; processCompressBatch();" class="w-full accent-indigo-500">
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[11px] font-bold text-slate-400">Định dạng nén</label>
-                        <select id="compress-format" onchange="processCompressBatch()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200">
-                            <option value="image/webp" selected>WEBP (Tốt nhất - Siêu nhẹ)</option>
+                        <select id="compress-format" onchange="processCompressBatch()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200">
+                            <option value="image/webp" selected>WEBP (Siêu nhẹ - Khuyên dùng)</option>
                             <option value="image/jpeg">JPG (Tiêu chuẩn)</option>
+                            <option value="image/png">PNG (Giữ nguyên gốc)</option>
                         </select>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400 flex items-center justify-between cursor-pointer">
+                            <span class="flex items-center gap-1.5"><input type="checkbox" id="compress-enable-sharp" onchange="processCompressBatch()" class="rounded border-slate-800 text-indigo-600 focus:ring-0"> Tăng độ nét nét vẽ Manga</span>
+                            <span id="lbl-compress-sharp-val" class="text-indigo-400 font-mono font-bold">1.0</span>
+                        </label>
+                        <input type="range" id="compress-sharp-val" min="0" max="3" step="0.5" value="1.0" oninput="document.getElementById('lbl-compress-sharp-val').innerText=this.value; if(document.getElementById('compress-enable-sharp').checked) processCompressBatch();" class="w-full accent-indigo-500">
                     </div>
                 </div>
             </div>
@@ -309,7 +324,7 @@
                 <p class="text-xs text-slate-400">Tăng độ nét nét vẽ Manga & độ tương phản cho chữ thoại dễ đọc hơn</p>
             </div>
             <div id="enhance-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center pb-3 border-b border-slate-800">
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-center pb-3 border-b border-slate-800">
                     <div class="flex flex-col gap-1">
                         <label class="text-[11px] font-bold text-slate-400 flex justify-between"><span>Độ sắc nét (Sharpen)</span><span id="lbl-sharp-val" class="text-indigo-400 font-mono">1.5</span></label>
                         <input type="range" id="enhance-sharp" min="0" max="4" step="0.5" value="1.5" oninput="document.getElementById('lbl-sharp-val').innerText=this.value; processEnhance();" class="accent-indigo-500">
@@ -318,7 +333,14 @@
                         <label class="text-[11px] font-bold text-slate-400 flex justify-between"><span>Độ tương phản (Contrast)</span><span id="lbl-contrast-val" class="text-indigo-400 font-mono">120%</span></label>
                         <input type="range" id="enhance-contrast" min="80" max="200" step="5" value="120" oninput="document.getElementById('lbl-contrast-val').innerText=this.value+'%'; processEnhance();" class="accent-indigo-500">
                     </div>
-                    <button onclick="downloadEnhancedImage()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg self-end"><i class="fa-solid fa-download"></i> Tải Ảnh Nét</button>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400 flex justify-between"><span>Độ sáng (Brightness)</span><span id="lbl-bright-val" class="text-indigo-400 font-mono">100%</span></label>
+                        <input type="range" id="enhance-brightness" min="80" max="150" step="5" value="100" oninput="document.getElementById('lbl-bright-val').innerText=this.value+'%'; processEnhance();" class="accent-indigo-500">
+                    </div>
+                    <div class="flex items-center gap-2 self-end">
+                        <button onclick="resetEnhance()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 shadow transition-colors"><i class="fa-solid fa-rotate-left"></i> Đổi ảnh</button>
+                        <button onclick="downloadEnhancedImage()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg transition-colors flex-1 text-center"><i class="fa-solid fa-download"></i> Tải Ảnh Nét</button>
+                    </div>
                 </div>
                 <div class="flex justify-center p-2 bg-slate-950 rounded-xl border border-slate-800"><canvas id="enhance-canvas" class="max-h-[60vh] object-contain rounded shadow"></canvas></div>
             </div>
@@ -666,84 +688,197 @@
         // 4. BATCH IMAGE COMPRESSOR
         // =========================================================================
         let compressList = [];
-        document.getElementById('compress-files').addEventListener('change', (e) => {
-            const files = Array.from(e.target.files);
-            if (files.length === 0) return;
+        let isCompressing = false;
+
+        function applySharpenFilterToCtx(ctx, width, height, sharpAmount) {
+            if (!sharpAmount || sharpAmount <= 0) return;
+            const imgData = ctx.getImageData(0, 0, width, height);
+            const data = imgData.data;
+            const copy = new Uint8ClampedArray(data);
+            const k = sharpAmount;
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    const idx = (y * width + x) * 4;
+                    for (let c = 0; c < 3; c++) {
+                        const val = (1 + 4 * k) * copy[idx + c]
+                            - k * copy[((y - 1) * width + x) * 4 + c]
+                            - k * copy[((y + 1) * width + x) * 4 + c]
+                            - k * copy[(y * width + x - 1) * 4 + c]
+                            - k * copy[(y * width + x + 1) * 4 + c];
+                        data[idx + c] = Math.min(255, Math.max(0, val));
+                    }
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        async function handleCompressFilesSelect(files) {
+            if (!files || files.length === 0) return;
+
             document.getElementById('compress-upload').classList.add('hidden');
             document.getElementById('compress-panel').classList.remove('hidden');
 
-            compressList = [];
-            files.forEach(f => {
+            const validFiles = files.filter(f => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp)$/i.test(f.name));
+            if (validFiles.length === 0) {
+                alert("Vui lòng chọn file hình ảnh hợp lệ (PNG, JPG, WEBP).");
+                return;
+            }
+
+            const newItems = await Promise.all(validFiles.map(f => new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = (evt) => {
                     const img = new Image();
-                    img.onload = () => {
-                        compressList.push({ file: f, img, originalSize: f.size });
-                        processCompressBatch();
-                    };
+                    img.onload = () => resolve({ file: f, img, originalSize: f.size, compressedBlob: null, objectUrl: null, compressedSize: 0 });
+                    img.onerror = () => resolve(null);
                     img.src = evt.target.result;
                 };
+                reader.onerror = () => resolve(null);
                 reader.readAsDataURL(f);
+            })));
+
+            const filteredNewItems = newItems.filter(Boolean);
+            if (filteredNewItems.length === 0) {
+                alert("Không thể mở được dữ liệu ảnh.");
+                return;
+            }
+
+            compressList = compressList.concat(filteredNewItems);
+            await processCompressBatch();
+        }
+
+        function addMoreCompressFiles() {
+            const input = document.getElementById('compress-files');
+            if (!input) return;
+            input.value = '';
+            input.click();
+        }
+
+        function resetCompressBatch() {
+            compressList.forEach(item => {
+                if (item.objectUrl) URL.revokeObjectURL(item.objectUrl);
             });
+            compressList = [];
+            document.getElementById('compress-grid').innerHTML = '';
+            document.getElementById('compress-panel').classList.add('hidden');
+            document.getElementById('compress-upload').classList.remove('hidden');
+            document.getElementById('compress-total-saved').innerText = 'Tiết kiệm: 0 KB';
+            const input = document.getElementById('compress-files');
+            if (input) input.value = '';
+        }
+
+        document.getElementById('compress-files').addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            handleCompressFilesSelect(files);
         });
 
         async function processCompressBatch() {
             if (compressList.length === 0) return;
+            if (isCompressing) return;
+            isCompressing = true;
+
             const q = parseFloat(document.getElementById('compress-quality').value) / 100;
             const format = document.getElementById('compress-format').value;
-            const ext = format === 'image/webp' ? 'webp' : 'jpg';
+            const enableSharp = document.getElementById('compress-enable-sharp').checked;
+            const sharpVal = enableSharp ? parseFloat(document.getElementById('compress-sharp-val').value) : 0;
+            const ext = format === 'image/webp' ? 'webp' : format === 'image/png' ? 'png' : 'jpg';
 
             const grid = document.getElementById('compress-grid');
-            grid.innerHTML = '';
             let totalSavedBytes = 0;
+
+            // Revoke old object URLs
+            compressList.forEach(item => {
+                if (item.objectUrl) {
+                    URL.revokeObjectURL(item.objectUrl);
+                    item.objectUrl = null;
+                }
+            });
+
+            grid.innerHTML = '';
 
             for (let i = 0; i < compressList.length; i++) {
                 const item = compressList[i];
                 const canvas = document.createElement('canvas');
                 canvas.width = item.img.naturalWidth;
                 canvas.height = item.img.naturalHeight;
-                canvas.getContext('2d').drawImage(item.img, 0, 0);
+                const ctx = canvas.getContext('2d');
+
+                if (format === 'image/jpeg') {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+                ctx.drawImage(item.img, 0, 0);
+
+                if (enableSharp && sharpVal > 0) {
+                    applySharpenFilterToCtx(ctx, canvas.width, canvas.height, sharpVal);
+                }
 
                 const blob = await new Promise(res => canvas.toBlob(res, format, q));
                 item.compressedBlob = blob;
-                item.compressedSize = blob.size;
+                item.compressedSize = blob ? blob.size : item.originalSize;
+                item.objectUrl = blob ? URL.createObjectURL(blob) : '';
 
-                const savedBytes = Math.max(0, item.originalSize - blob.size);
+                const savedBytes = Math.max(0, item.originalSize - item.compressedSize);
                 totalSavedBytes += savedBytes;
+                const savedPercent = item.originalSize > 0 ? Math.round((savedBytes / item.originalSize) * 100) : 0;
+
+                const baseName = item.file.name.replace(/\.[^/.]+$/, '');
+                const targetFilename = `${baseName}_compressed.${ext}`;
 
                 const card = document.createElement('div');
-                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col gap-2";
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col justify-between text-xs font-mono shadow-md hover:border-slate-700 transition-all";
                 card.innerHTML = `
-                    <div class="flex items-center justify-between text-xs font-bold text-slate-200">
-                        <span class="truncate max-w-[150px]">${item.file.name}</span>
-                        <span class="text-emerald-400 font-mono">-${Math.round((savedBytes/item.originalSize)*100)}%</span>
+                    <div class="relative group cursor-pointer overflow-hidden rounded-xl bg-slate-950/50 border border-slate-850 flex items-center justify-center min-h-[130px]" onclick="openPreviewModal('${item.objectUrl}')">
+                        <img src="${item.objectUrl}" class="max-h-36 object-contain rounded transition-transform group-hover:scale-105">
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-sans text-xs gap-1.5 font-bold">
+                            <i class="fa-solid fa-magnifying-glass-plus"></i> So sánh ảnh
+                        </div>
                     </div>
-                    <div class="text-[10px] text-slate-400 font-mono flex justify-between">
-                        <span>Gốc: ${(item.originalSize/1024).toFixed(1)} KB</span>
-                        <span class="text-indigo-400 font-bold">Nén: ${(blob.size/1024).toFixed(1)} KB</span>
+                    <div class="flex flex-col gap-1.5 mt-2.5 pt-2 border-t border-slate-800">
+                        <div class="flex items-center justify-between text-xs font-bold text-slate-200">
+                            <span class="truncate max-w-[140px]" title="${item.file.name}">${item.file.name}</span>
+                            <span class="text-emerald-400 font-mono font-bold">-${savedPercent}%</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] text-slate-400">
+                            <span>${(item.originalSize / 1024).toFixed(1)} KB ➔ <strong class="text-indigo-300">${(item.compressedSize / 1024).toFixed(1)} KB</strong></span>
+                            <a href="${item.objectUrl}" download="${targetFilename}" class="px-2 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white font-bold transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-download"></i> .${ext.toUpperCase()}
+                            </a>
+                        </div>
                     </div>
                 `;
                 grid.appendChild(card);
             }
 
-            document.getElementById('compress-total-saved').innerText = `Tổng tiết kiệm: ${(totalSavedBytes/1024).toFixed(1)} KB`;
+            document.getElementById('compress-total-saved').innerText = `Tiết kiệm: ${(totalSavedBytes / 1024).toFixed(1)} KB (${compressList.length} ảnh)`;
+            isCompressing = false;
         }
 
         async function downloadCompressedZip() {
             if (compressList.length === 0) return;
+            const validItems = compressList.filter(item => item.compressedBlob);
+            if (validItems.length === 0) {
+                alert("Chưa có dữ liệu nén để tải ZIP.");
+                return;
+            }
+
             const zip = new JSZip();
             const format = document.getElementById('compress-format').value;
-            const ext = format === 'image/webp' ? 'webp' : 'jpg';
+            const ext = format === 'image/webp' ? 'webp' : format === 'image/png' ? 'png' : 'jpg';
 
-            compressList.forEach(item => {
+            validItems.forEach(item => {
                 const base = item.file.name.replace(/\.[^/.]+$/, '');
                 zip.file(`${base}_compressed.${ext}`, item.compressedBlob);
             });
 
             const content = await zip.generateAsync({type: 'blob'});
+            const zipUrl = URL.createObjectURL(content);
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(content);
-            a.download = `Compressed_Images.zip`; a.click();
+            a.href = zipUrl;
+            a.download = `Compressed_Manga_Images.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(zipUrl), 10000);
         }
 
 
@@ -940,9 +1075,12 @@
         // 6. IMAGE SHARPEN & ENHANCE
         // =========================================================================
         let enhanceImg = null;
+        let enhanceFileName = 'Enhanced_Image.png';
+
         document.getElementById('enhance-file').addEventListener('change', (e) => {
             if (!e.target.files[0]) return;
             const file = e.target.files[0];
+            enhanceFileName = file.name;
             const reader = new FileReader();
             reader.onload = (evt) => {
                 const img = new Image();
@@ -957,6 +1095,14 @@
             reader.readAsDataURL(file);
         });
 
+        function resetEnhance() {
+            enhanceImg = null;
+            document.getElementById('enhance-panel').classList.add('hidden');
+            document.getElementById('enhance-upload').classList.remove('hidden');
+            const input = document.getElementById('enhance-file');
+            if (input) input.value = '';
+        }
+
         function processEnhance() {
             if (!enhanceImg) return;
             const canvas = document.getElementById('enhance-canvas');
@@ -965,41 +1111,32 @@
             const ctx = canvas.getContext('2d');
 
             const contrast = parseFloat(document.getElementById('enhance-contrast').value) / 100;
-            ctx.filter = `contrast(${contrast})`;
+            const brightness = parseFloat(document.getElementById('enhance-brightness').value) / 100;
+            ctx.filter = `contrast(${contrast}) brightness(${brightness})`;
             ctx.drawImage(enhanceImg, 0, 0);
 
-            // Simple Sharpen Filter convolution matrix
+            // Sharpen Filter convolution matrix
             const sharpAmount = parseFloat(document.getElementById('enhance-sharp').value);
             if (sharpAmount > 0) {
-                const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const data = imgData.data;
-                const w = canvas.width, h = canvas.height;
-                const copy = new Uint8ClampedArray(data);
-
-                const k = sharpAmount;
-                for (let y = 1; y < h - 1; y++) {
-                    for (let x = 1; x < w - 1; x++) {
-                        const idx = (y * w + x) * 4;
-                        for (let c = 0; c < 3; c++) {
-                            const val = (1 + 4 * k) * copy[idx + c]
-                                - k * copy[((y - 1) * w + x) * 4 + c]
-                                - k * copy[((y + 1) * w + x) * 4 + c]
-                                - k * copy[(y * w + x - 1) * 4 + c]
-                                - k * copy[(y * w + x + 1) * 4 + c];
-                            data[idx + c] = Math.min(255, Math.max(0, val));
-                        }
-                    }
-                }
-                ctx.putImageData(imgData, 0, 0);
+                applySharpenFilterToCtx(ctx, canvas.width, canvas.height, sharpAmount);
             }
         }
 
         function downloadEnhancedImage() {
             const canvas = document.getElementById('enhance-canvas');
-            const a = document.createElement('a');
-            a.href = canvas.toDataURL('image/png');
-            a.download = `Enhanced_Sharpened_Image.png`;
-            a.click();
+            if (!canvas) return;
+            canvas.toBlob((blob) => {
+                if (!blob) return;
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const baseName = enhanceFileName.replace(/\.[^/.]+$/, '');
+                a.href = url;
+                a.download = `${baseName}_enhanced.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+            }, 'image/png', 0.95);
         }
 
 
