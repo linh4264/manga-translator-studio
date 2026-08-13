@@ -484,9 +484,11 @@ async function executeOcrVisionStep({
     requestHeaders
 }) {
     const ocrSystemInstruction = [
-        "You are an expert manga speech bubble detector and OCR system.",
+        "You are an expert manga speech bubble detector and Vision OCR system.",
         "Detect ALL speech bubbles, narration boxes, SFX sound effects, and sign labels in this manga page.",
-        "Read and transcribe the exact raw original text (Japanese, Korean, Chinese, or English) inside each region.",
+        "MANGA READING ORDER: Order detected blocks strictly in natural manga reading flow: Top-Right to Bottom-Left across panels (start from the top-right panel, read right-to-left within each panel, then move downward to lower panels). This guarantees dialogue sequence is coherent for translation.",
+        "NO FURIGANA DUPLICATION: In Japanese manga, kanji characters often have tiny ruby text / furigana annotations above or beside them. Transcribe ONLY the primary kanji word itself. NEVER duplicate the furigana phonetic reading into the transcript (e.g. transcribe 運命, NEVER 運命さだめ or 運命(さだめ)).",
+        "CLEAN RAW TRANSCRIPTION: Read and transcribe the exact raw original text (Japanese, Korean, Chinese, or English) inside each region. Preserve original punctuation (?, !, ..., ♪, ♡) faithfully. Do not add commentary, explanations, or translations in this step.",
         "COORDINATE FORMULA: All box coordinates (x, y, w, h) MUST use integer scale 0 to 1000 (where top-left corner is x=0, y=0 and bottom-right corner is x=1000, y=1000). Set x = xmin (left edge), y = ymin (top edge), w = (xmax - xmin) (box width), h = (ymax - ymin) (box height). DO NOT return xmax as w or ymax as h. Example: A bubble spanning from xmin=200 to xmax=500 and ymin=100 to ymax=300 MUST return x=200, y=100, w=300, h=200.",
         "For speech bubbles and narration boxes, use a box covering the entire inner blank space of the bubble so translated text fits easily. For SFX and signs, use the tightest box covering the characters.",
         "IMPORTANT RULE FOR CONNECTED BUBBLES: When multiple speech bubbles are attached/connected together (such as double-bubbles, stacked connected lobes, or chained bubbles), treat EACH individual bubble lobe/section as a SEPARATE block with its own bounding box.",
@@ -714,10 +716,10 @@ async function executeTextTranslationStep({
     const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
 
     const transSystemInstruction = [
-        `You are a master manga translator specializing in Japanese/Korean/Chinese to natural, expressive, and fluent ${targetLangName} dialogue.`,
-        `Translate each given comic dialogue block accurately into natural ${targetLangName}, matching character tone, emotion, and scene pacing.`,
-        "Do not over-literalize Japanese/Chinese sentence order. Adapt slang, punchlines, and nuances seamlessly.",
-        `Ensure ${pronounTerm} are consistent across the dialogue blocks and match the previous story context.`,
+        `You are a master manga translator and publication editor specializing in translating Japanese/Korean/Chinese comic dialogues into natural, expressive, and fluent ${targetLangName}.`,
+        `SEQUENTIAL DIALOGUE CONTEXT: The input dialogue blocks are arranged in sequential manga reading order (Top-Right to Bottom-Left). Treat them as continuous, interactive conversational turns between characters. Infer speaker personalities, emotional tone, and relationship hierarchies.`,
+        `COMPACT MANGA DIALOGUE: Speech bubble space is limited. Keep ${targetLangName} translations natural, crisp, punchy, and concise. Avoid verbose explanations or literal word-for-word translation.`,
+        `Ensure ${pronounTerm} are consistent across the dialogue blocks and faithfully reflect character dynamics.`,
         globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
         glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
         getTranslationGuidancePrompt().trim(),
@@ -846,10 +848,10 @@ export async function executeChapterTranslationStep({
     const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
 
     const transSystemInstruction = [
-        `You are a master manga translator specializing in translating full chapters with continuous storytelling, consistent character voices, and natural, expressive, fluent ${targetLangName} dialogue.`,
-        `Translate each comic dialogue block accurately into natural ${targetLangName}, matching character tone, emotion, and chapter pacing.`,
-        "Do not over-literalize sentence order. Adapt slang, punchlines, and nuances seamlessly.",
-        `Ensure ${pronounTerm} are 100% consistent across the entire chapter between characters.`,
+        `You are a master manga translator and senior editor specializing in translating entire manga chapters with coherent storytelling, seamless conversational flow, and natural, expressive, publication-grade ${targetLangName} dialogue.`,
+        `CHAPTER NARRATIVE CONTEXT: The input dialogues are grouped by page in chronological reading sequence (Top-Right to Bottom-Left). Maintain consistent character voices, emotional arcs, and narrative pacing across the entire chapter.`,
+        `COMPACT MANGA DIALOGUE: Speech bubble space is limited. Keep ${targetLangName} translations natural, punchy, concise, and rhythmically flowing without overflow.`,
+        `Ensure ${pronounTerm} are 100% consistent across all pages and between all interacting characters.`,
         globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
         glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
         getTranslationGuidancePrompt().trim(),
