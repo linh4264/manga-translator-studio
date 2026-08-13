@@ -255,7 +255,7 @@ export function updatePageListUI() {
         pageItem.dataset.pageIndex = String(index);
 
         const activeBadge = isActive 
-            ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-pink-500 text-white border border-black flex items-center gap-1 shadow-[1px_1px_0px_#000] shrink-0"><i class="fa-solid fa-eye text-[8px]"></i> Đang sửa</span>`
+            ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-pink-500 text-white border border-black flex items-center gap-1 shadow-[1px_1px_0px_#000] shrink-0"><i class="fa-solid fa-eye text-[8px]"></i> Sửa</span>`
             : '';
 
         pageItem.innerHTML = `

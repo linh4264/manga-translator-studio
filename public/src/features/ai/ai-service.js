@@ -474,7 +474,7 @@ export async function translateActivePage() {
         return;
     }
 
-    await translatePage(globalState.activePageIndex, false);
+    await translatePage(globalState.activePageIndex, true);
 }
 
 export async function translateSinglePageInBatch(index) {
@@ -483,7 +483,7 @@ export async function translateSinglePageInBatch(index) {
         return;
     }
 
-    await translatePage(index, false);
+    await translatePage(index, true);
 }
 
 export async function translatePage(pageIndex, isBackgroundMode = false) {
@@ -923,6 +923,8 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
         } finally {
             if (!isBackgroundMode) {
                 uiUpdateProcessingOverlay(false);
+            } else {
+                uiUpdateBackgroundTaskOverlay(false);
             }
             if (isBackgroundMode && pageIndex !== globalState.activePageIndex) {
                 deactivatePage(page);
