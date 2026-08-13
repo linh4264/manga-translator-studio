@@ -132,15 +132,15 @@ body {
 }
 
 /* Sidebar Action Button & Tab Contrast */
-#left-panel button:not(.bg-indigo-600):not(.bg-indigo-500):not(.bg-pink-500):not(.bg-amber-500):not(.page-item-active),
-#right-panel button:not(.bg-indigo-600):not(.bg-indigo-500):not(.bg-pink-500):not(.bg-amber-500) {
+#left-panel button:not(.bg-indigo-600):not(.bg-indigo-500):not(.bg-pink-500):not(.bg-amber-500):not(.page-item-active):not(.bg-pink-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-orange-600):not(.bg-purple-600),
+#right-panel button:not(.bg-indigo-600):not(.bg-indigo-500):not(.bg-pink-500):not(.bg-amber-500):not(.bg-pink-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-orange-600):not(.bg-purple-600) {
     background-color: #1e293b !important;
     color: #f8fafc !important;
     border: 2px solid #000000 !important;
 }
 
-#left-panel button:hover,
-#right-panel button:hover {
+#left-panel button:hover:not(.bg-pink-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-orange-600):not(.bg-purple-600),
+#right-panel button:hover:not(.bg-pink-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-orange-600):not(.bg-purple-600) {
     background-color: #0284c7 !important;
     color: #ffffff !important;
 }
@@ -636,16 +636,40 @@ select:focus {
 }
 
 /* Hiệu ứng đàn hồi (tactile feedback) cho các nút bấm tương tác */
-button:not(:disabled) {
-    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+/* Comprehensive Universal Button Hover System */
+button:not(.resize-handle):not(#left-sidebar-toggle-handle):not(#right-sidebar-toggle-handle) {
+    transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.15s ease, filter 0.15s ease !important;
 }
 
-button:not(:disabled):hover {
-    filter: brightness(1.08);
+button:not(:disabled):hover:not(.resize-handle):not(#left-sidebar-toggle-handle):not(#right-sidebar-toggle-handle) {
+    transform: translate(-1.5px, -1.5px) !important;
+    box-shadow: 4px 4px 0px #000000 !important;
+    filter: brightness(1.12) !important;
+    cursor: pointer !important;
 }
 
-button:not(:disabled):active {
-    transform: scale(0.96);
+button:not(:disabled):active:not(.resize-handle):not(#left-sidebar-toggle-handle):not(#right-sidebar-toggle-handle) {
+    transform: translate(1.5px, 1.5px) !important;
+    box-shadow: 0.5px 0.5px 0px #000000 !important;
+}
+
+/* Icon scale & color transition inside buttons on hover (Turns Electric Orange #f97316) */
+button i {
+    transition: transform 0.15s ease, color 0.15s ease !important;
+}
+
+button:not(:disabled):hover i {
+    color: #f97316 !important;
+    transform: scale(1.2) !important;
+}
+
+/* Disabled button state */
+button:disabled {
+    opacity: 0.45 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+    box-shadow: 1px 1px 0px #000000 !important;
+    filter: grayscale(0.5) !important;
 }
 
 /* Lớp CSS cho Canvas Cọ vẽ tẩy chữ thô */
