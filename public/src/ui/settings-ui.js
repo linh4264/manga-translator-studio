@@ -19,40 +19,14 @@ export function toggleApiKeyVisibility() {
 }
 
 export function updatePipelineMode(mode) {
-    const validMode = mode === 'single-step' ? 'single-step' : 'two-step';
-    globalState.translationPipelineMode = validMode;
-    safeSetLocalStorage('gemini_manga_pipeline_mode', validMode);
-
-    syncPipelineModeUI(validMode);
-
-    const label = validMode === 'two-step'
-        ? "Đã bật quy trình 2 Bước chuyên sâu (OCR Model riêng + Dịch Model riêng) ⚡"
-        : "Đã chuyển sang quy trình Gộp 1 Bước ⏩";
-    showToast(label, "info");
+    globalState.translationPipelineMode = 'two-step';
+    safeSetLocalStorage('gemini_manga_pipeline_mode', 'two-step');
+    syncPipelineModeUI('two-step');
 }
 
 export function syncPipelineModeUI(mode) {
-    const btnTwoStep = document.getElementById('btn-pipeline-two-step');
-    const btnSingleStep = document.getElementById('btn-pipeline-single-step');
     const twoStepContainer = document.getElementById('two-step-models-container');
-    const singleStepContainer = document.getElementById('single-step-model-container');
-
-    const isTwoStep = mode === 'two-step';
-
-    if (btnTwoStep) {
-        btnTwoStep.className = isTwoStep
-            ? "py-1.5 px-2 text-[10px] font-bold rounded-md bg-sky-500 text-black border border-black shadow-[1.5px_1.5px_0px_#000] flex items-center justify-center gap-1 transition-all cursor-pointer"
-            : "py-1.5 px-2 text-[10px] font-bold rounded-md text-slate-400 hover:text-slate-200 border border-transparent flex items-center justify-center gap-1 transition-all cursor-pointer";
-    }
-
-    if (btnSingleStep) {
-        btnSingleStep.className = !isTwoStep
-            ? "py-1.5 px-2 text-[10px] font-bold rounded-md bg-sky-500 text-black border border-black shadow-[1.5px_1.5px_0px_#000] flex items-center justify-center gap-1 transition-all cursor-pointer"
-            : "py-1.5 px-2 text-[10px] font-bold rounded-md text-slate-400 hover:text-slate-200 border border-transparent flex items-center justify-center gap-1 transition-all cursor-pointer";
-    }
-
-    if (twoStepContainer) twoStepContainer.classList.toggle('hidden', !isTwoStep);
-    if (singleStepContainer) singleStepContainer.classList.toggle('hidden', isTwoStep);
+    if (twoStepContainer) twoStepContainer.classList.remove('hidden');
 }
 
 export function updateOcrModel(val) {
