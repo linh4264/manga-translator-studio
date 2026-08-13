@@ -353,7 +353,7 @@
                 </div>
 
                 <!-- Main Work Canvas Container (For Overlay or standard view) -->
-                <div id="manga-canvas-container" class="manga-container hidden m-auto">
+                <div id="manga-canvas-container" class="manga-container hidden m-auto" data-darkreader-ignore="true">
                     <img id="manga-bg-image" src="" alt="Manga Page"
                         class="block h-full w-auto max-w-none select-none rounded" pointer-events="none">
                     <canvas id="eraser-canvas"
@@ -366,7 +366,7 @@
 
 
                     <div id="manga-overlays-container"
-                        class="absolute inset-0 select-none overflow-hidden rounded z-20">
+                        class="absolute inset-0 select-none overflow-hidden rounded z-20" data-darkreader-ignore="true">
                         <!-- Dynamic translation overlays go here -->
                     </div>
 
@@ -405,16 +405,16 @@
             </div>
             <!-- Left Sidebar Toggle Handle (Desktop & Mobile) -->
             <button id="left-sidebar-toggle-handle" onclick="toggleLeftSidebar()"
-                class="absolute left-0 top-1/2 -translate-y-1/2 z-50 w-5 h-16 bg-slate-900/80 hover:bg-indigo-600/90 border-y border-r border-slate-800 hover:border-indigo-500 rounded-r-lg flex items-center justify-center text-slate-400 hover:text-white transition-all shadow-md group pointer-events-auto"
+                class="absolute left-0 top-1/2 -translate-y-1/2 z-50 w-5 h-16 bg-slate-900 border-y border-r border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white rounded-r-lg flex items-center justify-center shadow-md pointer-events-auto"
                 title="Ẩn/Hiện thanh bên trái">
-                <i class="fa-solid fa-chevron-left text-[10px] group-hover:scale-110 transition-transform"></i>
+                <i class="fa-solid fa-chevron-left text-[10px]"></i>
             </button>
 
             <!-- Right Sidebar Toggle Handle (Desktop & Mobile) -->
             <button id="right-sidebar-toggle-handle" onclick="toggleRightSidebar()"
-                class="absolute right-0 top-1/2 -translate-y-1/2 z-50 w-5 h-16 bg-slate-900/80 hover:bg-indigo-600/90 border-y border-l border-slate-800 hover:border-indigo-500 rounded-l-lg flex items-center justify-center text-slate-400 hover:text-white transition-all shadow-md group pointer-events-auto"
+                class="absolute right-0 top-1/2 -translate-y-1/2 z-50 w-5 h-16 bg-slate-900 border-y border-l border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white rounded-l-lg flex items-center justify-center shadow-md pointer-events-auto"
                 title="Ẩn/Hiện thanh bên phải">
-                <i class="fa-solid fa-chevron-right text-[10px] group-hover:scale-110 transition-transform"></i>
+                <i class="fa-solid fa-chevron-right text-[10px]"></i>
             </button>
         </main>
 

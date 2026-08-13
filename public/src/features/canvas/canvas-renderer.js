@@ -74,6 +74,7 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
     // 🌟 KHỞI TẠO 2 LAYER ĐỘC LẬP: LỚP NỀN CHE (COVERS) Ở DƯỚI, LỚP VĂN BẢN (TEXTS) Ở TRÊN
     const coversLayer = document.createElement('div');
     coversLayer.className = 'manga-covers-layer absolute inset-0 pointer-events-none z-10';
+    coversLayer.setAttribute('data-darkreader-ignore', 'true');
     coversLayer.style.position = 'absolute';
     coversLayer.style.top = '0';
     coversLayer.style.left = '0';
@@ -84,6 +85,7 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
 
     const textsLayer = document.createElement('div');
     textsLayer.className = 'manga-texts-layer absolute inset-0 z-20';
+    textsLayer.setAttribute('data-darkreader-ignore', 'true');
     textsLayer.style.position = 'absolute';
     textsLayer.style.top = '0';
     textsLayer.style.left = '0';
@@ -95,6 +97,7 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
         // --- 1. TẠO PHẦN NỀN CHE (BACKGROUND COVER) TRÊN COVERS LAYER ---
         const coverEl = document.createElement('div');
         coverEl.id = isMirror ? `mirror-cover-${block.id}` : `cover-${block.id}`;
+        coverEl.setAttribute('data-darkreader-ignore', 'true');
         coverEl.style.position = 'absolute';
         coverEl.style.top = `${block.box.y}%`;
         coverEl.style.left = `${block.box.x}%`;
@@ -117,6 +120,7 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
         }
 
         const coverMaskContent = document.createElement('div');
+        coverMaskContent.setAttribute('data-darkreader-ignore', 'true');
         coverMaskContent.style.position = 'relative';
         coverMaskContent.style.overflow = 'hidden';
         coverMaskContent.style.boxSizing = 'border-box';
