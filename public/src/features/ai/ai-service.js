@@ -17,6 +17,9 @@ import {
 import {
     VALID_MODEL_IDS,
     DEFAULT_MODEL,
+    DEFAULT_PIPELINE_MODE,
+    DEFAULT_OCR_MODEL,
+    DEFAULT_TRANSLATION_MODEL,
     DEFAULT_AI_BLOCK_BOX,
     DEFAULT_VERTICAL_WRITING_MODE,
     TRANSLATION_GENRE_PRESETS,
@@ -468,6 +471,299 @@ export async function enhanceImageForOcr(file) {
     });
 }
 
+/**
+ * ⚡ BƯỚC 1: QUÉT ẢNH VÀ NHẬN DIỆN TỌA ĐỘ KHUNG THOẠI (VISION OCR STEP)
+ */
+async function executeOcrVisionStep({
+    rawBase64,
+    mimeType,
+    ocrModel,
+    keyToUse,
+    isOpenAiFormat,
+    endpoint,
+    requestHeaders
+}) {
+    const ocrSystemInstruction = [
+        "You are an expert manga speech bubble detector and OCR system.",
+        "Detect ALL speech bubbles, narration boxes, SFX sound effects, and sign labels in this manga page.",
+        "Read and transcribe the exact raw original text (Japanese, Korean, Chinese, or English) inside each region.",
+        "COORDINATE FORMULA: All box coordinates (x, y, w, h) MUST use integer scale 0 to 1000 (where top-left corner is x=0, y=0 and bottom-right corner is x=1000, y=1000). Set x = xmin (left edge), y = ymin (top edge), w = (xmax - xmin) (box width), h = (ymax - ymin) (box height). DO NOT return xmax as w or ymax as h. Example: A bubble spanning from xmin=200 to xmax=500 and ymin=100 to ymax=300 MUST return x=200, y=100, w=300, h=200.",
+        "For speech bubbles and narration boxes, use a box covering the entire inner blank space of the bubble so translated text fits easily. For SFX and signs, use the tightest box covering the characters.",
+        "IMPORTANT RULE FOR CONNECTED BUBBLES: When multiple speech bubbles are attached/connected together (such as double-bubbles, stacked connected lobes, or chained bubbles), treat EACH individual bubble lobe/section as a SEPARATE block with its own bounding box.",
+        "Set positionKnown=true whenever text is visible and can be localized.",
+        "Detect text orientation in style.vertical (true for vertical text, false for horizontal text).",
+        "Return valid JSON only matching the schema."
+    ].join(" ");
+
+    let requestBody;
+    let apiUrl;
+
+    if (isOpenAiFormat) {
+        apiUrl = `${endpoint.replace(/\/$/, '')}/chat/completions`;
+        requestBody = JSON.stringify({
+            model: ocrModel,
+            messages: [
+                { role: "system", content: ocrSystemInstruction },
+                {
+                    role: "user",
+                    content: [
+                        { type: "text", text: "Detect all text bubbles, narration boxes, and SFX with their 0-1000 box coordinates and raw original text. Return JSON matching schema {\"blocks\": [{\"id\": \"b1\", \"original\": \"...\", \"box\": {\"x\":0,\"y\":0,\"w\":100,\"h\":100}, \"positionKnown\": true, \"style\": {\"vertical\": true}}]}" },
+                        { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
+                    ]
+                }
+            ],
+            temperature: 0.1,
+            max_tokens: 4096,
+            response_format: { type: "json_object" }
+        });
+    } else {
+        apiUrl = getGeminiGenerateContentUrl(ocrModel, keyToUse);
+        requestBody = JSON.stringify({
+            contents: [{
+                parts: [
+                    { text: "Detect all speech bubbles, narration boxes, SFX labels with their 0-1000 integer coordinates and raw original text. Return JSON." },
+                    { inlineData: { mimeType, data: rawBase64 } }
+                ]
+            }],
+            generationConfig: {
+                responseMimeType: "application/json",
+                maxOutputTokens: 4096,
+                responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                        blocks: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    id: { type: "STRING" },
+                                    original: { type: "STRING" },
+                                    box: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            x: { type: "NUMBER" },
+                                            y: { type: "NUMBER" },
+                                            w: { type: "NUMBER" },
+                                            h: { type: "NUMBER" }
+                                        },
+                                        required: ["x", "y", "w", "h"]
+                                    },
+                                    positionKnown: { type: "BOOLEAN" },
+                                    style: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            vertical: { type: "BOOLEAN" }
+                                        }
+                                    }
+                                },
+                                required: ["id", "original", "box", "positionKnown"]
+                            }
+                        }
+                    },
+                    required: ["blocks"]
+                }
+            },
+            systemInstruction: {
+                parts: [{ text: ocrSystemInstruction }]
+            }
+        });
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        try {
+            controller.abort(new Error("Yêu cầu OCR AI quá hạn (Timeout 120s). Vui lòng thử lại."));
+        } catch (e) {
+            controller.abort();
+        }
+    }, 120000);
+
+    let response;
+    try {
+        response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: requestHeaders,
+            body: requestBody,
+            signal: controller.signal
+        });
+    } catch (fetchErr) {
+        if (fetchErr.name === 'AbortError' || fetchErr.name === 'TimeoutError' || (fetchErr.message && fetchErr.message.includes('aborted'))) {
+            throw new Error("Kết nối OCR AI quá hạn (Timeout 120s). Đang tự động thử lại...");
+        }
+        throw fetchErr;
+    } finally {
+        clearTimeout(timeoutId);
+    }
+
+    if (!response.ok) {
+        let errorDetail = "";
+        try {
+            const errorJson = await response.json();
+            errorDetail = errorJson.error?.message || errorJson.message || "";
+        } catch (e) { }
+        throw new Error(errorDetail ? `Lỗi OCR (${response.status}): ${errorDetail}` : `Lỗi OCR API: ${response.status}`);
+    }
+
+    const result = await response.json();
+    const jsonText = isOpenAiFormat
+        ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
+        : result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    const data = parseGeminiJsonText(jsonText);
+    if (!data || !Array.isArray(data.blocks)) {
+        throw new Error("Phản hồi OCR từ AI không đúng định dạng JSON.");
+    }
+    return data.blocks;
+}
+
+/**
+ * ⚡ BƯỚC 2: DỊCH THUẬT NGỮ CẢNH VĂN HỌC (TEXT-ONLY TRANSLATION STEP)
+ */
+async function executeTextTranslationStep({
+    blocksToTranslate,
+    translationModel,
+    targetLangName,
+    prevPageContext,
+    glossaryNames,
+    keyToUse,
+    isOpenAiFormat,
+    endpoint,
+    requestHeaders
+}) {
+    const targetLang = globalState.targetLanguage || 'vi';
+    const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
+
+    const transSystemInstruction = [
+        `You are a master manga translator specializing in Japanese/Korean/Chinese to natural, expressive, and fluent ${targetLangName} dialogue.`,
+        `Translate each given comic dialogue block accurately into natural ${targetLangName}, matching character tone, emotion, and scene pacing.`,
+        "Do not over-literalize Japanese/Chinese sentence order. Adapt slang, punchlines, and nuances seamlessly.",
+        `Ensure ${pronounTerm} are consistent across the dialogue blocks and match the previous story context.`,
+        globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
+        glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
+        getTranslationGuidancePrompt().trim(),
+        "Strict Rule: Maintain the exact same block IDs. Return valid JSON only."
+    ].filter(Boolean).join(" ");
+
+    const textPayloadList = blocksToTranslate.map(b => ({
+        id: b.id,
+        original: b.original || ''
+    }));
+
+    let requestBody;
+    let apiUrl;
+
+    const userPromptText = [
+        `Translate the following manga dialogue blocks into natural ${targetLangName}:`,
+        prevPageContext ? `\n${prevPageContext}\n` : '',
+        `\nDialogue Blocks to Translate:\n${JSON.stringify(textPayloadList, null, 2)}`
+    ].filter(Boolean).join("\n");
+
+    if (isOpenAiFormat) {
+        apiUrl = `${endpoint.replace(/\/$/, '')}/chat/completions`;
+        requestBody = JSON.stringify({
+            model: translationModel,
+            messages: [
+                { role: "system", content: transSystemInstruction },
+                { role: "user", content: userPromptText }
+            ],
+            temperature: 0.3,
+            max_tokens: 4096,
+            response_format: { type: "json_object" }
+        });
+    } else {
+        apiUrl = getGeminiGenerateContentUrl(translationModel, keyToUse);
+        requestBody = JSON.stringify({
+            contents: [{
+                parts: [
+                    { text: userPromptText }
+                ]
+            }],
+            generationConfig: {
+                responseMimeType: "application/json",
+                maxOutputTokens: 4096,
+                responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                        blocks: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    id: { type: "STRING" },
+                                    translated: { type: "STRING" }
+                                },
+                                required: ["id", "translated"]
+                            }
+                        }
+                    },
+                    required: ["blocks"]
+                }
+            },
+            systemInstruction: {
+                parts: [{ text: transSystemInstruction }]
+            }
+        });
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        try {
+            controller.abort(new Error("Yêu cầu Dịch thuật AI quá hạn (Timeout 120s). Vui lòng thử lại."));
+        } catch (e) {
+            controller.abort();
+        }
+    }, 120000);
+
+    let response;
+    try {
+        response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: requestHeaders,
+            body: requestBody,
+            signal: controller.signal
+        });
+    } catch (fetchErr) {
+        if (fetchErr.name === 'AbortError' || fetchErr.name === 'TimeoutError' || (fetchErr.message && fetchErr.message.includes('aborted'))) {
+            throw new Error("Kết nối Dịch thuật AI quá hạn (Timeout 120s). Đang tự động thử lại...");
+        }
+        throw fetchErr;
+    } finally {
+        clearTimeout(timeoutId);
+    }
+
+    if (!response.ok) {
+        let errorDetail = "";
+        try {
+            const errorJson = await response.json();
+            errorDetail = errorJson.error?.message || errorJson.message || "";
+        } catch (e) { }
+        throw new Error(errorDetail ? `Lỗi Dịch thuật (${response.status}): ${errorDetail}` : `Lỗi Dịch thuật API: ${response.status}`);
+    }
+
+    const result = await response.json();
+    const jsonText = isOpenAiFormat
+        ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
+        : result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    const data = parseGeminiJsonText(jsonText);
+    const transMap = new Map();
+    if (data && Array.isArray(data.blocks)) {
+        data.blocks.forEach(item => {
+            if (item && item.id) {
+                transMap.set(item.id, item.translated || '');
+            }
+        });
+    } else if (data && Array.isArray(data.translations)) {
+        data.translations.forEach(item => {
+            if (item && item.id) {
+                transMap.set(item.id, item.translated || '');
+            }
+        });
+    }
+
+    return transMap;
+}
+
 export async function translateActivePage() {
     if (globalState.activePageIndex === -1) {
         showToast("Vui lòng chọn một trang trước khi dịch.", "warn");
@@ -525,8 +821,8 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
     );
 
     const maxRetriesConfig = globalState.maxRetries !== undefined && globalState.maxRetries !== null ? Number(globalState.maxRetries) : 3;
-    let attempts = Math.max(1, maxRetriesConfig); // Theo đúng cài đặt hệ thống "Số lần thử lại"
-    let retryDelay = 10000; // Khởi đầu chờ 10 giây, tăng dần theo luỳ thừa
+    let attempts = Math.max(1, maxRetriesConfig);
+    let retryDelay = 10000;
 
     while (attempts > 0) {
         if (cancelTranslationFlag) {
@@ -536,258 +832,246 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
             return false;
         }
 
-        let timeoutId;
-
         try {
-            // Read file as base64 (with optional high-contrast OCR enhancement)
             const fileForOcr = globalState.ocrEnhanceEnabled ? await enhanceImageForOcr(page.file) : page.file;
             const rawBase64 = await getBase64(fileForOcr);
             const mimeType = fileForOcr.type || page.file.type;
-
-            const glossaryNames = globalState.preserveNames ? globalState.glossaryNames.trim() : "";
-            const weakModel = isWeakTranslationModel(globalState.selectedModel);
             const targetLang = globalState.targetLanguage || 'vi';
             const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
-            const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
+            const glossaryNames = globalState.preserveNames ? (globalState.glossaryNames || '').trim() : "";
 
-            // Xây dựng ngữ cảnh dịch thuật dựa trên trang dịch liền kề trước đó
             let prevPageContext = "";
             if (pageIndex > 0) {
                 const prevPage = globalState.pages[pageIndex - 1];
                 if (prevPage && prevPage.blocks && prevPage.blocks.length > 0) {
                     const prevDialogues = prevPage.blocks
                         .filter(b => b.translated && b.translated.trim())
-                        .map((b, idx) => `Bubble #${idx + 1} (${b.type || 'dialogue'}): "${b.original || ''}" -> "${b.translated}"`)
+                        .map((b, idx) => `Bubble #${idx + 1}: "${b.translated}"`)
                         .join("\n");
-                    if (prevDialogues) {
-                        prevPageContext = `[PREVIOUS PAGE DIALOGUE HISTORY FOR CONSISTENCY]\n${prevDialogues}\n\nStrict Rule: Use the same character ${pronounTerm} and names as shown in the translation list above if the speakers are the same characters.`;
-                    }
+                    if (prevDialogues) prevPageContext = `[PREVIOUS PAGE DIALOGUE HISTORY FOR CONSISTENCY]\n${prevDialogues}`;
                 }
             }
 
-            let systemInstruction;
-            if (weakModel) {
-                systemInstruction = [
-                    "You are a professional manga translator and OCR/text detector.",
-                    "Detect ALL text regions on the manga page, but return them in a single dialogue-only format. Treat every text region as a dialogue block. Return valid JSON only.",
-                    "COORDINATE CALCULATION FORMULA: All box coordinates (x, y, w, h) MUST use integer scale 0 to 1000 (where top-left corner is x=0, y=0 and bottom-right corner is x=1000, y=1000). Set x = xmin (left edge), y = ymin (top edge), w = (xmax - xmin) (box width), h = (ymax - ymin) (box height). DO NOT return xmax as w or ymax as h. Example: A bubble spanning from xmin=200 to xmax=500 and ymin=100 to ymax=300 MUST return x=200, y=100, w=300, h=200.",
-                    "For speech bubbles and narration boxes, use a box covering the entire inner blank space of the bubble so translated text fits easily. For SFX sound effects and signs, use the tightest box covering the characters.",
-                    "IMPORTANT RULE FOR CONNECTED BUBBLES: When multiple speech bubbles are attached/connected together (such as double-bubbles, stacked connected lobes, or chained bubbles), treat EACH lobe/section as a SEPARATE block with its own bounding box. Do NOT merge connected or stacked bubble sections into a single large block.",
-                    "Do not split lines of text inside the SAME single bubble lobe into separate blocks. Only split when bubbles are connected/chained across separate lobes or tails.",
-                    "Set positionKnown=true whenever text is visible and can be localized.",
-                    "Set positionKnown=false only when text location cannot be localized.",
-                    `Translate text to short, conversational, and natural ${targetLangName} manga dialogue. Do not classify block types; every returned block must be treated as dialogue.`,
-                    `Ensure ${pronounTerm} are highly consistent across nearby bubbles and match the previous page history.`,
-                    globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
-                    glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
-                    getTranslationGuidancePrompt().trim()
-                ].filter(Boolean).join(" ");
-            } else {
-                systemInstruction = [
-                    "Detect every manga text bubble, narration box, SFX label, and sign/label area, then return JSON only. Use a single dialogue-only block format for all outputs.",
-                    "COORDINATE CALCULATION FORMULA: All box coordinates (x, y, w, h) MUST use integer scale 0 to 1000 (where top-left corner is x=0, y=0 and bottom-right corner is x=1000, y=1000). Set x = xmin (left edge), y = ymin (top edge), w = (xmax - xmin) (box width), h = (ymax - ymin) (box height). DO NOT return xmax as w or ymax as h. Example: A bubble spanning from xmin=200 to xmax=500 and ymin=100 to ymax=300 MUST return x=200, y=100, w=300, h=200.",
-                    "For speech bubbles and narration boxes, use a box that covers the entire inner blank space of the bubble or box (leaving a small 2% padding near the black outlines) rather than just the tight bounds of the original characters. This ensures there is sufficient room for the translated text. For SFX and signs, use the tightest box covering the characters.",
-                    "IMPORTANT RULE FOR CONNECTED BUBBLES: When multiple speech bubbles are attached or connected together in double-bubbles or stacked lobes, treat EACH individual bubble lobe/section as a SEPARATE block with its own box coordinates. Do NOT group text from connected/chained bubble lobes into a single bounding box.",
-                    "Do not split text inside the SAME bubble lobe into separate blocks, but ALWAYS separate connected/stacked bubble lobes.",
-                    "Do not center by default.",
-                    "Set positionKnown=true whenever the text region is visible enough to place a box.",
-                    "Set positionKnown=false only when the text location is truly unreadable or cannot be localized.",
-                    `Translate to short, natural ${targetLangName} that matches the scene and speaker relationship.`,
-                    "Do not infer or output multiple block types; every block must be dialogue.",
-                    `Preserve the same ${targetLangName} ${targetLang === 'vi' ? 'xưng hô' : 'pronouns'} and terminology within the page whenever the relationship stays the same.`,
-                    "Keep line breaks and pacing natural for manga dialogue. Do not over-literalize Japanese sentence order.",
-                    globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
-                    glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
-                    getTranslationGuidancePrompt().trim()
-                ].filter(Boolean).join(" ");
-            }
-
-            const contentsParts = [
-                { text: `Detect all speech bubbles, narration boxes, SFX sound effects, and signs/labels. Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` }
-            ];
-            if (prevPageContext) {
-                contentsParts.push({ text: prevPageContext });
-            }
-            contentsParts.push({ inlineData: { mimeType: mimeType, data: rawBase64 } });
-
-            const payload = {
-                contents: [{
-                    parts: contentsParts
-                }],
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    maxOutputTokens: 4096,
-                    responseSchema: {
-                        type: "OBJECT",
-                        properties: {
-                            blocks: {
-                                type: "ARRAY",
-                                items: {
-                                    type: "OBJECT",
-                                    properties: {
-                                        id: { type: "STRING" },
-                                        original: { type: "STRING" },
-                                        translated: { type: "STRING" },
-                                        box: {
-                                            type: "OBJECT",
-                                            properties: {
-                                                x: { type: "NUMBER" },
-                                                y: { type: "NUMBER" },
-                                                w: { type: "NUMBER" },
-                                                h: { type: "NUMBER" }
-                                            },
-                                            required: ["x", "y", "w", "h"]
-                                        },
-                                        positionKnown: {
-                                            type: "BOOLEAN"
-                                        },
-                                        style: {
-                                            type: "OBJECT",
-                                            properties: {
-                                                vertical: { type: "BOOLEAN" }
-                                            }
-                                        }
-                                    },
-                                    required: ["id", "original", "translated", "box", "positionKnown"]
-                                }
-                            }
-                        },
-                        required: ["blocks"]
-                    }
-                },
-                systemInstruction: {
-                    parts: [{ text: systemInstruction }]
-                }
-            };
-
-            updateProgressMsg(
-                "Đang kết nối Gemini AI...",
-                `Trang ${pageIndex + 1}/${totalPages}: Đang phân tích thoại bằng AI...`,
-                isBackgroundMode ? progressVal : 50
-            );
-
-            const provider = getConfiguredAiProvider();
+            const pipelineMode = globalState.translationPipelineMode || DEFAULT_PIPELINE_MODE;
+            const ocrModelToUse = globalState.ocrModel || DEFAULT_OCR_MODEL;
+            const transModelToUse = globalState.translationModel || DEFAULT_TRANSLATION_MODEL;
             const endpoint = getConfiguredApiEndpoint();
-            const selectedModel = globalState.selectedModel || 'gemini-3.1-flash-lite';
-            
-            let apiUrl = '';
-            let requestHeaders = { 'Content-Type': 'application/json' };
-            let requestBody = null;
-
             const isOpenAiFormat = provider === 'openai' || (provider === 'custom' && !endpoint.includes('generateContent'));
-            const hasExistingBlocks = page.blocks && page.blocks.length > 0;
+            const requestHeaders = { 'Content-Type': 'application/json' };
+            if (isOpenAiFormat && keyToUse) {
+                requestHeaders['Authorization'] = `Bearer ${keyToUse}`;
+            }
 
-            if (isOpenAiFormat) {
-                apiUrl = `${endpoint.replace(/\/$/, '')}/chat/completions`;
-                if (keyToUse) {
-                    requestHeaders['Authorization'] = `Bearer ${keyToUse}`;
-                }
+            const hasExistingBlocks = page.blocks && page.blocks.length > 0 && page.blocks.some(b => b.original && b.original.trim());
+            let finalBlocks = [];
 
-                let openAiUserContent;
+            if (pipelineMode === 'two-step') {
+                // --- 2-STEP PIPELINE: STEP 1 (OCR) + STEP 2 (TRANSLATION) ---
+                let detectedRawBlocks = [];
 
                 if (hasExistingBlocks) {
-                    const blockItems = page.blocks.map(b => ({ id: b.id, original: b.original || '', box: b.box || { x: 0, y: 0, w: 100, h: 100 } }));
-                    openAiUserContent = [
-                        { type: "text", text: `Translate the following text blocks into natural ${targetLangName} manga dialogue while keeping the same IDs. Return JSON matching schema {"blocks": [{"id": "...", "translated": "...", "original": "...", "box": {"x":0,"y":0,"w":100,"h":100},"positionKnown":true}]}:\n${JSON.stringify(blockItems, null, 2)}` }
-                    ];
+                    // Nếu trang đã có sẵn khung thoại, bỏ qua bước 1 để tiết kiệm 100% token ảnh!
+                    detectedRawBlocks = page.blocks;
                 } else {
-                    openAiUserContent = [
-                        { type: "text", text: `Detect all speech bubbles, narration boxes, SFX sound effects, and signs/labels. Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` }
-                    ];
-                    if (prevPageContext) {
-                        openAiUserContent.push({ type: "text", text: prevPageContext });
-                    }
-                    openAiUserContent.push({
-                        type: "image_url",
-                        image_url: { url: `data:${mimeType};base64,${rawBase64}` }
+                    // Bước 1: Quét ảnh & nhận diện tọa độ box bằng OCR Vision Model
+                    updateProgressMsg(
+                        "Bước 1/2: Đang quét khung thoại & chữ gốc...",
+                        `Trang ${pageIndex + 1}/${totalPages}: Sử dụng ${ocrModelToUse} (Vision)...`,
+                        isBackgroundMode ? progressVal : 35
+                    );
+
+                    detectedRawBlocks = await executeOcrVisionStep({
+                        rawBase64,
+                        mimeType,
+                        ocrModel: ocrModelToUse,
+                        keyToUse,
+                        isOpenAiFormat,
+                        endpoint,
+                        requestHeaders
                     });
                 }
 
-                requestBody = JSON.stringify({
-                    model: selectedModel,
-                    messages: [
-                        { role: "system", content: systemInstruction },
-                        { role: "user", content: openAiUserContent }
-                    ],
-                    temperature: 0.3,
-                    max_tokens: 4096,
-                    response_format: { type: "json_object" },
-                    options: {
-                        num_ctx: 16384
-                    }
-                });
-            } else {
-                apiUrl = getGeminiGenerateContentUrl(selectedModel, keyToUse);
-                requestBody = JSON.stringify(payload);
-            }
-
-            const controller = new AbortController();
-            timeoutId = setTimeout(() => controller.abort(), 60000); // 60 giây timeout
-
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: requestHeaders,
-                body: requestBody,
-                signal: controller.signal
-            });
-            clearTimeout(timeoutId);
-
-            if (response.status === 429 || response.status === 503 || response.status === 500 || response.status === 504) {
-                attempts--;
-                if (attempts > 0) {
-                    const errorTypeLabel = response.status === 429 ? "Quá tải giới hạn lượt gọi (429)" :
-                        response.status === 503 ? "Server bận/quá tải (503)" :
-                            `Lỗi hệ thống tạm thời (${response.status})`;
-
-                    showToast(`API bận ở trang ${pageIndex + 1}: ${errorTypeLabel}. Tự động chờ ${retryDelay / 1000}s rồi thử lại...`, "warn");
-
-                    for (let delay = 0; delay < (retryDelay / 100); delay++) {
-                        if (cancelTranslationFlag) break;
-                        const delayPercent = Math.round((delay / (retryDelay / 100)) * 100);
-                        updateProgressMsg(
-                            "Đang tự động kết nối lại...",
-                            `Bị nghẽn (${response.status}). Đang dừng nghỉ ${retryDelay / 1000}s để gửi lại...`,
-                            delayPercent
-                        );
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                    }
-
-                    retryDelay *= 2;
-                    continue;
+                if (!detectedRawBlocks || detectedRawBlocks.length === 0) {
+                    finalBlocks = [];
                 } else {
-                    throw new Error(response.status === 503 ? "Máy chủ hiện đang quá tải (Lỗi 503). Vui lòng thử lại sau." : `API tạm thời ngắt kết nối (Lỗi ${response.status}).`);
-                }
-            }
+                    // Bước 2: Dịch văn phong chuyên sâu bằng Translation Model (Text Only)
+                    updateProgressMsg(
+                        "Bước 2/2: Đang dịch ngữ cảnh văn học...",
+                        `Trang ${pageIndex + 1}/${totalPages}: Sử dụng ${transModelToUse} (Text Only)...`,
+                        isBackgroundMode ? progressVal : 70
+                    );
 
-            if (!response.ok) {
-                let errorDetail = "";
+                    const translationsMap = await executeTextTranslationStep({
+                        blocksToTranslate: detectedRawBlocks,
+                        translationModel: transModelToUse,
+                        targetLangName,
+                        prevPageContext,
+                        glossaryNames,
+                        keyToUse,
+                        isOpenAiFormat,
+                        endpoint,
+                        requestHeaders
+                    });
+
+                    finalBlocks = detectedRawBlocks.map((b, idx) => ({
+                        ...b,
+                        translated: translationsMap.get(b.id) || b.translated || ''
+                    }));
+                }
+
+            } else {
+                // --- LEGACY 1-PASS ALL-IN-ONE PIPELINE ---
+                const weakModel = isWeakTranslationModel(globalState.selectedModel);
+                const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
+
+                const systemInstruction = [
+                    "Detect every manga text bubble, narration box, SFX label, and sign/label area, then return JSON only. Use a single dialogue-only block format for all outputs.",
+                    "COORDINATE CALCULATION FORMULA: All box coordinates (x, y, w, h) MUST use integer scale 0 to 1000 (where top-left corner is x=0, y=0 and bottom-right corner is x=1000, y=1000). Set x = xmin (left edge), y = ymin (top edge), w = (xmax - xmin) (box width), h = (ymax - ymin) (box height). DO NOT return xmax as w or ymax as h. Example: A bubble spanning from xmin=200 to xmax=500 and ymin=100 to ymax=300 MUST return x=200, y=100, w=300, h=200.",
+                    "For speech bubbles and narration boxes, use a box that covers the entire inner blank space of the bubble or box. For SFX and signs, use the tightest box covering the characters.",
+                    "IMPORTANT RULE FOR CONNECTED BUBBLES: When multiple speech bubbles are attached or connected together in double-bubbles or stacked lobes, treat EACH individual bubble lobe/section as a SEPARATE block with its own box coordinates.",
+                    "Set positionKnown=true whenever the text region is visible enough to place a box.",
+                    `Translate to short, natural ${targetLangName} that matches the scene and speaker relationship.`,
+                    "Do not infer or output multiple block types; every block must be dialogue.",
+                    `Preserve the same ${targetLangName} ${pronounTerm} and terminology within the page whenever the relationship stays the same.`,
+                    "Keep line breaks and pacing natural for manga dialogue.",
+                    globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
+                    glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
+                    getTranslationGuidancePrompt().trim()
+                ].filter(Boolean).join(" ");
+
+                const selectedModel = globalState.selectedModel || DEFAULT_MODEL;
+                let apiUrl = '';
+                let requestBody = null;
+
+                if (isOpenAiFormat) {
+                    apiUrl = `${endpoint.replace(/\/$/, '')}/chat/completions`;
+                    let openAiUserContent = [
+                        { type: "text", text: `Detect all speech bubbles, narration boxes, SFX sound effects, and signs/labels. Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` },
+                        { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
+                    ];
+                    if (prevPageContext) {
+                        openAiUserContent.splice(1, 0, { type: "text", text: prevPageContext });
+                    }
+
+                    requestBody = JSON.stringify({
+                        model: selectedModel,
+                        messages: [
+                            { role: "system", content: systemInstruction },
+                            { role: "user", content: openAiUserContent }
+                        ],
+                        temperature: 0.3,
+                        max_tokens: 4096,
+                        response_format: { type: "json_object" }
+                    });
+                } else {
+                    apiUrl = getGeminiGenerateContentUrl(selectedModel, keyToUse);
+                    const contentsParts = [
+                        { text: `Detect all speech bubbles, narration boxes, SFX sound effects, and signs/labels. Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` }
+                    ];
+                    if (prevPageContext) {
+                        contentsParts.push({ text: prevPageContext });
+                    }
+                    contentsParts.push({ inlineData: { mimeType: mimeType, data: rawBase64 } });
+
+                    requestBody = JSON.stringify({
+                        contents: [{ parts: contentsParts }],
+                        generationConfig: {
+                            responseMimeType: "application/json",
+                            maxOutputTokens: 4096,
+                            responseSchema: {
+                                type: "OBJECT",
+                                properties: {
+                                    blocks: {
+                                        type: "ARRAY",
+                                        items: {
+                                            type: "OBJECT",
+                                            properties: {
+                                                id: { type: "STRING" },
+                                                original: { type: "STRING" },
+                                                translated: { type: "STRING" },
+                                                box: {
+                                                    type: "OBJECT",
+                                                    properties: {
+                                                        x: { type: "NUMBER" },
+                                                        y: { type: "NUMBER" },
+                                                        w: { type: "NUMBER" },
+                                                        h: { type: "NUMBER" }
+                                                    },
+                                                    required: ["x", "y", "w", "h"]
+                                                },
+                                                positionKnown: { type: "BOOLEAN" },
+                                                style: {
+                                                    type: "OBJECT",
+                                                    properties: {
+                                                        vertical: { type: "BOOLEAN" }
+                                                    }
+                                                }
+                                            },
+                                            required: ["id", "original", "translated", "box", "positionKnown"]
+                                        }
+                                    }
+                                },
+                                required: ["blocks"]
+                            }
+                        },
+                        systemInstruction: {
+                            parts: [{ text: systemInstruction }]
+                        }
+                    });
+                }
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    try {
+                        controller.abort(new Error("Yêu cầu AI quá hạn (Timeout 120s). Vui lòng thử lại."));
+                    } catch (e) {
+                        controller.abort();
+                    }
+                }, 120000);
+
+                let response;
                 try {
-                    const errorJson = await response.json();
-                    errorDetail = errorJson.error?.message || errorJson.message || "";
-                } catch (e) { }
-
-                if (errorDetail.includes('does not support multimodal') || errorDetail.includes('multimodal')) {
-                    throw new Error(`Model '${selectedModel}' là model thuần văn bản (Text-only), không đọc được hình ảnh. Bạn hãy cào model Vision như 'ollama run qwen2-vl:7b' hoặc 'ollama run llava' để quét ảnh!`);
+                    response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: requestHeaders,
+                        body: requestBody,
+                        signal: controller.signal
+                    });
+                } catch (fetchErr) {
+                    if (fetchErr.name === 'AbortError' || fetchErr.name === 'TimeoutError' || (fetchErr.message && fetchErr.message.includes('aborted'))) {
+                        throw new Error("Kết nối AI quá hạn (Timeout 120s). Đang tự động thử lại...");
+                    }
+                    throw fetchErr;
+                } finally {
+                    clearTimeout(timeoutId);
                 }
 
-                throw new Error(errorDetail ? `Lỗi API (${response.status}): ${errorDetail}` : `API Error: ${response.status} ${response.statusText || "Yêu cầu không hợp lệ"}`);
+                if (!response.ok) {
+                    let errorDetail = "";
+                    try {
+                        const errorJson = await response.json();
+                        errorDetail = errorJson.error?.message || errorJson.message || "";
+                    } catch (e) { }
+                    throw new Error(errorDetail ? `Lỗi API (${response.status}): ${errorDetail}` : `API Error: ${response.status}`);
+                }
+
+                const result = await response.json();
+                const jsonText = isOpenAiFormat 
+                    ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
+                    : result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                const data = parseGeminiJsonText(jsonText);
+                if (!data || !Array.isArray(data.blocks)) {
+                    throw new Error("Phản hồi từ AI bị lỗi định dạng JSON hoặc bị ngắt câu.");
+                }
+                finalBlocks = data.blocks;
             }
 
-            const result = await response.json();
             updateProgressMsg(
                 "Đang dựng bản dịch...",
                 `Trang ${pageIndex + 1}/${totalPages}: Đang tính toán tỷ lệ bong bóng thoại...`,
                 isBackgroundMode ? progressVal : 85
             );
-
-            const jsonText = isOpenAiFormat 
-                ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
-                : result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-            const data = parseGeminiJsonText(jsonText);
-            if (!data || !Array.isArray(data.blocks)) {
-                throw new Error("Phản hồi từ AI bị lỗi định dạng JSON hoặc bị ngắt câu. Đang tự động gửi lại để dịch lại...");
-            }
 
             let pageImageData = page.imageDataCache || null;
             if (!pageImageData) {
@@ -813,13 +1097,11 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
             // Lưu trạng thái trước khi thay đổi ô thoại
             pushStateToHistory();
 
-            page.blocks = (data.blocks || []).map((b, idx) => {
+            page.blocks = (finalBlocks || []).map((b, idx) => {
                 const normalisedBox = b.positionKnown === false
                     ? { ...DEFAULT_AI_BLOCK_BOX }
                     : refineAiBlockBox(b.box, pageImageData, globalState.selectedModel);
 
-                // Default to vertical layout ONLY if target language is ja, zh, or ko.
-                // If target language is horizontal (e.g. Vietnamese), FORCE vertical = false.
                 const isVerticalTarget = ['ja', 'zh', 'ko'].includes(targetLang);
                 const blockVertical = isVerticalTarget
                     ? ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true)
@@ -876,16 +1158,15 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
             return true;
 
         } catch (error) {
-            if (timeoutId) clearTimeout(timeoutId);
             console.error("Lỗi chi tiết khi dịch trang:", error);
 
-            const isTimeout = error.name === 'AbortError';
+            const isTimeout = error.name === 'AbortError' || error.name === 'TimeoutError' || (error.message && (error.message.includes('Timeout') || error.message.includes('aborted') || error.message.includes('AbortError')));
             const isNetworkError = error.message && (error.message.includes('Failed to fetch') || error.message.includes('network') || error.message.includes('NetworkError'));
 
             if (isTimeout || isNetworkError) {
                 attempts--;
                 if (attempts > 0) {
-                    const errorLabel = isTimeout ? "Thời gian yêu cầu quá hạn (Timeout 45s)" : "Mất kết nối mạng";
+                    const errorLabel = isTimeout ? "Thời gian yêu cầu quá hạn (Timeout 120s)" : "Mất kết nối mạng";
                     showToast(`API bận ở trang ${pageIndex + 1}: ${errorLabel}. Tự động chờ ${retryDelay / 1000}s rồi thử lại...`, "warn");
 
                     for (let delay = 0; delay < (retryDelay / 100); delay++) {
@@ -893,7 +1174,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                         const delayPercent = Math.round((delay / (retryDelay / 100)) * 100);
                         updateProgressMsg(
                             "Đang tự động kết nối lại...",
-                            `${isTimeout ? "Quá hạn" : "Lỗi mạng"}. Đang dừng nghỉ ${retryDelay / 1000}s để gửi lại...`,
+                            `${isTimeout ? "Quá hạn (Timeout)" : "Lỗi mạng"}. Đang dừng nghỉ ${retryDelay / 1000}s để gửi lại...`,
                             delayPercent
                         );
                         await new Promise(resolve => setTimeout(resolve, 100));
@@ -909,7 +1190,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
 
             let errorMessage = "Đã xảy ra lỗi không xác định.";
             if (isTimeout) {
-                errorMessage = "Kết nối API quá hạn (Timeout 45s). Vui lòng kiểm tra lại mạng hoặc chuyển đổi Model.";
+                errorMessage = "Kết nối API quá hạn (Timeout 120s). Vui lòng kiểm tra lại mạng hoặc chuyển đổi Model.";
             } else if (error instanceof Error) {
                 errorMessage = error.message;
             } else if (typeof error === 'string') {

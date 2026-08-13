@@ -1583,12 +1583,18 @@
                                 http://localhost:11434/v1 | LM Studio: http://localhost:1234/v1</p>
                         </div>
                         <div id="api-key-container" class="space-y-1">
-                            <label id="api-key-label" data-i18n="api-key-label"
-                                class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gemini API
-                                Key</label>
+                            <div class="flex justify-between items-center">
+                                <label id="api-key-label" data-i18n="api-key-label"
+                                    class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Gemini API Key</label>
+                                <button type="button" id="btn-refresh-models" onclick="fetchGeminiModels(true)" title="Tự động quét và cập nhật toàn bộ model mới nhất từ Google API"
+                                    class="text-[9px] font-bold text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 px-2 py-0.5 rounded border border-sky-500/30 flex items-center gap-1 transition-all cursor-pointer">
+                                    <i class="fa-solid fa-arrows-rotate text-[9px]"></i> Quét Model API
+                                </button>
+                            </div>
                             <div class="relative">
                                 <input type="password" id="api-key-input" data-i18n-placeholder="api-key-placeholder"
                                     placeholder="Tự động sử dụng key của hệ thống..."
+                                    onblur="fetchGeminiModels()"
                                     class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors pr-8">
                                 <button id="api-key-eye" onclick="toggleApiKeyVisibility()"
                                     class="absolute right-2.5 top-2 text-slate-500 hover:text-slate-300">
@@ -1596,11 +1602,74 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="space-y-1">
+                        <!-- Pipeline Mode Switcher (2-Step vs 1-Step) -->
+                        <div class="space-y-1.5 pt-1 border-t border-slate-800/80">
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                                <span>Quy trình xử lý AI (Pipeline Mode)</span>
+                                <span class="text-[9px] font-bold text-sky-400 bg-sky-500/10 px-1.5 py-0.5 rounded border border-sky-500/20">Tiết kiệm Quota</span>
+                            </label>
+                            <div class="grid grid-cols-2 gap-1.5 bg-slate-900/60 p-1 rounded-lg border border-slate-800">
+                                <button type="button" id="btn-pipeline-two-step" onclick="updatePipelineMode('two-step')"
+                                    class="py-1.5 px-2 text-[10px] font-bold rounded-md bg-sky-500 text-black border border-black shadow-[1.5px_1.5px_0px_#000] flex items-center justify-center gap-1 transition-all cursor-pointer">
+                                    <i class="fa-solid fa-bolt text-[10px]"></i> 2 Bước chuyên sâu
+                                </button>
+                                <button type="button" id="btn-pipeline-single-step" onclick="updatePipelineMode('single-step')"
+                                    class="py-1.5 px-2 text-[10px] font-bold rounded-md text-slate-400 hover:text-slate-200 border border-transparent flex items-center justify-center gap-1 transition-all cursor-pointer">
+                                    <i class="fa-solid fa-forward text-[10px]"></i> 1 Bước gộp
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 2-Step Models Container -->
+                        <div id="two-step-models-container" class="space-y-3 pt-1">
+                            <!-- OCR & Vision Model -->
+                            <div class="space-y-1 bg-slate-900/40 p-2.5 rounded-lg border border-slate-800/80">
+                                <div class="flex justify-between items-center">
+                                    <label class="block text-[10px] font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1">
+                                        <i class="fa-solid fa-eye text-[10px]"></i> 1. Model OCR & Khung thoại (Vision)
+                                    </label>
+                                    <span class="text-[8px] font-bold text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">Quét ảnh & Tọa độ</span>
+                                </div>
+                                <select id="ocr-model-select" onchange="updateOcrModel(this.value)"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500 transition-colors font-medium">
+                                    <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (Khuyên dùng, cực nhanh & chuẩn)</option>
+                                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (Siêu rẻ & tiết kiệm quota)</option>
+                                    <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite (Đời mới)</option>
+                                    <option value="gemini-1.5-flash">Gemini 1.5 Flash (Truyền thống)</option>
+                                    <option value="__custom__">✍️ Tự nhập model OCR tùy chỉnh...</option>
+                                </select>
+                                <input id="custom-ocr-model-input" type="text" placeholder="Nhập tên model Vision tùy chỉnh..."
+                                    class="hidden w-full mt-1.5 bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-sky-500">
+                                <p class="text-[9px] text-slate-500 leading-relaxed">* Dùng model Flash nhẹ giúp tiết kiệm tối đa quota ảnh và không bao giờ bị nghẽn server.</p>
+                            </div>
+
+                            <!-- Translation Model -->
+                            <div class="space-y-1 bg-slate-900/40 p-2.5 rounded-lg border border-slate-800/80">
+                                <div class="flex justify-between items-center">
+                                    <label class="block text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                                        <i class="fa-solid fa-language text-[10px]"></i> 2. Model Dịch thuật (Text Only)
+                                    </label>
+                                    <span class="text-[8px] font-bold text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">Văn học & Ngữ cảnh</span>
+                                </div>
+                                <select id="trans-model-select" onchange="updateTranslationModel(this.value)"
+                                    class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition-colors font-medium">
+                                    <option value="gemini-2.5-pro" selected>Gemini 2.5 Pro (Khuyên dùng, văn phong siêu mượt)</option>
+                                    <option value="gemini-1.5-pro">Gemini 1.5 Pro (Chất lượng dịch cao cấp)</option>
+                                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Nhanh, cân bằng tốt)</option>
+                                    <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview (Chuyên sâu)</option>
+                                    <option value="__custom__">✍️ Tự nhập model Dịch tùy chỉnh (DeepSeek, GPT-4o...)...</option>
+                                </select>
+                                <input id="custom-trans-model-input" type="text" placeholder="Nhập tên model Dịch thuật tùy chỉnh..."
+                                    class="hidden w-full mt-1.5 bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
+                                <p class="text-[9px] text-slate-500 leading-relaxed">* Chỉ gửi văn bản (Text-Only), tiết kiệm 85% quota so với việc gửi cả ảnh.</p>
+                            </div>
+                        </div>
+
+                        <!-- 1-Step Model Container (Hidden by default) -->
+                        <div id="single-step-model-container" class="hidden space-y-1">
                             <div class="flex justify-between items-center">
                                 <label data-i18n="ai-model-label"
-                                    class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mô hình
-                                    AI (Model)</label>
+                                    class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mô hình AI Gộp 1 Bước</label>
                                 <span id="model-lock-badge"
                                     class="text-[9px] text-indigo-400 font-bold bg-indigo-500/10 px-1.5 py-0.5 rounded flex items-center gap-1">
                                     <i class="fa-solid fa-lock"></i> Hệ thống
@@ -1609,19 +1678,16 @@
                             <select id="model-select" onchange="updateSelectedModel(this.value)"
                                 class="w-full bg-slate-900 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500 transition-colors">
                                 <option value="__custom__">✍️ Tự nhập model (Custom Model)...</option>
-                                <option value="gemini-3.5-flash">Gemini 3.5 Flash (Mới nhất)</option>
-                                <option value="gemini-3-flash-preview">Gemini 3 Flash Preview (mạnh, preview)</option>
-                                <option value="gemini-3.1-flash-lite" selected>Gemini 3.1 Flash-Lite (Khuyến nghị,
-                                    nhanh/tiết kiệm)</option>
-                                <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview (chuyên sâu)</option>
-                                <option value="gemini-2.5-flash">Gemini 2.5 Flash (ổn định)</option>
+                                <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (ổn định)</option>
                                 <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite (rẻ/nhanh)</option>
                                 <option value="gemini-2.5-pro">Gemini 2.5 Pro (chất lượng cao)</option>
+                                <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite</option>
+                                <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro Preview</option>
+                                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
                             </select>
-                            <input id="custom-model-input" type="text" placeholder="gemini-3.5-flash-lite"
+                            <input id="custom-model-input" type="text" placeholder="gemini-2.5-flash"
                                 class="hidden w-full mt-2 bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors">
-                            <p id="model-select-note" class="text-[9px] text-slate-500 leading-relaxed mt-1">* Mô hình
-                                được khóa cố định để đảm bảo chạy mượt mà bằng phím tự động của Sandbox Canvas.</p>
                         </div>
                     </div>
                     <div id="translation-settings-section"

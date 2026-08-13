@@ -18,8 +18,87 @@ export function toggleApiKeyVisibility() {
     }
 }
 
+export function updatePipelineMode(mode) {
+    const validMode = mode === 'single-step' ? 'single-step' : 'two-step';
+    globalState.translationPipelineMode = validMode;
+    safeSetLocalStorage('gemini_manga_pipeline_mode', validMode);
+
+    syncPipelineModeUI(validMode);
+
+    const label = validMode === 'two-step'
+        ? "Đã bật quy trình 2 Bước chuyên sâu (OCR Model riêng + Dịch Model riêng) ⚡"
+        : "Đã chuyển sang quy trình Gộp 1 Bước ⏩";
+    showToast(label, "info");
+}
+
+export function syncPipelineModeUI(mode) {
+    const btnTwoStep = document.getElementById('btn-pipeline-two-step');
+    const btnSingleStep = document.getElementById('btn-pipeline-single-step');
+    const twoStepContainer = document.getElementById('two-step-models-container');
+    const singleStepContainer = document.getElementById('single-step-model-container');
+
+    const isTwoStep = mode === 'two-step';
+
+    if (btnTwoStep) {
+        btnTwoStep.className = isTwoStep
+            ? "py-1.5 px-2 text-[10px] font-bold rounded-md bg-sky-500 text-black border border-black shadow-[1.5px_1.5px_0px_#000] flex items-center justify-center gap-1 transition-all cursor-pointer"
+            : "py-1.5 px-2 text-[10px] font-bold rounded-md text-slate-400 hover:text-slate-200 border border-transparent flex items-center justify-center gap-1 transition-all cursor-pointer";
+    }
+
+    if (btnSingleStep) {
+        btnSingleStep.className = !isTwoStep
+            ? "py-1.5 px-2 text-[10px] font-bold rounded-md bg-sky-500 text-black border border-black shadow-[1.5px_1.5px_0px_#000] flex items-center justify-center gap-1 transition-all cursor-pointer"
+            : "py-1.5 px-2 text-[10px] font-bold rounded-md text-slate-400 hover:text-slate-200 border border-transparent flex items-center justify-center gap-1 transition-all cursor-pointer";
+    }
+
+    if (twoStepContainer) twoStepContainer.classList.toggle('hidden', !isTwoStep);
+    if (singleStepContainer) singleStepContainer.classList.toggle('hidden', isTwoStep);
+}
+
+export function updateOcrModel(val) {
+    const customInput = document.getElementById('custom-ocr-model-input');
+    if (val === CUSTOM_MODEL_VALUE) {
+        if (customInput) {
+            customInput.classList.remove('hidden');
+            const customVal = customInput.value.trim();
+            if (customVal) {
+                globalState.ocrModel = customVal;
+                safeSetLocalStorage('gemini_manga_ocr_model', customVal);
+            }
+        }
+    } else {
+        if (customInput) customInput.classList.add('hidden');
+        if (val) {
+            globalState.ocrModel = val;
+            safeSetLocalStorage('gemini_manga_ocr_model', val);
+        }
+    }
+    showToast(`Model OCR & Khung thoại: ${globalState.ocrModel}`, "info");
+}
+
+export function updateTranslationModel(val) {
+    const customInput = document.getElementById('custom-trans-model-input');
+    if (val === CUSTOM_MODEL_VALUE) {
+        if (customInput) {
+            customInput.classList.remove('hidden');
+            const customVal = customInput.value.trim();
+            if (customVal) {
+                globalState.translationModel = customVal;
+                safeSetLocalStorage('gemini_manga_translation_model', customVal);
+            }
+        }
+    } else {
+        if (customInput) customInput.classList.add('hidden');
+        if (val) {
+            globalState.translationModel = val;
+            safeSetLocalStorage('gemini_manga_translation_model', val);
+        }
+    }
+    showToast(`Model Dịch thuật: ${globalState.translationModel}`, "info");
+}
+
 export function updateSelectedModel(val) {
-    const customModelInput = elements.customModelInput;
+    const customModelInput = elements.customModelInput || document.getElementById('custom-model-input');
     if (val === CUSTOM_MODEL_VALUE) {
         if (customModelInput) {
             customModelInput.classList.remove('hidden');
@@ -46,78 +125,201 @@ export function updateSelectedModel(val) {
     }
 }
 
-export function updateModelDropdown(fetchedModels) {
+export function updateAllModelDropdowns(fetchedModels = []) {
+    const ocrSelect = document.getElementById('ocr-model-select');
+    const transSelect = document.getElementById('trans-model-select');
     const modelSelect = document.getElementById('model-select');
-    if (!modelSelect) return;
 
-    const currentSelection = globalState.selectedModel || DEFAULT_MODEL;
-    const allModels = new Set([...VALID_MODEL_IDS, ...fetchedModels]);
-    if (currentSelection && currentSelection !== CUSTOM_MODEL_VALUE) {
-        allModels.add(currentSelection);
-    }
+    // Base fallback set if offline or before API key
+    const baseKnownModels = [
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-2.5-pro",
+        "gemini-3.1-flash-lite",
+        "gemini-3.1-pro-preview",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro"
+    ];
 
-    const getModelVersion = (id) => {
-        const match = id.match(/gemini-(\d+)(?:\.(\d+))?-/);
+    const allModelsSet = new Set([
+        ...baseKnownModels,
+        ...(Array.isArray(fetchedModels) ? fetchedModels : [])
+    ]);
+
+    if (globalState.ocrModel && globalState.ocrModel !== CUSTOM_MODEL_VALUE) allModelsSet.add(globalState.ocrModel);
+    if (globalState.translationModel && globalState.translationModel !== CUSTOM_MODEL_VALUE) allModelsSet.add(globalState.translationModel);
+    if (globalState.selectedModel && globalState.selectedModel !== CUSTOM_MODEL_VALUE) allModelsSet.add(globalState.selectedModel);
+
+    const getModelScore = (id) => {
+        let score = 0;
+        const match = id.match(/gemini-(\d+)(?:\.(\d+))?/);
         if (match) {
             const major = parseInt(match[1]);
             const minor = match[2] ? parseInt(match[2]) : 0;
-            return major * 10 + minor;
+            score = major * 100 + minor * 10;
         }
-        return 0;
+        if (id.includes('pro')) score += 5;
+        if (id.includes('flash')) score += 3;
+        if (id.includes('lite')) score += 1;
+        if (id.includes('preview')) score -= 2;
+        return score;
     };
 
-    const sortedModels = Array.from(allModels).sort((a, b) => {
-        const verA = getModelVersion(a);
-        const verB = getModelVersion(b);
-        return verA !== verB ? verB - verA : a.localeCompare(b);
+    const sortedModels = Array.from(allModelsSet).sort((a, b) => {
+        const scoreA = getModelScore(a);
+        const scoreB = getModelScore(b);
+        return scoreA !== scoreB ? scoreB - scoreA : a.localeCompare(b);
     });
 
-    const getFriendlyName = (id) => {
+    const getFriendlyName = (id, role = 'general') => {
         switch (id) {
-            case "gemini-3.5-flash": return "Gemini 3.5 Flash (Mới nhất)";
-            case "gemini-3-flash-preview": return "Gemini 3 Flash Preview (mạnh, preview)";
-            case "gemini-3.1-flash-lite": return "Gemini 3.1 Flash-Lite (Khuyến nghị)";
-            case "gemini-3.1-pro-preview": return "Gemini 3.1 Pro Preview (chuyên sâu)";
-            case "gemini-2.5-flash": return "Gemini 2.5 Flash (ổn định)";
-            case "gemini-2.5-flash-lite": return "Gemini 2.5 Flash-Lite (rẻ/nhanh)";
-            case "gemini-2.5-pro": return "Gemini 2.5 Pro (chất lượng cao)";
+            case "gemini-2.5-flash":
+                return role === 'ocr' ? "Gemini 2.5 Flash (Khuyên dùng: Siêu tốc & nhận diện chuẩn)" : "Gemini 2.5 Flash (Cực nhanh & ổn định)";
+            case "gemini-2.5-flash-lite":
+                return role === 'ocr' ? "Gemini 2.5 Flash-Lite (Siêu rẻ & tiết kiệm quota)" : "Gemini 2.5 Flash-Lite (Siêu rẻ & nhanh)";
+            case "gemini-2.5-pro":
+                return role === 'trans' ? "Gemini 2.5 Pro (Khuyên dùng: Văn phong dịch xuất sắc)" : "Gemini 2.5 Pro (Chất lượng cao nhất)";
+            case "gemini-3.1-flash-lite":
+                return "Gemini 3.1 Flash-Lite (Đời mới, tối ưu tốc độ)";
+            case "gemini-3.1-pro-preview":
+                return "Gemini 3.1 Pro Preview (Chuyên sâu ngữ cảnh)";
+            case "gemini-2.0-flash":
+                return "Gemini 2.0 Flash (Ổn định)";
+            case "gemini-2.0-flash-lite":
+                return "Gemini 2.0 Flash-Lite (Tiết kiệm)";
+            case "gemini-1.5-flash":
+                return "Gemini 1.5 Flash (Truyền thống)";
+            case "gemini-1.5-pro":
+                return role === 'trans' ? "Gemini 1.5 Pro (Chất lượng dịch cao cấp)" : "Gemini 1.5 Pro (Chất lượng cao)";
             default:
                 return id.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') + ' (Online)';
         }
     };
 
-    modelSelect.innerHTML = "";
+    // 1. Populate OCR Model Select
+    if (ocrSelect) {
+        const currentOcr = globalState.ocrModel || DEFAULT_OCR_MODEL;
+        ocrSelect.innerHTML = "";
 
-    const customOpt = document.createElement('option');
-    customOpt.value = CUSTOM_MODEL_VALUE;
-    customOpt.textContent = (globalState.uiLanguage === 'en') ? "✍️ Enter custom model..." : "✍️ Tự nhập model (Custom Model)...";
-    modelSelect.appendChild(customOpt);
+        sortedModels.forEach(modelId => {
+            const opt = document.createElement('option');
+            opt.value = modelId;
+            opt.textContent = getFriendlyName(modelId, 'ocr');
+            ocrSelect.appendChild(opt);
+        });
 
-    sortedModels.forEach(modelId => {
-        const opt = document.createElement('option');
-        opt.value = modelId;
-        opt.textContent = getFriendlyName(modelId);
-        modelSelect.appendChild(opt);
-    });
+        const customOpt = document.createElement('option');
+        customOpt.value = CUSTOM_MODEL_VALUE;
+        customOpt.textContent = "✍️ Tự nhập model OCR tùy chỉnh...";
+        ocrSelect.appendChild(customOpt);
 
-    if (allModels.has(currentSelection)) {
-        modelSelect.value = currentSelection;
-    } else {
-        modelSelect.value = CUSTOM_MODEL_VALUE;
-        if (elements.customModelInput) elements.customModelInput.value = currentSelection;
+        if (allModelsSet.has(currentOcr)) {
+            ocrSelect.value = currentOcr;
+            const customInput = document.getElementById('custom-ocr-model-input');
+            if (customInput) customInput.classList.add('hidden');
+        } else {
+            ocrSelect.value = CUSTOM_MODEL_VALUE;
+            const customInput = document.getElementById('custom-ocr-model-input');
+            if (customInput) {
+                customInput.classList.remove('hidden');
+                customInput.value = currentOcr;
+            }
+        }
+    }
+
+    // 2. Populate Translation Model Select
+    if (transSelect) {
+        const currentTrans = globalState.translationModel || DEFAULT_TRANSLATION_MODEL;
+        transSelect.innerHTML = "";
+
+        sortedModels.forEach(modelId => {
+            const opt = document.createElement('option');
+            opt.value = modelId;
+            opt.textContent = getFriendlyName(modelId, 'trans');
+            transSelect.appendChild(opt);
+        });
+
+        const customOpt = document.createElement('option');
+        customOpt.value = CUSTOM_MODEL_VALUE;
+        customOpt.textContent = "✍️ Tự nhập model Dịch tùy chỉnh (DeepSeek, GPT-4o...)...";
+        transSelect.appendChild(customOpt);
+
+        if (allModelsSet.has(currentTrans)) {
+            transSelect.value = currentTrans;
+            const customInput = document.getElementById('custom-trans-model-input');
+            if (customInput) customInput.classList.add('hidden');
+        } else {
+            transSelect.value = CUSTOM_MODEL_VALUE;
+            const customInput = document.getElementById('custom-trans-model-input');
+            if (customInput) {
+                customInput.classList.remove('hidden');
+                customInput.value = currentTrans;
+            }
+        }
+    }
+
+    // 3. Populate 1-Step Model Select
+    if (modelSelect) {
+        const currentModel = globalState.selectedModel || DEFAULT_MODEL;
+        modelSelect.innerHTML = "";
+
+        sortedModels.forEach(modelId => {
+            const opt = document.createElement('option');
+            opt.value = modelId;
+            opt.textContent = getFriendlyName(modelId, 'general');
+            modelSelect.appendChild(opt);
+        });
+
+        const customOpt = document.createElement('option');
+        customOpt.value = CUSTOM_MODEL_VALUE;
+        customOpt.textContent = (globalState.uiLanguage === 'en') ? "✍️ Enter custom model..." : "✍️ Tự nhập model (Custom Model)...";
+        modelSelect.appendChild(customOpt);
+
+        if (allModelsSet.has(currentModel)) {
+            modelSelect.value = currentModel;
+            const customModelInput = elements.customModelInput || document.getElementById('custom-model-input');
+            if (customModelInput) customModelInput.classList.add('hidden');
+        } else {
+            modelSelect.value = CUSTOM_MODEL_VALUE;
+            const customModelInput = elements.customModelInput || document.getElementById('custom-model-input');
+            if (customModelInput) {
+                customModelInput.classList.remove('hidden');
+                customModelInput.value = currentModel;
+            }
+        }
     }
 }
 
-export async function fetchGeminiModels() {
-    const keyToUse = (elements.apiKeyInput?.value || globalState.apiKey || "").trim();
-    if (!keyToUse) return;
+export async function fetchGeminiModels(isManual = false) {
+    const keyToUse = ((elements.apiKeyInput ? elements.apiKeyInput.value : "") || globalState.apiKey || "").trim();
+    if (!keyToUse) {
+        updateAllModelDropdowns([]);
+        if (isManual) {
+            showToast("Vui lòng nhập API Key trước khi tải danh sách Model.", "warn");
+        }
+        return;
+    }
+
+    const refreshBtn = document.getElementById('btn-refresh-models');
+    if (refreshBtn) {
+        refreshBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[9px]"></i> Đang nạp...';
+    }
 
     try {
         const response = await fetch(getGeminiModelsUrl(keyToUse));
-        if (!response.ok) return;
+        if (!response.ok) {
+            updateAllModelDropdowns([]);
+            if (isManual) {
+                showToast(`Không thể tải Model từ API (Mã lỗi ${response.status}). Vui lòng kiểm tra lại API Key.`, "error");
+            }
+            return;
+        }
         const data = await response.json();
 
         if (data.models && Array.isArray(data.models)) {
+            // Lọc toàn bộ các model có hỗ trợ generateContent, loại trừ embedding và audio/vision synth
             const geminiModels = data.models
                 .filter(m => {
                     const id = m.name ? m.name.replace('models/', '') : '';
@@ -126,20 +328,36 @@ export async function fetchGeminiModels() {
                     const supportsGen = m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent');
                     if (!supportsGen) return false;
 
-                    if (id.includes('gemini-1.0') || id.includes('-thinking') || id.includes('embedding') || id.includes('bison') || id.includes('tunedModels/')) return false;
-                    if (/-\d{3}$/.test(id)) return false;
+                    if (id.includes('embedding') || id.includes('bison') || id.includes('aqa') || id.includes('imagen') || id.includes('tunedModels/')) return false;
 
-                    return /gemini-(1\.5|2\.\d+|3\.\d+|4\.\d+|[5-9]\.\d+|[2-9]|\d{2,})-/.test(id);
+                    return true;
                 })
                 .map(m => m.name.replace('models/', ''));
 
             if (geminiModels.length > 0) {
-                updateModelDropdown(geminiModels);
+                updateAllModelDropdowns(geminiModels);
+                if (isManual) {
+                    showToast(`Đã nạp và cập nhật thành công ${geminiModels.length} mô hình từ Google Gemini!`, "success");
+                }
+            } else {
+                updateAllModelDropdowns([]);
             }
         }
     } catch (e) {
         console.warn("Không thể tự động tải danh sách Gemini models:", e);
+        updateAllModelDropdowns([]);
+        if (isManual) {
+            showToast("Lỗi kết nối mạng khi tải danh sách model.", "error");
+        }
+    } finally {
+        if (refreshBtn) {
+            refreshBtn.innerHTML = '<i class="fa-solid fa-arrows-rotate text-[9px]"></i> Cập nhật Model';
+        }
     }
+}
+
+export function updateModelDropdown(fetchedModels) {
+    updateAllModelDropdowns(fetchedModels);
 }
 
 export function updateModelLockingUI() {
@@ -207,6 +425,37 @@ export async function openSettingsModal() {
     if (endpointInput) endpointInput.value = globalState.apiEndpoint || '';
 
     syncAiProviderUI(globalState.aiProvider || 'gemini');
+    syncPipelineModeUI(globalState.translationPipelineMode || 'two-step');
+
+    const ocrSelect = document.getElementById('ocr-model-select');
+    const customOcrInput = document.getElementById('custom-ocr-model-input');
+    if (ocrSelect && globalState.ocrModel) {
+        if (Array.from(ocrSelect.options).some(opt => opt.value === globalState.ocrModel)) {
+            ocrSelect.value = globalState.ocrModel;
+            if (customOcrInput) customOcrInput.classList.add('hidden');
+        } else {
+            ocrSelect.value = CUSTOM_MODEL_VALUE;
+            if (customOcrInput) {
+                customOcrInput.classList.remove('hidden');
+                customOcrInput.value = globalState.ocrModel;
+            }
+        }
+    }
+
+    const transSelect = document.getElementById('trans-model-select');
+    const customTransInput = document.getElementById('custom-trans-model-input');
+    if (transSelect && globalState.translationModel) {
+        if (Array.from(transSelect.options).some(opt => opt.value === globalState.translationModel)) {
+            transSelect.value = globalState.translationModel;
+            if (customTransInput) customTransInput.classList.add('hidden');
+        } else {
+            transSelect.value = CUSTOM_MODEL_VALUE;
+            if (customTransInput) {
+                customTransInput.classList.remove('hidden');
+                customTransInput.value = globalState.translationModel;
+            }
+        }
+    }
 
     const modelSelect = document.getElementById('model-select');
     if (modelSelect && globalState.selectedModel) {
@@ -413,3 +662,9 @@ export function updateExportPdfQuality(value) {
     safeSetLocalStorage('manga_pdf_quality', globalState.pdfQuality);
     showToast(`Đã đổi chất lượng PDF sang: ${value.toUpperCase()}`, 'info');
 }
+
+window.updatePipelineMode = updatePipelineMode;
+window.updateOcrModel = updateOcrModel;
+window.updateTranslationModel = updateTranslationModel;
+window.fetchGeminiModels = fetchGeminiModels;
+window.updateAllModelDropdowns = updateAllModelDropdowns;

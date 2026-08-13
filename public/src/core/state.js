@@ -2,13 +2,25 @@
 import { globalBus } from './events.js';
 import {
     DEFAULT_MODEL,
+    DEFAULT_PIPELINE_MODE,
+    DEFAULT_OCR_MODEL,
+    DEFAULT_TRANSLATION_MODEL,
     DEFAULT_AI_BLOCK_BOX,
     DEFAULT_VERTICAL_WRITING_MODE,
     MAX_HISTORY_LIMIT,
     TRANSLATION_GENRE_PRESETS
 } from '../config/constants.js';
 
-export { DEFAULT_MODEL, CUSTOM_MODEL_VALUE, VALID_MODEL_IDS } from '../config/constants.js';
+export {
+    DEFAULT_MODEL,
+    DEFAULT_PIPELINE_MODE,
+    DEFAULT_OCR_MODEL,
+    DEFAULT_TRANSLATION_MODEL,
+    CUSTOM_MODEL_VALUE,
+    VALID_MODEL_IDS,
+    VALID_OCR_MODEL_IDS,
+    VALID_TRANSLATION_MODEL_IDS
+} from '../config/constants.js';
 
 export function isWeakTranslationModel(modelId) {
     return String(modelId || '').includes('flash-lite');
@@ -65,6 +77,9 @@ export const globalState = {
     chapterStoryMemory: [], // Multi-page dialogue and character tone memory
     enableStoryMemory: true, // Toggle story context accumulation
     selectedModel: DEFAULT_MODEL,
+    translationPipelineMode: DEFAULT_PIPELINE_MODE, // 'two-step' | 'single-step'
+    ocrModel: DEFAULT_OCR_MODEL,                   // Vision + Bounding Box model
+    translationModel: DEFAULT_TRANSLATION_MODEL,   // Text-only dialogue translation model
     defaultFont: localStorage.getItem('manga_default_font') || 'font-manga',
     pages: [],
     activePageIndex: -1,
@@ -123,6 +138,9 @@ export function initializeStateFromStorage() {
         'gemini_manga_ai_provider': 'aiProvider',
         'gemini_manga_api_endpoint': 'apiEndpoint',
         'gemini_manga_model': 'selectedModel',
+        'gemini_manga_pipeline_mode': 'translationPipelineMode',
+        'gemini_manga_ocr_model': 'ocrModel',
+        'gemini_manga_translation_model': 'translationModel',
         'gemini_manga_autofit_enabled': 'autoFitEnabled',
         'gemini_manga_preserve_names': 'preserveNames',
         'gemini_manga_glossary': 'glossaryNames',

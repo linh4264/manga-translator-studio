@@ -273,7 +273,6 @@ test('Format Extension Converter Helper Functions', () => {
 
 // 12. Sharpen Kernel Convolution & Compression Calculation Test
 test('Sharpen Kernel Matrix Math and Compression Savings Calculation', () => {
-    // Test 3x3 Sharpen Kernel Math Simulation
     const k = 1.5; // Sharpen factor
     const center = 100;
     const top = 90, bottom = 90, left = 90, right = 90;
@@ -281,7 +280,6 @@ test('Sharpen Kernel Matrix Math and Compression Savings Calculation', () => {
     const clampedVal = Math.min(255, Math.max(0, sharpenedVal));
     assert.strictEqual(clampedVal, 160, 'Sharpen kernel math must boost contrast at edges');
 
-    // Test Compression Ratio Percentage Calculation
     const originalBytes = 2097152; // 2 MB
     const compressedBytes = 629145; // ~614 KB
     const savedBytes = Math.max(0, originalBytes - compressedBytes);
@@ -289,6 +287,19 @@ test('Sharpen Kernel Matrix Math and Compression Savings Calculation', () => {
     assert.strictEqual(savedPercent, 70, 'Compression saving percentage calculation must be 70%');
 });
 
+// 13. 2-Step Dedicated AI Pipeline Configuration & State Test
+test('2-Step Dedicated AI Pipeline Configuration and State', async () => {
+    const { DEFAULT_PIPELINE_MODE, DEFAULT_OCR_MODEL, DEFAULT_TRANSLATION_MODEL, VALID_OCR_MODEL_IDS, VALID_TRANSLATION_MODEL_IDS } = await import('../public/src/config/constants.js');
+    const { globalState } = await import('../public/src/core/state.js');
 
+    assert.strictEqual(DEFAULT_PIPELINE_MODE, 'two-step', 'Default pipeline mode must be two-step');
+    assert.strictEqual(DEFAULT_OCR_MODEL, 'gemini-2.5-flash', 'Default OCR model must be gemini-2.5-flash');
+    assert.strictEqual(DEFAULT_TRANSLATION_MODEL, 'gemini-2.5-pro', 'Default translation model must be gemini-2.5-pro');
 
+    assert.ok(VALID_OCR_MODEL_IDS.includes(DEFAULT_OCR_MODEL), 'Default OCR model must be in VALID_OCR_MODEL_IDS');
+    assert.ok(VALID_TRANSLATION_MODEL_IDS.includes(DEFAULT_TRANSLATION_MODEL), 'Default translation model must be in VALID_TRANSLATION_MODEL_IDS');
 
+    assert.strictEqual(globalState.translationPipelineMode, 'two-step', 'globalState must initialize with two-step pipeline mode');
+    assert.strictEqual(globalState.ocrModel, 'gemini-2.5-flash', 'globalState must initialize with gemini-2.5-flash as OCR model');
+    assert.strictEqual(globalState.translationModel, 'gemini-2.5-pro', 'globalState must initialize with gemini-2.5-pro as Translation model');
+});

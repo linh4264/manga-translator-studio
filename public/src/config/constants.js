@@ -1,13 +1,32 @@
 // Global constants and configuration for Manga Translator Studio
 
-export const DEFAULT_MODEL = "gemini-1.5-flash-lite"; // Updated to a stable version
+export const DEFAULT_PIPELINE_MODE = "two-step"; // 'two-step' | 'single-step'
+export const DEFAULT_MODEL = "gemini-2.5-flash";
+export const DEFAULT_OCR_MODEL = "gemini-2.5-flash";
+export const DEFAULT_TRANSLATION_MODEL = "gemini-2.5-pro";
 export const CUSTOM_MODEL_VALUE = "__custom__";
 export const VALID_MODEL_IDS = [
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-pro",
+    "gemini-3.1-flash-lite",
+    "gemini-3.1-pro-preview",
     "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
-    "gemini-1.5-flash-lite",
+    "gemini-1.5-pro"
+];
+
+export const VALID_OCR_MODEL_IDS = [
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-1.5-flash"
+];
+
+export const VALID_TRANSLATION_MODEL_IDS = [
+    "gemini-2.5-pro",
     "gemini-1.5-pro",
-    "gemini-2.0-flash-exp"
+    "gemini-2.5-flash",
+    "gemini-3.1-pro-preview"
 ];
 
 export const TARGET_LANG_MAP = {
