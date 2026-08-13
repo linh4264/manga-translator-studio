@@ -367,13 +367,13 @@ select:focus {
 }
 
 .bubble-overlay:hover {
-    border: 2.5px solid #ff2a85 !important;
-    box-shadow: 3px 3px 0px #000000 !important;
+    border: 2px dashed #0284c7 !important;
+    box-shadow: none !important;
 }
 
 .bubble-overlay.active {
-    border: 2.5px solid #ff2a85 !important;
-    box-shadow: 4px 4px 0px #000000 !important;
+    border: 2px dashed #0284c7 !important;
+    box-shadow: none !important;
     z-index: 50;
 }
 
