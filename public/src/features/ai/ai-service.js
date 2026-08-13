@@ -617,6 +617,86 @@ async function executeOcrVisionStep({
 }
 
 /**
+ * 🔗 GHÉP BẢN DỊCH TỪ MODEL 2 VÀO TỪNG BLOCK VỚI 5 LỚP BẢO VỆ CHUẨN XÁC 100%
+ */
+export function matchTranslationsToBlocks(blocks, rawResponseData) {
+    if (!Array.isArray(blocks) || blocks.length === 0) return blocks || [];
+
+    const rawList = Array.isArray(rawResponseData?.blocks)
+        ? rawResponseData.blocks
+        : (Array.isArray(rawResponseData?.translations)
+            ? rawResponseData.translations
+            : (Array.isArray(rawResponseData) ? rawResponseData : []));
+
+    const mapById = new Map();
+    const mapByOriginal = new Map();
+    const listByOrder = [];
+
+    rawList.forEach((item) => {
+        if (!item) return;
+        const transText = (item.translated || item.translation || item.text || (typeof item === 'string' ? item : '') || '').trim();
+        const origText = (item.original || item.source || '').trim();
+
+        if (item.id !== undefined && item.id !== null) {
+            const rawIdStr = String(item.id).trim();
+            mapById.set(rawIdStr, transText);
+            mapById.set(rawIdStr.toLowerCase(), transText);
+        }
+
+        if (origText) {
+            mapByOriginal.set(origText, transText);
+            mapByOriginal.set(origText.replace(/\s+/g, ''), transText);
+        }
+
+        listByOrder.push(transText);
+    });
+
+    return blocks.map((b, idx) => {
+        const idStr = String(b.id || '').trim();
+        const idLower = idStr.toLowerCase();
+        const origTrim = (b.original || '').trim();
+        const origNoSpace = origTrim.replace(/\s+/g, '');
+
+        let translated = '';
+
+        // 1. Khớp chính xác ID (ví dụ: "p1_b1", "block_1")
+        if (mapById.has(idStr)) {
+            translated = mapById.get(idStr);
+        }
+        // 2. Khớp ID không phân biệt hoa thường ("P1_B1" -> "p1_b1")
+        else if (mapById.has(idLower)) {
+            translated = mapById.get(idLower);
+        }
+        // 3. Khớp theo hậu tố số ("p1_b2" -> "b2" hoặc "2")
+        else {
+            const bNum = idStr.match(/b(\d+)$/i) || idStr.match(/(\d+)$/);
+            if (bNum && mapById.has(`b${bNum[1]}`)) {
+                translated = mapById.get(`b${bNum[1]}`);
+            } else if (bNum && mapById.has(bNum[1])) {
+                translated = mapById.get(bNum[1]);
+            }
+        }
+
+        // 4. Khớp theo nội dung chữ gốc (Original Text)
+        if (!translated && origTrim && mapByOriginal.has(origTrim)) {
+            translated = mapByOriginal.get(origTrim);
+        } else if (!translated && origNoSpace && mapByOriginal.has(origNoSpace)) {
+            translated = mapByOriginal.get(origNoSpace);
+        }
+
+        // 5. Khớp theo vị trí thứ tự trong danh sách (Positional Index)
+        if (!translated && idx < listByOrder.length && listByOrder[idx]) {
+            translated = listByOrder[idx];
+        }
+
+        return {
+            ...b,
+            translated: translated || b.translated || ''
+        };
+    });
+}
+
+/**
  * ⚡ BƯỚC 2: DỊCH THUẬT NGỮ CẢNH VĂN HỌC (TEXT-ONLY TRANSLATION STEP)
  */
 async function executeTextTranslationStep({
@@ -641,7 +721,7 @@ async function executeTextTranslationStep({
         globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
         glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
         getTranslationGuidancePrompt().trim(),
-        "Strict Rule: Maintain the exact same block IDs. Return valid JSON only."
+        "Strict Rule: Maintain the exact same block IDs. Return valid JSON only with schema: {\"blocks\": [{\"id\": \"...\", \"translated\": \"...\"}]}"
     ].filter(Boolean).join(" ");
 
     const textPayloadList = blocksToTranslate.map(b => ({
@@ -746,22 +826,153 @@ async function executeTextTranslationStep({
         : result.candidates?.[0]?.content?.parts?.[0]?.text;
 
     const data = parseGeminiJsonText(jsonText);
-    const transMap = new Map();
-    if (data && Array.isArray(data.blocks)) {
-        data.blocks.forEach(item => {
-            if (item && item.id) {
-                transMap.set(item.id, item.translated || '');
+    return matchTranslationsToBlocks(blocksToTranslate, data);
+}
+
+/**
+ * ⚡ DỊCH TOÀN BỘ DIỄN BIẾN CHAPTER TRONG 1 LƯỢT GỌI DUY NHẤT (1 RPD CHO MODEL DỊCH)
+ */
+export async function executeChapterTranslationStep({
+    allChapterBlocks,
+    translationModel,
+    targetLangName,
+    glossaryNames,
+    keyToUse,
+    isOpenAiFormat,
+    endpoint,
+    requestHeaders
+}) {
+    const targetLang = globalState.targetLanguage || 'vi';
+    const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
+
+    const transSystemInstruction = [
+        `You are a master manga translator specializing in translating full chapters with continuous storytelling, consistent character voices, and natural, expressive, fluent ${targetLangName} dialogue.`,
+        `Translate each comic dialogue block accurately into natural ${targetLangName}, matching character tone, emotion, and chapter pacing.`,
+        "Do not over-literalize sentence order. Adapt slang, punchlines, and nuances seamlessly.",
+        `Ensure ${pronounTerm} are 100% consistent across the entire chapter between characters.`,
+        globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
+        glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
+        getTranslationGuidancePrompt().trim(),
+        "Strict Rule: Maintain the exact same block IDs. Return valid JSON only containing all block translations with schema: {\"blocks\": [{\"id\": \"...\", \"translated\": \"...\"}]}"
+    ].filter(Boolean).join(" ");
+
+    // Group blocks by page for clear chapter narrative context for the LLM
+    const groupedNarrative = [];
+    let currentPage = -1;
+    let pageItems = [];
+
+    allChapterBlocks.forEach(b => {
+        if (b.pageIndex !== currentPage) {
+            if (pageItems.length > 0) {
+                groupedNarrative.push(`[--- TRANG / PAGE ${currentPage + 1} ---]\n` + JSON.stringify(pageItems, null, 2));
             }
+            currentPage = b.pageIndex;
+            pageItems = [];
+        }
+        pageItems.push({ id: b.id, original: b.original || '' });
+    });
+    if (pageItems.length > 0) {
+        groupedNarrative.push(`[--- TRANG / PAGE ${currentPage + 1} ---]\n` + JSON.stringify(pageItems, null, 2));
+    }
+
+    const userPromptText = [
+        `Translate the following full-chapter manga dialogue blocks into natural ${targetLangName}:`,
+        groupedNarrative.join("\n\n"),
+        `\nStrict Requirement: Return a JSON object with schema: {"blocks": [{"id": "...", "translated": "..."}]}`
+    ].join("\n");
+
+    let requestBody;
+    let apiUrl;
+
+    if (isOpenAiFormat) {
+        apiUrl = `${endpoint.replace(/\/$/, '')}/chat/completions`;
+        requestBody = JSON.stringify({
+            model: translationModel,
+            messages: [
+                { role: "system", content: transSystemInstruction },
+                { role: "user", content: userPromptText }
+            ],
+            temperature: 0.3,
+            max_tokens: 8192,
+            response_format: { type: "json_object" }
         });
-    } else if (data && Array.isArray(data.translations)) {
-        data.translations.forEach(item => {
-            if (item && item.id) {
-                transMap.set(item.id, item.translated || '');
+    } else {
+        apiUrl = getGeminiGenerateContentUrl(translationModel, keyToUse);
+        requestBody = JSON.stringify({
+            contents: [{
+                parts: [
+                    { text: userPromptText }
+                ]
+            }],
+            generationConfig: {
+                responseMimeType: "application/json",
+                maxOutputTokens: 8192,
+                responseSchema: {
+                    type: "OBJECT",
+                    properties: {
+                        blocks: {
+                            type: "ARRAY",
+                            items: {
+                                type: "OBJECT",
+                                properties: {
+                                    id: { type: "STRING" },
+                                    translated: { type: "STRING" }
+                                },
+                                required: ["id", "translated"]
+                            }
+                        }
+                    },
+                    required: ["blocks"]
+                }
+            },
+            systemInstruction: {
+                parts: [{ text: transSystemInstruction }]
             }
         });
     }
 
-    return transMap;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+        try {
+            controller.abort(new Error("Yêu cầu Dịch thuật Chapter quá hạn (Timeout 180s)."));
+        } catch (e) {
+            controller.abort();
+        }
+    }, 180000);
+
+    let response;
+    try {
+        response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: requestHeaders,
+            body: requestBody,
+            signal: controller.signal
+        });
+    } catch (fetchErr) {
+        if (fetchErr.name === 'AbortError' || fetchErr.name === 'TimeoutError' || (fetchErr.message && fetchErr.message.includes('aborted'))) {
+            throw new Error("Kết nối Dịch thuật Chapter AI quá hạn (Timeout 180s). Đang tự động thử lại...");
+        }
+        throw fetchErr;
+    } finally {
+        clearTimeout(timeoutId);
+    }
+
+    if (!response.ok) {
+        let errorDetail = "";
+        try {
+            const errorJson = await response.json();
+            errorDetail = errorJson.error?.message || errorJson.message || "";
+        } catch (e) { }
+        throw new Error(errorDetail ? `Lỗi Dịch thuật (${response.status}): ${errorDetail}` : `Lỗi Dịch thuật API: ${response.status}`);
+    }
+
+    const result = await response.json();
+    const jsonText = isOpenAiFormat
+        ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
+        : result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    const data = parseGeminiJsonText(jsonText);
+    return matchTranslationsToBlocks(allChapterBlocks, data);
 }
 
 export async function translateActivePage() {
@@ -894,6 +1105,12 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 if (!detectedRawBlocks || detectedRawBlocks.length === 0) {
                     finalBlocks = [];
                 } else {
+                    // Đảm bảo từng block có ID duy nhất định dạng pX_bY
+                    detectedRawBlocks = detectedRawBlocks.map((b, bIdx) => ({
+                        ...b,
+                        id: `p${pageIndex + 1}_b${bIdx + 1}`
+                    }));
+
                     // Bước 2: Dịch văn phong chuyên sâu bằng Translation Model (Text Only)
                     updateProgressMsg(
                         "Bước 2/2: Đang dịch ngữ cảnh văn học...",
@@ -901,7 +1118,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                         isBackgroundMode ? progressVal : 70
                     );
 
-                    const translationsMap = await executeTextTranslationStep({
+                    finalBlocks = await executeTextTranslationStep({
                         blocksToTranslate: detectedRawBlocks,
                         translationModel: transModelToUse,
                         targetLangName,
@@ -912,11 +1129,6 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                         endpoint,
                         requestHeaders
                     });
-
-                    finalBlocks = detectedRawBlocks.map((b, idx) => ({
-                        ...b,
-                        translated: translationsMap.get(b.id) || b.translated || ''
-                    }));
                 }
 
             } else {
@@ -1233,7 +1445,7 @@ export async function runBatchTranslation() {
 
     cancelTranslationFlag = false;
     isBatchTranslating = true;
-    showToast('Đang tiến hành dịch hàng loạt dưới nền. Bạn có thể tiếp tục chỉnh sửa các trang khác!', 'success');
+    showToast('Đang tiến hành dịch toàn bộ Chapter dưới nền. Bạn có thể tiếp tục xem và chỉnh sửa!', 'success');
 
     for (let i = 0; i < globalState.pages.length; i++) {
         if (globalState.pages[i].status === 'draft' || globalState.pages[i].status === 'error') {
@@ -1244,59 +1456,317 @@ export async function runBatchTranslation() {
     uiUpdatePageListUI();
 
     const totalPages = globalState.pages.length;
+    const pipelineMode = globalState.translationPipelineMode || DEFAULT_PIPELINE_MODE;
 
-    for (let i = 0; i < totalPages; i++) {
-        if (cancelTranslationFlag) {
-            showToast("Đã dừng hàng loạt tiến trình dịch ngầm.", "warn");
-            break;
+    if (pipelineMode === 'two-step') {
+        // =========================================================================
+        // ⚡ 2-PHASE CHAPTER-LEVEL BATCH TRANSLATION (SUPER RPD SAVINGS)
+        // =========================================================================
+        const ocrModelToUse = globalState.ocrModel || DEFAULT_OCR_MODEL;
+        const transModelToUse = globalState.translationModel || DEFAULT_TRANSLATION_MODEL;
+        const targetLang = globalState.targetLanguage || 'vi';
+        const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
+        const glossaryNames = globalState.preserveNames ? (globalState.glossaryNames || '').trim() : "";
+        const endpoint = getConfiguredApiEndpoint();
+        const isOpenAiFormat = provider === 'openai' || (provider === 'custom' && !endpoint.includes('generateContent'));
+        const requestHeaders = { 'Content-Type': 'application/json' };
+        if (isOpenAiFormat && keyToUse) {
+            requestHeaders['Authorization'] = `Bearer ${keyToUse}`;
         }
 
-        const page = globalState.pages[i];
-        if (page.status !== 'queued') continue;
-
         try {
-            const delaySteps = (globalState.apiDelay !== undefined ? globalState.apiDelay : 8) * 10;
-            if (i > 0 && delaySteps > 0) {
-                let delayProgress = 0;
-                for (let delay = 0; delay < delaySteps; delay++) {
-                    if (cancelTranslationFlag) break;
-                    delayProgress = Math.round((delay / delaySteps) * 100);
-                    uiUpdateBackgroundTaskOverlay(
-                        true,
-                        "Đang chờ giãn cách API...",
-                        `Trang ${i + 1}/${totalPages}: Tạm nghỉ bảo vệ API Key tránh quá tải... (Còn ${Math.ceil((delaySteps - delay) / 10)} giây)`,
-                        delayProgress
-                    );
-                    await new Promise(resolve => setTimeout(resolve, 100));
+            // ---------------------------------------------------------------------
+            // GIAI ĐOẠN 1: QUÉT OCR TOÀN BỘ TRANG (VISION MODEL - FLASH)
+            // ---------------------------------------------------------------------
+            const queuedIndices = [];
+            for (let i = 0; i < totalPages; i++) {
+                if (globalState.pages[i].status === 'queued') {
+                    queuedIndices.push(i);
                 }
             }
 
+            for (let idx = 0; idx < queuedIndices.length; idx++) {
+                if (cancelTranslationFlag) {
+                    showToast("Đã dừng tiến trình dịch Chapter.", "warn");
+                    break;
+                }
+
+                const pageIndex = queuedIndices[idx];
+                const page = globalState.pages[pageIndex];
+                await activatePage(page);
+
+                const hasExistingBlocks = page.blocks && page.blocks.length > 0 && page.blocks.some(b => b.original && b.original.trim());
+
+                if (hasExistingBlocks) {
+                    // Đã có sẵn block, chuẩn hóa lại ID thành pX_bY để đảm bảo duy nhất
+                    page.blocks.forEach((b, bIdx) => {
+                        b.id = `p${pageIndex + 1}_b${bIdx + 1}`;
+                    });
+                    const progressVal = Math.round(((idx + 1) / queuedIndices.length) * 50);
+                    uiUpdateBackgroundTaskOverlay(
+                        true,
+                        "Giai đoạn 1/2: Đã có sẵn khung thoại",
+                        `Trang ${pageIndex + 1}/${totalPages}: Tận dụng khung có sẵn, bỏ qua OCR...`,
+                        progressVal
+                    );
+                } else {
+                    const progressVal = Math.round(((idx + 1) / queuedIndices.length) * 50);
+                    uiUpdateBackgroundTaskOverlay(
+                        true,
+                        "Giai đoạn 1/2: Quét OCR Khung thoại...",
+                        `Trang ${pageIndex + 1}/${totalPages}: Sử dụng ${ocrModelToUse} (Vision)...`,
+                        progressVal
+                    );
+
+                    try {
+                        const fileForOcr = globalState.ocrEnhanceEnabled ? await enhanceImageForOcr(page.file) : page.file;
+                        const rawBase64 = await getBase64(fileForOcr);
+                        const mimeType = fileForOcr.type || page.file.type;
+
+                        const detectedRawBlocks = await executeOcrVisionStep({
+                            rawBase64,
+                            mimeType,
+                            ocrModel: ocrModelToUse,
+                            keyToUse,
+                            isOpenAiFormat,
+                            endpoint,
+                            requestHeaders
+                        });
+
+                        // Caching ImageData for box contour refinement
+                        let pageImageData = page.imageDataCache || null;
+                        if (!pageImageData) {
+                            try {
+                                const img = new Image();
+                                img.src = page.src;
+                                await new Promise((resolve, reject) => {
+                                    img.onload = resolve;
+                                    img.onerror = reject;
+                                });
+                                const canvas = document.createElement('canvas');
+                                canvas.width = img.width;
+                                canvas.height = img.height;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0);
+                                pageImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                                page.imageDataCache = pageImageData;
+                            } catch (e) { }
+                        }
+
+                        const isVerticalTarget = ['ja', 'zh', 'ko'].includes(targetLang);
+                        page.blocks = (detectedRawBlocks || []).map((b, bIdx) => {
+                            const normalisedBox = b.positionKnown === false
+                                ? { ...DEFAULT_AI_BLOCK_BOX }
+                                : refineAiBlockBox(b.box, pageImageData, globalState.selectedModel);
+
+                            const blockVertical = isVerticalTarget
+                                ? ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true)
+                                : false;
+
+                            return {
+                                id: `p${pageIndex + 1}_b${bIdx + 1}`,
+                                type: 'dialogue',
+                                original: b.original || '',
+                                translated: '',
+                                box: normalisedBox,
+                                style: {
+                                    fontFamily: globalState.globalStyle.fontFamily,
+                                    fontSize: globalState.globalStyle.fontSize,
+                                    textColor: '#000000',
+                                    bgColor: '#ffffff',
+                                    bgOpacity: 100,
+                                    padding: globalState.globalStyle.padding,
+                                    rotate: 0,
+                                    vertical: blockVertical,
+                                    bold: globalState.globalStyle.bold,
+                                    align: globalState.globalStyle.align,
+                                    maskShape: globalState.globalStyle.maskShape,
+                                    maskSize: globalState.globalStyle.maskSize,
+                                    strokeColor: '#ffffff',
+                                    strokeWidth: 0,
+                                    shadowColor: '#000000',
+                                    shadowBlur: 0
+                                }
+                            };
+                        });
+
+                        savePageToDB(page);
+                    } catch (ocrErr) {
+                        console.error(`Lỗi OCR ở trang ${pageIndex + 1}:`, ocrErr);
+                        page.status = 'error';
+                        savePageToDB(page);
+                    }
+                }
+
+                if (pageIndex !== globalState.activePageIndex) {
+                    deactivatePage(page);
+                }
+                garbageCollectPageCaches();
+
+                // Gentle delay between OCR requests to avoid 429
+                if (idx < queuedIndices.length - 1 && !cancelTranslationFlag) {
+                    await new Promise(r => setTimeout(r, 1500));
+                }
+            }
+
+            // ---------------------------------------------------------------------
+            // GIAI ĐOẠN 2: DỊCH TOÀN BỘ CHAPTER (SINGLE REQUEST - 1 RPD - PRO MODEL)
+            // ---------------------------------------------------------------------
+            if (!cancelTranslationFlag) {
+                const allChapterBlocks = [];
+                queuedIndices.forEach(i => {
+                    const p = globalState.pages[i];
+                    if (p.status === 'queued' && p.blocks && p.blocks.length > 0) {
+                        p.blocks.forEach(b => {
+                            if (b.original && b.original.trim()) {
+                                allChapterBlocks.push({
+                                    id: b.id,
+                                    original: b.original,
+                                    pageIndex: i
+                                });
+                            }
+                        });
+                    }
+                });
+
+                if (allChapterBlocks.length > 0) {
+                    uiUpdateBackgroundTaskOverlay(
+                        true,
+                        "Giai đoạn 2/2: Đang dịch toàn bộ Chapter...",
+                        `Đang gửi ${allChapterBlocks.length} câu thoại của toàn bộ Chapter đến ${transModelToUse} (1 Request duy nhất)...`,
+                        75
+                    );
+
+                    try {
+                        const translatedChapterBlocks = await executeChapterTranslationStep({
+                            allChapterBlocks,
+                            translationModel: transModelToUse,
+                            targetLangName,
+                            glossaryNames,
+                            keyToUse,
+                            isOpenAiFormat,
+                            endpoint,
+                            requestHeaders
+                        });
+
+                        const lookupMap = new Map();
+                        translatedChapterBlocks.forEach(b => {
+                            if (b && b.id) {
+                                lookupMap.set(String(b.id), b.translated || '');
+                                lookupMap.set(String(b.id).toLowerCase(), b.translated || '');
+                            }
+                        });
+
+                        // Gán bản dịch vào từng trang chuẩn xác 100%
+                        queuedIndices.forEach(i => {
+                            const p = globalState.pages[i];
+                            if (p.status === 'queued' && p.blocks) {
+                                p.blocks.forEach((b, bIdx) => {
+                                    const expectedId = `p${i + 1}_b${bIdx + 1}`;
+                                    b.translated = lookupMap.get(String(b.id)) ||
+                                                   lookupMap.get(expectedId) ||
+                                                   lookupMap.get(expectedId.toLowerCase()) ||
+                                                   b.translated || '';
+                                });
+
+                                // Tự động so khớp font & màu sắc
+                                const imgEl = elements.mangaBgImage;
+                                if (imgEl && imgEl.naturalWidth && i === globalState.activePageIndex) {
+                                    try {
+                                        import('../canvas/canvas-service.js').then(({ autoMatchBlockStyle }) => {
+                                            p.blocks.forEach(b => autoMatchBlockStyle(b, imgEl));
+                                        });
+                                    } catch (e) { }
+                                }
+
+                                p.status = 'done';
+                                recordPageToStoryMemory(i, p.blocks);
+                                savePageToDB(p);
+                            }
+                        });
+
+                        showToast(`Đã dịch thành công toàn bộ Chapter (${allChapterBlocks.length} câu thoại) trong 1 lượt gọi duy nhất!`, "success");
+                    } catch (transErr) {
+                        console.error("Lỗi khi dịch gộp Chapter:", transErr);
+                        showToast(`Lỗi khi dịch Chapter: ${transErr.message || transErr}`, "error");
+                        queuedIndices.forEach(i => {
+                            const p = globalState.pages[i];
+                            if (p.status === 'queued') {
+                                p.status = 'error';
+                                savePageToDB(p);
+                            }
+                        });
+                    }
+                } else {
+                    // Không có text cần dịch
+                    queuedIndices.forEach(i => {
+                        const p = globalState.pages[i];
+                        if (p.status === 'queued') {
+                            p.status = 'done';
+                            savePageToDB(p);
+                        }
+                    });
+                }
+            }
+
+        } catch (chapterErr) {
+            console.error("Lỗi quy trình Chapter Batch:", chapterErr);
+        }
+
+    } else {
+        // =========================================================================
+        // ⏩ LEGACY 1-STEP PAGE-BY-PAGE BATCH TRANSLATION
+        // =========================================================================
+        for (let i = 0; i < totalPages; i++) {
             if (cancelTranslationFlag) {
                 showToast("Đã dừng hàng loạt tiến trình dịch ngầm.", "warn");
                 break;
             }
 
-            const progressPercent = Math.round((i / totalPages) * 100);
-            uiUpdateBackgroundTaskOverlay(true, "Đang xử lý...", `Đang chuẩn bị gửi trang ${i + 1}/${totalPages}...`, progressPercent);
+            const page = globalState.pages[i];
+            if (page.status !== 'queued') continue;
 
-            const success = await translatePage(i, true);
-            if (!success) {
-                let errorDelayProgress = 0;
-                const cooldownSeconds = 15;
-                for (let delay = 0; delay < cooldownSeconds * 10; delay++) {
-                    if (cancelTranslationFlag) break;
-                    errorDelayProgress = Math.round((delay / (cooldownSeconds * 10)) * 100);
-                    uiUpdateBackgroundTaskOverlay(
-                        true,
-                        "Lỗi kết nối - Đang chờ khôi phục...",
-                        `Tạm nghỉ bảo vệ API sau khi lỗi... (Chờ ${Math.ceil((cooldownSeconds * 10 - delay) / 10)} giây)`,
-                        errorDelayProgress
-                    );
-                    await new Promise(resolve => setTimeout(resolve, 100));
+            try {
+                const delaySteps = (globalState.apiDelay !== undefined ? globalState.apiDelay : 8) * 10;
+                if (i > 0 && delaySteps > 0) {
+                    let delayProgress = 0;
+                    for (let delay = 0; delay < delaySteps; delay++) {
+                        if (cancelTranslationFlag) break;
+                        delayProgress = Math.round((delay / delaySteps) * 100);
+                        uiUpdateBackgroundTaskOverlay(
+                            true,
+                            "Đang chờ giãn cách API...",
+                            `Trang ${i + 1}/${totalPages}: Tạm nghỉ bảo vệ API Key... (Còn ${Math.ceil((delaySteps - delay) / 10)} giây)`,
+                            delayProgress
+                        );
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
                 }
+
+                if (cancelTranslationFlag) break;
+
+                const progressPercent = Math.round((i / totalPages) * 100);
+                uiUpdateBackgroundTaskOverlay(true, "Đang xử lý...", `Đang chuẩn bị gửi trang ${i + 1}/${totalPages}...`, progressPercent);
+
+                const success = await translatePage(i, true);
+                if (!success) {
+                    let errorDelayProgress = 0;
+                    const cooldownSeconds = 15;
+                    for (let delay = 0; delay < cooldownSeconds * 10; delay++) {
+                        if (cancelTranslationFlag) break;
+                        errorDelayProgress = Math.round((delay / (cooldownSeconds * 10)) * 100);
+                        uiUpdateBackgroundTaskOverlay(
+                            true,
+                            "Lỗi kết nối - Đang chờ khôi phục...",
+                            `Tạm nghỉ bảo vệ API sau khi lỗi... (Chờ ${Math.ceil((cooldownSeconds * 10 - delay) / 10)} giây)`,
+                            errorDelayProgress
+                        );
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                }
+            } catch (e) {
+                console.error("Background batch translation error on page:", i, e);
             }
-        } catch (e) {
-            console.error("Background batch translation error on page:", i, e);
         }
     }
 
@@ -1310,6 +1780,10 @@ export async function runBatchTranslation() {
     isBatchTranslating = false;
     uiUpdatePageListUI();
     uiUpdateBackgroundTaskOverlay(false);
+    if (globalState.activePageIndex >= 0) {
+        requestOverlayRender();
+        uiUpdateActiveBlockEditor();
+    }
 }
 
 export async function requestAiInpaintPatch(page, block, cropX, cropY, cropW, cropH) {

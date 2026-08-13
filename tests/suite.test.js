@@ -303,3 +303,57 @@ test('2-Step Dedicated AI Pipeline Configuration and State', async () => {
     assert.strictEqual(globalState.ocrModel, 'gemini-2.5-flash', 'globalState must initialize with gemini-2.5-flash as OCR model');
     assert.strictEqual(globalState.translationModel, 'gemini-2.5-pro', 'globalState must initialize with gemini-2.5-pro as Translation model');
 });
+
+// 14. Chapter-Level Batch Translation Function and Aggregation Logic Test
+test('Chapter-Level Batch Translation Function and Aggregation Logic', async () => {
+    const aiService = await import('../public/src/features/ai/ai-service.js');
+    assert.strictEqual(typeof aiService.executeChapterTranslationStep, 'function', 'executeChapterTranslationStep must be exported');
+    assert.strictEqual(typeof aiService.runBatchTranslation, 'function', 'runBatchTranslation must be exported');
+
+    // Simulate chapter blocks aggregation across 3 pages
+    const mockChapterPages = [
+        { pageIndex: 0, blocks: [{ id: 'p0_b1', original: 'こんにちは' }, { id: 'p0_b2', original: '元気ですか？' }] },
+        { pageIndex: 1, blocks: [{ id: 'p1_b1', original: 'はい、元気です！' }] },
+        { pageIndex: 2, blocks: [{ id: 'p2_b1', original: 'また明日ね。' }] }
+    ];
+
+    const aggregatedBlocks = [];
+    mockChapterPages.forEach(p => {
+        p.blocks.forEach(b => {
+            aggregatedBlocks.push({ id: b.id, original: b.original, pageIndex: p.pageIndex });
+        });
+    });
+
+    assert.strictEqual(aggregatedBlocks.length, 4, 'Aggregated chapter dialogue count must be 4');
+    assert.strictEqual(aggregatedBlocks[0].id, 'p0_b1');
+    assert.strictEqual(aggregatedBlocks[3].id, 'p2_b1');
+});
+
+// 15. 5-Layer Bulletproof Translation Matching Engine Test
+test('5-Layer Translation Matching Engine with Fallbacks', async () => {
+    const { matchTranslationsToBlocks } = await import('../public/src/features/ai/ai-service.js');
+    assert.strictEqual(typeof matchTranslationsToBlocks, 'function', 'matchTranslationsToBlocks must be exported');
+
+    const inputBlocks = [
+        { id: 'p1_b1', original: 'おはよう' },
+        { id: 'p1_b2', original: '元気？' },
+        { id: 'p2_b1', original: 'うん、元気！' },
+        { id: 'p2_b2', original: 'じゃあね' }
+    ];
+
+    // Case A: AI returns exact IDs (some in uppercase, some numbers)
+    const mockApiResponse = {
+        blocks: [
+            { id: 'P1_B1', translated: 'Chào buổi sáng' }, // lowercase match
+            { id: 'b2', translated: 'Khỏe không?' },       // suffix match
+            { original: 'うん、元気！', translated: 'Ừ, mình khỏe!' }, // original text match
+            { translated: 'Tạm biệt nhé' }                 // positional index match
+        ]
+    };
+
+    const resolved = matchTranslationsToBlocks(inputBlocks, mockApiResponse);
+    assert.strictEqual(resolved[0].translated, 'Chào buổi sáng', 'Must match P1_B1 via case-insensitive ID');
+    assert.strictEqual(resolved[1].translated, 'Khỏe không?', 'Must match p1_b2 via suffix b2');
+    assert.strictEqual(resolved[2].translated, 'Ừ, mình khỏe!', 'Must match via original text');
+    assert.strictEqual(resolved[3].translated, 'Tạm biệt nhé', 'Must match via positional order index');
+});
