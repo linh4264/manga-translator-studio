@@ -230,6 +230,18 @@
                                 trước</span>
                         </button>
                     </div>
+                    <!-- Batch Translation Quota Info Notice -->
+                    <div class="mt-1.5 bg-slate-900/80 border border-indigo-500/30 rounded-lg p-2 text-[9px] text-slate-300 leading-snug shadow-sm">
+                        <div class="flex items-center gap-1 font-bold text-indigo-400 mb-0.5">
+                            <i class="fa-solid fa-circle-info text-[9px]"></i>
+                            <span>Quy tắc tiêu hao Quota khi Dịch tất cả:</span>
+                        </div>
+                        <div class="text-slate-400">
+                            • <strong>Chương 30 trang</strong> = <span class="text-sky-300 font-semibold">≥30 requests Model 1 (OCR)</span> + <span class="text-emerald-300 font-semibold">≥1 request Model 2 (Dịch)</span>.<br>
+                            • <em>Flash / Pro: ~20 reqs/ngày | Flash-Lite: ~500 reqs/ngày.</em><br>
+                            • 🔗 Truy cập <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer" class="text-sky-400 hover:text-sky-300 underline font-medium">aistudio.google.com</a> ➔ <strong>Dashboard</strong> ➔ <strong>Plan & Rate limits</strong> để xem hạn mức cụ thể.
+                        </div>
+                    </div>
                     <!-- Page range export options -->
                     <div id="export-range-container"
                         class="mt-2 pt-2 border-t border-slate-800/50 flex flex-col gap-1.5 hidden">
@@ -1662,6 +1674,31 @@
                                 <input id="custom-trans-model-input" type="text" placeholder="Nhập tên model Dịch thuật tùy chỉnh..."
                                     class="hidden w-full mt-1.5 bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-emerald-500">
                                 <p class="text-[9px] text-slate-500 leading-relaxed">* Chỉ gửi văn bản (Text-Only), tiết kiệm 85% quota so với việc gửi cả ảnh.</p>
+                            </div>
+
+                            <!-- Detailed Quota & RPD Explanation Banner -->
+                            <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-lg p-3 text-slate-300 space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[11px] font-bold text-indigo-300 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-calculator text-indigo-400"></i> Cơ chế Quota khi "Dịch tất cả" (Chapter 30 trang)
+                                    </span>
+                                    <span class="text-[8px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">Siêu tiết kiệm RPD</span>
+                                </div>
+                                <div class="text-[10px] space-y-1.5 leading-relaxed text-slate-300">
+                                    <div class="bg-slate-900/90 p-2 rounded border border-slate-800 font-mono text-[9.5px] text-amber-300 leading-relaxed">
+                                        📌 <strong>Công thức tiêu thụ khi Dịch Chapter 30 trang:</strong><br>
+                                        = <span class="text-sky-300 font-bold">≥ 30 requests Model 1 (OCR)</span> + <span class="text-emerald-300 font-bold">≥ 1 request Model 2 (Dịch thuật)</span>
+                                    </div>
+                                    <div class="text-slate-400 text-[9.5px]">
+                                        ⚡ <strong>Hạn mức API miễn phí (Google Free Tier):</strong><br>
+                                        • <strong>Flash / Pro:</strong> ~20 - 50 requests / ngày (RPD).<br>
+                                        • <strong>Flash-Lite:</strong> ~500 - 1500 requests / ngày (RPD).<br>
+                                        • 🔗 Truy cập <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer" class="text-sky-400 hover:text-sky-300 underline font-medium">aistudio.google.com</a> ➔ <strong>Dashboard</strong> ➔ <strong>Plan & Rate limits</strong> để kiểm tra hạn mức thực tế.
+                                    </div>
+                                    <div class="text-slate-300 text-[9.5px] bg-sky-950/30 border border-sky-500/20 p-1.5 rounded">
+                                        💡 <strong>Mẹo tối ưu:</strong> Hãy chọn <span class="text-sky-300 font-bold">Model 1 là Flash-Lite</span> (quét 30 trang tốn 30 requests nhẹ) và <span class="text-emerald-300 font-bold">Model 2 là Pro</span> (gom toàn bộ 30 trang dịch trong đúng 1 request Pro chất lượng cao).
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
