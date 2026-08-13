@@ -113,7 +113,7 @@ export const globalState = {
     maxRetries: 3,     // Số lần thử lại tối đa khi gặp lỗi API tạm thời
     // Global style presets for new/default blocks
     globalStyle: {
-        fontFamily: 'font-comic',
+        fontFamily: localStorage.getItem('manga_default_font') || 'font-manga',
         fontSize: 13,
         textColor: '#000000',
         bgColor: '#ffffff',
@@ -170,6 +170,9 @@ export function initializeStateFromStorage() {
                 try { globalState[stateKey] = JSON.parse(val); } catch (e) { globalState[stateKey] = true; }
             } else if (stateKey === 'audioSettings') {
                 try { globalState[stateKey] = JSON.parse(val); } catch (e) { console.error("Lỗi parse audioSettings:", e); }
+            } else if (stateKey === 'defaultFont') {
+                globalState.defaultFont = val;
+                if (globalState.globalStyle) globalState.globalStyle.fontFamily = val;
             } else {
                 globalState[stateKey] = val;
             }

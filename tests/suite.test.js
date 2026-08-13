@@ -357,3 +357,18 @@ test('5-Layer Translation Matching Engine with Fallbacks', async () => {
     assert.strictEqual(resolved[2].translated, 'Ừ, mình khỏe!', 'Must match via original text');
     assert.strictEqual(resolved[3].translated, 'Tạm biệt nhé', 'Must match via positional order index');
 });
+
+// 16. Default Font Synchronization and AI Translation Block Application Test
+test('Default Font Synchronization and Application for AI Translation', async () => {
+    const { globalState } = await import('../public/src/core/state.js');
+    const { updateDefaultFont } = await import('../public/src/ui/settings-ui.js');
+
+    updateDefaultFont('font-vietnamese');
+    assert.strictEqual(globalState.defaultFont, 'font-vietnamese', 'globalState.defaultFont must be updated');
+    assert.strictEqual(globalState.globalStyle.fontFamily, 'font-vietnamese', 'globalState.globalStyle.fontFamily must sync with defaultFont');
+
+    // Reset back to font-manga
+    updateDefaultFont('font-manga');
+    assert.strictEqual(globalState.defaultFont, 'font-manga');
+    assert.strictEqual(globalState.globalStyle.fontFamily, 'font-manga');
+});

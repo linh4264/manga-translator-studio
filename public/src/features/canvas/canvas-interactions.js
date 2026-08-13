@@ -395,7 +395,7 @@ export function addNewBlock() {
         translated: 'Nhập nội dung dịch...',
         box: { x: 35, y: 40, w: 30, h: 20 },
         style: {
-            fontFamily: globalState.globalStyle.fontFamily,
+            fontFamily: globalState.defaultFont || globalState.globalStyle?.fontFamily || 'font-manga',
             fontSize: globalState.globalStyle.fontSize,
             textColor: globalState.globalStyle.textColor,
             bgColor: globalState.globalStyle.bgColor,

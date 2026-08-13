@@ -144,7 +144,7 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
             coverMaskContent.appendChild(imgEl);
             coverEl.appendChild(coverMaskContent);
         } else {
-            const fontStyle = block.style.fontFamily || 'font-comic';
+            const fontStyle = block.style.fontFamily || globalState.defaultFont || 'font-manga';
             const isBuiltInFont = fontStyle.startsWith('font-');
 
             const currentMaskSize = block.style.maskSize || 'full';
@@ -245,7 +245,7 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
         maskContent.style.backgroundImage = 'none';
 
         if (block.type !== 'image') {
-            const fontStyle = block.style.fontFamily || 'font-comic';
+            const fontStyle = block.style.fontFamily || globalState.defaultFont || 'font-manga';
             const isBuiltInFont = fontStyle.startsWith('font-');
 
             const currentMaskSize = block.style.maskSize || 'full';

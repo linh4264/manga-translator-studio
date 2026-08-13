@@ -1326,7 +1326,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                     translated: b.translated || '',
                     box: normalisedBox,
                     style: {
-                        fontFamily: globalState.globalStyle.fontFamily,
+                        fontFamily: globalState.defaultFont || globalState.globalStyle?.fontFamily || 'font-manga',
                         fontSize: globalState.globalStyle.fontSize,
                         textColor: '#000000',
                         bgColor: '#ffffff',
@@ -1570,7 +1570,7 @@ export async function runBatchTranslation() {
                                 translated: '',
                                 box: normalisedBox,
                                 style: {
-                                    fontFamily: globalState.globalStyle.fontFamily,
+                                    fontFamily: globalState.defaultFont || globalState.globalStyle?.fontFamily || 'font-manga',
                                     fontSize: globalState.globalStyle.fontSize,
                                     textColor: '#000000',
                                     bgColor: '#ffffff',
