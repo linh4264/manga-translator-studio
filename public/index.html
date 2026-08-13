@@ -78,9 +78,9 @@
             <div class="p-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/40 shrink-0">
                 <div class="flex items-center gap-1.5">
                     <button data-action="openHelpModal"
-                        class="h-7 px-2.5 text-xs font-semibold rounded bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/40 text-indigo-300 hover:text-white flex items-center gap-1.5 transition-all shrink-0"
+                        class="h-7 px-2.5 text-xs font-bold rounded bg-sky-400 text-slate-950 border-2 border-black shadow-[2px_2px_0px_#000] hover:bg-pink-500 hover:text-white flex items-center gap-1.5 transition-all shrink-0"
                         title="Phím tắt & Tóm tắt chức năng ứng dụng">
-                        <i class="fa-solid fa-keyboard text-indigo-400"></i>
+                        <i class="fa-solid fa-keyboard text-slate-950"></i>
                         <span>Phím tắt</span>
                     </button>
                     <a href="./cong-cu-huu-ich/" target="_blank" rel="noopener noreferrer"
@@ -2599,7 +2599,7 @@
             <!-- Modal Header -->
             <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/50">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-9 h-9 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                    <div class="w-9 h-9 rounded-xl bg-sky-400 border-2 border-black shadow-[2px_2px_0px_#000] flex items-center justify-center text-slate-950">
                         <i class="fa-solid fa-circle-question text-lg"></i>
                     </div>
                     <div>
@@ -2607,15 +2607,15 @@
                         <p class="text-xs text-slate-400">Hướng dẫn thao tác nhanh & tổng quan hệ thống Manga Translator Studio</p>
                     </div>
                 </div>
-                <button data-action="closeHelpModal" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors">
+                <button data-action="closeHelpModal" class="w-8 h-8 rounded-lg bg-pink-500 text-white border-2 border-black shadow-[2px_2px_0px_#000] hover:bg-orange-500 flex items-center justify-center transition-all">
                     <i class="fa-solid fa-xmark text-sm"></i>
                 </button>
             </div>
 
             <!-- Modal Navigation Tabs -->
-            <div class="flex border-b border-slate-800 bg-slate-950/30 px-6 pt-2 gap-4">
+            <div class="flex border-b-2 border-black bg-slate-950/30 px-6 pt-2 gap-4">
                 <button onclick="switchHelpTab('shortcuts')" id="help-tab-btn-shortcuts"
-                    class="help-tab-btn pb-2.5 px-1 text-xs font-bold border-b-2 border-indigo-500 text-indigo-400 transition-all flex items-center gap-2">
+                    class="help-tab-btn pb-2.5 px-1 text-xs font-bold border-b-2 border-sky-400 text-sky-400 transition-all flex items-center gap-2">
                     <i class="fa-solid fa-keyboard"></i>
                     <span>Bảng Phím Tắt</span>
                 </button>
@@ -2631,17 +2631,17 @@
                 <!-- TAB 1: KEYBOARD SHORTCUTS -->
                 <div id="help-tab-content-shortcuts" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
-                            <span class="text-xs text-slate-300 font-medium">Hoàn tác (Undo)</span>
-                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Ctrl + Z</kbd>
+                        <div class="p-3 rounded-xl bg-slate-950 border-2 border-black shadow-[2.5px_2.5px_0px_#000] flex items-center justify-between">
+                            <span class="text-xs text-slate-200 font-bold">Hoàn tác (Undo)</span>
+                            <kbd class="px-2 py-1 rounded bg-sky-400 border-2 border-black text-slate-950 font-mono text-xs font-bold shadow-[1.5px_1.5px_0px_#000]">Ctrl + Z</kbd>
                         </div>
-                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
-                            <span class="text-xs text-slate-300 font-medium">Làm lại (Redo)</span>
-                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Ctrl + Y / Ctrl+Shift+Z</kbd>
+                        <div class="p-3 rounded-xl bg-slate-950 border-2 border-black shadow-[2.5px_2.5px_0px_#000] flex items-center justify-between">
+                            <span class="text-xs text-slate-200 font-bold">Làm lại (Redo)</span>
+                            <kbd class="px-2 py-1 rounded bg-sky-400 border-2 border-black text-slate-950 font-mono text-xs font-bold shadow-[1.5px_1.5px_0px_#000]">Ctrl + Y / Ctrl+Shift+Z</kbd>
                         </div>
-                        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
-                            <span class="text-xs text-slate-300 font-medium">Chọn tất cả ô thoại</span>
-                            <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Ctrl + A</kbd>
+                        <div class="p-3 rounded-xl bg-slate-950 border-2 border-black shadow-[2.5px_2.5px_0px_#000] flex items-center justify-between">
+                            <span class="text-xs text-slate-200 font-bold">Chọn tất cả ô thoại</span>
+                            <kbd class="px-2 py-1 rounded bg-sky-400 border-2 border-black text-slate-950 font-mono text-xs font-bold shadow-[1.5px_1.5px_0px_#000]">Ctrl + A</kbd>
                         </div>
                         <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
                             <span class="text-xs text-slate-300 font-medium">Sửa chữ trực tiếp (Inline Edit)</span>

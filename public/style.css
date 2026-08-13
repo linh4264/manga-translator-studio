@@ -1,25 +1,95 @@
 :root {
     color-scheme: light !important;
+    --neo-sky: #38bdf8;
+    --neo-sky-dark: #0284c7;
+    --neo-white: #ffffff;
+    --neo-black: #0f172a;
+    --neo-pink: #ff2a85;
+    --neo-orange: #f97316;
 }
 
-/* Custom Scrollbar for sleek dark look */
+/* ============================================================
+   NEO-BRUTALISM SYSTEM STYLES
+   Palette: Sky Blue + White + Black + Hot Pink / Orange
+   ============================================================ */
+
+body {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+}
+
+/* Hard Outlines & Drop Shadows on Buttons */
+button:not(.resize-handle):not(.help-tab-btn) {
+    border: 2px solid #000000 !important;
+    box-shadow: 2.5px 2.5px 0px #000000 !important;
+    font-weight: 700 !important;
+    transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease !important;
+}
+
+button:not(:disabled):hover:not(.resize-handle):not(.help-tab-btn) {
+    transform: translate(-1px, -1px) !important;
+    box-shadow: 3.5px 3.5px 0px #000000 !important;
+}
+
+button:not(:disabled):active:not(.resize-handle):not(.help-tab-btn) {
+    transform: translate(2px, 2px) !important;
+    box-shadow: 0px 0px 0px #000000 !important;
+}
+
+/* Primary Sky Blue Buttons & Hot Pink Accents */
+.bg-indigo-600, .bg-indigo-500, .bg-indigo-650 {
+    background-color: #0284c7 !important;
+    color: #ffffff !important;
+    border: 2px solid #000000 !important;
+}
+
+.bg-indigo-600:hover, .bg-indigo-500:hover {
+    background-color: #38bdf8 !important;
+    color: #0f172a !important;
+}
+
+.text-indigo-400, .text-indigo-300 {
+    color: #38bdf8 !important;
+}
+
+.border-indigo-500, .border-indigo-500\/40 {
+    border-color: #0284c7 !important;
+}
+
+/* Inputs, Textareas, Selects Neo-Brutalist styling */
+input[type="text"], input[type="number"], input[type="search"], input[type="password"], textarea, select {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border: 2px solid #000000 !important;
+    box-shadow: 2.5px 2.5px 0px #000000 !important;
+    border-radius: 6px !important;
+    font-weight: 600 !important;
+}
+
+input:focus, textarea:focus, select:focus {
+    box-shadow: 3.5px 3.5px 0px #ff2a85 !important;
+    border-color: #000000 !important;
+    outline: none !important;
+}
+
+/* Custom Scrollbar for sleek Neo look */
 ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-    background: transparent;
+    background: #0f172a;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #334155;
-    border-radius: 9999px;
-    transition: background-color 0.2s ease;
+    background: #38bdf8;
+    border: 1px solid #000000;
+    border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #6366f1;
+    background: #ff2a85;
 }
 
 /* Modern dropdown inputs styling */
@@ -107,7 +177,7 @@ select:focus {
 .bubble-overlay {
     position: absolute;
     cursor: move;
-    border: 1px dashed rgba(79, 70, 229, 0.4);
+    border: 2px dashed #0284c7;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
     box-sizing: border-box;
     display: flex;
@@ -132,27 +202,27 @@ select:focus {
 }
 
 .bubble-overlay:hover {
-    border-color: rgba(79, 70, 229, 1);
-    box-shadow: 0 0 0 1px rgba(79, 70, 229, 0.5);
+    border: 2.5px solid #ff2a85 !important;
+    box-shadow: 3px 3px 0px #000000 !important;
 }
 
 .bubble-overlay.active {
-    border: 1px solid #6366f1 !important;
-    box-shadow: 0 0 12px rgba(99, 102, 241, 0.4), inset 0 0 0 1px #6366f1;
+    border: 2.5px solid #ff2a85 !important;
+    box-shadow: 4px 4px 0px #000000 !important;
     z-index: 50;
 }
 
-/* Resizing handles */
+/* Resizing handles - Neo Brutalism */
 .resize-handle {
     position: absolute;
-    width: 10px;
-    height: 10px;
-    background-color: #6366f1;
-    border: 1px solid #ffffff;
-    border-radius: 50%;
+    width: 12px;
+    height: 12px;
+    background-color: #ff2a85;
+    border: 2px solid #000000;
+    border-radius: 3px;
+    box-shadow: 1.5px 1.5px 0px #000000;
     z-index: 60;
     display: none;
-    /* Ẩn mặc định để tránh rối mắt trên toàn trang */
 }
 
 /* Chỉ hiện chấm kéo chỉnh kích thước khi block đang được chọn active */
@@ -448,11 +518,39 @@ button:not(:disabled):active {
     transform: translateY(-50%) scale(0.95) !important;
 }
 
-/* Canvas Floating Context Toolbar */
+/* Canvas Floating Context Toolbar - Neo Brutalism */
 #canvas-floating-toolbar {
     pointer-events: auto;
-    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6), 0 0 15px rgba(99, 102, 241, 0.25);
+    background-color: #38bdf8 !important;
+    border: 2.5px solid #000000 !important;
+    box-shadow: 4px 4px 0px #000000 !important;
+    border-radius: 10px !important;
     animation: popInFloating 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#canvas-floating-toolbar button {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border: 2px solid #000000 !important;
+    box-shadow: 2px 2px 0px #000000 !important;
+}
+
+#canvas-floating-toolbar button:hover {
+    background-color: #ff2a85 !important;
+    color: #ffffff !important;
+}
+
+/* Modals & Dialogs Neo-Brutalism Style */
+#settings-modal > div, 
+#lorebook-modal > div, 
+#help-modal > div, 
+#gdrive-modal > div,
+#find-replace-modal > div,
+#srs-modal > div {
+    background-color: #0f172a !important;
+    border: 3px solid #000000 !important;
+    box-shadow: 6px 6px 0px #000000 !important;
+    border-radius: 14px !important;
 }
 
 @keyframes popInFloating {
@@ -488,8 +586,10 @@ button:not(:disabled):active {
 
 /* Typesetting Presets Tactile Feedback */
 .preset-btn-active {
-    border-color: #6366f1 !important;
-    background-color: rgba(99, 102, 241, 0.15) !important;
+    border-color: #000000 !important;
+    background-color: #ff2a85 !important;
+    color: #ffffff !important;
+    box-shadow: 3px 3px 0px #000000 !important;
 }
 
 /* Premium Range Input Styling */
@@ -498,38 +598,41 @@ input[type="range"] {
     appearance: none;
     background: #1e293b;
     border-radius: 9999px;
-    height: 4px;
+    height: 6px;
     outline: none;
+    border: 1px solid #000000;
 }
 
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #6366f1;
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    background: #ff2a85;
     cursor: pointer;
     transition: transform 0.1s ease, background-color 0.1s ease;
-    border: none;
+    border: 1.5px solid #000000;
+    box-shadow: 1px 1px 0px #000000;
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
-    transform: scale(1.25);
-    background: #818cf8;
+    transform: scale(1.2);
+    background: #f97316;
 }
 
 input[type="range"]::-moz-range-thumb {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #6366f1;
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    background: #ff2a85;
     cursor: pointer;
     transition: transform 0.1s ease, background-color 0.1s ease;
-    border: none;
+    border: 1.5px solid #000000;
+    box-shadow: 1px 1px 0px #000000;
 }
 
 input[type="range"]::-moz-range-thumb:hover {
-    transform: scale(1.25);
-    background: #818cf8;
+    transform: scale(1.2);
+    background: #f97316;
 }

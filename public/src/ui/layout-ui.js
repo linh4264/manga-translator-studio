@@ -324,7 +324,7 @@ export function switchHelpTab(tabName) {
         const content = document.getElementById(`help-tab-content-${t}`);
         if (t === tabName) {
             if (btn) {
-                btn.className = "help-tab-btn pb-2.5 px-1 text-xs font-bold border-b-2 border-indigo-500 text-indigo-400 transition-all flex items-center gap-2";
+                btn.className = "help-tab-btn pb-2.5 px-1 text-xs font-bold border-b-2 border-sky-400 text-sky-400 transition-all flex items-center gap-2";
             }
             if (content) content.classList.remove('hidden');
         } else {
