@@ -436,26 +436,26 @@
                     class="fa-solid fa-paintbrush text-sm group-hover:scale-110 transition-transform text-amber-400 group-hover:text-white"></i>
             </button>
 
-            <!-- Floating Zoom Controls attached to left outer edge of Right Sidebar near bottom -->
+            <!-- Floating Vertical Zoom Controls attached to outer left edge of Right Sidebar -->
             <div id="zoom-controls-floating"
-                class="absolute -left-[148px] bottom-3 z-40 bg-slate-900/90 border border-slate-800 rounded-lg p-1 flex items-center space-x-1 shadow-2xl backdrop-blur-md pointer-events-auto select-none">
-                <button onclick="changeZoom(-10)"
-                    class="w-6 h-6 hover:bg-slate-800 rounded text-slate-400 hover:text-white flex items-center justify-center transition-all"
-                    title="Thu nhỏ (Alt + Cuộn xuống / Ctrl + -)">
-                    <i class="fa-solid fa-minus text-xs"></i>
+                class="absolute -left-10 bottom-4 z-40 bg-white border-2.5 border-black rounded-xl p-1 flex flex-col items-center gap-1 shadow-[3.5px_3.5px_0px_#000] pointer-events-auto select-none">
+                <button onclick="changeZoom(10)"
+                    class="w-7 h-7 rounded-lg bg-sky-400 hover:bg-sky-300 text-black border border-black flex items-center justify-center transition-all cursor-pointer shadow-[1px_1px_0px_#000]"
+                    title="Phóng to (Alt + Cuộn lên / Ctrl + +)">
+                    <i class="fa-solid fa-plus text-xs font-black"></i>
                 </button>
                 <span id="zoom-indicator"
-                    class="text-[10px] font-semibold text-slate-300 w-10 text-center font-mono select-none">100%</span>
-                <button onclick="changeZoom(10)"
-                    class="w-6 h-6 hover:bg-slate-800 rounded text-slate-400 hover:text-white flex items-center justify-center transition-all"
-                    title="Phóng to (Alt + Cuộn lên / Ctrl + +)">
-                    <i class="fa-solid fa-plus text-xs"></i>
+                    class="text-[10px] font-black text-white bg-slate-950 border border-black rounded px-1 py-0.5 font-mono select-none shadow-[1px_1px_0px_#000] text-center w-full min-w-[32px]">100%</span>
+                <button onclick="changeZoom(-10)"
+                    class="w-7 h-7 rounded-lg bg-sky-400 hover:bg-sky-300 text-black border border-black flex items-center justify-center transition-all cursor-pointer shadow-[1px_1px_0px_#000]"
+                    title="Thu nhỏ (Alt + Cuộn xuống / Ctrl + -)">
+                    <i class="fa-solid fa-minus text-xs font-black"></i>
                 </button>
-                <div class="h-3 w-px bg-slate-800"></div>
+                <div class="w-4 h-px bg-black my-0.5"></div>
                 <button onclick="resetZoom()"
-                    class="w-6 h-6 hover:bg-slate-800 rounded text-slate-400 hover:text-white flex items-center justify-center transition-all"
+                    class="w-7 h-7 rounded-lg bg-pink-500 hover:bg-pink-400 text-white border border-black flex items-center justify-center transition-all cursor-pointer shadow-[1px_1px_0px_#000]"
                     title="Khôi phục 100% (Ctrl + 0)">
-                    <i class="fa-solid fa-rotate-left text-xs"></i>
+                    <i class="fa-solid fa-rotate-left text-xs font-black"></i>
                 </button>
             </div>
 

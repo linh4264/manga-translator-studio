@@ -843,16 +843,25 @@ input[type="range"]::-moz-range-thumb {
     border-radius: 10px !important;
 }
 
-#zoom-controls-floating button {
+#zoom-controls-floating button:not(.bg-pink-500):not(.bg-sky-400) {
     background-color: #ffffff !important;
     color: #0f172a !important;
     border: 1.5px solid #000000 !important;
     box-shadow: 1px 1px 0px #000000 !important;
 }
 
-#zoom-controls-floating button:hover {
+#zoom-controls-floating button:hover:not(.bg-pink-500):not(.bg-sky-400) {
     background-color: #38bdf8 !important;
     color: #0f172a !important;
+}
+
+#zoom-indicator {
+    background-color: #0f172a !important;
+    color: #ffffff !important;
+    border: 1.5px solid #000000 !important;
+    box-shadow: 1px 1px 0px #000000 !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.5px;
 }
 
 /* Empty State Card */
