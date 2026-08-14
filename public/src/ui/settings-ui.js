@@ -477,6 +477,20 @@ export function updateDefaultFont(value) {
     const el = document.getElementById('default-font');
     if (el) el.value = value;
     localStorage.setItem('manga_default_font', value);
+
+    // Invalidate autoFitCache for all blocks across all pages and request re-render
+    if (globalState.pages && Array.isArray(globalState.pages)) {
+        globalState.pages.forEach(p => {
+            if (p && p.blocks) {
+                p.blocks.forEach(b => {
+                    b.autoFitCache = null;
+                    b.maskCache = null;
+                });
+                markPageAutoFitDirty(p);
+            }
+        });
+    }
+    requestOverlayRender();
     showToast('Đã cập nhật phông chữ mặc định!', 'info');
 }
 

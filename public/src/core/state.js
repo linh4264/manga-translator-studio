@@ -68,6 +68,14 @@ export function registerStateCallbacks(callbacks) {
 export function markPageAutoFitDirty(page) {
     if (!page) return;
     page.autoFitRevision = (page.autoFitRevision || 0) + 1;
+    if (page.blocks && Array.isArray(page.blocks)) {
+        page.blocks.forEach(b => {
+            if (b) {
+                b.autoFitCache = null;
+                b.maskCache = null;
+            }
+        });
+    }
 }
 
 export const globalState = {
