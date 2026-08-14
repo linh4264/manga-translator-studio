@@ -851,55 +851,71 @@ async function executeTextTranslationStep({
         });
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-        try {
-            controller.abort(new Error("Yêu cầu Dịch thuật AI quá hạn (Timeout 120s). Vui lòng thử lại."));
-        } catch (e) {
-            controller.abort();
-        }
-    }, 120000);
+    const maxRetries = 2;
+    let lastError = null;
 
-    let response;
-    try {
-        response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: requestHeaders,
-            body: requestBody,
-            signal: controller.signal
-        });
-    } catch (fetchErr) {
-        if (fetchErr.name === 'AbortError' || fetchErr.name === 'TimeoutError' || (fetchErr.message && fetchErr.message.includes('aborted'))) {
-            throw new Error("Kết nối Dịch thuật AI quá hạn (Timeout 120s). Đang tự động thử lại...");
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        if (cancelTranslationFlag) break;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            try {
+                controller.abort(new Error("Yêu cầu Dịch thuật AI quá hạn (Timeout 120s). Vui lòng thử lại."));
+            } catch (e) {
+                controller.abort();
+            }
+        }, 120000);
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: requestHeaders,
+                body: requestBody,
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                let errorDetail = "";
+                try {
+                    const errorJson = await response.json();
+                    errorDetail = errorJson.error?.message || errorJson.message || "";
+                } catch (e) { }
+                throw new Error(errorDetail ? `Lỗi Dịch thuật (${response.status}): ${errorDetail}` : `Lỗi Dịch thuật API: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const jsonText = isOpenAiFormat
+                ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
+                : result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            const data = parseGeminiJsonText(jsonText);
+            return matchTranslationsToBlocks(blocksToTranslate, data);
+        } catch (fetchErr) {
+            clearTimeout(timeoutId);
+            lastError = fetchErr;
+
+            const isRetryable = fetchErr.name === 'AbortError' || fetchErr.name === 'TimeoutError' ||
+                (fetchErr.message && (fetchErr.message.includes('429') || fetchErr.message.includes('503') || fetchErr.message.includes('500') || fetchErr.message.includes('Timeout') || fetchErr.message.includes('aborted') || fetchErr.message.includes('Failed to fetch')));
+
+            if (isRetryable && attempt < maxRetries) {
+                const waitSec = (attempt + 1) * 2;
+                await new Promise(r => setTimeout(r, waitSec * 1000));
+                continue;
+            }
+            throw fetchErr;
         }
-        throw fetchErr;
-    } finally {
-        clearTimeout(timeoutId);
     }
 
-    if (!response.ok) {
-        let errorDetail = "";
-        try {
-            const errorJson = await response.json();
-            errorDetail = errorJson.error?.message || errorJson.message || "";
-        } catch (e) { }
-        throw new Error(errorDetail ? `Lỗi Dịch thuật (${response.status}): ${errorDetail}` : `Lỗi Dịch thuật API: ${response.status}`);
-    }
-
-    const result = await response.json();
-    const jsonText = isOpenAiFormat
-        ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
-        : result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    const data = parseGeminiJsonText(jsonText);
-    return matchTranslationsToBlocks(blocksToTranslate, data);
+    throw lastError || new Error("Không thể hoàn tất dịch thuật.");
 }
 
 /**
- * ⚡ DỊCH TOÀN BỘ DIỄN BIẾN CHAPTER TRONG 1 LƯỢT GỌI DUY NHẤT (1 RPD CHO MODEL DỊCH)
+ * ⚡ THỰC THI DỊCH TỪNG CHUNK ĐỐI THOẠI CỦA CHAPTER VỚI AUTO-RETRY
  */
-export async function executeChapterTranslationStep({
-    allChapterBlocks,
+async function executeChapterChunkTranslationStep({
+    chunkBlocks,
     translationModel,
     targetLangName,
     glossaryNames,
@@ -927,7 +943,7 @@ export async function executeChapterTranslationStep({
     let currentPage = -1;
     let pageItems = [];
 
-    allChapterBlocks.forEach(b => {
+    chunkBlocks.forEach(b => {
         if (b.pageIndex !== currentPage) {
             if (pageItems.length > 0) {
                 groupedNarrative.push(`[--- TRANG / PAGE ${currentPage + 1} ---]\n` + JSON.stringify(pageItems, null, 2));
@@ -997,48 +1013,145 @@ export async function executeChapterTranslationStep({
         });
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-        try {
-            controller.abort(new Error("Yêu cầu Dịch thuật Chapter quá hạn (Timeout 180s)."));
-        } catch (e) {
-            controller.abort();
-        }
-    }, 180000);
+    const maxRetries = 2;
+    let lastError = null;
 
-    let response;
-    try {
-        response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: requestHeaders,
-            body: requestBody,
-            signal: controller.signal
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        if (cancelTranslationFlag) break;
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            try {
+                controller.abort(new Error("Yêu cầu Dịch thuật Chapter quá hạn (Timeout 180s)."));
+            } catch (e) {
+                controller.abort();
+            }
+        }, 180000);
+
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: requestHeaders,
+                body: requestBody,
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                let errorDetail = "";
+                try {
+                    const errorJson = await response.json();
+                    errorDetail = errorJson.error?.message || errorJson.message || "";
+                } catch (e) { }
+                throw new Error(errorDetail ? `Lỗi Dịch thuật (${response.status}): ${errorDetail}` : `Lỗi Dịch thuật API: ${response.status}`);
+            }
+
+            const result = await response.json();
+            const jsonText = isOpenAiFormat
+                ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
+                : result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            const data = parseGeminiJsonText(jsonText);
+            return matchTranslationsToBlocks(chunkBlocks, data);
+        } catch (fetchErr) {
+            clearTimeout(timeoutId);
+            lastError = fetchErr;
+
+            const isRetryable = fetchErr.name === 'AbortError' || fetchErr.name === 'TimeoutError' ||
+                (fetchErr.message && (fetchErr.message.includes('429') || fetchErr.message.includes('503') || fetchErr.message.includes('500') || fetchErr.message.includes('Timeout') || fetchErr.message.includes('aborted') || fetchErr.message.includes('Failed to fetch')));
+
+            if (isRetryable && attempt < maxRetries) {
+                const waitSec = (attempt + 1) * 3;
+                await new Promise(r => setTimeout(r, waitSec * 1000));
+                continue;
+            }
+            throw fetchErr;
+        }
+    }
+
+    throw lastError || new Error("Không thể hoàn tất dịch thuật Chapter.");
+}
+
+/**
+ * ⚡ DỊCH TOÀN BỘ DIỄN BIẾN CHAPTER VỚI SMART CHUNKING (>220 BLOCKS) VÀ TIẾT KIỆM TỐI ĐA RPD
+ */
+export async function executeChapterTranslationStep({
+    allChapterBlocks,
+    translationModel,
+    targetLangName,
+    glossaryNames,
+    keyToUse,
+    isOpenAiFormat,
+    endpoint,
+    requestHeaders
+}) {
+    if (!allChapterBlocks || allChapterBlocks.length === 0) return [];
+
+    const MAX_CHUNK_BLOCKS = 220; // Ngưỡng an toàn chống tràn output token 8192
+
+    // Trường hợp 1: Toàn bộ chapter nhỏ hơn hoặc bằng 220 câu thoại -> Dịch trong đúng 1 request duy nhất (1 RPD)
+    if (allChapterBlocks.length <= MAX_CHUNK_BLOCKS) {
+        return executeChapterChunkTranslationStep({
+            chunkBlocks: allChapterBlocks,
+            translationModel,
+            targetLangName,
+            glossaryNames,
+            keyToUse,
+            isOpenAiFormat,
+            endpoint,
+            requestHeaders
         });
-    } catch (fetchErr) {
-        if (fetchErr.name === 'AbortError' || fetchErr.name === 'TimeoutError' || (fetchErr.message && fetchErr.message.includes('aborted'))) {
-            throw new Error("Kết nối Dịch thuật Chapter AI quá hạn (Timeout 180s). Đang tự động thử lại...");
+    }
+
+    // Trường hợp 2: Chapter siêu dài (>220 câu) -> Tự động chia nhóm thông minh theo ranh giới từng trang
+    const chunks = [];
+    let currentChunk = [];
+    let currentPageIndex = -1;
+
+    for (const block of allChapterBlocks) {
+        if (currentChunk.length >= MAX_CHUNK_BLOCKS && block.pageIndex !== currentPageIndex) {
+            chunks.push(currentChunk);
+            currentChunk = [];
         }
-        throw fetchErr;
-    } finally {
-        clearTimeout(timeoutId);
+        currentChunk.push(block);
+        currentPageIndex = block.pageIndex;
+    }
+    if (currentChunk.length > 0) {
+        chunks.push(currentChunk);
     }
 
-    if (!response.ok) {
-        let errorDetail = "";
-        try {
-            const errorJson = await response.json();
-            errorDetail = errorJson.error?.message || errorJson.message || "";
-        } catch (e) { }
-        throw new Error(errorDetail ? `Lỗi Dịch thuật (${response.status}): ${errorDetail}` : `Lỗi Dịch thuật API: ${response.status}`);
+    const allTranslatedBlocks = [];
+    for (let cIdx = 0; cIdx < chunks.length; cIdx++) {
+        if (cancelTranslationFlag) break;
+
+        const chunk = chunks[cIdx];
+        uiUpdateBackgroundTaskOverlay(
+            true,
+            `Giai đoạn 2/2: Đang dịch Chapter (Nhóm ${cIdx + 1}/${chunks.length})...`,
+            `Đang dịch ${chunk.length} câu thoại với ${translationModel}...`,
+            Math.round(50 + ((cIdx + 1) / chunks.length) * 45)
+        );
+
+        const translatedChunk = await executeChapterChunkTranslationStep({
+            chunkBlocks: chunk,
+            translationModel,
+            targetLangName,
+            glossaryNames,
+            keyToUse,
+            isOpenAiFormat,
+            endpoint,
+            requestHeaders
+        });
+
+        allTranslatedBlocks.push(...translatedChunk);
+
+        if (cIdx < chunks.length - 1 && !cancelTranslationFlag) {
+            await new Promise(r => setTimeout(r, 1500));
+        }
     }
 
-    const result = await response.json();
-    const jsonText = isOpenAiFormat
-        ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
-        : result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    const data = parseGeminiJsonText(jsonText);
-    return matchTranslationsToBlocks(allChapterBlocks, data);
+    return allTranslatedBlocks;
 }
 
 export async function translateActivePage() {
