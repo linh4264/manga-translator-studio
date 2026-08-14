@@ -299,17 +299,65 @@ export function getTranslationGuidancePrompt() {
             guidanceParts.push(`- SOURCE LANGUAGE: Chinese Manhua. Translate idiom phrases naturally into ${targetLangName}, keep cultivation/wuxia/fantasy terms consistent.`);
         }
     } else if (srcLang === 'ko') {
-        guidanceParts.push(
-            `- SOURCE LANGUAGE: Korean Manhwa / Webtoon:`,
-            `  1. SPEECH LEVELS (존댓말 vs 반말):`,
-            `     - Jondaetmal (Kính ngữ 존댓말): Mandatory respectful speech in ${targetLangName}. Include polite particles ("dạ", "vâng", "ạ") and respectful forms of address.`,
-            `     - Banmal (Nói trống 반말): Casual, informal, or hostile speech (${targetLangName} "mày-tao", "cậu-tớ", "bạn-tôi"). Strictly remove polite markers ("dạ", "ạ").`,
-            `  2. KOREAN HONORIFICS & TITLES (XƯNG HÔ MANHWA): Localize Korean titles naturally into ${targetLangName}: Sunbae (선배) -> "Tiền bối / Anh / Chị", Oppa/Hyung/Unnie/Noona -> "Anh / Chị", Ahjussi (아저씨) -> "Chú / Bác", Nim (님) -> "Sếp / Ngài / Anh / Chị". Do not leave awkward raw transliterations unless requested.`,
-            `  3. MANHWA INTERJECTIONS & SLANG: Translate Korean webtoon exclamations naturally: "헐 (Heol)" -> "Sốc thật! / Vãi!", "대박 (Daebak)" -> "Đỉnh thật! / Bá cháy!", "아이구 (Aigoo)" -> "Ôi chao! / Trời ạ!", initial "아니 (Ani...)" -> "Ủa... / Mà... / Này...".`,
-            `  4. SENTENCE ENDINGS: Convert sentence endings (~잖아, ~거든, ~지, ~냐) into matching ${targetLangName} tone particles ("đấy thôi", "mà", "chứ", "sao/hả").`
-        );
+        if (targetLang === 'vi') {
+            guidanceParts.push(
+                `- KOREAN TO VIETNAMESE MANHWA TRANSLATION MASTER SPECIFICATION:`,
+                `  1. HỆ THỐNG KÍNH NGỮ & THÂN MẬT (존댓말 vs 반말):`,
+                `     - Kính ngữ (존댓말 - Jondaetmal): Bắt buộc dịch sang khẩu ngữ tôn kính trong tiếng Việt. Thêm từ đệm "dạ, vâng, ạ", đại từ xưng hô lịch thiệp ("Thưa sếp/ngài", "Tôi hiểu rồi ạ", "Xin chào tiền bối").`,
+                `     - Nói trống / Suồng sã / Bằng vai (반말 - Banmal): Dùng các cặp xưng hô tự nhiên ("mày-tao", "cậu-tớ", "anh-em"), TRIỆT TIÊU hoàn toàn từ dạ/vâng/ạ.`,
+                `  2. DANH XƯNG & HẬU TỐ MANHWA (HONORIFICS & TITLES):`,
+                `     - 선배 (Sunbae) -> "Tiền bối", "Anh/Chị khóa trên", hoặc xưng "anh/chị".`,
+                `     - 후배 (Hubae) -> "Hậu bối", "Đàn em", "Em".`,
+                `     - 오빠 (Oppa) / 형 (Hyung) -> "Anh" (linh hoạt theo ngữ cảnh tình cảm, anh em ruột hoặc anh kết nghĩa).`,
+                `     - 언니 (Unnie) / 누나 (Noona) -> "Chị".`,
+                `     - 아저씨 (Ahjussi) / 아줌마 (Ahjumma) -> "Chú / Bác / Cô".`,
+                `     - 님 (-nim) -> "Ngài / Sếp / Trưởng phòng / Anh / Chị".`,
+                `  3. TỪ CẢM THÁN & KHẨU NGỮ WEBTOON (EXCLAMATIONS & SPOKEN SLANG):`,
+                `     - 헐 (Heol) -> "Sốc thật!", "Vãi!", "Trời đất!".`,
+                `     - 대박 (Daebak) -> "Đỉnh thật!", "Bá cháy!", "Quá dữ!".`,
+                `     - 아이구 (Aigoo) -> "Ôi trời ơi!", "Trời ạ!", "Haiz...".`,
+                `     - 아니 (Ani...) đứng đầu câu -> "Ủa...", "Mà này...", "Không phải chứ...".`,
+                `     - 진짜 / 정말 (Jinjja / Jeongmal) -> "Thật luôn?", "Thiệt hả?", "Nghiêm túc đấy à?".`,
+                `     - 미쳤어 (Michyeosseo) -> "Điên rồi!", "Khùng hả?!".`,
+                `     - 콜 (Call) -> "Chốt kèo!", "Duyệt luôn!", "OK!".`,
+                `  4. TRỢ TỪ ĐUÔI CÂU MANHWA (SENTENCE-ENDING PARTICLES):`,
+                `     - Chuyển đổi linh hoạt (~잖아, ~거든, ~지, ~냐) thành từ đệm tiếng Việt tự nhiên: "đấy thôi", "mà", "chứ", "sao/hả".`,
+                `  5. TỪ TƯỢNG THANH / TƯỢNG HÌNH MANHWA (SFX):`,
+                `     - 쿵 (Kung) -> "Rầm! / Thình!", 촤악 (Chwak) -> "Roẹt! / Xoẹt!", 헉 (Heok) -> "Ặc! / Hở?!", 피식 (Pisik) -> "Cười khẩy / Nhếch mép", 꿀꺽 (Kkulkkeok) -> "Ực!".`
+            );
+        } else {
+            guidanceParts.push(
+                `- SOURCE LANGUAGE: Korean Manhwa / Webtoon:`,
+                `  1. SPEECH LEVELS (존댓말 vs 반말): Respectful speech in ${targetLangName} for Jondaetmal; casual/informal for Banmal.`,
+                `  2. KOREAN HONORIFICS & TITLES: Localize Sunbae, Oppa/Hyung/Unnie/Noona, Ahjussi, -nim naturally into ${targetLangName}.`,
+                `  3. MANHWA INTERJECTIONS & SLANG: Translate Heol, Daebak, Aigoo, Ani naturally.`
+            );
+        }
     } else if (srcLang === 'en') {
-        guidanceParts.push(`- SOURCE LANGUAGE: English Comic/Scanlation. English relies heavily on neutral "I/You" and conversational idioms. Actively infer character hierarchy, age, and emotional state to pick proper ${targetLangName} pronouns (xưng hô). Translate idioms, slang, and comic interjections (e.g., "Holy crap", "Sheesh", "No way", "Guh") into natural, vivid ${targetLangName} expressions.`);
+        if (targetLang === 'vi') {
+            guidanceParts.push(
+                `- ENGLISH TO VIETNAMESE COMIC TRANSLATION MASTER SPECIFICATION:`,
+                `  1. PHÁ BỎ ĐẠI TỪ I/YOU TRUNG TÍNH (DYNAMIC PRONOUNS):`,
+                `     - Tiếng Anh chỉ dùng "I/You". Bắt buộc tự động suy luận tuổi tác, bối cảnh và cảm xúc nhân vật để chọn cặp đại từ tiếng Việt sống động (mày-tao, cậu-tớ, anh-em, chú-cháu, sếp-em, đại nhân-tiểu nhân...). TUYỆT ĐỐI TRÁNH dùng "tôi-bạn" cứng nhắc.`,
+                `  2. THÀNH NGỮ, TỪ LÓNG & CỤM TỪ CẢM THÁN (COMIC IDIOMS & SLANG):`,
+                `     - "Holy crap!" / "Holy shit!" -> "Vãi thật!", "Trời đất ơi!".`,
+                `     - "No way!" -> "Làm gì có!", "Không đời nào!", "Đùa à?!".`,
+                `     - "I got your back" -> "Có tôi bảo kê rồi", "Cứ để tôi lo".`,
+                `     - "Piece of cake" -> "Dễ như ăn kẹo", "Chuyện nhỏ".`,
+                `     - "What the heck/hell" -> "Cái quái gì thế này?!", "Gì vậy trời?!".`,
+                `     - "Sheesh" / "Guh" -> "Vãi chưởng", "Hừ / Chậc".`,
+                `     - "Don't mess with me" -> "Đừng có nhờn", "Liệu hồn đấy".`,
+                `     - "I'm on it" -> "Để đó cho tôi", "Có ngay".`,
+                `  3. RÚT GỌN CÂU THEO KHẨU NGỮ MANGA (BUBBLE-FIT CONCISENESS):`,
+                `     - "Are you kidding me?" -> "Đùa đấy à?" / "Bỡn cợt hả?".`,
+                `     - "Get out of my way!" -> "Tránh đường!" / "Biến đi!".`,
+                `     - "I won't let you get away with this" -> "Đừng hòng thoát!".`,
+                `  4. TỪ TƯỢNG THANH TIẾNG ANH (COMIC SFX):`,
+                `     - BOOM -> "Đùng! / Ầm!", SLASH -> "Xoẹt! / Vút!", CLANG -> "Keng! / Choảng!", GASP -> "Hả?! / Ặc!", SIGH -> "Haiz... / Phù..."`
+            );
+        } else {
+            guidanceParts.push(`- SOURCE LANGUAGE: English Comic/Scanlation. Infer dynamic pronouns for "I/You" based on character hierarchy. Translate idioms and slang naturally into ${targetLangName}.`);
+        }
     } else if (srcLang === 'auto') {
         guidanceParts.push('- SOURCE LANGUAGE: Auto-detect source language from image text.');
     }
