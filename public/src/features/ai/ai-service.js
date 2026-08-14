@@ -487,6 +487,8 @@ export async function enhanceImageForOcr(file) {
             ctx.drawImage(img, 0, 0);
 
             canvas.toBlob((blob) => {
+                canvas.width = 0;
+                canvas.height = 0;
                 if (blob) {
                     const enhancedFile = new File([blob], file.name, { type: 'image/jpeg' });
                     resolve(enhancedFile);

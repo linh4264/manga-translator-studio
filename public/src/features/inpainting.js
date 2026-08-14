@@ -47,6 +47,8 @@ export function autoCleanBubbleBackground(page, block) {
             const tempCtx = tempCanvas.getContext('2d');
             tempCtx.drawImage(imgElement, 0, 0);
             activeImageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+            tempCanvas.width = 0;
+            tempCanvas.height = 0;
             page.imageDataCache = activeImageData;
         } catch (e) {
             console.error("Không thể lấy dữ liệu ảnh để chạy inpainting mask:", e);

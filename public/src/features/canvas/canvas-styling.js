@@ -236,6 +236,8 @@ export function autoMatchBlockStyle(block, imgElement) {
     tempCtx.drawImage(imgElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
     const imgData = tempCtx.getImageData(0, 0, cropW, cropH);
+    tempCanvas.width = 0;
+    tempCanvas.height = 0;
     const data = imgData.data;
 
     let rimLumSum = 0, rimCount = 0;
