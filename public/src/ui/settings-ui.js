@@ -1,11 +1,12 @@
 import { selectPage } from './pages-ui.js';
-import { globalState } from '../core/state.js';
+import { globalState, markPageAutoFitDirty } from '../core/state.js';
 import { VALID_MODEL_IDS, CUSTOM_MODEL_VALUE, DEFAULT_MODEL } from '../config/constants.js';
 import { elements } from '../core/elements.js';
 import { showToast } from '../core/utils.js';
 import { safeSetLocalStorage } from '../core/utils/storage.js';
 import { getGeminiModelsUrl } from '../features/ai/ai-config.js';
 import { ensureModalElement } from '../core/component-loader.js';
+import { requestOverlayRender } from '../features/canvas/canvas-service.js';
 
 export function toggleApiKeyVisibility() {
     const eyeBtn = document.getElementById('api-key-eye');

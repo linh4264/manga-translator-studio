@@ -724,19 +724,23 @@ export function matchTranslationsToBlocks(blocks, rawResponseData) {
         const transText = (item.translated || item.translation || item.text || (typeof item === 'string' ? item : '') || '').trim();
         const origText = (item.original || item.source || '').trim();
 
-        if (item.id !== undefined && item.id !== null) {
+        if (transText && item.id !== undefined && item.id !== null) {
             const rawIdStr = String(item.id).trim();
             mapById.set(rawIdStr, transText);
             mapById.set(rawIdStr.toLowerCase(), transText);
         }
 
-        if (origText) {
+        if (transText && origText) {
             mapByOriginal.set(origText, transText);
             mapByOriginal.set(origText.replace(/\s+/g, ''), transText);
         }
 
-        listByOrder.push(transText);
+        if (transText) {
+            listByOrder.push(transText);
+        }
     });
+
+    const usedSuffixIds = new Set();
 
     return blocks.map((b, idx) => {
         const idStr = String(b.id || '').trim();
@@ -757,10 +761,16 @@ export function matchTranslationsToBlocks(blocks, rawResponseData) {
         // 3. Khớp theo hậu tố số ("p1_b2" -> "b2" hoặc "2")
         else {
             const bNum = idStr.match(/b(\d+)$/i) || idStr.match(/(\d+)$/);
-            if (bNum && mapById.has(`b${bNum[1]}`)) {
-                translated = mapById.get(`b${bNum[1]}`);
-            } else if (bNum && mapById.has(bNum[1])) {
-                translated = mapById.get(bNum[1]);
+            if (bNum) {
+                const sKey1 = `b${bNum[1]}`;
+                const sKey2 = bNum[1];
+                if (mapById.has(sKey1) && !usedSuffixIds.has(sKey1)) {
+                    translated = mapById.get(sKey1);
+                    usedSuffixIds.add(sKey1);
+                } else if (mapById.has(sKey2) && !usedSuffixIds.has(sKey2)) {
+                    translated = mapById.get(sKey2);
+                    usedSuffixIds.add(sKey2);
+                }
             }
         }
 
@@ -834,7 +844,7 @@ async function executeTextTranslationStep({
                 { role: "user", content: userPromptText }
             ],
             temperature: 0.3,
-            max_tokens: 4096,
+            max_tokens: 8192,
             response_format: { type: "json_object" }
         });
     } else {
@@ -847,7 +857,7 @@ async function executeTextTranslationStep({
             }],
             generationConfig: {
                 responseMimeType: "application/json",
-                maxOutputTokens: 4096,
+                maxOutputTokens: 8192,
                 responseSchema: {
                     type: "OBJECT",
                     properties: {
@@ -907,9 +917,16 @@ async function executeTextTranslationStep({
             }
 
             const result = await response.json();
+            const choice = result.choices?.[0];
+            const candidate = result.candidates?.[0];
+            const finishReason = candidate?.finishReason || choice?.finish_reason;
+            if (finishReason === 'MAX_TOKENS' || finishReason === 'length') {
+                console.warn(`Model 2 Translation hit output token limit (${finishReason}). Running intelligent JSON repair...`);
+            }
+
             const jsonText = isOpenAiFormat
-                ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
-                : result.candidates?.[0]?.content?.parts?.[0]?.text;
+                ? (choice?.message?.content || choice?.text)
+                : candidate?.content?.parts?.[0]?.text;
 
             const data = parseGeminiJsonText(jsonText);
             return matchTranslationsToBlocks(blocksToTranslate, data);
@@ -939,6 +956,7 @@ async function executeChapterChunkTranslationStep({
     chunkBlocks,
     translationModel,
     targetLangName,
+    prevChunkContext = "",
     glossaryNames,
     keyToUse,
     isOpenAiFormat,
@@ -980,9 +998,10 @@ async function executeChapterChunkTranslationStep({
 
     const userPromptText = [
         `Translate the following full-chapter manga dialogue blocks into natural ${targetLangName}:`,
+        prevChunkContext ? `\n${prevChunkContext}\n` : '',
         groupedNarrative.join("\n\n"),
         `\nStrict Requirement: Return a JSON object with schema: {"blocks": [{"id": "...", "translated": "..."}]}`
-    ].join("\n");
+    ].filter(Boolean).join("\n");
 
     let requestBody;
     let apiUrl;
@@ -1069,9 +1088,16 @@ async function executeChapterChunkTranslationStep({
             }
 
             const result = await response.json();
+            const choice = result.choices?.[0];
+            const candidate = result.candidates?.[0];
+            const finishReason = candidate?.finishReason || choice?.finish_reason;
+            if (finishReason === 'MAX_TOKENS' || finishReason === 'length') {
+                console.warn(`Model 2 Chapter Chunk hit output token limit (${finishReason}). Running intelligent JSON repair...`);
+            }
+
             const jsonText = isOpenAiFormat
-                ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
-                : result.candidates?.[0]?.content?.parts?.[0]?.text;
+                ? (choice?.message?.content || choice?.text)
+                : candidate?.content?.parts?.[0]?.text;
 
             const data = parseGeminiJsonText(jsonText);
             return matchTranslationsToBlocks(chunkBlocks, data);
@@ -1095,7 +1121,7 @@ async function executeChapterChunkTranslationStep({
 }
 
 /**
- * ⚡ DỊCH TOÀN BỘ DIỄN BIẾN CHAPTER VỚI SMART CHUNKING (>220 BLOCKS) VÀ TIẾT KIỆM TỐI ĐA RPD
+ * ⚡ DỊCH TOÀN BỘ DIỄN BIẾN CHAPTER VỚI SMART CHUNKING (<=65 BLOCKS/CHUNK) VÀ TIẾT KIỆM TỐI ĐA RPD
  */
 export async function executeChapterTranslationStep({
     allChapterBlocks,
@@ -1109,9 +1135,9 @@ export async function executeChapterTranslationStep({
 }) {
     if (!allChapterBlocks || allChapterBlocks.length === 0) return [];
 
-    const MAX_CHUNK_BLOCKS = 220; // Ngưỡng an toàn chống tràn output token 8192
+    const MAX_CHUNK_BLOCKS = 65; // Ngưỡng an toàn tuyệt đối chống tràn output token 8192 (~65 câu thoại / chunk)
 
-    // Trường hợp 1: Toàn bộ chapter nhỏ hơn hoặc bằng 220 câu thoại -> Dịch trong đúng 1 request duy nhất (1 RPD)
+    // Trường hợp 1: Toàn bộ chapter nhỏ hơn hoặc bằng 65 câu thoại -> Dịch trong đúng 1 request duy nhất (1 RPD)
     if (allChapterBlocks.length <= MAX_CHUNK_BLOCKS) {
         return executeChapterChunkTranslationStep({
             chunkBlocks: allChapterBlocks,
@@ -1154,10 +1180,23 @@ export async function executeChapterTranslationStep({
             Math.round(50 + ((cIdx + 1) / chunks.length) * 45)
         );
 
+        let prevChunkContext = "";
+        if (allTranslatedBlocks.length > 0) {
+            const recentTranslated = allTranslatedBlocks
+                .filter(b => b.translated && b.translated.trim())
+                .slice(-8)
+                .map(b => `[ID ${b.id}]: "${b.translated}"`)
+                .join("\n");
+            if (recentTranslated) {
+                prevChunkContext = `[PREVIOUS SCENE CONTEXT (FOR NARRATIVE & PRONOUN CONTINUITY)]\n${recentTranslated}`;
+            }
+        }
+
         const translatedChunk = await executeChapterChunkTranslationStep({
             chunkBlocks: chunk,
             translationModel,
             targetLangName,
+            prevChunkContext,
             glossaryNames,
             keyToUse,
             isOpenAiFormat,

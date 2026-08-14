@@ -9,7 +9,8 @@ export let overlayRenderRafId = null;
 
 export function requestOverlayRender() {
     if (overlayRenderRafId) return;
-    overlayRenderRafId = requestAnimationFrame(() => {
+    const raf = typeof requestAnimationFrame === 'function' ? requestAnimationFrame : (cb) => setTimeout(cb, 0);
+    overlayRenderRafId = raf(() => {
         overlayRenderRafId = null;
         renderOverlays();
     });

@@ -19,6 +19,9 @@ export function sanitizeUnescapedNewlinesInJson(jsonStr) {
     return result;
 }
 
+/**
+ * Robust balance and repair for incomplete/truncated JSON
+ */
 export function balanceJsonBrackets(jsonStr) {
     let s = String(jsonStr || '').trim();
     if (!s) return "{}";
@@ -49,8 +52,11 @@ export function balanceJsonBrackets(jsonStr) {
     }
 
     // Clean up trailing incomplete property or key fragment before closing brackets
+    // e.g. `..., "translated": ` -> `..., "translated": ""`
     s = s.replace(/:\s*$/, ': ""');
+    // e.g. trailing comma before closing: `..., `
     s = s.replace(/,\s*$/, '');
+    // e.g. dangling `{` at the end: `..., {`
     s = s.replace(/,\s*\{\s*$/, '');
 
     // Close remaining open brackets in reverse order
@@ -161,6 +167,7 @@ function cleanBlocksList(rawList) {
         if (!b) return false;
         if (typeof b === 'string' && b.trim()) return true;
         if (typeof b === 'object') {
+            // Keep block if it has a valid translated string or original text or box coordinates
             const hasTranslated = typeof b.translated === 'string' && b.translated.trim().length > 0;
             const hasTranslation = typeof b.translation === 'string' && b.translation.trim().length > 0;
             const hasText = typeof b.text === 'string' && b.text.trim().length > 0;

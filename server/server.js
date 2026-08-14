@@ -122,15 +122,17 @@ server.listen(PORT, () => {
     console.log('\x1b[33m%s\x1b[0m', '  💡 Bấm Ctrl + C để dừng máy chủ.');
     console.log('\x1b[32m%s\x1b[0m', '==================================================');
 
-    // Automatically open the default browser based on platform
-    try {
-        const cmd = process.platform === 'win32'
-            ? `start ${localUrl}`
-            : process.platform === 'darwin'
-                ? `open ${localUrl}`
-                : `xdg-open ${localUrl}`;
-        exec(cmd);
-    } catch (e) {
-        console.warn('⚠️ Không thể tự động mở trình duyệt. Bạn hãy click trực tiếp vào link trên nhé.');
+    // Automatically open the default browser based on platform (only in normal run)
+    if (process.env.NODE_ENV !== 'test' && !process.env.CI) {
+        try {
+            const cmd = process.platform === 'win32'
+                ? `start ${localUrl}`
+                : process.platform === 'darwin'
+                    ? `open ${localUrl}`
+                    : `xdg-open ${localUrl}`;
+            exec(cmd);
+        } catch (e) {
+            console.warn('⚠️ Không thể tự động mở trình duyệt. Bạn hãy click trực tiếp vào link trên nhé.');
+        }
     }
 });
