@@ -430,6 +430,11 @@ export async function runBatchExport() {
                     }, mimeType, quality);
                 });
 
+                if (canvas) {
+                    canvas.width = 0;
+                    canvas.height = 0;
+                }
+
                 const finalExportName = `translated_${getCleanFileBaseName(page.name, `page_${i + 1}`)}.${ext}`;
                 filesToZip.push({ name: finalExportName, blob: pageBlob });
                 successCount++;
@@ -586,6 +591,11 @@ export async function runPdfExport() {
             } else {
                 pdf.addPage([naturalW, naturalH], orientation);
                 pdf.addImage(imgData, imgFormat, 0, 0, naturalW, naturalH);
+            }
+
+            if (canvas) {
+                canvas.width = 0;
+                canvas.height = 0;
             }
         }
 

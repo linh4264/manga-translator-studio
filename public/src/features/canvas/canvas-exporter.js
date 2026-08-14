@@ -6,6 +6,9 @@ import { renderOverlays, convertHexToRGBA, wrapCanvasText, wrapCanvasVerticalTex
 
 // Helper mapper cho phông chữ canvas kết xuất
 function getFontFamilyName(fontClass) {
+    if (!fontClass) return "'Nunito', sans-serif";
+    const cleanFont = String(fontClass).trim();
+
     const fontMap = {
         'font-comic': "'Patrick Hand', cursive",
         'font-manga': "'Nunito', sans-serif",
@@ -19,9 +22,9 @@ function getFontFamilyName(fontClass) {
         'font-condensed': "'Saira Condensed', sans-serif"
     };
 
-    if (fontMap[fontClass]) return fontMap[fontClass];
-    if (fontClass && !fontClass.startsWith('font-')) return `'${fontClass}', sans-serif`;
-    return "'Patrick Hand', cursive";
+    if (fontMap[cleanFont]) return fontMap[cleanFont];
+    const stripped = cleanFont.replace(/^font-/, '');
+    return `'${cleanFont}', '${stripped}', 'Nunito', sans-serif`;
 }
 
 export async function renderPageToCanvas2D(page, bgImageOverride = null) {
