@@ -8,7 +8,10 @@ import {
     DEFAULT_AI_BLOCK_BOX,
     DEFAULT_VERTICAL_WRITING_MODE,
     MAX_HISTORY_LIMIT,
-    TRANSLATION_GENRE_PRESETS
+    TRANSLATION_GENRE_PRESETS,
+    COMIC_UNIVERSE_PRESETS,
+    COMIC_GENRE_PRESETS,
+    COMIC_TONE_PRESETS
 } from '../config/constants.js';
 
 export {
@@ -19,7 +22,11 @@ export {
     CUSTOM_MODEL_VALUE,
     VALID_MODEL_IDS,
     VALID_OCR_MODEL_IDS,
-    VALID_TRANSLATION_MODEL_IDS
+    VALID_TRANSLATION_MODEL_IDS,
+    TRANSLATION_GENRE_PRESETS,
+    COMIC_UNIVERSE_PRESETS,
+    COMIC_GENRE_PRESETS,
+    COMIC_TONE_PRESETS
 } from '../config/constants.js';
 
 export function isWeakTranslationModel(modelId) {
@@ -117,7 +124,19 @@ export const globalState = {
     pdfQuality: localStorage.getItem('manga_pdf_quality') || 'hd',     // 'hd' | 'standard' | 'max'
     pronounMatrix: '',   // Ma trận xưng hô 2 chiều giữa các nhân vật
     ocrEnhanceEnabled: true, // Tiền xử lý tương phản ảnh trước khi gửi OCR
-    translationGenrePresets: ['quality'], // Mẫu prompt theo thể loại
+    translationGenrePresets: ['quality'], // Mẫu prompt theo thể loại (Legacy)
+    comicUniverse: localStorage.getItem('manga_comic_universe') || 'auto', // 'auto' | 'manga' | 'manhwa' | 'manhua' | 'us_comic' | 'franco_belgian'
+    comicGenres: (() => {
+        try {
+            const saved = localStorage.getItem('manga_comic_genres');
+            if (saved) return JSON.parse(saved);
+            const oldSingle = localStorage.getItem('manga_comic_genre');
+            return oldSingle ? [oldSingle] : ['fantasy', 'isekai'];
+        } catch (e) {
+            return ['fantasy', 'isekai'];
+        }
+    })(),
+    comicTone: localStorage.getItem('manga_comic_tone') || 'classic',      // 'classic' | 'comedy' | 'dark' | 'poetic'
     translationContextPrompt: '', // Prompt ngữ cảnh bổ sung cho dịch thuật
     apiDelay: 2,       // Giãn cách gửi yêu cầu API (giây) tránh lỗi 429
     maxRetries: 3,     // Số lần thử lại tối đa khi gặp lỗi API tạm thời
@@ -161,6 +180,8 @@ export function initializeStateFromStorage() {
         'gemini_manga_ocr_enhance': 'ocrEnhanceEnabled',
         'gemini_manga_api_delay': 'apiDelay',
         'gemini_manga_max_retries': 'maxRetries',
+        'manga_comic_universe': 'comicUniverse',
+        'manga_comic_tone': 'comicTone',
         'manga_default_dialogue_font': 'defaultDialogueFont',
         'manga_default_sfx_font': 'defaultSfxFont',
         'manga_default_narration_font': 'defaultNarrationFont',

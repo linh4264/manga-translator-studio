@@ -22,6 +22,7 @@ import {
     updateSourceLanguage, updateTargetLanguage, updatePronounMatrix, updateGlossary,
     toggleStoryMemory, updateStoryMemoryBadge, togglePreserveNames, syncGenrePresetCheckboxes,
     saveTranslationGenrePresets, updateTranslationGenrePreset, updateTranslationContextPrompt,
+    updateComicUniverse, updateComicGenre, toggleComicGenre, updateComicTone,
     updateApiDelay, updateMaxRetries, updateAiProvider, updateApiEndpoint,
     updateExportFormat, updateExportPdfQuality
 } from './settings-ui.js';
@@ -401,6 +402,10 @@ Object.assign(window, {
     toggleStoryMemory,
     togglePreserveNames,
     updateTranslationGenrePreset,
+    updateComicUniverse,
+    updateComicGenre,
+    toggleComicGenre,
+    updateComicTone,
     updateTranslationContextPrompt,
     updateApiDelay,
     updateMaxRetries,

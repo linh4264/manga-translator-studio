@@ -401,3 +401,47 @@ test('Immediate Auto-Fit Execution on Newly Translated Blocks', async () => {
     assert.ok(mockPage.blocks[0].style.fontSize >= 8, 'Font size must be computed automatically');
     assert.ok(mockPage.blocks[0].autoFitCache !== null, 'Block must store autoFitCache');
 });
+
+// 18. 3-Tier Comic Universe, Genre & Tone Matrix Prompt Generation Test
+test('3-Tier Comic Universe, World Setting & Narrative Tone Matrix Prompt Generation', async () => {
+    const { globalState } = await import('../public/src/core/state.js');
+    const { getTranslationGuidancePrompt } = await import('../public/src/features/ai/ai-service.js');
+    const { COMIC_UNIVERSE_PRESETS, COMIC_GENRE_PRESETS, COMIC_TONE_PRESETS } = await import('../public/src/config/constants.js');
+
+    // Test Manga + Multi-Genre (Isekai + Fantasy + Action + Comedy + Revenge) + Classic Scanlation
+    globalState.comicUniverse = 'manga';
+    globalState.comicGenres = ['isekai', 'fantasy', 'action', 'comedy', 'revenge'];
+    globalState.comicTone = 'classic';
+    globalState.sourceLanguage = 'ja';
+    globalState.targetLanguage = 'vi';
+
+    let prompt = getTranslationGuidancePrompt();
+    assert.ok(prompt.includes('JAPANESE MANGA SCANLATION'), 'Prompt should include Japanese Manga Scanlation guidance');
+    assert.ok(prompt.includes('COMPOSITE GENRE PROFILE'), 'Prompt should include Composite Genre Profile');
+    assert.ok(prompt.includes('ISEKAI / REINCARNATION'), 'Prompt should include Isekai guidance');
+    assert.ok(prompt.includes('FANTASY & MAGIC'), 'Prompt should include Fantasy & Magic guidance');
+    assert.ok(prompt.includes('ACTION & MARTIAL ARTS'), 'Prompt should include Action guidance');
+    assert.ok(prompt.includes('COMEDY & GAG'), 'Prompt should include Comedy guidance');
+    assert.ok(prompt.includes('REVENGE / ZAMAA'), 'Prompt should include Revenge / Zamaa guidance');
+    assert.ok(prompt.includes('CLASSIC SCANLATION'), 'Prompt should include Classic Scanlation Tone guidance');
+
+    // Test Manhwa + Action + Monsters/Dungeon + Comedy/Meme
+    globalState.comicUniverse = 'manhwa';
+    globalState.comicGenres = ['action', 'monsters'];
+    globalState.comicTone = 'comedy';
+
+    prompt = getTranslationGuidancePrompt();
+    assert.ok(prompt.includes('KOREAN MANHWA / WEBTOON'), 'Prompt should include Korean Manhwa guidance');
+    assert.ok(prompt.includes('MONSTERS / DUNGEON / HUNTER'), 'Prompt should include Monsters & Dungeon guidance');
+    assert.ok(prompt.includes('COMEDY & GAG'), 'Prompt should include Comedy & Gag guidance');
+
+    // Test US Comics + Horror + Dark
+    globalState.comicUniverse = 'us_comic';
+    globalState.comicGenres = ['horror'];
+    globalState.comicTone = 'dark';
+
+    prompt = getTranslationGuidancePrompt();
+    assert.ok(prompt.includes('AMERICAN COMICS & GRAPHIC NOVELS'), 'Prompt should include US Comic guidance');
+    assert.ok(prompt.includes('HORROR & SURVIVAL'), 'Prompt should include Horror & Survival guidance');
+    assert.ok(prompt.includes('DARK & GRITTY'), 'Prompt should include Dark & Gritty guidance');
+});

@@ -560,9 +560,75 @@ export function togglePreserveNames(enabled) {
     if (glossarySection) glossarySection.classList.toggle('hidden', !globalState.preserveNames);
 }
 
+export function updateComicUniverse(value) {
+    globalState.comicUniverse = value;
+    safeSetLocalStorage('manga_comic_universe', value);
+    syncGenrePresetCheckboxes();
+}
+
+export function toggleComicGenre(genreKey) {
+    if (!Array.isArray(globalState.comicGenres)) {
+        globalState.comicGenres = [];
+    }
+    const idx = globalState.comicGenres.indexOf(genreKey);
+    if (idx > -1) {
+        if (globalState.comicGenres.length > 1) {
+            globalState.comicGenres.splice(idx, 1);
+        } else {
+            import('../core/utils/dom.js').then(m => m.showToast("Cần chọn ít nhất 1 thể loại.", "info"));
+            return;
+        }
+    } else {
+        globalState.comicGenres.push(genreKey);
+    }
+    safeSetLocalStorage('manga_comic_genres', JSON.stringify(globalState.comicGenres));
+    syncGenrePresetCheckboxes();
+}
+
+export function updateComicGenre(value) {
+    toggleComicGenre(value);
+}
+
+export function updateComicTone(value) {
+    globalState.comicTone = value;
+    safeSetLocalStorage('manga_comic_tone', value);
+    syncGenrePresetCheckboxes();
+}
+
 export function syncGenrePresetCheckboxes() {
+    const universeSelect = document.getElementById('comic-universe-select');
+    if (universeSelect) universeSelect.value = globalState.comicUniverse || 'auto';
+
+    const selectedGenres = Array.isArray(globalState.comicGenres) ? globalState.comicGenres : ['fantasy', 'isekai'];
+
+    document.querySelectorAll('.comic-genre-tag').forEach(btn => {
+        const gVal = btn.getAttribute('data-genre');
+        const isActive = selectedGenres.includes(gVal);
+        btn.classList.toggle('bg-indigo-600', isActive);
+        btn.classList.toggle('text-white', isActive);
+        btn.classList.toggle('border-indigo-400', isActive);
+        btn.classList.toggle('shadow-sm', isActive);
+        btn.classList.toggle('bg-slate-900', !isActive);
+        btn.classList.toggle('text-slate-400', !isActive);
+        btn.classList.toggle('border-slate-800', !isActive);
+        
+        const checkIcon = btn.querySelector('.tag-check');
+        if (checkIcon) checkIcon.classList.toggle('hidden', !isActive);
+    });
+
+    document.querySelectorAll('.comic-tone-option').forEach(btn => {
+        const toneVal = btn.getAttribute('data-tone');
+        const isActive = (globalState.comicTone || 'classic') === toneVal;
+        btn.classList.toggle('bg-indigo-600', isActive);
+        btn.classList.toggle('text-white', isActive);
+        btn.classList.toggle('border-indigo-500', isActive);
+        btn.classList.toggle('bg-slate-900', !isActive);
+        btn.classList.toggle('text-slate-400', !isActive);
+        btn.classList.toggle('border-slate-800', !isActive);
+    });
+
     document.querySelectorAll('.genre-preset-option').forEach((checkbox) => {
-        checkbox.checked = globalState.translationGenrePresets.includes(checkbox.value);
+        checkbox.checked = (globalState.translationGenrePresets || []).includes(checkbox.value);
     });
 }
 

@@ -23,6 +23,9 @@ import {
     DEFAULT_AI_BLOCK_BOX,
     DEFAULT_VERTICAL_WRITING_MODE,
     TRANSLATION_GENRE_PRESETS,
+    COMIC_UNIVERSE_PRESETS,
+    COMIC_GENRE_PRESETS,
+    COMIC_TONE_PRESETS,
     TARGET_LANG_MAP
 } from '../../config/constants.js';
 import { elements } from '../../core/elements.js';
@@ -369,23 +372,39 @@ export function getTranslationGuidancePrompt() {
         guidanceParts.push(`- WRITING DIRECTION RULE: The target language (${targetLangName}) is written HORIZONTALLY (left-to-right). You MUST set style.vertical = false for ALL translated text blocks without exception.`);
     }
 
-    const genrePresets = globalState.translationGenrePresets.length ? globalState.translationGenrePresets : ['quality'];
-    genrePresets.forEach((presetKey) => {
-        let presetPrompt = TRANSLATION_GENRE_PRESETS[presetKey] || '';
-        if (presetPrompt) {
-            if (targetLang !== 'vi') {
-                presetPrompt = presetPrompt
-                    .replace(/Vietnamese/g, targetLangName)
-                    .replace(/xưng hô/g, 'pronouns')
-                    .replace(/Sino-Vietnamese \(Hán-Việt\)/g, 'appropriate historical/cultural');
-            }
-            guidanceParts.push(presetPrompt);
+    // 5. 🏛️ 3-Tier Comic Universe, World Setting & Narrative Tone Matrix
+    const currentUniverseKey = globalState.comicUniverse || 'auto';
+    const selectedGenres = Array.isArray(globalState.comicGenres) && globalState.comicGenres.length > 0
+        ? globalState.comicGenres
+        : [globalState.comicGenre || 'fantasy'];
+    const currentToneKey = globalState.comicTone || 'classic';
+
+    const universeSpec = COMIC_UNIVERSE_PRESETS[currentUniverseKey]?.prompt || COMIC_UNIVERSE_PRESETS.auto.prompt;
+    guidanceParts.push(universeSpec);
+
+    // Multi-Genre Composite Profile
+    const genreLabels = [];
+    const genrePrompts = [];
+    selectedGenres.forEach((gKey) => {
+        const preset = COMIC_GENRE_PRESETS[gKey];
+        if (preset) {
+            genreLabels.push(preset.label.replace(/^[\p{Emoji}\s]+/u, '').trim());
+            genrePrompts.push(preset.prompt);
         }
     });
 
-    if (genrePresets.length > 1) {
-        guidanceParts.push(`- GENRE COMBINATION RULE: When multiple genre presets are selected, merge them naturally. Keep the strongest shared tone and do not make the translation overly long or conflicted.`);
+    if (genrePrompts.length > 0) {
+        if (genrePrompts.length > 1) {
+            guidanceParts.push(`- COMPOSITE GENRE PROFILE: ${genreLabels.join(' + ')}. Blend these storytelling themes harmoniously.`);
+        }
+        genrePrompts.forEach(p => guidanceParts.push(p));
+    } else {
+        guidanceParts.push(COMIC_GENRE_PRESETS.fantasy.prompt);
     }
+
+    const toneSpec = COMIC_TONE_PRESETS[currentToneKey]?.prompt || COMIC_TONE_PRESETS.classic.prompt;
+    guidanceParts.push(toneSpec);
+
     if (customContextPrompt) {
         guidanceParts.push(`- USER CONTEXT / TRANSLATION GUIDANCE: ${customContextPrompt}`);
     }
