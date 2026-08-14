@@ -322,15 +322,33 @@ export function initEventListeners() {
 
         if (e.key === 'Escape') {
             e.preventDefault();
-            const helpModal = document.getElementById('help-modal');
-            if (helpModal && !helpModal.classList.contains('hidden')) {
-                closeHelpModal();
-                return;
+            const modalIds = [
+                'help-modal',
+                'settings-modal',
+                'lorebook-dossier-modal',
+                'gdrive-modal',
+                'audio-settings-modal',
+                'srs-review-modal',
+                'find-replace-modal',
+                'export-modal',
+                'preview-modal'
+            ];
+
+            let closedAnyModal = false;
+            for (const id of modalIds) {
+                const m = document.getElementById(id);
+                if (m && !m.classList.contains('hidden')) {
+                    m.classList.add('hidden');
+                    closedAnyModal = true;
+                }
             }
+            if (closedAnyModal) return;
+
             if (globalState.selectedBlockId) {
                 const prevEl = document.getElementById(globalState.selectedBlockId);
                 if (prevEl) prevEl.classList.remove('active');
                 globalState.selectedBlockId = null;
+                globalState.selectedBlockIds = [];
                 if (elements.btnCopyStyle) elements.btnCopyStyle.disabled = true;
                 if (elements.btnPasteStyle) elements.btnPasteStyle.disabled = true;
                 updateActiveBlockEditor();
@@ -338,12 +356,12 @@ export function initEventListeners() {
             return;
         }
 
-        if (e.key === 'PageUp') {
+        if (e.key === 'PageUp' || (e.shiftKey && e.key === 'ArrowLeft') || (e.altKey && e.key === 'ArrowLeft')) {
             e.preventDefault();
             if (globalState.activePageIndex > 0) selectPage(globalState.activePageIndex - 1);
             return;
         }
-        if (e.key === 'PageDown') {
+        if (e.key === 'PageDown' || (e.shiftKey && e.key === 'ArrowRight') || (e.altKey && e.key === 'ArrowRight')) {
             e.preventDefault();
             if (globalState.activePageIndex < globalState.pages.length - 1) selectPage(globalState.activePageIndex + 1);
             return;
