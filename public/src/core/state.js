@@ -38,6 +38,7 @@ export let redoStack = [];
 // Callbacks to decouple UI updates from state logic
 let onUndoRedoChange = null;
 let onPageListChange = null;
+let onSnapshotRestored = null;
 
 /**
  * UI Event Dispatchers
@@ -63,6 +64,7 @@ export function uiSetRightTab(tab) { globalBus.publish(stateEvents.RIGHT_TAB_CHA
 export function registerStateCallbacks(callbacks) {
     if (callbacks.onUndoRedoChange) onUndoRedoChange = callbacks.onUndoRedoChange;
     if (callbacks.onPageListChange) onPageListChange = callbacks.onPageListChange;
+    if (callbacks.onSnapshotRestored) onSnapshotRestored = callbacks.onSnapshotRestored;
 }
 
 export function markPageAutoFitDirty(page) {
@@ -223,7 +225,8 @@ export function pushStateToHistory() {
     undoStack.push({
         pagesState: currentState,
         activePageIndex: globalState.activePageIndex,
-        selectedBlockId: globalState.selectedBlockId
+        selectedBlockId: globalState.selectedBlockId,
+        selectedBlockIds: [...(globalState.selectedBlockIds || [])]
     });
 
     if (undoStack.length > MAX_HISTORY_LIMIT) {
@@ -259,32 +262,28 @@ export function applyStateFromSnapshot(snapshot) {
                 textWidth: b.textWidth,
                 textHeight: b.textHeight
             }));
+            targetPage.autoFitRevision = (targetPage.autoFitRevision || 0) + 1;
             savePageToDB(targetPage);
         }
     });
 
     globalState.activePageIndex = snapshot.activePageIndex;
     globalState.selectedBlockId = snapshot.selectedBlockId;
+    globalState.selectedBlockIds = Array.isArray(snapshot.selectedBlockIds)
+        ? [...snapshot.selectedBlockIds]
+        : (snapshot.selectedBlockId ? [snapshot.selectedBlockId] : []);
 
     if (onUndoRedoChange) onUndoRedoChange();
 
-    import('../ui/index.js').then(ui => {
-        ui.updatePageListUI();
-        if (globalState.activePageIndex !== -1) {
-            ui.selectPage(globalState.activePageIndex);
-        } else {
-            const container = document.getElementById('manga-canvas-container');
-            const split = document.getElementById('workspace-split-wrapper');
-            const empty = document.getElementById('workspace-empty-state');
-            if (container) container.classList.add('hidden');
-            if (split) split.classList.add('hidden');
-            if (empty) empty.classList.remove('hidden');
+    if (onSnapshotRestored) {
+        onSnapshotRestored(snapshot);
+    } else {
+        uiUpdatePageListUI();
+        uiUpdateActiveBlockEditor();
+        if (typeof window !== 'undefined' && typeof window.selectPage === 'function' && globalState.activePageIndex !== -1) {
+            window.selectPage(globalState.activePageIndex);
         }
-        ui.updateActiveBlockEditor();
-    });
-    import('../features/canvas/canvas-service.js').then(canvas => {
-        canvas.requestOverlayRender();
-    });
+    }
 }
 
 export function executeUndo() {
@@ -307,7 +306,8 @@ export function executeUndo() {
     redoStack.push({
         pagesState: currentState,
         activePageIndex: globalState.activePageIndex,
-        selectedBlockId: globalState.selectedBlockId
+        selectedBlockId: globalState.selectedBlockId,
+        selectedBlockIds: [...(globalState.selectedBlockIds || [])]
     });
 
     const previous = undoStack.pop();
@@ -334,7 +334,8 @@ export function executeRedo() {
     undoStack.push({
         pagesState: currentState,
         activePageIndex: globalState.activePageIndex,
-        selectedBlockId: globalState.selectedBlockId
+        selectedBlockId: globalState.selectedBlockId,
+        selectedBlockIds: [...(globalState.selectedBlockIds || [])]
     });
 
     const next = redoStack.pop();

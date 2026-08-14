@@ -181,7 +181,21 @@ export async function initApplication() {
         // Register Undo/Redo UI update callback
         import('./state.js').then(state => {
             state.registerStateCallbacks({
-                onUndoRedoChange: updateUndoRedoUI
+                onUndoRedoChange: updateUndoRedoUI,
+                onSnapshotRestored: (snapshot) => {
+                    updatePageListUI();
+                    if (globalState.activePageIndex !== -1) {
+                        selectPage(globalState.activePageIndex);
+                    } else {
+                        const container = document.getElementById('manga-canvas-container');
+                        const split = document.getElementById('workspace-split-wrapper');
+                        const empty = document.getElementById('workspace-empty-state');
+                        if (container) container.classList.add('hidden');
+                        if (split) split.classList.add('hidden');
+                        if (empty) empty.classList.remove('hidden');
+                    }
+                    import('../ui/block-editor-ui.js').then(m => m.updateActiveBlockEditor());
+                }
             });
         });
         updateUndoRedoUI();
