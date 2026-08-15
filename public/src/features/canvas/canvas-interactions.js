@@ -37,6 +37,9 @@ export function startBlockDrag(e, block) {
     const startPercentX = block.box.x;
     const startPercentY = block.box.y;
 
+    const containerWidth = elements.mangaCanvasContainer?.clientWidth || 1;
+    const containerHeight = elements.mangaCanvasContainer?.clientHeight || 1;
+
     let hasMoved = false;
 
     function onDragging(moveEvent) {
