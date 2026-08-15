@@ -96,6 +96,12 @@ export async function initApplication() {
     registerAction('triggerUploadFiles', () => document.getElementById('file-input')?.click());
     registerAction('triggerBatchTranslate', () => import('../features/ai/ai-service.js').then(m => m.runBatchTranslation()));
     registerAction('triggerBatchExport', () => import('../features/io.js').then(m => m.runBatchExport()));
+    registerAction('fitCanvasToScreen', () => import('../ui/layout-ui.js').then(m => m.fitCanvasToScreen()));
+    registerAction('toggleLeftSidebarMoreMenu', () => import('../ui/layout-ui.js').then(m => m.toggleLeftSidebarMoreMenu()));
+    registerAction('addNewBlock', () => import('../features/canvas/canvas-service.js').then(m => m.addNewBlock()));
+    registerAction('triggerAddImageBlock', () => import('../features/canvas/canvas-service.js').then(m => m.triggerAddImageBlock()));
+    registerAction('executeUndo', () => import('../core/state.js').then(s => s.executeUndo()));
+    registerAction('executeRedo', () => import('../core/state.js').then(s => s.executeRedo()));
     initEventDelegation();
 
     mountSettingsModal();

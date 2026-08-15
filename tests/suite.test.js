@@ -558,3 +558,34 @@ test('Phase 1 UI: Stepper State Synchronization, Demo Manga Loader and Manga Sty
         updateStepperUI();
     }, 'updateStepperUI must execute smoothly without errors');
 });
+
+// 21. Phase 2 UI: Ergonomic Canvas Controls (Fit Canvas, Zoom Synchronization, Left Sidebar Streamlining)
+test('Phase 2 UI: Ergonomic Canvas Controls and Sidebar Streamlining', async () => {
+    const { globalState } = await import('../public/src/core/state.js');
+    const { fitCanvasToScreen, resetZoom, changeZoom, toggleLeftSidebarMoreMenu } = await import('../public/src/ui/layout-ui.js');
+
+    assert.strictEqual(typeof fitCanvasToScreen, 'function', 'fitCanvasToScreen must be exported');
+    assert.strictEqual(typeof toggleLeftSidebarMoreMenu, 'function', 'toggleLeftSidebarMoreMenu must be exported');
+
+    // Test resetZoom
+    resetZoom();
+    assert.strictEqual(globalState.zoom, 100, 'resetZoom must set zoom to 100');
+
+    // Test changeZoom
+    changeZoom(20);
+    assert.strictEqual(globalState.zoom, 120, 'changeZoom(20) must increase zoom to 120');
+
+    changeZoom(-30);
+    assert.strictEqual(globalState.zoom, 90, 'changeZoom(-30) must decrease zoom to 90');
+
+    // Test fitCanvasToScreen fallback execution without DOM crashes
+    assert.doesNotThrow(() => {
+        fitCanvasToScreen();
+    }, 'fitCanvasToScreen must handle headless/empty environment gracefully');
+
+    // Test toggleLeftSidebarMoreMenu execution
+    assert.doesNotThrow(() => {
+        toggleLeftSidebarMoreMenu();
+    }, 'toggleLeftSidebarMoreMenu must execute without errors');
+});
+

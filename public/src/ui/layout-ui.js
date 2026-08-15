@@ -161,18 +161,26 @@ export function changeZoom(amount, mouseEvent = null) {
     }
 
     globalState.zoom = newZoom;
-    elements.zoomIndicator.innerText = `${globalState.zoom}%`;
-    elements.mangaCanvasContainer.style.height = `${globalState.zoom}%`;
-    elements.mangaCanvasContainer.style.maxHeight = 'none';
-    elements.mangaCanvasContainer.style.width = 'auto';
-    elements.workspaceSplitWrapper.style.transform = `scale(${globalState.zoom / 100})`;
+    if (elements.zoomIndicator) elements.zoomIndicator.innerText = `${globalState.zoom}%`;
+    const dockZoomIndicator = document.getElementById('dock-zoom-indicator');
+    if (dockZoomIndicator) dockZoomIndicator.innerText = `${globalState.zoom}%`;
 
-    if (newZoom > 100) {
-        elements.mangaCanvasContainer.classList.remove('m-auto');
-        elements.mangaCanvasContainer.classList.add('my-auto', 'mx-0');
-    } else {
-        elements.mangaCanvasContainer.classList.remove('my-auto', 'mx-0');
-        elements.mangaCanvasContainer.classList.add('m-auto');
+    if (elements.mangaCanvasContainer) {
+        elements.mangaCanvasContainer.style.height = `${globalState.zoom}%`;
+        elements.mangaCanvasContainer.style.maxHeight = 'none';
+        elements.mangaCanvasContainer.style.width = 'auto';
+
+        if (newZoom > 100) {
+            elements.mangaCanvasContainer.classList.remove('m-auto');
+            elements.mangaCanvasContainer.classList.add('my-auto', 'mx-0');
+        } else {
+            elements.mangaCanvasContainer.classList.remove('my-auto', 'mx-0');
+            elements.mangaCanvasContainer.classList.add('m-auto');
+        }
+    }
+
+    if (elements.workspaceSplitWrapper) {
+        elements.workspaceSplitWrapper.style.transform = `scale(${globalState.zoom / 100})`;
     }
 
     renderOverlays();
@@ -195,14 +203,34 @@ export function changeZoom(amount, mouseEvent = null) {
 
 export function resetZoom() {
     globalState.zoom = 100;
-    elements.zoomIndicator.innerText = '100%';
-    elements.mangaCanvasContainer.style.height = '100%';
-    elements.mangaCanvasContainer.style.maxHeight = '100%';
-    elements.mangaCanvasContainer.style.width = 'auto';
-    elements.mangaCanvasContainer.classList.remove('my-auto', 'mx-0');
-    elements.mangaCanvasContainer.classList.add('m-auto');
-    elements.workspaceSplitWrapper.style.transform = 'scale(1)';
+    if (elements.zoomIndicator) elements.zoomIndicator.innerText = '100%';
+    const dockZoomIndicator = document.getElementById('dock-zoom-indicator');
+    if (dockZoomIndicator) dockZoomIndicator.innerText = '100%';
+
+    if (elements.mangaCanvasContainer) {
+        elements.mangaCanvasContainer.style.height = '100%';
+        elements.mangaCanvasContainer.style.maxHeight = '100%';
+        elements.mangaCanvasContainer.style.width = 'auto';
+        elements.mangaCanvasContainer.classList.remove('my-auto', 'mx-0');
+        elements.mangaCanvasContainer.classList.add('m-auto');
+    }
+
+    if (elements.workspaceSplitWrapper) {
+        elements.workspaceSplitWrapper.style.transform = 'scale(1)';
+    }
+
     renderOverlays();
+}
+
+export function fitCanvasToScreen() {
+    resetZoom();
+}
+
+export function toggleLeftSidebarMoreMenu() {
+    const menu = document.getElementById('left-more-actions-menu');
+    if (menu) {
+        menu.classList.toggle('hidden');
+    }
 }
 
 export function toggleSidebarToolsMenu() {
@@ -428,3 +456,5 @@ export function updateStepperUI() {
 }
 
 window.updateStepperUI = updateStepperUI;
+window.fitCanvasToScreen = fitCanvasToScreen;
+window.toggleLeftSidebarMoreMenu = toggleLeftSidebarMoreMenu;

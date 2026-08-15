@@ -113,22 +113,19 @@ body {
     box-shadow: 3px 3px 0px #000000 !important;
 }
 
-/* Dropzone styling inside sidebar */
+/* Dropzone clean button container */
 #dropzone {
-    background-color: #1e293b !important;
-    border: 2px dashed #0284c7 !important;
-    color: #f8fafc !important;
-    box-shadow: 2px 2px 0px #000000 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 #dropzone:hover {
-    background-color: #ff2a85 !important;
-    color: #ffffff !important;
-    border: 2px solid #000000 !important;
-}
-
-#dropzone:hover span, #dropzone:hover i {
-    color: #ffffff !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 /* Color Swatches & Presets Immunity */
@@ -901,3 +898,126 @@ input[type="range"]::-moz-range-thumb:hover {
     transform: scale(1.2);
     background: #f97316;
 }
+
+/* ============================================================
+   CANVAS TOP BAR & ERGONOMIC PAN/ZOOM
+   ============================================================ */
+#canvas-top-bar {
+    height: 42px !important;
+    background-color: rgba(15, 23, 42, 0.95) !important;
+    border-bottom: 1px solid rgba(51, 65, 85, 0.6) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+#canvas-top-bar button {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    border: 1px solid rgba(51, 65, 85, 0.7) !important;
+    box-shadow: none !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.01em !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    height: 28px !important;
+}
+
+#canvas-top-bar button:hover:not(:disabled) {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+}
+
+#canvas-top-bar button:active:not(:disabled) {
+    transform: translateY(0) !important;
+    box-shadow: none !important;
+}
+
+#canvas-top-bar button.w-7 {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0 !important;
+}
+
+#canvas-top-bar button.w-6 {
+    width: 24px !important;
+    height: 24px !important;
+    padding: 0 !important;
+}
+
+#canvas-top-bar button#btn-undo,
+#canvas-top-bar button#btn-redo {
+    width: 24px !important;
+    height: 24px !important;
+    padding: 0 !important;
+    border: none !important;
+}
+
+#canvas-top-bar button[onclick*="changeZoom"] {
+    width: 24px !important;
+    height: 24px !important;
+    padding: 0 !important;
+}
+
+#canvas-top-bar span,
+#canvas-top-bar div {
+    white-space: nowrap !important;
+}
+
+body.space-pan-active,
+body.space-pan-active *,
+.space-pan-active,
+.space-pan-active * {
+    cursor: grab !important;
+}
+
+body.space-panning,
+body.space-panning *,
+.space-panning,
+.space-panning * {
+    cursor: grabbing !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+/* Left Sidebar More Actions Menu */
+#left-more-actions-menu {
+    animation: fadeInScale 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+#pages-search-input {
+    padding-left: 32px !important;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Page List Item Styles */
+.page-item {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.page-item:hover {
+    transform: translateX(2px);
+    border-color: rgba(99, 102, 241, 0.4);
+}
+
+.page-item.active {
+    border-color: #6366f1 !important;
+    background-color: rgba(99, 102, 241, 0.12) !important;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}

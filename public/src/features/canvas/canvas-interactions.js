@@ -7,6 +7,7 @@ import { autoFitBlock, copiedStyle } from './canvas-styling.js';
 import { duplicateActiveBlock as duplicateActiveBlockLogic } from './canvas-actions.js';
 
 export function startBlockDrag(e, block) {
+    if (window.__isSpacePanPressed || e.button === 1) return;
     if (e.target.classList.contains('resize-handle')) return;
     if (e.target.isContentEditable || block._isEditingInline) return;
 
@@ -117,6 +118,7 @@ export function startBlockDrag(e, block) {
 }
 
 export function startBlockResize(e, block, handleDir) {
+    if (window.__isSpacePanPressed || e.button === 1) return;
     e.stopPropagation();
     e.preventDefault();
     pushStateToHistory();

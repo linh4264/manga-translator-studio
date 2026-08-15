@@ -1,10 +1,10 @@
 import { debounceSavePage } from '../core/state.js';
 import {
     setRightTab, updateProcessingOverlay, updateBackgroundTaskOverlay,
-    setViewMode, updateSplitView, changeZoom, resetZoom,
+    setViewMode, updateSplitView, changeZoom, resetZoom, fitCanvasToScreen,
     toggleSidebarToolsMenu, toggleMobileSidebar, syncMobileMenuState, syncMobileToolbarState,
     closeMobileMenus, toggleLeftSidebar, toggleRightSidebar, toggleQuickBilingualMode, toggleQuickAudioDrama,
-    openHelpModal, closeHelpModal, switchHelpTab
+    openHelpModal, closeHelpModal, switchHelpTab, toggleLeftSidebarMoreMenu
 } from './layout-ui.js';
 
 import { selectPage, removePage, updatePageListUI, filterPagesList, toggleExportRangeInputs, validateExportRange, setExportRangeToCurrent } from './pages-ui.js';
@@ -254,6 +254,114 @@ export function initEventListeners() {
         }
     }, { passive: false });
 
+    // Space + Drag / Middle Mouse Button Pan interactions for Smooth Figma/Photoshop canvas flow
+    window.__isSpacePanPressed = false;
+    let isPanning = false;
+    let panStartX = 0;
+    let panStartY = 0;
+    let scrollStartX = 0;
+    let scrollStartY = 0;
+
+    function isTextInputActive(target) {
+        if (!target) return false;
+        const active = document.activeElement;
+        const isTargetInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable || target.classList?.contains('inline-text-editor');
+        const isActiveInput = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable || active.classList?.contains('inline-text-editor'));
+        return isTargetInput || isActiveInput;
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' || e.key === ' ') {
+            if (isTextInputActive(e.target)) return;
+            if (!window.__isSpacePanPressed) {
+                window.__isSpacePanPressed = true;
+                const viewport = document.getElementById('workspace-viewport');
+                if (viewport) viewport.classList.add('space-pan-active');
+                document.body?.classList.add('space-pan-active');
+            }
+            e.preventDefault();
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        if (e.code === 'Space' || e.key === ' ') {
+            window.__isSpacePanPressed = false;
+            const viewport = document.getElementById('workspace-viewport');
+            if (viewport) viewport.classList.remove('space-pan-active');
+            document.body?.classList.remove('space-pan-active');
+            if (!isPanning && viewport) {
+                viewport.classList.remove('space-panning');
+                document.body?.classList.remove('space-panning');
+            }
+        }
+    });
+
+    window.addEventListener('blur', () => {
+        window.__isSpacePanPressed = false;
+        isPanning = false;
+        const viewport = document.getElementById('workspace-viewport');
+        if (viewport) {
+            viewport.classList.remove('space-pan-active');
+            viewport.classList.remove('space-panning');
+        }
+        document.body?.classList.remove('space-pan-active');
+        document.body?.classList.remove('space-panning');
+    });
+
+    // Capture-phase mousedown to intercept drag before overlays/bubbles
+    window.addEventListener('mousedown', (e) => {
+        const isMiddleClick = e.button === 1;
+        const isLeftSpaceDrag = e.button === 0 && window.__isSpacePanPressed;
+
+        if (isMiddleClick || isLeftSpaceDrag) {
+            const viewport = document.getElementById('workspace-viewport');
+            if (viewport) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+
+                isPanning = true;
+                panStartX = e.clientX;
+                panStartY = e.clientY;
+                scrollStartX = viewport.scrollLeft;
+                scrollStartY = viewport.scrollTop;
+
+                viewport.classList.add('space-panning');
+                document.body?.classList.add('space-panning');
+            }
+        }
+    }, true);
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isPanning) return;
+        const viewport = document.getElementById('workspace-viewport');
+        if (!viewport) return;
+
+        e.preventDefault();
+        const dx = e.clientX - panStartX;
+        const dy = e.clientY - panStartY;
+
+        viewport.scrollLeft = scrollStartX - dx;
+        viewport.scrollTop = scrollStartY - dy;
+    }, { passive: false });
+
+    window.addEventListener('mouseup', (e) => {
+        if (isPanning) {
+            isPanning = false;
+            const viewport = document.getElementById('workspace-viewport');
+            if (viewport) {
+                viewport.classList.remove('space-panning');
+                if (!window.__isSpacePanPressed) {
+                    viewport.classList.remove('space-pan-active');
+                }
+            }
+            document.body?.classList.remove('space-panning');
+            if (!window.__isSpacePanPressed) {
+                document.body?.classList.remove('space-pan-active');
+            }
+        }
+    }, true);
+
     document.addEventListener('keydown', (e) => {
         // Ctrl + Shortcuts for zooming and Undo/Redo
         if (e.ctrlKey || e.metaKey) {
@@ -290,6 +398,27 @@ export function initEventListeners() {
             e.preventDefault();
             selectAllBlocksOnPage();
             return;
+        }
+
+        // F key: Fit Canvas to Screen
+        if (e.key === 'f' || e.key === 'F') {
+            e.preventDefault();
+            fitCanvasToScreen();
+            return;
+        }
+
+        // Left/Right Arrow Page Navigation when not editing block text
+        if (globalState.selectedBlockId === null) {
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                if (globalState.activePageIndex > 0) selectPage(globalState.activePageIndex - 1);
+                return;
+            }
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                if (globalState.activePageIndex < globalState.pages.length - 1) selectPage(globalState.activePageIndex + 1);
+                return;
+            }
         }
 
         if (globalState.selectedBlockId !== null) {
@@ -333,7 +462,8 @@ export function initEventListeners() {
                 'srs-review-modal',
                 'find-replace-modal',
                 'export-modal',
-                'preview-modal'
+                'preview-modal',
+                'left-more-actions-menu'
             ];
 
             let closedAnyModal = false;
@@ -389,6 +519,8 @@ Object.assign(window, {
     setViewMode,
     changeZoom,
     resetZoom,
+    fitCanvasToScreen,
+    toggleLeftSidebarMoreMenu,
     toggleApiKeyVisibility,
     updateSelectedModel,
     openSettingsModal,
