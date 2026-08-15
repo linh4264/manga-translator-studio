@@ -270,10 +270,15 @@ export function updateAllModelDropdowns(fetchedModels = []) {
 export async function fetchGeminiModels(isManual = false) {
     const keyToUse = ((elements.apiKeyInput ? elements.apiKeyInput.value : "") || globalState.apiKey || "").trim();
     if (!keyToUse) {
-        updateAllModelDropdowns([]);
+        updateAllModelDropdowns(window.__cachedGeminiModels || []);
         if (isManual) {
             showToast("Vui lòng nhập API Key trước khi tải danh sách Model.", "warn");
         }
+        return;
+    }
+
+    if (!isManual && window.__cachedGeminiModels && window.__cachedGeminiModels.length > 0) {
+        updateAllModelDropdowns(window.__cachedGeminiModels);
         return;
     }
 
@@ -285,7 +290,7 @@ export async function fetchGeminiModels(isManual = false) {
     try {
         const response = await fetch(getGeminiModelsUrl(keyToUse));
         if (!response.ok) {
-            updateAllModelDropdowns([]);
+            updateAllModelDropdowns(window.__cachedGeminiModels || []);
             if (isManual) {
                 showToast(`Không thể tải Model từ API (Mã lỗi ${response.status}). Vui lòng kiểm tra lại API Key.`, "error");
             }
@@ -310,23 +315,24 @@ export async function fetchGeminiModels(isManual = false) {
                 .map(m => m.name.replace('models/', ''));
 
             if (geminiModels.length > 0) {
+                window.__cachedGeminiModels = geminiModels;
                 updateAllModelDropdowns(geminiModels);
                 if (isManual) {
                     showToast(`Đã nạp và cập nhật thành công ${geminiModels.length} mô hình từ Google Gemini!`, "success");
                 }
             } else {
-                updateAllModelDropdowns([]);
+                updateAllModelDropdowns(window.__cachedGeminiModels || []);
             }
         }
     } catch (e) {
         console.warn("Không thể tự động tải danh sách Gemini models:", e);
-        updateAllModelDropdowns([]);
+        updateAllModelDropdowns(window.__cachedGeminiModels || []);
         if (isManual) {
             showToast("Lỗi kết nối mạng khi tải danh sách model.", "error");
         }
     } finally {
         if (refreshBtn) {
-            refreshBtn.innerHTML = '<i class="fa-solid fa-arrows-rotate text-[9px]"></i> Cập nhật Model';
+            refreshBtn.innerHTML = '<i class="fa-solid fa-arrows-rotate text-[9px]"></i> Quét Model';
         }
     }
 }
@@ -387,7 +393,7 @@ export function mountSettingsModal() { }
 
 export async function openSettingsModal() {
     mountSettingsModal();
-    const modal = await ensureModalElement('settings-modal');
+    const modal = document.getElementById('settings-modal') || await ensureModalElement('settings-modal');
     if (modal) modal.classList.remove('hidden');
 
     if (elements.uiLangSelect) elements.uiLangSelect.value = globalState.uiLanguage || 'vi';
@@ -401,46 +407,10 @@ export async function openSettingsModal() {
 
     syncAiProviderUI(globalState.aiProvider || 'gemini');
     syncPipelineModeUI(globalState.translationPipelineMode || 'two-step');
+    syncGenrePresetCheckboxes();
 
-    const ocrSelect = document.getElementById('ocr-model-select');
-    const customOcrInput = document.getElementById('custom-ocr-model-input');
-    if (ocrSelect && globalState.ocrModel) {
-        if (Array.from(ocrSelect.options).some(opt => opt.value === globalState.ocrModel)) {
-            ocrSelect.value = globalState.ocrModel;
-            if (customOcrInput) customOcrInput.classList.add('hidden');
-        } else {
-            ocrSelect.value = CUSTOM_MODEL_VALUE;
-            if (customOcrInput) {
-                customOcrInput.classList.remove('hidden');
-                customOcrInput.value = globalState.ocrModel;
-            }
-        }
-    }
-
-    const transSelect = document.getElementById('trans-model-select');
-    const customTransInput = document.getElementById('custom-trans-model-input');
-    if (transSelect && globalState.translationModel) {
-        if (Array.from(transSelect.options).some(opt => opt.value === globalState.translationModel)) {
-            transSelect.value = globalState.translationModel;
-            if (customTransInput) customTransInput.classList.add('hidden');
-        } else {
-            transSelect.value = CUSTOM_MODEL_VALUE;
-            if (customTransInput) {
-                customTransInput.classList.remove('hidden');
-                customTransInput.value = globalState.translationModel;
-            }
-        }
-    }
-
-    const modelSelect = document.getElementById('model-select');
-    if (modelSelect && globalState.selectedModel) {
-        if (Array.from(modelSelect.options).some(opt => opt.value === globalState.selectedModel)) {
-            modelSelect.value = globalState.selectedModel;
-        } else {
-            modelSelect.value = CUSTOM_MODEL_VALUE;
-            if (elements.customModelInput) elements.customModelInput.value = globalState.selectedModel;
-        }
-    }
+    updateAllModelDropdowns(window.__cachedGeminiModels || []);
+    updateModelLockingUI();
 
     const defaultFontSelect = document.getElementById('default-font');
     if (defaultFontSelect) defaultFontSelect.value = globalState.defaultFont || 'font-manga';
@@ -460,12 +430,27 @@ export async function openSettingsModal() {
     const storedPdfQuality = localStorage.getItem('manga_pdf_quality') || globalState.pdfQuality || 'hd';
     globalState.pdfQuality = storedPdfQuality;
     if (exportPdfQualitySelect) exportPdfQualitySelect.value = storedPdfQuality;
-
-    fetchGeminiModels();
-    updateModelLockingUI();
-
-    if (elements.apiKeyInput) setTimeout(() => elements.apiKeyInput.focus(), 50);
 }
+
+export function switchSettingsTab(tabId) {
+    const tabs = ['ai', 'trans', 'pronouns', 'fonts'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`settings-tab-btn-${t}`);
+        const content = document.getElementById(`settings-tab-content-${t}`);
+        if (t === tabId) {
+            if (btn) {
+                btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer bg-indigo-600 text-white shadow-sm whitespace-nowrap";
+            }
+            if (content) content.classList.remove('hidden');
+        } else {
+            if (btn) {
+                btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 whitespace-nowrap";
+            }
+            if (content) content.classList.add('hidden');
+        }
+    });
+}
+window.switchSettingsTab = switchSettingsTab;
 
 export function closeSettingsModal() {
     const modal = elements.settingsModal || document.getElementById('settings-modal');

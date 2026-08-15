@@ -17,7 +17,7 @@ import {
 
 import {
     toggleApiKeyVisibility, updateSelectedModel, updateModelDropdown, fetchGeminiModels,
-    updateModelLockingUI, mountSettingsModal, openSettingsModal, closeSettingsModal,
+    updateModelLockingUI, mountSettingsModal, openSettingsModal, closeSettingsModal, switchSettingsTab,
     updateDefaultFont,
     updateSourceLanguage, updateTargetLanguage, updatePronounMatrix, updateGlossary,
     toggleStoryMemory, updateStoryMemoryBadge, togglePreserveNames, syncGenrePresetCheckboxes,
@@ -593,6 +593,7 @@ Object.assign(window, {
     updateSelectedModel,
     openSettingsModal,
     closeSettingsModal,
+    switchSettingsTab,
     openHelpModal,
     closeHelpModal,
     switchHelpTab,
