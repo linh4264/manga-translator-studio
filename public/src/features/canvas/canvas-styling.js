@@ -54,7 +54,7 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
 
     const maskShape = block.style.maskShape || 'bubble-fit';
     const strokeWidth = block.style.strokeWidth || 0;
-    const cacheKey = `${block.translated}_${block.box.w}_${block.box.h}_${block.style.fontFamily}_${block.style.padding}_${strokeWidth}_${block.style.vertical}_${block.style.bold}_${block.style.align}_${maskShape}_${Math.round(displayWidth)}_${Math.round(displayHeight)}`;
+    const cacheKey = `${block.translated}_${block.box.w}_${block.box.h}_${block.style.fontFamily}_${block.style.padding}_${strokeWidth}_${block.style.vertical}_${block.style.bold}_${block.style.italic}_${block.style.align}_${maskShape}_${Math.round(displayWidth)}_${Math.round(displayHeight)}`;
     if (block.autoFitCache && block.autoFitCache.key === cacheKey) {
         block.style.fontSize = block.autoFitCache.fontSize;
         block.textWidth = block.autoFitCache.textWidth;
@@ -95,6 +95,12 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
         ruler.style.fontWeight = 'normal';
     }
 
+    if (block.style.italic) {
+        ruler.style.fontStyle = 'italic';
+    } else {
+        ruler.style.fontStyle = 'normal';
+    }
+
     if (block.style.vertical) {
         ruler.classList.add('text-vertical');
         ruler.style.writingMode = 'vertical-rl';
@@ -111,7 +117,9 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
     const targetHeight = (block.box.h / 100) * displayHeight;
 
     const isEllipseShape = maskShape === 'ellipse' || maskShape === 'bubble-fit';
-    const fitMargin = isEllipseShape ? 0.94 : 0.98;
+    const fitMargin = isEllipseShape ? 0.88 : 0.94;
+    const maxAllowedWidth = Math.max(10, (targetWidth * fitMargin) - strokeWidth * 2);
+    const maxAllowedHeight = Math.max(10, (targetHeight * fitMargin) - strokeWidth * 2);
 
     if (block.style.vertical) {
         ruler.style.height = 'auto';
@@ -119,8 +127,8 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
         ruler.style.width = 'auto';
         ruler.style.maxWidth = 'none';
     } else {
-        ruler.style.width = `${targetWidth * fitMargin}px`;
-        ruler.style.maxWidth = `${targetWidth * fitMargin}px`;
+        ruler.style.width = `${maxAllowedWidth}px`;
+        ruler.style.maxWidth = `${maxAllowedWidth}px`;
         ruler.style.height = 'auto';
         ruler.style.maxHeight = 'none';
     }
@@ -145,7 +153,7 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
         const contentWidth = ruler.scrollWidth;
         const contentHeight = ruler.scrollHeight;
 
-        const fits = contentWidth <= (targetWidth * fitMargin) + 2 && contentHeight <= (targetHeight * fitMargin) + 2;
+        const fits = contentWidth <= maxAllowedWidth + 2 && contentHeight <= maxAllowedHeight + 2;
 
         if (fits) {
             optimalSize = mid;

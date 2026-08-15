@@ -287,6 +287,7 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
             maskContent.style.letterSpacing = '0';
             maskContent.style.fontKerning = 'normal';
             maskContent.style.fontWeight = block.style.bold ? 'bold' : 'normal';
+            maskContent.style.fontStyle = block.style.italic ? 'italic' : 'normal';
 
             if (block.style.vertical) {
                 maskContent.classList.add('text-vertical');
