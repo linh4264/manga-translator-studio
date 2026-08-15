@@ -142,6 +142,7 @@
 
 
         <!-- ================================================================= -->
+        <!-- ================================================================= -->
         <!-- 2. VERTICAL IMAGE SLICER -->
         <!-- ================================================================= -->
         <section id="sec-slice" class="tool-sec hidden flex-col gap-6">
@@ -149,35 +150,127 @@
                 <input type="file" id="slice-file" accept="image/*" class="hidden">
                 <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform"><i class="fa-solid fa-scissors text-3xl"></i></div>
                 <h2 class="text-base font-bold text-slate-200">Kéo thả ảnh Webtoon/Manga vào đây hoặc <span class="text-indigo-400 underline">Chọn ảnh</span></h2>
-                <p class="text-xs text-slate-400">Cắt ảnh dọc dải dài thành nhiều phần bằng nhau theo nhu cầu đọc & đăng tải</p>
+                <p class="text-xs text-slate-400">Cắt dải ảnh dọc thành các phần nhỏ chuẩn Webtoon, hỗ trợ tự động tìm khe phân khung thông minh tránh cắt trúng chữ</p>
             </div>
+
             <div id="slice-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <!-- Header Controls -->
                 <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-800">
                     <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-image text-2xl text-indigo-400"></i>
-                        <div><h3 id="slice-filename" class="text-sm font-bold text-slate-200">image.png</h3><p id="slice-dim" class="text-xs font-mono text-slate-400">0 x 0 px</p></div>
+                        <div class="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                            <i class="fa-solid fa-scissors text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 id="slice-filename" class="text-sm font-bold text-slate-200 truncate max-w-xs md:max-w-md">image.png</h3>
+                            <p id="slice-dim" class="text-xs font-mono text-slate-400">0 x 0 px • 0 MB</p>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <button onclick="document.getElementById('slice-file').click()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">Chọn ảnh khác</button>
-                        <button onclick="downloadSlicedZip()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg"><i class="fa-solid fa-file-zipper"></i> Cắt & Tải ZIP</button>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button onclick="resetSlice()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 shadow transition-colors flex items-center gap-1.5">
+                            <i class="fa-solid fa-rotate-left"></i> Chọn ảnh khác
+                        </button>
+                        <button id="btn-slice-zip" onclick="downloadSlicedZip()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg transition-colors flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-zipper"></i> Tải Tất Cả (ZIP)
+                        </button>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
-                    <div class="flex flex-col gap-1">
-                        <label class="text-[11px] font-bold text-slate-400">Số mảnh cắt</label>
-                        <input type="number" id="slice-count" min="2" max="100" value="4" oninput="processSlicing()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono text-center font-bold">
+
+                <!-- Settings Controls -->
+                <div class="flex flex-col gap-3 bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                    <!-- Top Row: Mode Switcher & Format -->
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                        <!-- Segmented Mode Tabs -->
+                        <div class="flex flex-col gap-1.5 md:col-span-8">
+                            <label class="text-[11px] font-bold text-slate-400">Phương thức cắt ảnh</label>
+                            <div class="flex items-center p-1 bg-slate-900 border border-slate-800 rounded-xl gap-1">
+                                <button type="button" id="btn-mode-count" onclick="setSliceMode('count')" class="flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white shadow flex items-center justify-center gap-1.5">
+                                    <i class="fa-solid fa-table-cells-large"></i> Cắt Chia Đều Nhau (Số mảnh)
+                                </button>
+                                <button type="button" id="btn-mode-height" onclick="setSliceMode('height')" class="flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5">
+                                    <i class="fa-solid fa-ruler-vertical"></i> Cắt Theo Chiều Cao (px)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Format Selection -->
+                        <div class="flex flex-col gap-1.5 md:col-span-4">
+                            <label class="text-[11px] font-bold text-slate-400">Định dạng ảnh xuất</label>
+                            <select id="slice-format" onchange="onSliceFormatChange()" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                                <option value="image/webp" selected>WEBP (Tối ưu - Nhẹ & Nét)</option>
+                                <option value="image/png">PNG (Gốc nét 100%)</option>
+                                <option value="image/jpeg">JPG (Tiêu chuẩn)</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="flex flex-col gap-1">
-                        <label class="text-[11px] font-bold text-slate-400">Định dạng ảnh xuất</label>
-                        <select id="slice-format" onchange="processSlicing()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200">
-                            <option value="image/png" selected>PNG (Gốc nét)</option>
-                            <option value="image/jpeg">JPG (Nhẹ)</option>
-                        </select>
+
+                    <!-- Middle Row 1: Parameter for Equal Slices Mode (Default) -->
+                    <div id="box-slice-count" class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-850">
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-bold text-indigo-300 whitespace-nowrap"><i class="fa-solid fa-divide mr-1"></i> Chia đều thành:</label>
+                            <input type="number" id="slice-count" min="2" max="100" value="4" oninput="processSlicingDebounced()" class="w-20 bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 font-mono font-bold text-center focus:outline-none focus:border-indigo-500">
+                            <span id="slice-count-calc-info" class="text-xs text-slate-400 font-mono">mảnh bằng nhau</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="text-[11px] text-slate-400 mr-1 font-semibold">Chọn nhanh:</span>
+                            <button type="button" onclick="setSliceCountPreset(2)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">2 mảnh</button>
+                            <button type="button" onclick="setSliceCountPreset(3)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">3 mảnh</button>
+                            <button type="button" onclick="setSliceCountPreset(4)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">4 mảnh</button>
+                            <button type="button" onclick="setSliceCountPreset(5)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">5 mảnh</button>
+                            <button type="button" onclick="setSliceCountPreset(6)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">6 mảnh</button>
+                            <button type="button" onclick="setSliceCountPreset(8)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">8 mảnh</button>
+                            <button type="button" onclick="setSliceCountPreset(10)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">10 mảnh</button>
+                        </div>
                     </div>
-                    <div id="slice-info-box" class="text-xs text-slate-400 bg-slate-950 p-2.5 rounded-xl border border-slate-800 font-mono">Mỗi mảnh ~0px</div>
+
+                    <!-- Middle Row 2: Parameter for Max Height Mode -->
+                    <div id="box-slice-height" class="hidden flex-col md:flex-row md:items-center justify-between gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-850">
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-bold text-indigo-300 whitespace-nowrap"><i class="fa-solid fa-arrows-up-down mr-1"></i> Chiều cao mỗi mảnh:</label>
+                            <input type="number" id="slice-max-height" min="300" max="50000" step="100" value="2000" oninput="processSlicingDebounced()" class="w-28 bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 font-mono font-bold text-center focus:outline-none focus:border-indigo-500">
+                            <span id="slice-height-calc-info" class="text-xs text-slate-400 font-mono">px/mảnh</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="text-[11px] text-slate-400 mr-1 font-semibold">Mốc chuẩn:</span>
+                            <button type="button" onclick="setSliceHeightPreset(1500)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">1500px</button>
+                            <button type="button" onclick="setSliceHeightPreset(2048)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">2048px</button>
+                            <button type="button" onclick="setSliceHeightPreset(3000)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">3000px</button>
+                            <button type="button" onclick="setSliceHeightPreset(4096)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">4096px</button>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Options Row: Smart Gap & Quality -->
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 pt-2 border-t border-slate-850 items-center">
+                        <div class="md:col-span-7 flex items-center gap-3">
+                            <label class="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-300">
+                                <input type="checkbox" id="slice-smart-gap" onchange="processSlicingDebounced()" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0 focus:ring-offset-0">
+                                <span class="font-semibold text-indigo-300"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Cắt Thông Minh (Smart Gap):</span>
+                                <span class="text-slate-400 text-[11px]">Tự động dời đường cắt vào khe trắng giữa các khung tranh</span>
+                            </label>
+                        </div>
+
+                        <div id="box-slice-quality" class="md:col-span-5 flex items-center gap-2 justify-end">
+                            <label class="text-[11px] font-bold text-slate-400 whitespace-nowrap">Chất lượng: <span id="lbl-slice-quality" class="text-indigo-400 font-mono">92%</span></label>
+                            <input type="range" id="slice-quality" min="50" max="100" value="92" oninput="document.getElementById('lbl-slice-quality').innerText = this.value + '%'; processSlicingDebounced();" class="w-36 accent-indigo-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info and Status Badge Bar -->
+                <div class="flex flex-wrap items-center justify-between gap-2 px-1">
+                    <div id="slice-status-bar" class="text-xs font-mono text-slate-400 flex items-center gap-2">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
+                            <i class="fa-solid fa-circle-check"></i> <span id="slice-summary-text">Đã tạo 0 mảnh cắt</span>
+                        </span>
+                        <span id="slice-size-calc" class="text-slate-400 text-[11px]">Mỗi mảnh ~0px</span>
+                    </div>
+                    <div id="slice-process-indicator" class="hidden text-xs text-indigo-400 font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý cắt ảnh...
+                    </div>
                 </div>
             </div>
-            <div id="slice-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"></div>
+
+            <!-- Slice Output Grid -->
+            <div id="slice-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
         </section>
 
 
@@ -466,12 +559,96 @@
 
 
         // =========================================================================
-        // 2. VERTICAL IMAGE SLICER
+        // 2. VERTICAL IMAGE SLICER (SMART GAP & WEBTOON OPTIMIZED)
         // =========================================================================
-        let sliceImg = null, sliceName = '', sliceList = [];
+        let sliceImg = null, sliceFile = null, sliceName = '', sliceList = [];
+        let sliceDebounceTimer = null;
+        let isSlicing = false;
+        let currentSliceMode = 'count'; // Default: 'count' (Cắt chia đều nhau)
+
+        function clearSliceList() {
+            sliceList.forEach(item => {
+                if (item.objectUrl) URL.revokeObjectURL(item.objectUrl);
+            });
+            sliceList = [];
+        }
+
+        function resetSlice() {
+            clearSliceList();
+            sliceImg = null;
+            sliceFile = null;
+            sliceName = '';
+            document.getElementById('slice-grid').innerHTML = '';
+            document.getElementById('slice-panel').classList.add('hidden');
+            document.getElementById('slice-upload').classList.remove('hidden');
+            const input = document.getElementById('slice-file');
+            if (input) input.value = '';
+        }
+
+        function setSliceMode(mode) {
+            currentSliceMode = mode;
+            const btnCount = document.getElementById('btn-mode-count');
+            const btnHeight = document.getElementById('btn-mode-height');
+            const boxCount = document.getElementById('box-slice-count');
+            const boxHeight = document.getElementById('box-slice-height');
+
+            if (mode === 'count') {
+                if (btnCount) btnCount.className = "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white shadow flex items-center justify-center gap-1.5";
+                if (btnHeight) btnHeight.className = "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5";
+                if (boxCount) { boxCount.classList.remove('hidden'); boxCount.classList.add('flex'); }
+                if (boxHeight) { boxHeight.classList.add('hidden'); boxHeight.classList.remove('flex'); }
+            } else {
+                if (btnHeight) btnHeight.className = "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white shadow flex items-center justify-center gap-1.5";
+                if (btnCount) btnCount.className = "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5";
+                if (boxHeight) { boxHeight.classList.remove('hidden'); boxHeight.classList.add('flex'); }
+                if (boxCount) { boxCount.classList.add('hidden'); boxCount.classList.remove('flex'); }
+            }
+            processSlicingDebounced();
+        }
+
+        function setSliceCountPreset(countVal) {
+            const input = document.getElementById('slice-count');
+            if (input) input.value = countVal;
+            processSlicingDebounced();
+        }
+
+        function setSliceHeightPreset(heightVal) {
+            const input = document.getElementById('slice-max-height');
+            if (input) input.value = heightVal;
+            processSlicingDebounced();
+        }
+
+        function onSliceFormatChange() {
+            const format = document.getElementById('slice-format').value;
+            const boxQ = document.getElementById('box-slice-quality');
+            if (boxQ) {
+                if (format === 'image/png') {
+                    boxQ.classList.add('opacity-40', 'pointer-events-none');
+                } else {
+                    boxQ.classList.remove('opacity-40', 'pointer-events-none');
+                }
+            }
+            processSlicingDebounced();
+        }
+
+        function processSlicingDebounced() {
+            if (sliceDebounceTimer) clearTimeout(sliceDebounceTimer);
+            sliceDebounceTimer = setTimeout(() => {
+                processSlicing();
+            }, 100);
+        }
+
         document.getElementById('slice-file').addEventListener('change', (e) => {
-            if (!e.target.files[0]) return;
-            const file = e.target.files[0];
+            if (!e.target.files || !e.target.files[0]) return;
+            handleSliceFileSelect(e.target.files[0]);
+        });
+
+        function handleSliceFileSelect(file) {
+            if (!file || !file.type.startsWith('image/')) {
+                alert("Vui lòng chọn một tệp hình ảnh hợp lệ (PNG, JPG, WEBP, v.v.)");
+                return;
+            }
+            sliceFile = file;
             sliceName = file.name;
             const reader = new FileReader();
             reader.onload = (evt) => {
@@ -479,58 +656,246 @@
                 img.onload = () => {
                     sliceImg = img;
                     document.getElementById('slice-filename').innerText = file.name;
-                    document.getElementById('slice-dim').innerText = `${img.naturalWidth} x ${img.naturalHeight} px`;
+                    document.getElementById('slice-filename').title = file.name;
+                    const sizeStr = formatFileSize(file.size);
+                    document.getElementById('slice-dim').innerText = `${img.naturalWidth} x ${img.naturalHeight} px • ${sizeStr}`;
                     document.getElementById('slice-upload').classList.add('hidden');
                     document.getElementById('slice-panel').classList.remove('hidden');
                     processSlicing();
                 };
+                img.onerror = () => {
+                    alert("Không thể đọc định dạng ảnh này. Vui lòng thử lại với ảnh khác.");
+                };
                 img.src = evt.target.result;
             };
             reader.readAsDataURL(file);
-        });
+        }
+
+        /**
+         * Fast Smart Gap Detector: Finds horizontal blank bands (white, black, uniform color)
+         * within [targetY - searchRange, targetY + searchRange] around cut point
+         */
+        function findOptimalCutLine(ctxSample, targetY, searchRange, width, totalHeight) {
+            const minY = Math.max(10, Math.floor(targetY - searchRange));
+            const maxY = Math.min(totalHeight - 10, Math.floor(targetY + searchRange));
+            if (minY >= maxY) return targetY;
+
+            const sampleHeight = maxY - minY + 1;
+            const imgData = ctxSample.getImageData(0, minY, width, sampleHeight);
+            const data = imgData.data;
+
+            let bestY = targetY;
+            let bestScore = Infinity;
+
+            for (let r = 0; r < sampleHeight; r++) {
+                const currentY = minY + r;
+                let rSum = 0, gSum = 0, bSum = 0;
+                const sampleStep = Math.max(1, Math.floor(width / 80));
+                let sampleCount = 0;
+
+                for (let x = 0; x < width; x += sampleStep) {
+                    const idx = (r * width + x) * 4;
+                    rSum += data[idx];
+                    gSum += data[idx + 1];
+                    bSum += data[idx + 2];
+                    sampleCount++;
+                }
+
+                const rAvg = rSum / sampleCount;
+                const gAvg = gSum / sampleCount;
+                const bAvg = bSum / sampleCount;
+
+                let variance = 0;
+                for (let x = 0; x < width; x += sampleStep) {
+                    const idx = (r * width + x) * 4;
+                    const dr = data[idx] - rAvg;
+                    const dg = data[idx + 1] - gAvg;
+                    const db = data[idx + 2] - bAvg;
+                    variance += Math.abs(dr) + Math.abs(dg) + Math.abs(db);
+                }
+                variance = variance / sampleCount;
+
+                const isWhiteOrBlack = (rAvg > 242 && gAvg > 242 && bAvg > 242) || (rAvg < 15 && gAvg < 15 && bAvg < 15);
+                const solidBonus = isWhiteOrBlack ? 0.3 : 1.0;
+
+                const dist = Math.abs(currentY - targetY);
+                const distPenalty = (dist / searchRange) * 15;
+
+                const score = (variance * solidBonus) + distPenalty;
+
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestY = currentY;
+                }
+            }
+
+            return bestY;
+        }
 
         async function processSlicing() {
-            if (!sliceImg) return;
-            const count = parseInt(document.getElementById('slice-count').value) || 4;
+            if (!sliceImg || isSlicing) return;
+            isSlicing = true;
+
+            const indicator = document.getElementById('slice-process-indicator');
+            if (indicator) indicator.classList.remove('hidden');
+
             const format = document.getElementById('slice-format').value;
-            const ext = format === 'image/jpeg' ? 'jpg' : 'png';
-            const W = sliceImg.naturalWidth, H = sliceImg.naturalHeight;
-            const h = Math.floor(H / count);
-            document.getElementById('slice-info-box').innerText = `Mỗi mảnh ~${h}px chiều cao`;
+            const quality = parseFloat(document.getElementById('slice-quality').value) / 100;
+            const enableSmartGap = document.getElementById('slice-smart-gap').checked;
+            const ext = getTargetFormatExt(format);
+
+            const W = sliceImg.naturalWidth;
+            const H = sliceImg.naturalHeight;
+
+            // Determine target cut lines
+            let cutPoints = [0];
+
+            if (currentSliceMode === 'count') {
+                const count = Math.max(2, Math.min(100, parseInt(document.getElementById('slice-count').value) || 4));
+                const h = Math.floor(H / count);
+                for (let i = 1; i < count; i++) {
+                    cutPoints.push(i * h);
+                }
+                const countCalc = document.getElementById('slice-count-calc-info');
+                if (countCalc) countCalc.innerText = `(= ${count} mảnh ~${h}px chia đều)`;
+            } else {
+                const targetH = Math.max(200, parseInt(document.getElementById('slice-max-height').value) || 2000);
+                let currentY = targetH;
+                while (currentY < H) {
+                    cutPoints.push(currentY);
+                    currentY += targetH;
+                }
+                const heightCalc = document.getElementById('slice-height-calc-info');
+                if (heightCalc) heightCalc.innerText = `(~${Math.ceil(H / targetH)} mảnh)`;
+            }
+
+            // If Smart Gap is enabled, adjust cut points to blank comic gutters
+            if (enableSmartGap && cutPoints.length > 1) {
+                const sampleCanvas = document.createElement('canvas');
+                sampleCanvas.width = W;
+                sampleCanvas.height = H;
+                const sampleCtx = sampleCanvas.getContext('2d');
+                sampleCtx.drawImage(sliceImg, 0, 0);
+
+                for (let i = 1; i < cutPoints.length; i++) {
+                    const prevCut = cutPoints[i - 1];
+                    const rawTarget = cutPoints[i];
+                    const nextTarget = (i + 1 < cutPoints.length) ? cutPoints[i + 1] : H;
+                    const maxSearch = Math.min(300, Math.floor((rawTarget - prevCut) * 0.3), Math.floor((nextTarget - rawTarget) * 0.3));
+                    if (maxSearch > 20) {
+                        const optimalY = findOptimalCutLine(sampleCtx, rawTarget, maxSearch, W, H);
+                        cutPoints[i] = optimalY;
+                    }
+                }
+            }
+
+            cutPoints.push(H);
+            cutPoints = Array.from(new Set(cutPoints)).sort((a, b) => a - b);
+
+            const numSlices = cutPoints.length - 1;
+            const avgH = Math.round(H / numSlices);
+            document.getElementById('slice-summary-text').innerText = `Đã tạo ${numSlices} mảnh cắt`;
+            document.getElementById('slice-size-calc').innerText = `Trung bình ~${avgH}px/mảnh • .${ext.toUpperCase()}`;
 
             const grid = document.getElementById('slice-grid');
-            grid.innerHTML = ''; sliceList = [];
+            clearSliceList();
+            grid.innerHTML = '';
 
-            for (let i = 0; i < count; i++) {
-                const sy = i * h;
-                const sh = (i === count - 1) ? (H - sy) : h;
+            const baseName = sliceName.replace(/\.[^/.]+$/, '') || 'slice';
+
+            for (let i = 0; i < numSlices; i++) {
+                const sy = cutPoints[i];
+                const sh = cutPoints[i + 1] - sy;
+                if (sh <= 0) continue;
+
                 const canvas = document.createElement('canvas');
-                canvas.width = W; canvas.height = sh;
-                canvas.getContext('2d').drawImage(sliceImg, 0, sy, W, sh, 0, 0, W, sh);
-                const dataUrl = canvas.toDataURL(format, 0.92);
-                const blob = await new Promise(res => canvas.toBlob(res, format, 0.92));
-                sliceList.push({ idx: i + 1, dataUrl, blob, ext });
+                canvas.width = W;
+                canvas.height = sh;
+                const ctx = canvas.getContext('2d');
+
+                // Fix black background for JPG
+                if (format === 'image/jpeg') {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, W, sh);
+                }
+
+                ctx.drawImage(sliceImg, 0, sy, W, sh, 0, 0, W, sh);
+
+                const blob = await new Promise(res => canvas.toBlob(res, format, quality));
+                const objectUrl = blob ? URL.createObjectURL(blob) : '';
+                const partIdx = String(i + 1).padStart(2, '0');
+                const targetFilename = `${baseName}_part_${partIdx}.${ext}`;
+                const sizeFormatted = formatFileSize(blob ? blob.size : 0);
+
+                sliceList.push({
+                    idx: i + 1,
+                    blob,
+                    objectUrl,
+                    width: W,
+                    height: sh,
+                    size: blob ? blob.size : 0,
+                    ext,
+                    filename: targetFilename
+                });
 
                 const card = document.createElement('div');
-                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-2 flex flex-col";
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col justify-between text-xs font-mono shadow-md hover:border-slate-700 transition-all";
                 card.innerHTML = `
-                    <img src="${dataUrl}" class="max-h-60 object-contain rounded cursor-pointer" onclick="openPreviewModal('${dataUrl}')">
-                    <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-800 text-xs font-mono">
-                        <span>Mảnh ${i+1}/${count}</span>
-                        <a href="${dataUrl}" download="slice_${i+1}.${ext}" class="text-indigo-400 hover:underline">Tải về</a>
+                    <div class="relative group cursor-pointer overflow-hidden rounded-xl bg-slate-950/60 border border-slate-850 flex items-center justify-center min-h-[140px]" onclick="openPreviewModal('${objectUrl}')">
+                        <img src="${objectUrl}" class="max-h-48 object-contain rounded transition-transform group-hover:scale-105" alt="Slice ${i+1}">
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-sans text-xs gap-1.5 font-bold">
+                            <i class="fa-solid fa-magnifying-glass-plus"></i> Phóng to xem
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-2 mt-3 pt-2.5 border-t border-slate-800">
+                        <div class="flex items-center justify-between text-xs font-bold text-slate-200">
+                            <span class="text-indigo-400">Mảnh #${partIdx} / ${String(numSlices).padStart(2,'0')}</span>
+                            <span class="text-[11px] text-slate-400 font-normal font-mono">${W}x${sh}px</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] text-slate-400">
+                            <span class="text-slate-300 font-bold">${sizeFormatted}</span>
+                            <a href="${objectUrl}" download="${targetFilename}" class="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white font-bold transition-all flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-download"></i> Tải .${ext.toUpperCase()}
+                            </a>
+                        </div>
                     </div>
                 `;
                 grid.appendChild(card);
             }
+
+            if (indicator) indicator.classList.add('hidden');
+            isSlicing = false;
         }
+
         async function downloadSlicedZip() {
             if (sliceList.length === 0) return;
+            const validItems = sliceList.filter(item => item.blob);
+            if (validItems.length === 0) {
+                alert("Chưa có ảnh mảnh cắt nào sẵn sàng để tải ZIP.");
+                return;
+            }
+
+            const btn = document.getElementById('btn-slice-zip');
+            const origHtml = btn ? btn.innerHTML : '';
+            if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang nén ZIP...`;
+
             const zip = new JSZip();
-            sliceList.forEach(item => zip.file(`manh_${String(item.idx).padStart(2,'0')}.${item.ext}`, item.blob));
-            const content = await zip.generateAsync({type: 'blob'});
+            validItems.forEach(item => {
+                zip.file(item.filename, item.blob);
+            });
+
+            const content = await zip.generateAsync({ type: 'blob' });
+            const zipUrl = URL.createObjectURL(content);
             const a = document.createElement('a');
-            a.href = URL.createObjectURL(content);
-            a.download = `${sliceName}_Sliced.zip`; a.click();
+            const baseName = sliceName.replace(/\.[^/.]+$/, '') || 'sliced_webtoon';
+            a.href = zipUrl;
+            a.download = `${baseName}_sliced.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(zipUrl), 10000);
+
+            if (btn) btn.innerHTML = origHtml;
         }
 
 
@@ -1235,12 +1600,8 @@
                 }
             });
             setupDragAndDrop('slice-upload', 'slice-file', (files) => {
-                if (files[0]) {
-                    const input = document.getElementById('slice-file');
-                    const dt = new DataTransfer();
-                    dt.items.add(files[0]);
-                    input.files = dt.files;
-                    input.dispatchEvent(new Event('change'));
+                if (files && files[0]) {
+                    handleSliceFileSelect(files[0]);
                 }
             });
             setupDragAndDrop('merge-upload', 'merge-files', (files) => {
