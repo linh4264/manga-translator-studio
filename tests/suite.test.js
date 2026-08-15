@@ -424,9 +424,9 @@ test('3-Tier Comic Universe, World Setting & Narrative Tone Matrix Prompt Genera
     const { getTranslationGuidancePrompt } = await import('../public/src/features/ai/ai-service.js');
     const { COMIC_UNIVERSE_PRESETS, COMIC_GENRE_PRESETS, COMIC_TONE_PRESETS } = await import('../public/src/config/constants.js');
 
-    // Test Manga + Multi-Genre (Isekai + Fantasy + Action + Comedy + Revenge) + Classic Scanlation
+    // Test Manga + Multi-Genre (Isekai + Fantasy + Action + Comedy + Wuxia + Girls' Love) + Classic Scanlation
     globalState.comicUniverse = 'manga';
-    globalState.comicGenres = ['isekai', 'fantasy', 'action', 'comedy', 'revenge'];
+    globalState.comicGenres = ['isekai', 'fantasy', 'action', 'comedy', 'wuxia', 'girls_love'];
     globalState.comicTone = 'classic';
     globalState.sourceLanguage = 'ja';
     globalState.targetLanguage = 'vi';
@@ -434,21 +434,23 @@ test('3-Tier Comic Universe, World Setting & Narrative Tone Matrix Prompt Genera
     let prompt = getTranslationGuidancePrompt();
     assert.ok(prompt.includes('JAPANESE MANGA SCANLATION'), 'Prompt should include Japanese Manga Scanlation guidance');
     assert.ok(prompt.includes('COMPOSITE GENRE PROFILE'), 'Prompt should include Composite Genre Profile');
-    assert.ok(prompt.includes('ISEKAI / REINCARNATION'), 'Prompt should include Isekai guidance');
-    assert.ok(prompt.includes('FANTASY & MAGIC'), 'Prompt should include Fantasy & Magic guidance');
-    assert.ok(prompt.includes('ACTION & MARTIAL ARTS'), 'Prompt should include Action guidance');
-    assert.ok(prompt.includes('COMEDY & GAG'), 'Prompt should include Comedy guidance');
-    assert.ok(prompt.includes('REVENGE / ZAMAA'), 'Prompt should include Revenge / Zamaa guidance');
+    assert.ok(prompt.includes('ISEKAI / TRANSMIGRATION'), 'Prompt should include Isekai guidance');
+    assert.ok(prompt.includes('FANTASY'), 'Prompt should include Fantasy guidance');
+    assert.ok(prompt.includes('ACTION'), 'Prompt should include Action guidance');
+    assert.ok(prompt.includes('COMEDY'), 'Prompt should include Comedy guidance');
+    assert.ok(prompt.includes('WUXIA / XIANXIA'), 'Prompt should include Wuxia guidance');
+    assert.ok(prompt.includes("GIRLS' LOVE / YURI"), "Prompt should include Girls' Love guidance");
     assert.ok(prompt.includes('CLASSIC SCANLATION'), 'Prompt should include Classic Scanlation Tone guidance');
 
-    // Test Manhwa + Action + Monsters/Dungeon + Comedy/Meme
+    // Test Manhwa + Crime + Psychological + Comedy/Meme
     globalState.comicUniverse = 'manhwa';
-    globalState.comicGenres = ['action', 'monsters'];
+    globalState.comicGenres = ['crime', 'psychological'];
     globalState.comicTone = 'comedy';
 
     prompt = getTranslationGuidancePrompt();
     assert.ok(prompt.includes('KOREAN MANHWA / WEBTOON'), 'Prompt should include Korean Manhwa guidance');
-    assert.ok(prompt.includes('MONSTERS / DUNGEON / HUNTER'), 'Prompt should include Monsters & Dungeon guidance');
+    assert.ok(prompt.includes('CRIME'), 'Prompt should include Crime guidance');
+    assert.ok(prompt.includes('PSYCHOLOGICAL'), 'Prompt should include Psychological guidance');
     assert.ok(prompt.includes('COMEDY & GAG'), 'Prompt should include Comedy & Gag guidance');
 
     // Test US Comics + Horror + Dark
@@ -458,7 +460,7 @@ test('3-Tier Comic Universe, World Setting & Narrative Tone Matrix Prompt Genera
 
     prompt = getTranslationGuidancePrompt();
     assert.ok(prompt.includes('AMERICAN COMICS & GRAPHIC NOVELS'), 'Prompt should include US Comic guidance');
-    assert.ok(prompt.includes('HORROR & SURVIVAL'), 'Prompt should include Horror & Survival guidance');
+    assert.ok(prompt.includes('HORROR'), 'Prompt should include Horror guidance');
     assert.ok(prompt.includes('DARK & GRITTY'), 'Prompt should include Dark & Gritty guidance');
 });
 

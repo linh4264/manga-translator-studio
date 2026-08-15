@@ -2033,86 +2033,126 @@
                                         </label>
                                         <span class="text-[9px] text-slate-500 italic">Click để chọn</span>
                                     </div>
-                                    <div id="comic-genres-tag-container" class="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[11px] max-h-40 overflow-y-auto pr-1 custom-scrollbar">
-                                        <button type="button" data-genre="isekai" onclick="toggleComicGenre('isekai')"
-                                            class="comic-genre-tag px-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-left flex items-center justify-between gap-1 transition-all">
-                                            <span class="truncate">🌀 Isekai</span>
-                                            <i class="fa-solid fa-check text-[10px] text-white tag-check hidden"></i>
-                                        </button>
-                                        <button type="button" data-genre="fantasy" onclick="toggleComicGenre('fantasy')"
-                                            class="comic-genre-tag px-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-left flex items-center justify-between gap-1 transition-all">
-                                            <span class="truncate">🏰 Fantasy</span>
-                                            <i class="fa-solid fa-check text-[10px] text-white tag-check hidden"></i>
-                                        </button>
+                                    <div id="comic-genres-tag-container" class="flex flex-wrap gap-1.5 text-[11px] max-h-48 overflow-y-auto pr-1 custom-scrollbar">
                                         <button type="button" data-genre="action" onclick="toggleComicGenre('action')"
-                                            class="comic-genre-tag px-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-left flex items-center justify-between gap-1 transition-all">
-                                            <span class="truncate">⚔️ Action</span>
-                                            <i class="fa-solid fa-check text-[10px] text-white tag-check hidden"></i>
-                                        </button>
-                                        <button type="button" data-genre="comedy" onclick="toggleComicGenre('comedy')"
-                                            class="comic-genre-tag px-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-left flex items-center justify-between gap-1 transition-all">
-                                            <span class="truncate">🤣 Comedy</span>
-                                            <i class="fa-solid fa-check text-[10px] text-white tag-check hidden"></i>
-                                        </button>
-                                        <button type="button" data-genre="monsters" onclick="toggleComicGenre('monsters')"
-                                            class="comic-genre-tag px-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-left flex items-center justify-between gap-1 transition-all">
-                                            <span class="truncate">🐉 Quái vật</span>
-                                            <i class="fa-solid fa-check text-[10px] text-white tag-check hidden"></i>
-                                        </button>
-                                        <button type="button" data-genre="revenge" onclick="toggleComicGenre('revenge')"
-                                            class="comic-genre-tag px-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-left flex items-center justify-between gap-1 transition-all">
-                                            <span class="truncate">👑 Báo thù</span>
-                                            <i class="fa-solid fa-check text-[10px] text-white tag-check hidden"></i>
-                                        </button>
-                                        <button type="button" data-genre="system" onclick="toggleComicGenre('system')"
-                                            class="comic-genre-tag px-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-left flex items-center justify-between gap-1 transition-all">
-                                            <span class="truncate">📈 Hệ thống</span>
-                                            <i class="fa-solid fa-check text-[10px] text-white tag-check hidden"></i>
-                                        </button>
-                                        <button type="button" data-genre="romance" onclick="toggleComicGenre('romance')"
-                                            class="comic-genre-tag px-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-left flex items-center justify-between gap-1 transition-all">
-                                            <span class="truncate">🌸 Romance</span>
-                                            <i class="fa-solid fa-check text-[10px] text-white tag-check hidden"></i>
-                                        </button>
-                                        <button type="button" data-genre="school" onclick="toggleComicGenre('school')"
-                                            class="comic-genre-tag px-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-left flex items-center justify-between gap-1 transition-all">
-                                            <span class="truncate">🏫 Học đường</span>
-                                            <i class="fa-solid fa-check text-[10px] text-white tag-check hidden"></i>
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Action</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
                                         </button>
                                         <button type="button" data-genre="adventure" onclick="toggleComicGenre('adventure')"
-                                            class="comic-genre-tag px-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-left flex items-center justify-between gap-1 transition-all">
-                                            <span class="truncate">🧭 Phiêu lưu</span>
-                                            <i class="fa-solid fa-check text-[10px] text-white tag-check hidden"></i>
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Adventure</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
+                                        </button>
+                                        <button type="button" data-genre="comedy" onclick="toggleComicGenre('comedy')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Comedy</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
+                                        </button>
+                                        <button type="button" data-genre="crime" onclick="toggleComicGenre('crime')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Crime</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
+                                        </button>
+                                        <button type="button" data-genre="drama" onclick="toggleComicGenre('drama')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Drama</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
+                                        </button>
+                                        <button type="button" data-genre="fantasy" onclick="toggleComicGenre('fantasy')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Fantasy</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
+                                        </button>
+                                        <button type="button" data-genre="girls_love" onclick="toggleComicGenre('girls_love')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Girls' Love</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
+                                        </button>
+                                        <button type="button" data-genre="historical" onclick="toggleComicGenre('historical')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Historical</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
                                         </button>
                                         <button type="button" data-genre="horror" onclick="toggleComicGenre('horror')"
-                                            class="comic-genre-tag px-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-left flex items-center justify-between gap-1 transition-all">
-                                            <span class="truncate">🩸 Kinh dị</span>
-                                            <i class="fa-solid fa-check text-[10px] text-white tag-check hidden"></i>
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Horror</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
                                         </button>
-                                        <button type="button" data-genre="scifi" onclick="toggleComicGenre('scifi')"
-                                            class="comic-genre-tag px-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-left flex items-center justify-between gap-1 transition-all">
-                                            <span class="truncate">🚀 Sci-Fi</span>
-                                            <i class="fa-solid fa-check text-[10px] text-white tag-check hidden"></i>
+                                        <button type="button" data-genre="isekai" onclick="toggleComicGenre('isekai')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Isekai</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
                                         </button>
-                                        <button type="button" data-genre="cultivation" onclick="toggleComicGenre('cultivation')"
-                                            class="comic-genre-tag px-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-left flex items-center justify-between gap-1 transition-all">
-                                            <span class="truncate">🏛️ Tiên hiệp</span>
-                                            <i class="fa-solid fa-check text-[10px] text-white tag-check hidden"></i>
+                                        <button type="button" data-genre="magical_girls" onclick="toggleComicGenre('magical_girls')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Magical Girls</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
                                         </button>
-                                        <button type="button" data-genre="urban" onclick="toggleComicGenre('urban')"
-                                            class="comic-genre-tag px-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-left flex items-center justify-between gap-1 transition-all">
-                                            <span class="truncate">💼 Đô thị</span>
-                                            <i class="fa-solid fa-check text-[10px] text-white tag-check hidden"></i>
+                                        <button type="button" data-genre="mecha" onclick="toggleComicGenre('mecha')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Mecha</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
+                                        </button>
+                                        <button type="button" data-genre="medical" onclick="toggleComicGenre('medical')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Medical</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
                                         </button>
                                         <button type="button" data-genre="mystery" onclick="toggleComicGenre('mystery')"
-                                            class="comic-genre-tag px-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-left flex items-center justify-between gap-1 transition-all">
-                                            <span class="truncate">🔍 Trinh thám</span>
-                                            <i class="fa-solid fa-check text-[10px] text-white tag-check hidden"></i>
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Mystery</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
                                         </button>
-                                        <button type="button" data-genre="iyashikei" onclick="toggleComicGenre('iyashikei')"
-                                            class="comic-genre-tag px-2 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-left flex items-center justify-between gap-1 transition-all">
-                                            <span class="truncate">🍃 Chữa lành</span>
-                                            <i class="fa-solid fa-check text-[10px] text-white tag-check hidden"></i>
+                                        <button type="button" data-genre="philosophical" onclick="toggleComicGenre('philosophical')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Philosophical</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
+                                        </button>
+                                        <button type="button" data-genre="psychological" onclick="toggleComicGenre('psychological')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Psychological</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
+                                        </button>
+                                        <button type="button" data-genre="romance" onclick="toggleComicGenre('romance')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Romance</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
+                                        </button>
+                                        <button type="button" data-genre="scifi" onclick="toggleComicGenre('scifi')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Sci-Fi</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
+                                        </button>
+                                        <button type="button" data-genre="slice_of_life" onclick="toggleComicGenre('slice_of_life')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Slice of Life</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
+                                        </button>
+                                        <button type="button" data-genre="sports" onclick="toggleComicGenre('sports')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Sports</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
+                                        </button>
+                                        <button type="button" data-genre="superhero" onclick="toggleComicGenre('superhero')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Superhero</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
+                                        </button>
+                                        <button type="button" data-genre="thriller" onclick="toggleComicGenre('thriller')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Thriller</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
+                                        </button>
+                                        <button type="button" data-genre="tragedy" onclick="toggleComicGenre('tragedy')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Tragedy</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
+                                        </button>
+                                        <button type="button" data-genre="wuxia" onclick="toggleComicGenre('wuxia')"
+                                            class="comic-genre-tag px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 text-slate-300 font-medium text-center flex items-center gap-1.5 transition-all hover:border-indigo-500/50 cursor-pointer">
+                                            <span>Wuxia</span>
+                                            <i class="fa-solid fa-check text-[9px] text-white tag-check hidden"></i>
                                         </button>
                                     </div>
                                 </div>

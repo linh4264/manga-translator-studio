@@ -85,85 +85,125 @@ export const COMIC_UNIVERSE_PRESETS = {
 
 // TIER 2: WORLD SETTING & CORE GENRE (MULTI-SELECTABLE TAGS)
 export const COMIC_GENRE_PRESETS = {
-    isekai: {
-        id: 'isekai',
-        label: '🌀 Isekai / Chuyển sinh / Trọng sinh',
-        prompt: '- GENRE (ISEKAI / REINCARNATION / TRANSMIGRATION): Handle past-life vs new-world identity dynamics naturally. Adapt system prompts, status windows, cheat skills, and reincarnator inner knowledge seamlessly.'
-    },
-    fantasy: {
-        id: 'fantasy',
-        label: '🏰 Fantasy / Ma thuật / Thần thoại',
-        prompt: '- GENRE (FANTASY & MAGIC): Maintain consistent, authoritative fantasy worldbuilding terms, spell names, artifact ranks, and magical creature lore. Translate incantations and battle cries with majestic flair.'
-    },
     action: {
         id: 'action',
-        label: '⚔️ Action / Shounen / Võ thuật',
-        prompt: '- GENRE (ACTION & MARTIAL ARTS): Deliver fast-paced, high-octane dialogue. Keep battle commands and combat banter ferocious, sharp, and impactful.'
-    },
-    comedy: {
-        id: 'comedy',
-        label: '🤣 Comedy / Hài hước / Parody',
-        prompt: '- GENRE (COMEDY & GAG): Sharp comedic timing, witty punchlines, tsukkomi/boke dynamic, and clever situational banter.'
-    },
-    romance: {
-        id: 'romance',
-        label: '🌸 Romance / Tình cảm / Harem',
-        prompt: '- GENRE (ROMANCE & HAREM): Delicate, heartfelt, and emotionally expressive phrasing (cậu-tớ, anh-em). Capture subtle romantic tension, bashfulness, and romantic chemistry.'
-    },
-    school: {
-        id: 'school',
-        label: '🏫 Học đường / Đời thường (Slice of Life)',
-        prompt: '- GENRE (SCHOOL & SLICE OF LIFE): Youthful, authentic student conversations, club activities, and friendly casual teasing.'
-    },
-    monsters: {
-        id: 'monsters',
-        label: '🐉 Quái vật / Hầm ngục / Thợ săn',
-        prompt: '- GENRE (MONSTERS / DUNGEON / HUNTER): Standardize dungeon ranks (Rank S, A, B...), boss monster species, loot drops, and hunter guild terminology.'
-    },
-    system: {
-        id: 'system',
-        label: '📈 Hệ thống / Level-Up / Game thủ',
-        prompt: '- GENRE (SYSTEM & LEVEL-UP): Clean, clear system notifications, stat screens, quest rewards, and leveling terminology.'
-    },
-    revenge: {
-        id: 'revenge',
-        label: '👑 Báo thù / Zamaa / Trục xuất / Ác nữ',
-        prompt: '- GENRE (REVENGE / ZAMAA / VILLAINESS / EXPULSION): Sharp cathartic satisfaction (Zamaa), scheming arrogance of villains, and ruthless vindication of the protagonist.'
-    },
-    horror: {
-        id: 'horror',
-        label: '🩸 Kinh dị / Sinh tồn / U tối',
-        prompt: '- GENRE (HORROR & SURVIVAL): Tense, chilling, and desperate dialogue. Heighten panic, dread, and grim survival stakes.'
-    },
-    scifi: {
-        id: 'scifi',
-        label: '🚀 Sci-Fi / Cyberpunk / Mecha',
-        prompt: '- GENRE (SCI-FI & CYBERPUNK): Futuristic jargon, cybernetic terminology, AI voices, and sleek tech lingo.'
-    },
-    cultivation: {
-        id: 'cultivation',
-        label: '🏛️ Tiên hiệp / Tu chân / Cổ trang',
-        prompt: '- GENRE (CULTIVATION & WUXIA): Proper Sino-Vietnamese (Hán-Việt) terms, martial sect titles (Bổn tọa, Huynh đệ, Tiền bối, Đạo hữu), and cultivation realm ranks.'
-    },
-    urban: {
-        id: 'urban',
-        label: '💼 Đô thị / Công sở / Tài phiệt',
-        prompt: '- GENRE (URBAN & CORPORATE DRAMA): Realistic social hierarchy, business diplomacy, and sharp workplace dialogue.'
+        label: 'Action',
+        prompt: '- GENRE (ACTION): Deliver high-octane, intense, and dynamic combat dialogue. Keep battle commands, martial art techniques, tactical shouts, and combat banter ferocious, sharp, and punchy. Avoid sluggish or overly verbose phrasing in fast-paced action sequences; match the urgency and adrenaline of the battlefield.'
     },
     adventure: {
         id: 'adventure',
-        label: '🧭 Phiêu lưu / Khám phá',
-        prompt: '- GENRE (ADVENTURE & EXPLORATION): High spirits of discovery, travel banter, uncharted territory excitement, and guild quests.'
+        label: 'Adventure',
+        prompt: '- GENRE (ADVENTURE): Capture the spirit of discovery, exploration, and camaraderie. Accurately translate expedition terminology, guild quests, geographical lore, survival challenges, and travel banter. Maintain vivid atmosphere when encountering ancient ruins, treacherous wilderness, and unknown civilizations.'
+    },
+    comedy: {
+        id: 'comedy',
+        label: 'Comedy',
+        prompt: '- GENRE (COMEDY): Sharp comedic timing, witty punchlines, situational banter, tsukkomi/boke (straight-man / funny-man) dynamics, and clever culturally localized humor. Keep puns, exaggerated reactions, and funny internal monologues lively and punchy without distorting the underlying context.'
+    },
+    crime: {
+        id: 'crime',
+        label: 'Crime',
+        prompt: '- GENRE (CRIME): Authentic criminal underworld jargon, syndicate hierarchies, law enforcement protocols, and intense interrogation dialogues. Strictly distinguish between professional investigative terminology and street-level criminal slang with gritty realism and suspense.'
+    },
+    drama: {
+        id: 'drama',
+        label: 'Drama',
+        prompt: '- GENRE (DRAMA): Deeply emotional, nuanced, and mature character interactions. Preserve psychological subtext, dramatic tension, moral dilemmas, and interpersonal vulnerability. Ensure dialogue feels weighty, poignant, and grounded in authentic human emotions.'
+    },
+    fantasy: {
+        id: 'fantasy',
+        label: 'Fantasy',
+        prompt: '- GENRE (FANTASY): Authoritative high-fantasy worldbuilding, magic circles, spell chants, ancient lore, racial/class hierarchies, and mythical beast terminology. Translate incantations, artifacts, and noble titles with grand, majestic flair.'
+    },
+    girls_love: {
+        id: 'girls_love',
+        label: "Girls' Love",
+        prompt: "- GENRE (GIRLS' LOVE / YURI): Tender, delicate, and deeply expressive emotional chemistry between female leads. Capture subtle romantic tension, heartfelt confessions, bashful intimacy, and gentle conversational cadence (cậu-tớ, em-chị, mình-bạn) with emotional warmth."
+    },
+    historical: {
+        id: 'historical',
+        label: 'Historical',
+        prompt: '- GENRE (HISTORICAL): Period-accurate decorum, aristocratic court etiquette, archaic honorifics, and traditional cultural idioms. Employ dignified, classical phrasing and accurate historical hierarchy appropriate for the era and royal court.'
+    },
+    horror: {
+        id: 'horror',
+        label: 'Horror',
+        prompt: '- GENRE (HORROR): Chilling, eerie, and visceral dialogue evoking dread, visceral fear, and sheer desperation. Heighten claustrophobic panic, distorted mutterings, survival urgency, and grim occult atmosphere.'
+    },
+    isekai: {
+        id: 'isekai',
+        label: 'Isekai',
+        prompt: '- GENRE (ISEKAI / TRANSMIGRATION): Seamless balance between modern reincarnator inner monologues and native otherworld conventions. Accurately translate status screens, skill appraisals, level notifications, and cheat abilities.'
+    },
+    magical_girls: {
+        id: 'magical_girls',
+        label: 'Magical Girls',
+        prompt: '- GENRE (MAGICAL GIRLS / MAHOU SHOUJO): Radiant transformation slogans, energetic incantations, mascot companion banter, and heartfelt themes of hope, friendship, and justice. Balance bright sparkle with emotional combat stakes.'
+    },
+    mecha: {
+        id: 'mecha',
+        label: 'Mecha',
+        prompt: '- GENRE (MECHA): Precise military engineering jargon, cockpit telemetry, weapon firing sequences, synchronized pilot commands, and heavy tactical warfare dialogue. Keep combat alerts crisp and mechanical.'
+    },
+    medical: {
+        id: 'medical',
+        label: 'Medical',
+        prompt: '- GENRE (MEDICAL): Accurate clinical terms, surgical procedures, pharmacological data, diagnosis debates, and hospital hierarchy. Ensure medical terminology is authentic while remaining natural and urgent during emergency scenes.'
     },
     mystery: {
         id: 'mystery',
-        label: '🔍 Trinh thám / Tâm lý / Noir',
-        prompt: '- GENRE (MYSTERY & DETECTIVE NOIR): Sharp deductive reasoning, suspenseful interrogations, and keen psychological analysis.'
+        label: 'Mystery',
+        prompt: '- GENRE (MYSTERY & DETECTIVE): Sharp deductive reasoning, analytical case breakdowns, forensic clues, alibi interrogations, and suspenseful plot reveals. Preserve logical clarity and thrilling intellectual tension.'
     },
-    iyashikei: {
-        id: 'iyashikei',
-        label: '🍃 Chữa lành / Ẩm thực / Thư giãn',
-        prompt: '- GENRE (IYASHIKEI & CULINARY): Gentle, mouth-watering food descriptions, soothing atmosphere, and warm daily interactions.'
+    philosophical: {
+        id: 'philosophical',
+        label: 'Philosophical',
+        prompt: '- GENRE (PHILOSOPHICAL): Deep existential reflections, ethical inquiries, profound metaphors, and contemplative worldview dialogues. Ensure nuanced philosophical treatises and abstract concepts read fluently, poetically, and thought-provokingly.'
+    },
+    psychological: {
+        id: 'psychological',
+        label: 'Psychological',
+        prompt: '- GENRE (PSYCHOLOGICAL): High-stakes mind games, gaslighting, subconscious unraveling, paranoid inner monologues, and intense mental manipulation. Capture sharp psychological tension and fragile mental states.'
+    },
+    romance: {
+        id: 'romance',
+        label: 'Romance',
+        prompt: '- GENRE (ROMANCE): Heartfelt, tender, and deeply emotional romantic dialogue. Naturally adapt romantic pronouns (anh-em, cậu-tớ) based on relationship progression, subtle blushing subtext, and romantic chemistry.'
+    },
+    scifi: {
+        id: 'scifi',
+        label: 'Sci-Fi',
+        prompt: '- GENRE (SCI-FI & CYBERPUNK): Futuristic technology jargon, artificial intelligence synthesis, space travel physics, cybernetics, and dystopian socio-tech vocabulary. Keep futuristic terminology sharp and cohesive.'
+    },
+    slice_of_life: {
+        id: 'slice_of_life',
+        label: 'Slice of Life',
+        prompt: '- GENRE (SLICE OF LIFE): Warm, natural, and everyday conversational flow. Reflect relaxed daily routines, heartwarming interpersonal moments, cozy humor, and gentle slice-of-life charm.'
+    },
+    sports: {
+        id: 'sports',
+        label: 'Sports',
+        prompt: '- GENRE (SPORTS): Passionate, fiery athletic commentary, tactical playbook calls, coach strategies, competitive rivalries, and adrenaline-fueled team spirit. Keep match momentum electric and authentic.'
+    },
+    superhero: {
+        id: 'superhero',
+        label: 'Superhero',
+        prompt: '- GENRE (SUPERHERO): Iconic hero vs villain confrontations, secret identity banter, signature power names, public distress calls, and moral duty speeches. Balance dramatic heroism with snappy, comic-book quips.'
+    },
+    thriller: {
+        id: 'thriller',
+        label: 'Thriller',
+        prompt: '- GENRE (THRILLER): Relentless suspense, ticking-clock urgency, high-stakes conspiracies, pulse-pounding chase sequences, and nail-biting confrontations. Keep sentence pacing rapid and suspenseful.'
+    },
+    tragedy: {
+        id: 'tragedy',
+        label: 'Tragedy',
+        prompt: '- GENRE (TRAGEDY): Deeply sorrowful, heartbreaking, and poignant emotional weight. Capture agonizing loss, bitter regret, hopeless sacrifices, and melancholic reflections with raw, moving literary power.'
+    },
+    wuxia: {
+        id: 'wuxia',
+        label: 'Wuxia',
+        prompt: '- GENRE (WUXIA / XIANXIA): Rich Sino-Vietnamese (Hán-Việt) terminology, martial sect etiquette, internal cultivation stages, Daoist philosophy, martial art moves, and chivalric Jianghu honor codes (Tại hạ, Bổn tọa, Các hạ, Tiền bối, Đạo hữu).'
     }
 };
 
@@ -195,19 +235,29 @@ export const COMIC_TONE_PRESETS = {
 export const TRANSLATION_GENRE_PRESETS = {
     quality: COMIC_TONE_PRESETS.classic.prompt,
     comedy: COMIC_TONE_PRESETS.comedy.prompt,
-    school: COMIC_GENRE_PRESETS.school.prompt,
-    shounen: COMIC_GENRE_PRESETS.action.prompt,
+    action: COMIC_GENRE_PRESETS.action.prompt,
+    adventure: COMIC_GENRE_PRESETS.adventure.prompt,
+    crime: COMIC_GENRE_PRESETS.crime.prompt,
+    drama: COMIC_GENRE_PRESETS.drama.prompt,
     fantasy: COMIC_GENRE_PRESETS.fantasy.prompt,
-    drama: COMIC_GENRE_PRESETS.urban.prompt,
+    girls_love: COMIC_GENRE_PRESETS.girls_love.prompt,
+    historical: COMIC_GENRE_PRESETS.historical.prompt,
     horror: COMIC_GENRE_PRESETS.horror.prompt,
-    polite: COMIC_GENRE_PRESETS.cultivation.prompt,
-    dark: COMIC_TONE_PRESETS.dark.prompt,
+    isekai: COMIC_GENRE_PRESETS.isekai.prompt,
+    magical_girls: COMIC_GENRE_PRESETS.magical_girls.prompt,
+    mecha: COMIC_GENRE_PRESETS.mecha.prompt,
+    medical: COMIC_GENRE_PRESETS.medical.prompt,
+    mystery: COMIC_GENRE_PRESETS.mystery.prompt,
+    philosophical: COMIC_GENRE_PRESETS.philosophical.prompt,
+    psychological: COMIC_GENRE_PRESETS.psychological.prompt,
     romance: COMIC_GENRE_PRESETS.romance.prompt,
-    slice: COMIC_GENRE_PRESETS.school.prompt,
-    martial: COMIC_GENRE_PRESETS.cultivation.prompt,
     scifi: COMIC_GENRE_PRESETS.scifi.prompt,
-    gag: COMIC_TONE_PRESETS.comedy.prompt,
-    historical: COMIC_GENRE_PRESETS.cultivation.prompt
+    slice_of_life: COMIC_GENRE_PRESETS.slice_of_life.prompt,
+    sports: COMIC_GENRE_PRESETS.sports.prompt,
+    superhero: COMIC_GENRE_PRESETS.superhero.prompt,
+    thriller: COMIC_GENRE_PRESETS.thriller.prompt,
+    tragedy: COMIC_GENRE_PRESETS.tragedy.prompt,
+    wuxia: COMIC_GENRE_PRESETS.wuxia.prompt
 };
 
 export const DEFAULT_VERTICAL_WRITING_MODE = false;
