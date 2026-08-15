@@ -2,7 +2,7 @@ import { globalState, pushStateToHistory, savePageToDB, uiUpdateActiveBlockEdito
 import { elements } from '../../core/elements.js';
 import { showToast, setMultilineText } from '../../core/utils.js';
 import { computeBubbleMask } from '../ocr/ocr-service.js';
-import { autoFitAllBlocksOnPage, autoFitBlock } from './canvas-styling.js';
+import { autoFitAllBlocksOnPage, autoFitBlock, isBlockAutoFit } from './canvas-styling.js';
 import { startBlockDrag, startBlockResize } from './canvas-interactions.js';
 
 export let overlayRenderRafId = null;
@@ -31,7 +31,10 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
     const imgElement = customImgElement || elements.mangaBgImage;
     if (imgElement && imgElement.clientWidth > 0) {
         const zoomScale = (globalState.zoom || 100) / 100;
-        page.lastDisplayWidth = imgElement.clientWidth / zoomScale;
+        const normalizedWidth = Math.round(imgElement.clientWidth / zoomScale);
+        if (!page.lastDisplayWidth || Math.abs(page.lastDisplayWidth - normalizedWidth) > 5) {
+            page.lastDisplayWidth = normalizedWidth;
+        }
     }
 
     if (globalState.autoFitEnabled) {
@@ -669,13 +672,13 @@ export function startInlineEditing(block, bubble, maskContent, innerTextDiv) {
             elements.editTranslatedText.value = newText;
         }
 
-        if (globalState.autoFitEnabled) {
+        if (isBlockAutoFit(block)) {
             const imgElement = elements.mangaBgImage;
             block.autoFitCache = null;
             autoFitBlock(block, imgElement);
             const zoomScale = (globalState.zoom || 100) / 100;
             maskContent.style.fontSize = `${(block.style.fontSize || 16) * zoomScale}px`;
-            if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px`;
+            if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px (Auto)`;
             if (elements.styleFontSize) elements.styleFontSize.value = block.style.fontSize;
         }
     }

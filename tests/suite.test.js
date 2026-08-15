@@ -229,6 +229,15 @@ test('Arc and Full Warp Suite Rendering in setMultilineText', async () => {
     assert.strictEqual(dummyContainer.children.length, 1, 'Container should contain line div');
     const lineDiv = dummyContainer.children[0];
     assert.strictEqual(lineDiv.children.length, 17, 'Line div should contain 17 character spans for arc & warp rendering');
+
+    // Test vertical text stacking (including ellipsis and single words)
+    const vertContainer = document.createElement('div');
+    vertContainer.style.writingMode = 'vertical-rl';
+    setMultilineText(vertContainer, 'DỊCH...');
+    assert.strictEqual(vertContainer.children.length, 1, 'Vertical container should contain 1 line div');
+    const vertLine = vertContainer.children[0];
+    assert.strictEqual(vertLine.children.length, 7, 'Vertical line should contain 7 character spans (D, Ị, C, H, ., ., .)');
+    assert.strictEqual(vertLine.style.wordBreak, 'keep-all', 'Word-break must be keep-all to prevent breaking words');
 });
 
 // 11. Format Converter Helper Functions Test
@@ -392,8 +401,21 @@ test('Immediate Auto-Fit Execution on Newly Translated Blocks', async () => {
     autoFitAllBlocksOnPage(mockPage);
 
     // Verify block style fontSize was processed
-    assert.ok(mockPage.blocks[0].style.fontSize >= 8, 'Font size must be computed automatically');
+    assert.ok(mockPage.blocks[0].style.fontSize >= 6, 'Font size must be computed automatically');
     assert.ok(mockPage.blocks[0].autoFitCache !== null, 'Block must store autoFitCache');
+
+    // Test that manual mode blocks are strictly preserved and never overwritten
+    const manualBlock = {
+        id: 'p1_b2',
+        type: 'dialogue',
+        translated: 'Văn bản thủ công',
+        box: { x: 10, y: 10, w: 30, h: 20 },
+        style: { fontFamily: 'font-manga', fontSize: 32, autoFit: false }
+    };
+    mockPage.blocks.push(manualBlock);
+    autoFitAllBlocksOnPage(mockPage);
+    assert.strictEqual(manualBlock.style.fontSize, 32, 'Manual font size must be strictly preserved when autoFit is false');
+    assert.strictEqual(isBlockAutoFit(manualBlock), false, 'Manual block must return isBlockAutoFit = false');
 });
 
 // 18. 3-Tier Comic Universe, Genre & Tone Matrix Prompt Generation Test

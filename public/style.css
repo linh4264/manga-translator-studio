@@ -320,7 +320,7 @@ body.space-panning *,
 .bubble-overlay {
     position: absolute;
     cursor: move;
-    border: 1.5px dashed rgba(99, 102, 241, 0.7);
+    border: 2px dashed rgba(99, 102, 241, 0.6);
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
     box-sizing: border-box;
     display: flex;
@@ -331,7 +331,7 @@ body.space-panning *,
 }
 
 .bubble-overlay:hover {
-    border: 1.5px dashed #38bdf8 !important;
+    border: 2px dashed #38bdf8 !important;
     box-shadow: 0 0 10px rgba(56, 189, 248, 0.25) !important;
 }
 

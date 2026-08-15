@@ -28,15 +28,17 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
         return;
     }
 
+    const page = globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null;
     const imgEl = customImgElement || elements.mangaBgImage;
-
     const zoomScale = (globalState.zoom || 100) / 100;
-    let displayWidth = (imgEl && imgEl.clientWidth > 0) ? imgEl.clientWidth : 0;
-    if (!displayWidth && elements.mangaCanvasContainer && elements.mangaCanvasContainer.clientWidth > 0) {
-        displayWidth = elements.mangaCanvasContainer.clientWidth;
+
+    let displayWidth = page?.lastDisplayWidth || 0;
+    if (!displayWidth && imgEl && imgEl.clientWidth > 0) {
+        displayWidth = imgEl.clientWidth / zoomScale;
+        if (page) page.lastDisplayWidth = displayWidth;
     }
-    if (displayWidth) {
-        displayWidth = displayWidth / zoomScale;
+    if (!displayWidth && elements.mangaCanvasContainer && elements.mangaCanvasContainer.clientWidth > 0) {
+        displayWidth = elements.mangaCanvasContainer.clientWidth / zoomScale;
     }
     if (!displayWidth && elements.workspaceViewport && elements.workspaceViewport.clientWidth > 0) {
         displayWidth = Math.min((elements.workspaceViewport.clientWidth - 32) / zoomScale, 1000);
@@ -82,8 +84,10 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
     ruler.style.letterSpacing = '0';
     ruler.style.fontKerning = 'normal';
     ruler.style.whiteSpace = 'pre-wrap';
-    ruler.style.wordBreak = 'break-word';
-    ruler.style.overflowWrap = 'break-word';
+    ruler.style.wordBreak = 'keep-all';
+    ruler.style.overflowWrap = 'normal';
+    ruler.style.hyphens = 'none';
+    ruler.style.boxSizing = 'border-box';
 
     if (block.style.bold) {
         ruler.style.fontWeight = 'bold';
@@ -107,14 +111,18 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
     const targetHeight = (block.box.h / 100) * displayHeight;
 
     const isEllipseShape = maskShape === 'ellipse' || maskShape === 'bubble-fit';
-    const fitMargin = isEllipseShape ? 0.85 : 0.95;
+    const fitMargin = isEllipseShape ? 0.94 : 0.98;
 
     if (block.style.vertical) {
-        ruler.style.height = `${targetHeight * fitMargin}px`;
+        ruler.style.height = 'auto';
+        ruler.style.maxHeight = 'none';
         ruler.style.width = 'auto';
+        ruler.style.maxWidth = 'none';
     } else {
         ruler.style.width = `${targetWidth * fitMargin}px`;
+        ruler.style.maxWidth = `${targetWidth * fitMargin}px`;
         ruler.style.height = 'auto';
+        ruler.style.maxHeight = 'none';
     }
 
     const warpOpts = {
@@ -126,9 +134,8 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
     };
     setMultilineText(ruler, block.translated, warpOpts);
 
-    let minSize = 8;
-    let maxSize = Math.min(80, Math.floor(targetHeight * 0.9));
-    if (maxSize < minSize) maxSize = minSize;
+    let minSize = 6;
+    let maxSize = Math.min(80, Math.max(minSize, Math.floor(targetHeight * 0.9)));
     let optimalSize = minSize;
 
     while (minSize <= maxSize) {
@@ -148,18 +155,9 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
         }
     }
 
-    let probeSize = optimalSize;
-    let finalSize = FONT_SIZE_STEPS[0];
-    for (const step of FONT_SIZE_STEPS) {
-        if (step <= probeSize) {
-            finalSize = step;
-        } else {
-            break;
-        }
-    }
-    block.style.fontSize = finalSize;
+    block.style.fontSize = optimalSize;
 
-    ruler.style.fontSize = `${finalSize}px`;
+    ruler.style.fontSize = `${optimalSize}px`;
     ruler.style.padding = '1px';
     setMultilineText(ruler, block.translated, warpOpts);
     block.textWidth = ruler.scrollWidth;
@@ -167,7 +165,7 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
 
     block.autoFitCache = {
         key: cacheKey,
-        fontSize: finalSize,
+        fontSize: optimalSize,
         textWidth: block.textWidth,
         textHeight: block.textHeight
     };
@@ -542,6 +540,7 @@ export function syncActiveBlockTranslation(val) {
 
         const autoFitActive = isBlockAutoFit(block);
         if (autoFitActive) {
+            block.autoFitCache = null;
             autoFitBlock(block);
         }
 
@@ -553,10 +552,12 @@ export function syncActiveBlockTranslation(val) {
             }
             if (autoFitActive) {
                 const maskElem = overlayElem.firstElementChild;
+                const zoomScale = (globalState.zoom || 100) / 100;
                 if (maskElem) {
-                    maskElem.style.fontSize = `${block.style.fontSize}px`;
+                    maskElem.style.fontSize = `${(block.style.fontSize || 16) * zoomScale}px`;
                 }
-                if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px`;
+                const isAutoFit = isBlockAutoFit(block);
+                if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px${isAutoFit ? ' (Auto)' : ''}`;
                 if (elements.styleFontSize) elements.styleFontSize.value = block.style.fontSize;
             }
         }

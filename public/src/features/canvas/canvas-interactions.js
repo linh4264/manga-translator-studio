@@ -3,7 +3,7 @@ import { elements } from '../../core/elements.js';
 import { showToast } from '../../core/utils.js';
 import { DEFAULT_VERTICAL_WRITING_MODE } from '../../config/constants.js';
 import { requestOverlayRender } from './canvas-renderer.js';
-import { autoFitBlock, copiedStyle } from './canvas-styling.js';
+import { autoFitBlock, isBlockAutoFit, copiedStyle } from './canvas-styling.js';
 import { duplicateActiveBlock as duplicateActiveBlockLogic } from './canvas-actions.js';
 
 export function startBlockDrag(e, block) {
@@ -37,10 +37,10 @@ export function startBlockDrag(e, block) {
     const startPercentX = block.box.x;
     const startPercentY = block.box.y;
 
-    const containerWidth = elements.mangaCanvasContainer.clientWidth;
-    const containerHeight = elements.mangaCanvasContainer.clientHeight;
+    let hasMoved = false;
 
     function onDragging(moveEvent) {
+        hasMoved = true;
         const curTouch = moveEvent.type.startsWith('touch');
         const curX = curTouch ? moveEvent.touches[0].clientX : moveEvent.clientX;
         const curY = curTouch ? moveEvent.touches[0].clientY : moveEvent.clientY;
@@ -104,11 +104,13 @@ export function startBlockDrag(e, block) {
         document.removeEventListener('touchmove', onDragging);
         document.removeEventListener('touchend', onDragEnd);
 
-        block.maskCache = null;
-        requestOverlayRender();
+        if (hasMoved) {
+            block.maskCache = null;
+            requestOverlayRender();
 
-        const activePage = globalState.pages[globalState.activePageIndex];
-        if (activePage) savePageToDB(activePage);
+            const activePage = globalState.pages[globalState.activePageIndex];
+            if (activePage) savePageToDB(activePage);
+        }
     }
 
     document.addEventListener('mousemove', onDragging);
@@ -200,17 +202,18 @@ export function startBlockResize(e, block, handleDir) {
 
         updateFloatingToolbarPosition();
 
-        if (globalState.autoFitEnabled) {
+        if (isBlockAutoFit(block)) {
             if (!resizeRafId) {
                 resizeRafId = requestAnimationFrame(() => {
                     resizeRafId = null;
                     block.autoFitCache = null;
                     autoFitBlock(block);
+                    const zoomScale = (globalState.zoom || 100) / 100;
                     const maskElem = blockElem?.firstElementChild;
                     if (maskElem) {
-                        maskElem.style.fontSize = `${block.style.fontSize}px`;
+                        maskElem.style.fontSize = `${(block.style.fontSize || 16) * zoomScale}px`;
                     }
-                    if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px`;
+                    if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px (Auto)`;
                     if (elements.styleFontSize) elements.styleFontSize.value = block.style.fontSize;
                 });
             }
@@ -243,16 +246,14 @@ export function startBlockResize(e, block, handleDir) {
 
 export function updateBlockSelectionDOM() {
     if (!globalState.selectedBlockIds) globalState.selectedBlockIds = [];
-    const overlays = elements.mangaOverlaysContainer?.children;
-    if (overlays) {
-        Array.from(overlays).forEach(el => {
-            if (globalState.selectedBlockIds.includes(el.id)) {
-                el.classList.add('active');
-            } else {
-                el.classList.remove('active');
-            }
-        });
-    }
+    const overlays = document.querySelectorAll('.bubble-overlay');
+    overlays.forEach(el => {
+        if (globalState.selectedBlockIds.includes(el.id)) {
+            el.classList.add('active');
+        } else {
+            el.classList.remove('active');
+        }
+    });
 }
 
 export function selectBlock(blockId, isMultiSelect = false) {

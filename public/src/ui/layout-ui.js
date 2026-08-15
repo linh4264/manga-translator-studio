@@ -183,7 +183,7 @@ export function changeZoom(amount, mouseEvent = null) {
         elements.workspaceSplitWrapper.style.transform = `scale(${globalState.zoom / 100})`;
     }
 
-    renderOverlays();
+    requestOverlayRender();
 
     if (mouseEvent && viewport && targetEl && vRect) {
         const ratio = newZoom / oldZoom;
@@ -219,7 +219,7 @@ export function resetZoom() {
         elements.workspaceSplitWrapper.style.transform = 'scale(1)';
     }
 
-    renderOverlays();
+    requestOverlayRender();
 }
 
 export function fitCanvasToScreen() {

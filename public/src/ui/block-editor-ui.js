@@ -1,7 +1,7 @@
 import { globalState, savePageToDB } from '../core/state.js';
 import { elements } from '../core/elements.js';
 import { showToast } from '../core/utils.js';
-import { requestOverlayRender, syncActiveBlockStyle } from '../features/canvas/canvas-service.js';
+import { requestOverlayRender, syncActiveBlockStyle, isBlockAutoFit } from '../features/canvas/canvas-service.js';
 import { saveEraserDrawingToPage } from '../features/inpainting.js';
 import { displayToeicAnalysis, resetToeicAnalysisUI } from '../features/toeic.js';
 
@@ -183,14 +183,14 @@ function syncBlockStyleInputs(block) {
     if (btnSfxRestore) btnSfxRestore.classList.toggle('hidden', !block.originalBackgroundBackup);
 
     // General Style
-    const isAutoFit = (block.style && block.style.autoFit !== undefined) ? !!block.style.autoFit : globalState.autoFitEnabled;
+    const isAutoFit = isBlockAutoFit(block);
     if (elements.styleAutoFit) elements.styleAutoFit.checked = isAutoFit;
-    elements.styleFont.value = block.style.fontFamily;
-    elements.styleFontSize.value = block.style.fontSize;
+    elements.styleFont.value = block.style.fontFamily || globalState.defaultFont || 'font-manga';
+    elements.styleFontSize.value = block.style.fontSize || 13;
     const fontSizeLbl = document.getElementById('lbl-font-size') || elements.lblFontSize;
-    if (fontSizeLbl) fontSizeLbl.innerText = `${block.style.fontSize}px`;
-    elements.styleAlign.value = block.style.align;
-    if (elements.styleBold) elements.styleBold.checked = block.style.bold;
+    if (fontSizeLbl) fontSizeLbl.innerText = `${block.style.fontSize || 13}px${isAutoFit ? ' (Auto)' : ''}`;
+    elements.styleAlign.value = block.style.align || 'center';
+    if (elements.styleBold) elements.styleBold.checked = !!block.style.bold;
 
     // Sync Align Icon Buttons
     const alignVal = block.style.align || 'center';

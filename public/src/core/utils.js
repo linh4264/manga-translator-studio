@@ -13,7 +13,9 @@ export function escapeHTML(value) {
 export function setMultilineText(target, value, warpOptions = {}) {
     if (!target) return;
     target.textContent = '';
-    const isVertical = target.style.writingMode === 'vertical-rl';
+    const isVertical = target.style.writingMode === 'vertical-rl' ||
+        (typeof target.classList?.contains === 'function' && target.classList.contains('text-vertical')) ||
+        (typeof target.className === 'string' && target.className.includes('text-vertical'));
     const lines = String(value ?? '').split('\n');
 
     const opts = typeof warpOptions === 'object' && warpOptions !== null ? warpOptions : { arcAngle: Number(warpOptions) || 0 };
@@ -26,7 +28,7 @@ export function setMultilineText(target, value, warpOptions = {}) {
     lines.forEach((line) => {
         const lineDiv = document.createElement('div');
         if (isVertical) {
-            lineDiv.style.height = '100%';
+            lineDiv.style.height = 'auto';
             lineDiv.style.width = 'auto';
             lineDiv.style.minWidth = '1.1em';
             lineDiv.style.minHeight = 'auto';
@@ -34,8 +36,8 @@ export function setMultilineText(target, value, warpOptions = {}) {
             lineDiv.style.flexDirection = 'column';
             lineDiv.style.alignItems = 'center';
             lineDiv.style.justifyContent = 'center';
-            lineDiv.style.wordBreak = 'break-all';
-            lineDiv.style.overflowWrap = 'break-word';
+            lineDiv.style.wordBreak = 'keep-all';
+            lineDiv.style.overflowWrap = 'normal';
         } else {
             lineDiv.style.width = '100%';
             lineDiv.style.height = 'auto';
@@ -44,8 +46,8 @@ export function setMultilineText(target, value, warpOptions = {}) {
             lineDiv.style.display = 'block';
             lineDiv.style.textAlign = target.style.textAlign || 'center';
             lineDiv.style.whiteSpace = 'pre-wrap';
-            lineDiv.style.wordBreak = 'break-word';
-            lineDiv.style.overflowWrap = 'break-word';
+            lineDiv.style.wordBreak = 'keep-all';
+            lineDiv.style.overflowWrap = 'normal';
         }
         lineDiv.style.margin = '0';
         lineDiv.style.padding = '0';
@@ -58,7 +60,41 @@ export function setMultilineText(target, value, warpOptions = {}) {
         const normLine = String(line || '').normalize('NFC');
         const hasCharWarp = (arcAngle !== 0) || (warpWave !== 0) || (warpBulge !== 0);
 
-        if (hasCharWarp && normLine.length > 1) {
+        if (isVertical) {
+            const chars = (typeof Intl !== 'undefined' && Intl.Segmenter)
+                ? Array.from(new Intl.Segmenter().segment(normLine)).map(s => s.segment)
+                : Array.from(normLine);
+            const count = chars.length;
+            const arcDepth = (arcAngle / 45) * 8;
+            const waveAmp = (warpWave / 50) * 10;
+            const bulgeFactor = (warpBulge / 50) * 0.4;
+
+            if (count === 0) {
+                lineDiv.appendChild(document.createTextNode(' '));
+            } else {
+                chars.forEach((ch, idx) => {
+                    const span = document.createElement('span');
+                    span.style.display = 'inline-flex';
+                    span.style.alignItems = 'center';
+                    span.style.justifyContent = 'center';
+                    span.style.whiteSpace = 'pre';
+                    span.textContent = ch;
+
+                    if (hasCharWarp && count > 1) {
+                        const t = (idx - (count - 1) / 2) / ((count - 1) / 2);
+                        const arcOffset = (1 - t * t) * -arcDepth;
+                        const waveOffset = Math.sin(t * Math.PI) * waveAmp;
+                        const totalOffset = arcOffset + waveOffset;
+                        const rot = t * (arcAngle * 0.35);
+                        const scale = 1 + (1 - t * t) * bulgeFactor;
+                        span.style.transform = `translateX(${totalOffset}px) rotate(${rot}deg) scale(${scale})`;
+                    } else if (ch === '…' || ch === '―' || ch === '—') {
+                        span.style.transform = 'rotate(90deg)';
+                    }
+                    lineDiv.appendChild(span);
+                });
+            }
+        } else if (hasCharWarp && normLine.length > 1) {
             const chars = (typeof Intl !== 'undefined' && Intl.Segmenter)
                 ? Array.from(new Intl.Segmenter().segment(normLine)).map(s => s.segment)
                 : Array.from(normLine);
@@ -80,11 +116,7 @@ export function setMultilineText(target, value, warpOptions = {}) {
                 const rot = t * (arcAngle * 0.35);
                 const scale = 1 + (1 - t * t) * bulgeFactor;
 
-                if (isVertical) {
-                    span.style.transform = `translateX(${totalOffset}px) rotate(${rot}deg) scale(${scale})`;
-                } else {
-                    span.style.transform = `translateY(${totalOffset}px) rotate(${rot}deg) scale(${scale})`;
-                }
+                span.style.transform = `translateY(${totalOffset}px) rotate(${rot}deg) scale(${scale})`;
                 lineDiv.appendChild(span);
             });
         } else {
