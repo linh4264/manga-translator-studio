@@ -66,93 +66,93 @@
     </div>
 
     <!-- TOP APP STUDIO HEADER -->
-    <header id="app-header" class="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 shrink-0 z-30 select-none">
+    <header id="app-header" class="h-12 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-3.5 shrink-0 z-30 select-none">
         <!-- Left: Brand Logo & Title -->
-        <div class="flex items-center gap-3 min-w-0">
+        <div class="flex items-center gap-2.5 min-w-0">
             <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md shrink-0">
-                    <span class="text-base">📖</span>
+                <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md shrink-0">
+                    <span class="text-sm">📖</span>
                 </div>
                 <div>
-                    <div class="flex items-center gap-2">
-                        <span class="font-extrabold text-sm tracking-tight text-white">Manga Translator Studio</span>
-                        <span class="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">AI Pro</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-extrabold text-[13px] tracking-tight text-white leading-none">Manga Translator Studio</span>
+                        <span class="text-[8.5px] px-1 py-0.2 rounded font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 leading-none">AI Pro</span>
                     </div>
-                    <div class="flex items-center gap-2 text-[10px] text-slate-400">
+                    <div class="flex items-center gap-1.5 text-[9.5px] text-slate-400 mt-0.5 leading-none">
                         <span id="header-page-count-text" class="font-medium text-slate-300">Chưa có trang</span>
                         <span class="text-slate-600">•</span>
-                        <span class="text-emerald-400 font-medium flex items-center gap-1"><i class="fa-solid fa-bolt text-[8px]"></i> Google Gemini AI</span>
+                        <span class="text-emerald-400 font-medium flex items-center gap-1"><i class="fa-solid fa-bolt text-[7px]"></i> Gemini AI</span>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Center: 3-Step Guided Workflow Stepper (Zero-to-Hero) -->
-        <div id="app-stepper" class="hidden md:flex items-center gap-1 bg-slate-950/70 p-1 rounded-full border border-slate-800/80 shadow-inner">
+        <div id="app-stepper" class="hidden md:flex items-center gap-1 bg-slate-950/70 p-0.5 rounded-full border border-slate-800/80 shadow-inner">
             <!-- Step 1: API Key -->
             <button id="stepper-step-1" data-action="openSettingsModal"
-                class="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 border border-amber-500/40 text-amber-300 cursor-pointer animate-pulse hover:bg-amber-500/25 transition-all"
+                class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-500/15 border border-amber-500/40 text-amber-300 cursor-pointer animate-pulse hover:bg-amber-500/25 transition-all"
                 title="Cài đặt API Key Gemini">
-                <i id="stepper-step-1-icon" class="fa-solid fa-triangle-exclamation text-[11px] text-amber-400"></i>
+                <i id="stepper-step-1-icon" class="fa-solid fa-triangle-exclamation text-[10px] text-amber-400"></i>
                 <span id="stepper-step-1-text">1. Nhập API Key</span>
             </button>
 
-            <i class="fa-solid fa-chevron-right text-[8px] text-slate-600 mx-0.5"></i>
+            <i class="fa-solid fa-chevron-right text-[7px] text-slate-600 mx-0.5"></i>
 
             <!-- Step 2: Upload Manga Pages -->
             <button id="stepper-step-2" data-action="triggerUploadFiles"
-                class="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-slate-900 border border-slate-800 text-slate-400 cursor-pointer hover:border-slate-700 transition-all"
+                class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-medium bg-slate-900 border border-slate-800 text-slate-400 cursor-pointer hover:border-slate-700 transition-all"
                 title="Tải ảnh truyện lên">
-                <i id="stepper-step-2-icon" class="fa-regular fa-images text-[11px] text-slate-500"></i>
+                <i id="stepper-step-2-icon" class="fa-regular fa-images text-[10px] text-slate-500"></i>
                 <span id="stepper-step-2-text">2. Tải ảnh truyện</span>
             </button>
 
-            <i class="fa-solid fa-chevron-right text-[8px] text-slate-600 mx-0.5"></i>
+            <i class="fa-solid fa-chevron-right text-[7px] text-slate-600 mx-0.5"></i>
 
             <!-- Step 3: Auto Translate & Export -->
             <button id="stepper-step-3" data-action="triggerBatchTranslate"
-                class="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-normal bg-slate-900/50 border border-slate-800/60 text-slate-500 cursor-pointer hover:border-slate-700 transition-all"
+                class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-normal bg-slate-900/50 border border-slate-800/60 text-slate-500 cursor-pointer hover:border-slate-700 transition-all"
                 title="Bắt đầu dịch tự động và xuất truyện">
-                <i id="stepper-step-3-icon" class="fa-solid fa-bolt text-[11px] text-slate-600"></i>
+                <i id="stepper-step-3-icon" class="fa-solid fa-bolt text-[10px] text-slate-600"></i>
                 <span id="stepper-step-3-text">3. Dịch & Xuất bản</span>
             </button>
         </div>
 
         <!-- Right: Primary Action Buttons & Settings -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5">
             <!-- Demo Quick Load Button -->
             <button data-action="loadDemoManga"
-                class="hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 text-xs font-semibold hover:text-white transition-all shadow-sm cursor-pointer"
+                class="hidden sm:flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 text-[11px] font-semibold hover:text-white transition-all shadow-sm cursor-pointer"
                 title="Dùng thử ngay với 1 trang Manga mẫu (Demo)">
-                <i class="fa-solid fa-play text-amber-400 text-[10px]"></i>
+                <i class="fa-solid fa-play text-amber-400 text-[9px]"></i>
                 <span>Thử ảnh Demo</span>
             </button>
 
             <!-- Primary Batch Translate CTA -->
             <button id="header-btn-batch-translate" data-action="triggerBatchTranslate" disabled
-                class="h-8 px-3.5 rounded-lg bg-gradient-to-r from-pink-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md hover:shadow-indigo-500/20 transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                class="h-7 px-3 rounded-lg bg-gradient-to-r from-pink-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-md hover:shadow-indigo-500/20 transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                 title="Dịch tự động toàn bộ các trang bằng AI (Batch Translate)">
-                <i class="fa-solid fa-wand-magic-sparkles text-yellow-300 text-xs"></i>
+                <i class="fa-solid fa-wand-magic-sparkles text-yellow-300 text-[11px]"></i>
                 <span>Dịch tất cả</span>
             </button>
 
             <!-- Export Dropdown / Action -->
             <button id="header-btn-batch-export" onclick="runBatchExport()" disabled
-                class="h-8 px-3 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                class="h-7 px-2.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                 title="Xuất gói ZIP truyện đã dịch">
-                <i class="fa-solid fa-download text-xs text-sky-100"></i>
+                <i class="fa-solid fa-download text-[11px] text-sky-100"></i>
                 <span class="hidden sm:inline">Xuất ZIP</span>
             </button>
 
-            <div class="h-4 w-px bg-slate-800 mx-1"></div>
+            <div class="h-3.5 w-px bg-slate-800 mx-0.5"></div>
 
             <!-- Settings Button with API Status Dot -->
             <button data-action="openSettingsModal"
-                class="relative h-8 px-2.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                class="relative h-7 px-2.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
                 title="Cài đặt API Key, Model & Quy tắc dịch">
-                <i class="fa-solid fa-gear text-indigo-400 text-xs"></i>
+                <i class="fa-solid fa-gear text-indigo-400 text-[11px]"></i>
                 <span class="hidden md:inline">Cài đặt</span>
-                <span id="header-api-status-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                <span id="header-api-status-dot" class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
             </button>
         </div>
     </header>
