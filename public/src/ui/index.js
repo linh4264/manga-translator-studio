@@ -510,6 +510,74 @@ export function initEventListeners() {
             return;
         }
     });
+
+    // Global Clipboard Paste (Ctrl + V) for Images & Manga Pages
+    window.addEventListener('paste', async (e) => {
+        const active = document.activeElement;
+        const isEditingText = active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable || active.classList?.contains('inline-text-editor'));
+        if (isEditingText) {
+            return; // Cho phép dán text bình thường khi đang gõ trong ô nhập
+        }
+
+        const items = e.clipboardData?.items;
+        const files = e.clipboardData?.files;
+        const imageFiles = [];
+
+        if (items && items.length > 0) {
+            for (let i = 0; i < items.length; i++) {
+                const item = items[i];
+                if (item.type && item.type.startsWith('image/')) {
+                    const blob = item.getAsFile();
+                    if (blob) {
+                        const now = new Date();
+                        const timestamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}${String(now.getSeconds()).padStart(2,'0')}`;
+                        const ext = blob.type.split('/')[1] || 'png';
+                        const file = new File([blob], `clipboard_page_${timestamp}.${ext}`, { type: blob.type });
+                        imageFiles.push(file);
+                    }
+                }
+            }
+        }
+
+        if (imageFiles.length === 0 && files && files.length > 0) {
+            for (let i = 0; i < files.length; i++) {
+                const f = files[i];
+                if ((f.type && f.type.startsWith('image/')) || /\.(png|jpe?g|webp|avif|bmp|gif)$/i.test(f.name)) {
+                    imageFiles.push(f);
+                }
+            }
+        }
+
+        if (imageFiles.length > 0) {
+            e.preventDefault();
+            const io = await import('../features/io.js');
+            await io.handleUploadedFiles(imageFiles);
+            const { showToast } = await import('../core/utils.js');
+            showToast(`Đã dán ${imageFiles.length} trang ảnh từ Clipboard thành công!`, "success");
+            return;
+        }
+
+        // Nếu dán văn bản từ Clipboard và đang chọn một ô thoại trên Canvas
+        const pastedText = e.clipboardData?.getData('text');
+        if (pastedText && globalState.selectedBlockId !== null) {
+            const activePage = globalState.pages[globalState.activePageIndex];
+            if (activePage) {
+                const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
+                if (block) {
+                    e.preventDefault();
+                    const { pushStateToHistory, savePageToDB } = await import('../core/state.js');
+                    const { requestOverlayRender } = await import('../features/canvas/canvas-renderer.js');
+                    const { showToast } = await import('../core/utils.js');
+                    pushStateToHistory();
+                    block.translated = pastedText;
+                    requestOverlayRender();
+                    updateActiveBlockEditor();
+                    savePageToDB(activePage);
+                    showToast("Đã dán văn bản vào ô thoại đang chọn!", "success");
+                }
+            }
+        }
+    });
 }
 
 Object.assign(window, {

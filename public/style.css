@@ -1,119 +1,124 @@
-:root {
-    color-scheme: light !important;
-    --neo-sky: #38bdf8;
-    --neo-sky-dark: #0284c7;
-    --neo-white: #ffffff;
-    --neo-black: #0f172a;
-    --neo-pink: #ff2a85;
-    --neo-orange: #f97316;
-}
-
 /* ============================================================
-   MUTED MIDNIGHT CHARCOAL NEO-BRUTALISM SYSTEM STYLES
-   Palette: Muted Midnight Slate (#0b0f19 / #111827) + Black (#000000)
-            + Electric Sky Blue (#38bdf8 / #0284c7) + Hot Pink (#ff2a85)
+   MANGA TRANSLATOR STUDIO - DARK SLATE STUDIO DESIGN SYSTEM
+   Modern, sleek, glassmorphic dark theme tailored for creative workflows.
    ============================================================ */
+
+:root {
+    color-scheme: dark !important;
+    --studio-bg: #090d16;
+    --studio-surface: #0f172a;
+    --studio-card: #1e293b;
+    --studio-card-hover: #273549;
+    --studio-border: rgba(255, 255, 255, 0.08);
+    --studio-border-hover: rgba(255, 255, 255, 0.16);
+    --studio-primary: #6366f1;
+    --studio-primary-hover: #4f46e5;
+    --studio-primary-glow: rgba(99, 102, 241, 0.25);
+    --studio-sky: #38bdf8;
+    --studio-emerald: #10b981;
+    --studio-amber: #f59e0b;
+    --studio-rose: #f43f5e;
+}
 
 body {
-    background-color: #0b0f19 !important;
+    background-color: var(--studio-bg) !important;
     color: #f8fafc !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* ============================================================
-   CLEAN NEO WHITE & ELECTRIC SKY SIDEBAR SYSTEM
+   APP SHELL, HEADER & STEPPER
    ============================================================ */
+#app-header {
+    background-color: rgba(15, 23, 42, 0.95) !important;
+    border-bottom: 1px solid var(--studio-border) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+}
 
+#app-stepper button {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#app-stepper button:hover {
+    transform: translateY(-1px);
+}
+
+/* ============================================================
+   PANELS & SIDEBARS (LEFT & RIGHT)
+   ============================================================ */
 #left-panel, 
 #right-panel {
-    background-color: #111827 !important;
+    background-color: var(--studio-surface) !important;
     color: #f8fafc !important;
-    border-color: #000000 !important;
-    border-width: 2.5px !important;
+    border-color: var(--studio-border) !important;
 }
 
-/* Sidebar Section Headers */
+#left-panel {
+    border-right: 1px solid var(--studio-border) !important;
+}
+
+#right-panel {
+    border-left: 1px solid var(--studio-border) !important;
+}
+
 #left-panel > div:first-child,
 #right-panel > div:first-child {
+    background-color: rgba(15, 23, 42, 0.98) !important;
+    border-bottom: 1px solid var(--studio-border) !important;
+}
+
+/* Custom CSS class to reliably collapse panels on desktop */
+#left-panel.collapsed-sidebar,
+#right-panel.collapsed-sidebar {
+    display: none !important;
+}
+
+/* Sidebar toggle handles - Clean, fixed position with no movement animations */
+#left-sidebar-toggle-handle,
+#right-sidebar-toggle-handle,
+#left-sidebar-toggle-handle:hover,
+#right-sidebar-toggle-handle:hover,
+#left-sidebar-toggle-handle:active,
+#right-sidebar-toggle-handle:active {
+    transform: translateY(-50%) !important;
+    animation: none !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+}
+
+#left-sidebar-toggle-handle {
     background-color: #1e293b !important;
-    border-bottom: 2.5px solid #000000 !important;
-    color: #38bdf8 !important;
+    border: 1px solid var(--studio-border) !important;
+    border-left: none !important;
+    color: #94a3b8 !important;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3) !important;
 }
 
-#left-panel .border-slate-800,
-#right-panel .border-slate-800,
-#left-panel .border-b,
-#right-panel .border-b,
-#left-panel .border-t,
-#right-panel .border-t {
-    border-color: #000000 !important;
-}
-
-/* Background fills inside sidebar panels */
-#left-panel .bg-slate-900,
-#left-panel .bg-slate-950,
-#left-panel .bg-slate-900\/20,
-#left-panel .bg-slate-950\/40,
-#left-panel .bg-slate-950\/60,
-#right-panel .bg-slate-900,
-#right-panel .bg-slate-950,
-#right-panel .bg-slate-900\/20,
-#right-panel .bg-slate-950\/40,
-#right-panel .bg-slate-950\/60 {
-    background-color: #111827 !important;
-    color: #f8fafc !important;
-}
-
-/* Text readability inside sidebar */
-#left-panel span, #left-panel p, #left-panel label,
-#right-panel span, #right-panel p, #right-panel label {
-    color: #f8fafc;
-}
-
-#left-panel .text-slate-400, #left-panel .text-slate-500, #left-panel .text-slate-300, #left-panel .text-slate-200,
-#right-panel .text-slate-400, #right-panel .text-slate-500, #right-panel .text-slate-300, #right-panel .text-slate-200 {
-    color: #cbd5e1 !important;
-}
-
-/* Active Page Card in Sidebar */
-.page-item-active,
-#pages-list .bg-indigo-600\/20,
-#pages-list .bg-indigo-600,
-#pages-list .border-indigo-500 {
-    background-color: #0284c7 !important;
-    color: #ffffff !important;
-    border: 2.5px solid #000000 !important;
-    box-shadow: 4px 4px 0px #000000 !important;
-    transform: translate(-1px, -1px);
-}
-
-.page-item-active .thumb-frame {
-    border: 2px solid #ff2a85 !important;
-    box-shadow: 2px 2px 0px #ff2a85 !important;
-}
-
-.page-item-active span,
-.page-item-active p,
-.page-item-active div,
-.page-item-active i {
-    color: #ffffff !important;
-}
-
-/* Non-active Page Item Cards */
-#pages-list > div:not(.page-item-active) {
+#right-sidebar-toggle-handle {
     background-color: #1e293b !important;
-    color: #cbd5e1 !important;
-    border: 2px solid #000000 !important;
-    box-shadow: 2px 2px 0px #000000 !important;
+    border: 1px solid var(--studio-border) !important;
+    border-right: none !important;
+    color: #94a3b8 !important;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3) !important;
 }
 
-#pages-list > div:not(.page-item-active):hover {
-    background-color: #0f172a !important;
-    border-color: #38bdf8 !important;
-    transform: translate(-1px, -1px);
-    box-shadow: 3px 3px 0px #000000 !important;
+#left-sidebar-toggle-handle:hover,
+#right-sidebar-toggle-handle:hover {
+    background-color: #334155 !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
 }
 
-/* Dropzone clean button container */
+#left-sidebar-toggle-handle i,
+#right-sidebar-toggle-handle i {
+    transform: none !important;
+    transition: none !important;
+}
+
+/* Dropzone clean container */
 #dropzone {
     background: transparent !important;
     border: none !important;
@@ -128,784 +133,83 @@ body {
     box-shadow: none !important;
 }
 
-/* Color Swatches & Presets Immunity */
-.bg-white,
-button.bg-white,
-[onclick*="setEraserColor('#ffffff')"] {
-    background-color: #ffffff !important;
-    border: 2px solid #000000 !important;
-}
-
-.bg-black,
-button.bg-black,
-[onclick*="setEraserColor('#000000')"] {
-    background-color: #000000 !important;
-    border: 2px solid #ffffff !important;
-}
-
-/* Sidebar Action Button & Tab Contrast */
-#left-panel button:not(.bg-indigo-600):not(.bg-indigo-500):not(.bg-pink-500):not(.bg-amber-500):not(.page-item-active):not(.bg-pink-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-orange-600):not(.bg-purple-600):not(.bg-white):not(.bg-black),
-#right-panel button:not(.bg-indigo-600):not(.bg-indigo-500):not(.bg-pink-500):not(.bg-amber-500):not(.bg-pink-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-orange-600):not(.bg-purple-600):not(.bg-white):not(.bg-black) {
+/* ============================================================
+   PAGE CARDS IN LEFT SIDEBAR
+   ============================================================ */
+.page-item,
+#pages-list > div {
     background-color: #1e293b !important;
-    color: #f8fafc !important;
-    border: 2px solid #000000 !important;
-}
-
-#left-panel button:hover:not(.bg-pink-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-orange-600):not(.bg-purple-600):not(.bg-white):not(.bg-black),
-#right-panel button:hover:not(.bg-pink-600):not(.bg-sky-600):not(.bg-emerald-600):not(.bg-orange-600):not(.bg-purple-600):not(.bg-white):not(.bg-black) {
-    background-color: #0284c7 !important;
-    color: #ffffff !important;
-}
-
-/* Hard Outlines & Drop Shadows on Buttons */
-button:not(.resize-handle):not(.help-tab-btn) {
-    border: 2px solid #000000 !important;
-    box-shadow: 2.5px 2.5px 0px #000000 !important;
-    font-weight: 700 !important;
-    transition: transform 0.08s ease, box-shadow 0.08s ease, background-color 0.15s ease !important;
-}
-
-button:not(:disabled):hover:not(.resize-handle):not(.help-tab-btn) {
-    transform: translate(-1px, -1px) !important;
-    box-shadow: 3.5px 3.5px 0px #000000 !important;
-}
-
-button:not(:disabled):active:not(.resize-handle):not(.help-tab-btn) {
-    transform: translate(2px, 2px) !important;
-    box-shadow: 0px 0px 0px #000000 !important;
-}
-
-/* Primary Sky Blue Buttons & Hot Pink Accents */
-.bg-indigo-600, .bg-indigo-500, .bg-indigo-650 {
-    background-color: #0284c7 !important;
-    color: #ffffff !important;
-    border: 2px solid #000000 !important;
-}
-
-.bg-indigo-600:hover, .bg-indigo-500:hover {
-    background-color: #38bdf8 !important;
-    color: #0f172a !important;
-}
-
-.text-indigo-400, .text-indigo-300 {
-    color: #38bdf8 !important;
-}
-
-.border-indigo-500, .border-indigo-500\/40 {
-    border-color: #0284c7 !important;
-}
-
-/* Inputs, Textareas, Selects Neo-Brutalist styling */
-input[type="text"], input[type="number"], input[type="search"], input[type="password"], textarea, select {
-    background-color: #1e293b !important;
-    color: #f8fafc !important;
-    border: 2px solid #000000 !important;
-    box-shadow: 2.5px 2.5px 0px #000000 !important;
-    border-radius: 6px !important;
-    font-weight: 600 !important;
-}
-
-input:focus, textarea:focus, select:focus {
-    box-shadow: 3.5px 3.5px 0px #ff2a85 !important;
-    border-color: #000000 !important;
-    outline: none !important;
-}
-
-/* Custom Scrollbar for sleek Neo look */
-::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-
-::-webkit-scrollbar-track {
-    background: #0b0f19;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #38bdf8;
-    border: 1px solid #000000;
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #ff2a85;
-}
-
-/* Modern dropdown inputs styling */
-select {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.5rem center;
-    background-repeat: no-repeat;
-    background-size: 1.25em 1.25em;
-    padding-right: 2.2rem !important;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    cursor: pointer;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-select:focus {
-    border-color: #6366f1 !important;
-    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.4);
-}
-
-/* Manga Font Classes */
-.font-manga {
-    font-family: 'Nunito', sans-serif;
-    font-weight: 700;
-}
-
-.font-vietnamese {
-    font-family: 'Be Vietnam Pro', 'Inter', sans-serif;
-    font-weight: 600;
-    letter-spacing: 0;
-}
-
-.font-comic {
-    font-family: 'Patrick Hand', cursive;
-}
-
-.font-comicneue {
-    font-family: 'Comic Neue', cursive;
-    font-weight: 700;
-}
-
-.font-impact {
-    font-family: 'Bangers', cursive;
-    letter-spacing: 0.05em;
-}
-
-.font-marker {
-    font-family: 'Permanent Marker', cursive;
-}
-
-.font-bungee {
-    font-family: 'Bungee', cursive;
-}
-
-.font-caveat {
-    font-family: 'Caveat', cursive;
-    font-weight: 700;
-}
-
-.font-tech {
-    font-family: 'Chakra Petch', sans-serif;
-    font-weight: 700;
-}
-
-.font-condensed {
-    font-family: 'Saira Condensed', sans-serif;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-/* Workspace Grid and Overlays - Muted Midnight Slate Neo Brutalism */
-#workspace-viewport {
-    justify-content: safe center;
-    align-items: safe center;
-    background-color: #0b0f19 !important;
-    background-image: radial-gradient(#38bdf8 1.1px, transparent 1.1px) !important;
-    background-size: 24px 24px !important;
-}
-
-#left-panel {
-    border-right: 2.5px solid #000000 !important;
-}
-
-#right-panel {
-    border-left: 2.5px solid #000000 !important;
-}
-
-.manga-container {
-    position: relative;
-    user-select: none;
-    border: 3px solid #000000 !important;
-    box-shadow: 8px 8px 0px #000000 !important;
-    border-radius: 8px !important;
-    height: 100%;
-    max-height: 100%;
-}
-
-.bubble-overlay {
-    position: absolute;
-    cursor: move;
-    border: 2px dashed #0284c7;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    will-change: left, top, width, height;
-    transform: translateZ(0);
-    /* Kích hoạt tăng tốc đồ họa phần cứng GPU */
-}
-
-/* Chống trình duyệt tự động đảo màu ở chế độ tối trên toàn bộ Workspace Canvas & Overlays */
-#manga-canvas-container,
-#manga-canvas-container *,
-#manga-overlays-container,
-#manga-overlays-container *,
-.manga-covers-layer,
-.manga-covers-layer *,
-.manga-texts-layer,
-.manga-texts-layer *,
-.bubble-overlay,
-.bubble-overlay * {
-    word-break: keep-all !important;
-    overflow-wrap: normal !important;
-    word-wrap: normal !important;
-    hyphens: none !important;
-    -webkit-hyphens: none !important;
-    forced-color-adjust: none !important;
-    -webkit-forced-color-adjust: none !important;
-    color-scheme: light !important;
-    filter: none !important;
-    -webkit-filter: none !important;
-}
-
-.bubble-overlay:hover {
-    border: 2px dashed #0284c7 !important;
-    box-shadow: none !important;
-}
-
-.bubble-overlay.active {
-    border: 2px dashed #0284c7 !important;
-    box-shadow: none !important;
-    z-index: 50;
-}
-
-/* Resizing handles - Neo Brutalism */
-.resize-handle {
-    position: absolute;
-    width: 12px;
-    height: 12px;
-    background-color: #ff2a85;
-    border: 2px solid #000000;
-    border-radius: 3px;
-    box-shadow: 1.5px 1.5px 0px #000000;
-    z-index: 60;
-    display: none;
-}
-
-/* Chỉ hiện chấm kéo chỉnh kích thước khi block đang được chọn active */
-.bubble-overlay.active .resize-handle {
-    display: block;
-}
-
-.resize-se {
-    bottom: -5px;
-    right: -5px;
-    cursor: se-resize;
-}
-
-.resize-nw {
-    top: -5px;
-    left: -5px;
-    cursor: nw-resize;
-}
-
-.resize-ne {
-    top: -5px;
-    right: -5px;
-    cursor: ne-resize;
-}
-
-.resize-sw {
-    bottom: -5px;
-    left: -5px;
-    cursor: sw-resize;
-}
-
-/* Text styling configurations */
-.text-vertical {
-    writing-mode: vertical-rl;
-    text-orientation: upright;
-}
-
-/* Skeleton loader animations */
-@keyframes pulse-slow {
-
-    0%,
-    100% {
-        opacity: 0.2;
-    }
-
-    50% {
-        opacity: 0.6;
-    }
-}
-
-.animate-pulse-slow {
-    animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-/* Hide resize handles and dashed borders on export */
-.exporting-mode .resize-handle {
-    display: none !important;
-}
-
-.exporting-mode .bubble-overlay {
-    border: none !important;
-    box-shadow: none !important;
-    will-change: auto !important;
-}
-
-@media (max-width: 1024px) {
-    body {
-        height: auto;
-        min-height: 100dvh;
-        overflow-x: hidden;
-        overflow-y: auto;
-    }
-
-    #app-shell {
-        flex-direction: column;
-        overflow: visible;
-        min-height: 100dvh;
-    }
-
-    #left-panel,
-    #right-panel {
-        display: none;
-        position: fixed;
-        top: 0.5rem;
-        left: 0.5rem;
-        right: 0.5rem;
-        bottom: 0.5rem;
-        width: auto;
-        max-width: none;
-        min-width: 0;
-        z-index: 60;
-        border-left: none;
-        border-right: none;
-        border-top: 1px solid rgb(30 41 59);
-        border-bottom: none;
-        border-radius: 1rem;
-        background: rgb(15 23 42);
-        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.35);
-        overflow: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    body.mobile-menu-left-open #left-panel,
-    body.mobile-menu-right-open #right-panel {
-        display: flex;
-    }
-
-    #mobile-menu-backdrop {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: 55;
-        background: rgba(2, 6, 23, 0.72);
-        backdrop-filter: blur(8px);
-    }
-
-    body.mobile-menu-left-open #mobile-menu-backdrop,
-    body.mobile-menu-right-open #mobile-menu-backdrop {
-        display: block;
-    }
-
-    #workspace-panel {
-        width: 100%;
-        min-width: 0;
-        order: 2;
-    }
-
-    #left-panel {
-        order: 1;
-    }
-
-    #right-panel {
-        order: 3;
-    }
-
-    #workspace-viewport {
-        padding: 0;
-        overflow: visible;
-    }
-
-    #workspace-split-wrapper {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 1rem;
-        width: 100%;
-    }
-
-    #workspace-split-wrapper>div {
-        width: 100%;
-    }
-
-    #workspace-split-wrapper img {
-        max-width: 100% !important;
-        width: 100%;
-    }
-
-    #manga-canvas-container {
-        width: 100%;
-        max-width: 100%;
-    }
-
-    header {
-        padding-left: 0.75rem;
-        padding-right: 0.75rem;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        align-items: flex-start;
-    }
-
-    header>div:last-child {
-        width: 100%;
-        justify-content: flex-start;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-
-
-    #app-shell button,
-    #app-shell input,
-    #app-shell textarea,
-    #app-shell select {
-        min-height: 40px;
-    }
-
-    #app-shell input,
-    #app-shell textarea,
-    #app-shell select {
-        font-size: 16px;
-    }
-
-    #app-shell textarea {
-        line-height: 1.45;
-    }
-
-    #app-shell .text-xs {
-        line-height: 1.35;
-    }
-
-    #app-shell .p-4 {
-        padding: 0.75rem;
-    }
-
-    #app-shell .px-6 {
-        padding-left: 0.75rem;
-        padding-right: 0.75rem;
-    }
-
-    #app-shell .py-3 {
-        padding-top: 0.625rem;
-        padding-bottom: 0.625rem;
-    }
-}
-
-@media (max-width: 768px) {
-    header {
-        padding-top: 0.625rem;
-        padding-bottom: 0.625rem;
-    }
-
-    header h1 {
-        font-size: 0.8rem;
-    }
-
-    header p,
-    #local-mode-indicator,
-    header a {
-        font-size: 10px;
-    }
-
-    #workspace-viewport {
-        padding: 0;
-    }
-
-
-
-    #workspace-split-wrapper span,
-    #workspace-split-wrapper img {
-        max-width: 100%;
-    }
-
-    #app-shell .space-y-4>*+* {
-        margin-top: 0.75rem;
-    }
-
-    #app-shell .space-y-3>*+* {
-        margin-top: 0.6rem;
-    }
-
-    #left-panel,
-    #right-panel {
-        top: 0.5rem;
-    }
-
-    #mobile-menu-backdrop {
-        top: 0;
-    }
-}
-
-/* Hiệu ứng đàn hồi (tactile feedback) cho các nút bấm tương tác */
-/* Comprehensive Universal Button Hover System */
-button:not(.resize-handle):not(#left-sidebar-toggle-handle):not(#right-sidebar-toggle-handle) {
-    transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.15s ease, filter 0.15s ease !important;
-}
-
-button:not(:disabled):hover:not(.resize-handle):not(#left-sidebar-toggle-handle):not(#right-sidebar-toggle-handle) {
-    transform: translate(-1.5px, -1.5px) !important;
-    box-shadow: 4px 4px 0px #000000 !important;
-    filter: brightness(1.12) !important;
-    cursor: pointer !important;
-}
-
-button:not(:disabled):active:not(.resize-handle):not(#left-sidebar-toggle-handle):not(#right-sidebar-toggle-handle) {
-    transform: translate(1.5px, 1.5px) !important;
-    box-shadow: 0.5px 0.5px 0px #000000 !important;
-}
-
-/* Icon scale & color transition inside buttons on hover (Turns Electric Orange #f97316) */
-button i {
-    transition: transform 0.15s ease, color 0.15s ease !important;
-}
-
-button:not(:disabled):hover i {
-    color: #f97316 !important;
-    transform: scale(1.2) !important;
-}
-
-/* Disabled button state */
-button:disabled {
-    opacity: 0.45 !important;
-    cursor: not-allowed !important;
-    transform: none !important;
-    box-shadow: 1px 1px 0px #000000 !important;
-    filter: grayscale(0.5) !important;
-}
-
-/* Lớp CSS cho Canvas Cọ vẽ tẩy chữ thô */
-#eraser-canvas.drawing-active {
-    cursor: crosshair;
-    pointer-events: auto !important;
-}
-
-
-
-/* Custom CSS class to reliably collapse panels on desktop */
-#left-panel.collapsed-sidebar,
-#right-panel.collapsed-sidebar {
-    display: none !important;
-}
-
-/* Disable hover animation and scale transform for sidebar toggle handles */
-#left-sidebar-toggle-handle,
-#right-sidebar-toggle-handle,
-#left-sidebar-toggle-handle:hover,
-#right-sidebar-toggle-handle:hover,
-#left-sidebar-toggle-handle:active,
-#right-sidebar-toggle-handle:active {
-    transition: none !important;
-    transform: translateY(-50%) !important;
-    box-shadow: none !important;
-    filter: none !important;
-}
-
-#left-sidebar-toggle-handle i,
-#right-sidebar-toggle-handle i {
-    transition: none !important;
-    transform: none !important;
-}
-
-/* Canvas Floating Context Toolbar - Neo Brutalism */
-#canvas-floating-toolbar {
-    pointer-events: auto;
-    background-color: #38bdf8 !important;
-    border: 2.5px solid #000000 !important;
-    box-shadow: 4px 4px 0px #000000 !important;
+    color: #cbd5e1 !important;
+    border: 1px solid var(--studio-border) !important;
     border-radius: 10px !important;
-    animation: popInFloating 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-#canvas-floating-toolbar button {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    border: 2px solid #000000 !important;
-    box-shadow: 2px 2px 0px #000000 !important;
+.page-item:hover,
+#pages-list > div:not(.page-item-active):hover {
+    background-color: #273549 !important;
+    border-color: rgba(99, 102, 241, 0.4) !important;
+    transform: translateX(2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
 }
 
-#canvas-floating-toolbar button:hover {
-    background-color: #ff2a85 !important;
+.page-item-active,
+.page-item.active,
+#pages-list .bg-indigo-600\/20,
+#pages-list .bg-indigo-600 {
+    background-color: rgba(99, 102, 241, 0.15) !important;
+    border-color: var(--studio-primary) !important;
     color: #ffffff !important;
+    box-shadow: 0 4px 16px var(--studio-primary-glow), 0 0 0 1px var(--studio-primary) !important;
+    transform: translateX(2px) !important;
 }
 
-/* Modals & Dialogs Neo-Brutalism Style */
-#settings-modal > div, 
-#lorebook-modal > div, 
-#help-modal > div, 
-#gdrive-modal > div,
-#find-replace-modal > div,
-#srs-modal > div {
-    background-color: #0f172a !important;
-    border: 3px solid #000000 !important;
-    box-shadow: 6px 6px 0px #000000 !important;
-    border-radius: 14px !important;
+.page-item-active .thumb-frame,
+.page-item.active .thumb-frame {
+    border: 1.5px solid var(--studio-primary) !important;
+    box-shadow: 0 0 8px var(--studio-primary-glow) !important;
 }
 
-@keyframes popInFloating {
+/* Pages Search Bar */
+#pages-search-input {
+    padding-left: 32px !important;
+    background-color: #0b0f19 !important;
+    border: 1px solid var(--studio-border) !important;
+    border-radius: 8px !important;
+    transition: all 0.15s ease !important;
+}
+
+#pages-search-input:focus {
+    border-color: var(--studio-primary) !important;
+    box-shadow: 0 0 0 2px var(--studio-primary-glow) !important;
+}
+
+/* Left Sidebar Popover Menu */
+#left-more-actions-menu {
+    animation: fadeInScale 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7) !important;
+}
+
+@keyframes fadeInScale {
     from {
         opacity: 0;
-        transform: translate(-50%, 6px) scale(0.95);
+        transform: scale(0.96) translateY(-6px);
     }
     to {
         opacity: 1;
-        transform: translate(-50%, 0) scale(1);
+        transform: scale(1) translateY(0);
     }
 }
 
-/* Text Stroke Cross-browser Support */
-.bubble-text-span {
-    -webkit-font-smoothing: antialiased;
-    paint-order: stroke fill;
-}
-
-/* SRS Flashcard 3D Perspective & Flip Animations */
-.srs-card-perspective {
-    perspective: 1000px;
-}
-
-.srs-card-inner {
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    transform-style: preserve-3d;
-}
-
-.srs-card-flipped {
-    transform: rotateY(180deg);
-}
-
-/* Typesetting Presets Tactile Feedback */
-.preset-btn-active {
-    border-color: #000000 !important;
-    background-color: #ff2a85 !important;
-    color: #ffffff !important;
-    box-shadow: 3px 3px 0px #000000 !important;
-}
-
-/* Premium Range Input Styling */
-input[type="range"] {
-    -webkit-appearance: none;
-    appearance: none;
-    background: #1e293b;
-    border-radius: 9999px;
-    height: 6px;
-    outline: none;
-    border: 1px solid #000000;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 14px;
-    height: 14px;
-    border-radius: 4px;
-    background: #ff2a85;
-    cursor: pointer;
-    transition: transform 0.1s ease, background-color 0.1s ease;
-    border: 1.5px solid #000000;
-    box-shadow: 1px 1px 0px #000000;
-}
-
-input[type="range"]::-webkit-slider-thumb:hover {
-    transform: scale(1.2);
-    background: #f97316;
-}
-
-input[type="range"]::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
-    border-radius: 4px;
-    background: #ff2a85;
-    cursor: pointer;
-    transition: transform 0.1s ease, background-color 0.1s ease;
-    border: 1.5px solid #000000;
-    box-shadow: 1px 1px 0px #000000;
-}
-
-/* Floating Zoom Controls - Neo Brutalism */
-#zoom-controls-floating {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    border: 2.5px solid #000000 !important;
-    box-shadow: 3.5px 3.5px 0px #000000 !important;
-    border-radius: 10px !important;
-}
-
-#zoom-controls-floating button:not(.bg-pink-500):not(.bg-sky-400) {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    border: 1.5px solid #000000 !important;
-    box-shadow: 1px 1px 0px #000000 !important;
-}
-
-#zoom-controls-floating button:hover:not(.bg-pink-500):not(.bg-sky-400) {
-    background-color: #38bdf8 !important;
-    color: #0f172a !important;
-}
-
-#zoom-indicator {
-    background-color: #0f172a !important;
-    color: #ffffff !important;
-    border: 1.5px solid #000000 !important;
-    box-shadow: 1px 1px 0px #000000 !important;
-    font-weight: 900 !important;
-    letter-spacing: -0.5px;
-}
-
 /* ============================================================
-   TOP APP STUDIO HEADER & STEPPER SYSTEM
-   ============================================================ */
-#app-header {
-    background-color: #0f172a !important;
-    border-bottom: 2px solid #000000 !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
-}
-
-#app-stepper button {
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-#app-stepper button:hover {
-    transform: translateY(-1px);
-}
-
-/* ============================================================
-   HERO WORKSPACE EMPTY STATE & PRESETS
-   ============================================================ */
-#workspace-empty-state {
-    background: radial-gradient(circle at 50% 40%, rgba(99, 102, 241, 0.08) 0%, rgba(15, 23, 42, 0.4) 60%, transparent 100%);
-}
-
-#workspace-empty-state .border-dashed:hover {
-    box-shadow: 0 0 30px rgba(99, 102, 241, 0.25);
-}
-
-/* Preset Cards Hover */
-button[data-action="applyStylePreset"]:hover {
-    transform: translateY(-1px);
-}
-
-input[type="range"]::-moz-range-thumb:hover {
-    transform: scale(1.2);
-    background: #f97316;
-}
-
-/* ============================================================
-   CANVAS TOP BAR & ERGONOMIC PAN/ZOOM
+   CANVAS TOP BAR & STUDIO VIEWPORT
    ============================================================ */
 #canvas-top-bar {
     height: 42px !important;
     background-color: rgba(15, 23, 42, 0.95) !important;
-    border-bottom: 1px solid rgba(51, 65, 85, 0.6) !important;
+    border-bottom: 1px solid var(--studio-border) !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
     backdrop-filter: blur(12px) !important;
     -webkit-backdrop-filter: blur(12px) !important;
@@ -916,22 +220,20 @@ input[type="range"]::-moz-range-thumb:hover {
 #canvas-top-bar button {
     white-space: nowrap !important;
     flex-shrink: 0 !important;
-    border: 1px solid rgba(51, 65, 85, 0.7) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
     box-shadow: none !important;
     font-size: 11px !important;
     font-weight: 600 !important;
-    letter-spacing: 0.01em !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    padding-left: 8px !important;
-    padding-right: 8px !important;
-    height: 28px !important;
+    transition: all 0.15s ease !important;
 }
 
 #canvas-top-bar button:hover:not(:disabled) {
     transform: translateY(-1px) !important;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
 }
 
 #canvas-top-bar button:active:not(:disabled) {
@@ -970,6 +272,24 @@ input[type="range"]::-moz-range-thumb:hover {
     white-space: nowrap !important;
 }
 
+/* Workspace Viewport & Dot Grid */
+#workspace-viewport {
+    justify-content: safe center;
+    align-items: safe center;
+    background-color: #090d16 !important;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px) !important;
+    background-size: 24px 24px !important;
+}
+
+#workspace-empty-state {
+    background: radial-gradient(circle at 50% 40%, rgba(99, 102, 241, 0.08) 0%, rgba(15, 23, 42, 0.4) 60%, transparent 100%);
+}
+
+#workspace-empty-state .border-dashed:hover {
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.25);
+}
+
+/* Space Pan Cursors */
 body.space-pan-active,
 body.space-pan-active *,
 .space-pan-active,
@@ -986,38 +306,385 @@ body.space-panning *,
     -webkit-user-select: none !important;
 }
 
-/* Left Sidebar More Actions Menu */
-#left-more-actions-menu {
-    animation: fadeInScale 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+/* Manga Canvas Container & Overlays */
+.manga-container {
+    position: relative;
+    user-select: none;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6) !important;
+    border-radius: 8px !important;
+    height: 100%;
+    max-height: 100%;
 }
 
-#pages-search-input {
-    padding-left: 32px !important;
+.bubble-overlay {
+    position: absolute;
+    cursor: move;
+    border: 1.5px dashed rgba(99, 102, 241, 0.7);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    will-change: left, top, width, height;
+    transform: translateZ(0);
 }
 
-@keyframes fadeInScale {
+.bubble-overlay:hover {
+    border: 1.5px dashed #38bdf8 !important;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.25) !important;
+}
+
+.bubble-overlay.active {
+    border: 2px dashed #6366f1 !important;
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.35) !important;
+    z-index: 50;
+}
+
+/* Resizing handles */
+.resize-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: #6366f1;
+    border: 2px solid #ffffff;
+    border-radius: 3px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    z-index: 60;
+    display: none;
+}
+
+.bubble-overlay.active .resize-handle {
+    display: block;
+}
+
+.resize-se { bottom: -5px; right: -5px; cursor: se-resize; }
+.resize-nw { top: -5px; left: -5px; cursor: nw-resize; }
+.resize-ne { top: -5px; right: -5px; cursor: ne-resize; }
+.resize-sw { bottom: -5px; left: -5px; cursor: sw-resize; }
+
+.exporting-mode .resize-handle { display: none !important; }
+.exporting-mode .bubble-overlay { border: none !important; box-shadow: none !important; will-change: auto !important; }
+
+/* Canvas Floating Quick Toolbar for Active Block */
+#canvas-floating-toolbar {
+    pointer-events: auto;
+    background-color: rgba(15, 23, 42, 0.95) !important;
+    border: 1px solid var(--studio-border) !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+    border-radius: 10px !important;
+    backdrop-filter: blur(12px) !important;
+    animation: popInFloating 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#canvas-floating-toolbar button {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+#canvas-floating-toolbar button:hover {
+    background-color: rgba(99, 102, 241, 0.2) !important;
+}
+
+@keyframes popInFloating {
     from {
         opacity: 0;
-        transform: scale(0.96) translateY(-6px);
+        transform: translate(-50%, 6px) scale(0.95);
     }
     to {
         opacity: 1;
-        transform: scale(1) translateY(0);
+        transform: translate(-50%, 0) scale(1);
     }
 }
 
-/* Page List Item Styles */
-.page-item {
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+/* ============================================================
+   GLOBAL BUTTONS, INPUTS & FORMS
+   ============================================================ */
+button:not(#left-sidebar-toggle-handle):not(#right-sidebar-toggle-handle) {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.page-item:hover {
-    transform: translateX(2px);
-    border-color: rgba(99, 102, 241, 0.4);
+button:not(:disabled):not(#left-sidebar-toggle-handle):not(#right-sidebar-toggle-handle):hover {
+    transform: translateY(-1px);
 }
 
-.page-item.active {
-    border-color: #6366f1 !important;
-    background-color: rgba(99, 102, 241, 0.12) !important;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
-}
+button:not(:disabled):not(#left-sidebar-toggle-handle):not(#right-sidebar-toggle-handle):active {
+    transform: translateY(0.5px);
+}
+
+button:disabled {
+    opacity: 0.45 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+}
+
+/* Inputs, Textareas, Selects */
+input[type="text"], 
+input[type="number"], 
+input[type="search"], 
+input[type="password"], 
+textarea, 
+select {
+    background-color: #0b0f19 !important;
+    color: #f8fafc !important;
+    border: 1px solid var(--studio-border) !important;
+    border-radius: 8px !important;
+    transition: all 0.15s ease !important;
+}
+
+input:focus, 
+textarea:focus, 
+select:focus {
+    border-color: var(--studio-primary) !important;
+    box-shadow: 0 0 0 2px var(--studio-primary-glow) !important;
+    outline: none !important;
+}
+
+select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.25em 1.25em;
+    padding-right: 2.2rem !important;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+/* Range Inputs */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: #1e293b;
+    border-radius: 9999px;
+    height: 6px;
+    outline: none;
+    border: 1px solid var(--studio-border);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    background: #6366f1;
+    cursor: pointer;
+    transition: transform 0.1s ease, background-color 0.1s ease;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    background: #4f46e5;
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    background: #6366f1;
+    cursor: pointer;
+    transition: transform 0.1s ease, background-color 0.1s ease;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+    transform: scale(1.2);
+    background: #4f46e5;
+}
+
+/* Color Swatches & Presets */
+.bg-white,
+button.bg-white,
+[onclick*="setEraserColor('#ffffff')"] {
+    background-color: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.2) !important;
+}
+
+.bg-black,
+button.bg-black,
+[onclick*="setEraserColor('#000000')"] {
+    background-color: #000000 !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Modals & Dialogs */
+#settings-modal > div, 
+#lorebook-modal > div, 
+#help-modal > div, 
+#gdrive-modal > div,
+#find-replace-modal > div,
+#srs-modal > div,
+#batch-export-modal > div,
+#preview-mode-modal > div {
+    background-color: rgba(15, 23, 42, 0.96) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8) !important;
+    border-radius: 16px !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+}
+
+/* Custom Sleek Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #090d16;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #6366f1;
+}
+
+/* ============================================================
+   MANGA FONTS & CORE STYLING
+   ============================================================ */
+.font-manga { font-family: 'Nunito', sans-serif; font-weight: 700; }
+.font-vietnamese { font-family: 'Be Vietnam Pro', 'Inter', sans-serif; font-weight: 600; letter-spacing: 0; }
+.font-comic { font-family: 'Patrick Hand', cursive; }
+.font-comicneue { font-family: 'Comic Neue', cursive; font-weight: 700; }
+.font-impact { font-family: 'Bangers', cursive; letter-spacing: 0.05em; }
+.font-marker { font-family: 'Permanent Marker', cursive; }
+.font-bungee { font-family: 'Bungee', cursive; }
+.font-caveat { font-family: 'Caveat', cursive; font-weight: 700; }
+.font-tech { font-family: 'Chakra Petch', sans-serif; font-weight: 700; }
+.font-condensed { font-family: 'Saira Condensed', sans-serif; font-weight: 700; text-transform: uppercase; }
+
+.text-vertical {
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+}
+
+.bubble-text-span {
+    -webkit-font-smoothing: antialiased;
+    paint-order: stroke fill;
+}
+
+/* Chống tự động đảo màu ở chế độ tối trên Canvas & Overlays */
+#manga-canvas-container,
+#manga-canvas-container *,
+#manga-overlays-container,
+#manga-overlays-container *,
+.manga-covers-layer,
+.manga-covers-layer *,
+.manga-texts-layer,
+.manga-texts-layer *,
+.bubble-overlay,
+.bubble-overlay * {
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+    word-wrap: normal !important;
+    hyphens: none !important;
+    -webkit-hyphens: none !important;
+    forced-color-adjust: none !important;
+    -webkit-forced-color-adjust: none !important;
+    color-scheme: light !important;
+    filter: none !important;
+    -webkit-filter: none !important;
+}
+
+#eraser-canvas.drawing-active {
+    cursor: crosshair;
+    pointer-events: auto !important;
+}
+
+/* SRS Flashcard 3D */
+.srs-card-perspective { perspective: 1000px; }
+.srs-card-inner { transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); transform-style: preserve-3d; }
+.srs-card-flipped { transform: rotateY(180deg); }
+
+/* Mobile Responsive */
+@media (max-width: 1024px) {
+    body {
+        height: auto;
+        min-height: 100dvh;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    #app-shell {
+        flex-direction: column;
+        overflow: visible;
+        min-height: 100dvh;
+    }
+
+    #left-panel,
+    #right-panel {
+        display: none;
+        position: fixed;
+        top: 0.5rem;
+        left: 0.5rem;
+        right: 0.5rem;
+        bottom: 0.5rem;
+        width: auto;
+        max-width: none;
+        min-width: 0;
+        z-index: 60;
+        border: 1px solid var(--studio-border);
+        border-radius: 1rem;
+        background: #0f172a;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    body.mobile-menu-left-open #left-panel,
+    body.mobile-menu-right-open #right-panel {
+        display: flex;
+    }
+
+    #mobile-menu-backdrop {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 55;
+        background: rgba(2, 6, 23, 0.72);
+        backdrop-filter: blur(8px);
+    }
+
+    body.mobile-menu-left-open #mobile-menu-backdrop,
+    body.mobile-menu-right-open #mobile-menu-backdrop {
+        display: block;
+    }
+
+    #workspace-panel {
+        width: 100%;
+        min-width: 0;
+        order: 2;
+    }
+
+    #left-panel { order: 1; }
+    #right-panel { order: 3; }
+
+    #workspace-viewport {
+        padding: 0;
+        overflow: visible;
+    }
+
+    #workspace-split-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+        width: 100%;
+    }
+
+    #workspace-split-wrapper>div { width: 100%; }
+    #workspace-split-wrapper img { max-width: 100% !important; width: 100%; }
+    #manga-canvas-container { width: 100%; max-width: 100%; }
+}
