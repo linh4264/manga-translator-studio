@@ -6,6 +6,7 @@ import { updateFloatingToolbarPosition } from './canvas-interactions.js';
 
 let isCurrentlySliding = false;
 export let copiedStyle = null;
+export const FONT_SIZE_STEPS = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72];
 
 export function setCopiedStyle(val) {
     copiedStyle = val;
@@ -65,14 +66,24 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
         return;
     }
 
-    ruler.className = `${block.style.fontFamily}`;
+    const fontStyle = block.style.fontFamily || globalState.defaultFont || 'font-manga';
+    const isBuiltInFont = ['font-sans', 'font-manga', 'font-comic', 'font-comicneue', 'font-impact', 'font-marker', 'font-bungee', 'font-caveat', 'font-tech', 'font-condensed', 'font-vietnamese'].includes(fontStyle);
+    if (isBuiltInFont) {
+        ruler.className = fontStyle;
+        ruler.style.fontFamily = '';
+    } else {
+        ruler.className = '';
+        ruler.style.fontFamily = `'${fontStyle}', sans-serif`;
+    }
+
     const padding = block.style.padding !== undefined ? block.style.padding : 4;
     ruler.style.padding = `${padding}px`;
     ruler.style.textAlign = block.style.align || 'center';
     ruler.style.letterSpacing = '0';
     ruler.style.fontKerning = 'normal';
-    ruler.style.wordBreak = 'keep-all';
-    ruler.style.overflowWrap = 'normal';
+    ruler.style.whiteSpace = 'pre-wrap';
+    ruler.style.wordBreak = 'break-word';
+    ruler.style.overflowWrap = 'break-word';
 
     if (block.style.bold) {
         ruler.style.fontWeight = 'bold';
@@ -96,7 +107,7 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
     const targetHeight = (block.box.h / 100) * displayHeight;
 
     const isEllipseShape = maskShape === 'ellipse' || maskShape === 'bubble-fit';
-    const fitMargin = isEllipseShape ? 0.82 : 0.95;
+    const fitMargin = isEllipseShape ? 0.85 : 0.95;
 
     if (block.style.vertical) {
         ruler.style.height = `${targetHeight * fitMargin}px`;
@@ -106,10 +117,17 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
         ruler.style.height = 'auto';
     }
 
-    setMultilineText(ruler, block.translated);
+    const warpOpts = {
+        arcAngle: block.style.arcAngle || 0,
+        skewX: block.style.skewX || 0,
+        skewY: block.style.skewY || 0,
+        warpWave: block.style.warpWave || 0,
+        warpBulge: block.style.warpBulge || 0
+    };
+    setMultilineText(ruler, block.translated, warpOpts);
 
     let minSize = 8;
-    let maxSize = Math.min(72, Math.floor(targetHeight * 0.85));
+    let maxSize = Math.min(80, Math.floor(targetHeight * 0.9));
     if (maxSize < minSize) maxSize = minSize;
     let optimalSize = minSize;
 
@@ -120,7 +138,7 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
         const contentWidth = ruler.scrollWidth;
         const contentHeight = ruler.scrollHeight;
 
-        const fits = contentWidth <= (targetWidth * fitMargin) + 1 && contentHeight <= (targetHeight * fitMargin) + 1;
+        const fits = contentWidth <= (targetWidth * fitMargin) + 2 && contentHeight <= (targetHeight * fitMargin) + 2;
 
         if (fits) {
             optimalSize = mid;
@@ -131,18 +149,10 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
     }
 
     let probeSize = optimalSize;
-    for (let i = 0; i < 2; i++) {
-        ruler.style.fontSize = `${probeSize}px`;
-        if (ruler.scrollWidth <= (targetWidth * fitMargin) + 1 && ruler.scrollHeight <= (targetHeight * fitMargin) + 1) break;
-        probeSize = Math.max(8, probeSize - 1);
-    }
-
-    const STANDARD_FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 56, 64];
-
-    let finalSize = STANDARD_FONT_SIZES[0];
-    for (const size of STANDARD_FONT_SIZES) {
-        if (size <= probeSize) {
-            finalSize = size;
+    let finalSize = FONT_SIZE_STEPS[0];
+    for (const step of FONT_SIZE_STEPS) {
+        if (step <= probeSize) {
+            finalSize = step;
         } else {
             break;
         }
@@ -151,7 +161,7 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
 
     ruler.style.fontSize = `${finalSize}px`;
     ruler.style.padding = '1px';
-    setMultilineText(ruler, block.translated);
+    setMultilineText(ruler, block.translated, warpOpts);
     block.textWidth = ruler.scrollWidth;
     block.textHeight = ruler.scrollHeight;
 

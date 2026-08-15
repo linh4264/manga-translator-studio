@@ -433,12 +433,17 @@ export function initEventListeners() {
                 return;
             }
 
+            const FONT_SIZE_STEPS = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72];
             if (e.key === '[') {
                 e.preventDefault();
-                syncActiveBlockStyle('fontSize', Math.max(8, block.style.fontSize - 1));
+                const cur = block.style.fontSize || 16;
+                const prev = [...FONT_SIZE_STEPS].reverse().find(s => s < cur) || FONT_SIZE_STEPS[0];
+                syncActiveBlockStyle('fontSize', prev);
             } else if (e.key === ']') {
                 e.preventDefault();
-                syncActiveBlockStyle('fontSize', Math.min(100, block.style.fontSize + 1));
+                const cur = block.style.fontSize || 16;
+                const next = FONT_SIZE_STEPS.find(s => s > cur) || FONT_SIZE_STEPS[FONT_SIZE_STEPS.length - 1];
+                syncActiveBlockStyle('fontSize', next);
             } else if (e.key === 'Delete' || e.key === 'Backspace') {
                 e.preventDefault();
                 import('../features/canvas/canvas-service.js').then(canvas => canvas.deleteActiveBlock());

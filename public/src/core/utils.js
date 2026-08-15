@@ -34,20 +34,21 @@ export function setMultilineText(target, value, warpOptions = {}) {
             lineDiv.style.flexDirection = 'column';
             lineDiv.style.alignItems = 'center';
             lineDiv.style.justifyContent = 'center';
+            lineDiv.style.wordBreak = 'break-all';
+            lineDiv.style.overflowWrap = 'break-word';
         } else {
             lineDiv.style.width = '100%';
             lineDiv.style.height = 'auto';
             lineDiv.style.minHeight = '1em';
             lineDiv.style.minWidth = 'auto';
-            lineDiv.style.display = 'flex';
-            lineDiv.style.flexDirection = 'row';
-            lineDiv.style.alignItems = 'center';
-            lineDiv.style.justifyContent = 'center';
+            lineDiv.style.display = 'block';
+            lineDiv.style.textAlign = target.style.textAlign || 'center';
+            lineDiv.style.whiteSpace = 'pre-wrap';
+            lineDiv.style.wordBreak = 'break-word';
+            lineDiv.style.overflowWrap = 'break-word';
         }
         lineDiv.style.margin = '0';
         lineDiv.style.padding = '0';
-        lineDiv.style.wordBreak = 'keep-all';
-        lineDiv.style.overflowWrap = 'normal';
         lineDiv.style.hyphens = 'none';
 
         if (skewX !== 0 || skewY !== 0) {
