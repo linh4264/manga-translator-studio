@@ -19,6 +19,7 @@ export function requestOverlayRender() {
 export function renderOverlays(targetContainer = null, customPage = null, customImgElement = null, forceExportScale = 1) {
     const isMirror = targetContainer !== null;
     const container = targetContainer || elements.mangaOverlaysContainer;
+    if (!container) return;
 
     container.innerHTML = '';
 

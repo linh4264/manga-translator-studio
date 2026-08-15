@@ -283,6 +283,8 @@ export function updatePageListUI() {
         `;
         elements.pagesList.appendChild(pageItem);
     });
+
+    import('./layout-ui.js').then(m => m.updateStepperUI());
 }
 
 export function filterPagesList() {
@@ -394,9 +396,26 @@ export function setExportRangeToCurrent(type = 'start') {
     }
 }
 
+export async function loadDemoManga() {
+    try {
+        const res = await fetch('./demo.jpg');
+        if (!res.ok) {
+            throw new Error('Không thể tải file demo.jpg');
+        }
+        const blob = await res.blob();
+        const demoFile = new File([blob], 'demo_manga_page.jpg', { type: 'image/jpeg' });
+        const { handleUploadedFiles } = await import('../features/io.js');
+        handleUploadedFiles([demoFile]);
+        showToast('Đã nạp trang truyện mẫu thành công!', 'success');
+    } catch (err) {
+        showToast('Lỗi nạp ảnh demo: ' + (err.message || err), 'error');
+    }
+}
+
 window.toggleExportRangeInputs = toggleExportRangeInputs;
 window.validateExportRange = validateExportRange;
 window.setExportRangeToCurrent = setExportRangeToCurrent;
 window.triggerReplaceBgImage = triggerReplaceBgImage;
 window.handleReplaceBgFileInput = handleReplaceBgFileInput;
 window.replacePageBackgroundImage = replacePageBackgroundImage;
+window.loadDemoManga = loadDemoManga;

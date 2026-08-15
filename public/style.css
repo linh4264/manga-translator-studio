@@ -864,12 +864,37 @@ input[type="range"]::-moz-range-thumb {
     letter-spacing: -0.5px;
 }
 
-/* Empty State Card */
-#workspace-empty-state > div {
-    background-color: #ffffff !important;
-    border: 2.5px solid #000000 !important;
-    box-shadow: 4px 4px 0px #000000 !important;
-    color: #0f172a !important;
+/* ============================================================
+   TOP APP STUDIO HEADER & STEPPER SYSTEM
+   ============================================================ */
+#app-header {
+    background-color: #0f172a !important;
+    border-bottom: 2px solid #000000 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+#app-stepper button {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#app-stepper button:hover {
+    transform: translateY(-1px);
+}
+
+/* ============================================================
+   HERO WORKSPACE EMPTY STATE & PRESETS
+   ============================================================ */
+#workspace-empty-state {
+    background: radial-gradient(circle at 50% 40%, rgba(99, 102, 241, 0.08) 0%, rgba(15, 23, 42, 0.4) 60%, transparent 100%);
+}
+
+#workspace-empty-state .border-dashed:hover {
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.25);
+}
+
+/* Preset Cards Hover */
+button[data-action="applyStylePreset"]:hover {
+    transform: translateY(-1px);
 }
 
 input[type="range"]::-moz-range-thumb:hover {

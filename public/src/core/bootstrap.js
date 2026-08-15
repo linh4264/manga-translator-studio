@@ -92,7 +92,10 @@ export async function initApplication() {
         applyStylePreset(preset);
     });
     registerAction('triggerReplaceBgImage', () => import('../ui/pages-ui.js').then(m => m.triggerReplaceBgImage()));
-    registerAction('runLocalOcrDetectionOnPage', () => import('../features/ocr/ocr-service.js').then(m => m.runLocalOcrDetectionOnPage()));
+    registerAction('loadDemoManga', () => import('../ui/pages-ui.js').then(m => m.loadDemoManga()));
+    registerAction('triggerUploadFiles', () => document.getElementById('file-input')?.click());
+    registerAction('triggerBatchTranslate', () => import('../features/ai/ai-service.js').then(m => m.runBatchTranslation()));
+    registerAction('triggerBatchExport', () => import('../features/io.js').then(m => m.runBatchExport()));
     initEventDelegation();
 
     mountSettingsModal();
@@ -103,6 +106,7 @@ export async function initApplication() {
 
     // Centralized state initialization
     initializeStateFromStorage();
+    import('../ui/layout-ui.js').then(m => m.updateStepperUI());
 
     // UI synchronization based on initialized state
     if (elements.apiKeyInput) elements.apiKeyInput.value = globalState.apiKey;

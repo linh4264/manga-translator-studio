@@ -335,3 +335,96 @@ export function switchHelpTab(tabName) {
         }
     });
 }
+
+export function updateStepperUI() {
+    const hasKey = !!(globalState.apiKey || localStorage.getItem('gemini_api_key'));
+    const pageCount = globalState.pages?.length || 0;
+    let translatedCount = 0;
+    if (pageCount > 0) {
+        translatedCount = globalState.pages.filter(p => p.blocks && p.blocks.some(b => b.text && b.text.trim().length > 0)).length;
+    }
+
+    // Step 1: API Key
+    const step1Pill = document.getElementById('stepper-step-1');
+    const step1Icon = document.getElementById('stepper-step-1-icon');
+    const step1Text = document.getElementById('stepper-step-1-text');
+    const headerApiKeyDot = document.getElementById('header-api-status-dot');
+    const emptyStateApiBanner = document.getElementById('empty-state-api-banner');
+
+    if (step1Pill && step1Icon && step1Text) {
+        if (hasKey) {
+            step1Pill.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 cursor-pointer hover:bg-emerald-500/20 transition-all";
+            step1Icon.className = "fa-solid fa-circle-check text-[11px] text-emerald-400";
+            step1Text.innerText = "1. API Key (Sẵn sàng)";
+            if (headerApiKeyDot) {
+                headerApiKeyDot.className = "w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]";
+            }
+            if (emptyStateApiBanner) {
+                emptyStateApiBanner.classList.add('hidden');
+            }
+        } else {
+            step1Pill.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 border border-amber-500/40 text-amber-300 cursor-pointer animate-pulse hover:bg-amber-500/25 transition-all";
+            step1Icon.className = "fa-solid fa-triangle-exclamation text-[11px] text-amber-400";
+            step1Text.innerText = "1. Nhập API Key (Chưa có)";
+            if (headerApiKeyDot) {
+                headerApiKeyDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-ping";
+            }
+            if (emptyStateApiBanner) {
+                emptyStateApiBanner.classList.remove('hidden');
+            }
+        }
+    }
+
+    // Step 2: Upload Pages
+    const step2Pill = document.getElementById('stepper-step-2');
+    const step2Icon = document.getElementById('stepper-step-2-icon');
+    const step2Text = document.getElementById('stepper-step-2-text');
+    if (step2Pill && step2Icon && step2Text) {
+        if (pageCount > 0) {
+            step2Pill.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-sky-500/10 border border-sky-500/30 text-sky-400 cursor-pointer hover:bg-sky-500/20 transition-all";
+            step2Icon.className = "fa-solid fa-circle-check text-[11px] text-sky-400";
+            step2Text.innerText = `2. Đã nạp (${pageCount} trang)`;
+        } else {
+            step2Pill.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-slate-900 border border-slate-800 text-slate-400 cursor-pointer hover:border-slate-700 transition-all";
+            step2Icon.className = "fa-regular fa-images text-[11px] text-slate-500";
+            step2Text.innerText = "2. Tải ảnh truyện";
+        }
+    }
+
+    // Step 3: Translate & Export
+    const step3Pill = document.getElementById('stepper-step-3');
+    const step3Icon = document.getElementById('stepper-step-3-icon');
+    const step3Text = document.getElementById('stepper-step-3-text');
+    if (step3Pill && step3Icon && step3Text) {
+        if (translatedCount > 0) {
+            step3Pill.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 cursor-pointer hover:bg-indigo-500/25 transition-all";
+            step3Icon.className = "fa-solid fa-wand-magic-sparkles text-[11px] text-indigo-400";
+            step3Text.innerText = `3. Đã dịch (${translatedCount}/${pageCount})`;
+        } else if (pageCount > 0) {
+            step3Pill.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-900 border border-slate-800 text-slate-300 cursor-pointer hover:border-slate-700 transition-all";
+            step3Icon.className = "fa-solid fa-bolt text-[11px] text-yellow-400";
+            step3Text.innerText = "3. Sẵn sàng dịch";
+        } else {
+            step3Pill.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-normal bg-slate-900/50 border border-slate-800/60 text-slate-500";
+            step3Icon.className = "fa-solid fa-bolt text-[11px] text-slate-600";
+            step3Text.innerText = "3. Dịch & Xuất bản";
+        }
+    }
+
+    // Header Action Buttons Sync
+    const headerBtnBatchTranslate = document.getElementById('header-btn-batch-translate');
+    const headerBtnBatchExport = document.getElementById('header-btn-batch-export');
+    const headerPageCountText = document.getElementById('header-page-count-text');
+
+    if (headerBtnBatchTranslate) {
+        headerBtnBatchTranslate.disabled = pageCount === 0;
+    }
+    if (headerBtnBatchExport) {
+        headerBtnBatchExport.disabled = pageCount === 0;
+    }
+    if (headerPageCountText) {
+        headerPageCountText.innerText = pageCount > 0 ? `${pageCount} trang` : "Chưa có trang";
+    }
+}
+
+window.updateStepperUI = updateStepperUI;

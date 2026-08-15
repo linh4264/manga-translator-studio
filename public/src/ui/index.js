@@ -180,6 +180,7 @@ export function initEventListeners() {
             globalState.apiKey = key;
             safeSetLocalStorage('gemini_manga_api_key', key);
             updateModelLockingUI();
+            import('./layout-ui.js').then(m => m.updateStepperUI());
             if (key.startsWith('AIzaSy') && key.length >= 35) {
                 fetchGeminiModels();
             }

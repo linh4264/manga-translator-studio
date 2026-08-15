@@ -65,7 +65,97 @@
         style="position: absolute; left: -99999px; top: 0; visibility: hidden; box-sizing: border-box; display: inline-block; line-height: 1.25; white-space: pre-wrap; word-break: keep-all; overflow-wrap: normal; overflow: hidden; font-style: normal; letter-spacing: 0; margin: 0; padding: 0;">
     </div>
 
-    <!-- HEADER / NAVIGATION BAR REMOVED FOR CLEAN FULL SCREEN LAYOUT -->
+    <!-- TOP APP STUDIO HEADER -->
+    <header id="app-header" class="h-14 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-4 shrink-0 z-30 select-none">
+        <!-- Left: Brand Logo & Title -->
+        <div class="flex items-center gap-3 min-w-0">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md shrink-0">
+                    <span class="text-base">📖</span>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-extrabold text-sm tracking-tight text-white">Manga Translator Studio</span>
+                        <span class="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">AI Pro</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-[10px] text-slate-400">
+                        <span id="header-page-count-text" class="font-medium text-slate-300">Chưa có trang</span>
+                        <span class="text-slate-600">•</span>
+                        <span class="text-emerald-400 font-medium flex items-center gap-1"><i class="fa-solid fa-bolt text-[8px]"></i> Google Gemini AI</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center: 3-Step Guided Workflow Stepper (Zero-to-Hero) -->
+        <div id="app-stepper" class="hidden md:flex items-center gap-1 bg-slate-950/70 p-1 rounded-full border border-slate-800/80 shadow-inner">
+            <!-- Step 1: API Key -->
+            <button id="stepper-step-1" data-action="openSettingsModal"
+                class="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 border border-amber-500/40 text-amber-300 cursor-pointer animate-pulse hover:bg-amber-500/25 transition-all"
+                title="Cài đặt API Key Gemini">
+                <i id="stepper-step-1-icon" class="fa-solid fa-triangle-exclamation text-[11px] text-amber-400"></i>
+                <span id="stepper-step-1-text">1. Nhập API Key</span>
+            </button>
+
+            <i class="fa-solid fa-chevron-right text-[8px] text-slate-600 mx-0.5"></i>
+
+            <!-- Step 2: Upload Manga Pages -->
+            <button id="stepper-step-2" data-action="triggerUploadFiles"
+                class="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-slate-900 border border-slate-800 text-slate-400 cursor-pointer hover:border-slate-700 transition-all"
+                title="Tải ảnh truyện lên">
+                <i id="stepper-step-2-icon" class="fa-regular fa-images text-[11px] text-slate-500"></i>
+                <span id="stepper-step-2-text">2. Tải ảnh truyện</span>
+            </button>
+
+            <i class="fa-solid fa-chevron-right text-[8px] text-slate-600 mx-0.5"></i>
+
+            <!-- Step 3: Auto Translate & Export -->
+            <button id="stepper-step-3" data-action="triggerBatchTranslate"
+                class="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-normal bg-slate-900/50 border border-slate-800/60 text-slate-500 cursor-pointer hover:border-slate-700 transition-all"
+                title="Bắt đầu dịch tự động và xuất truyện">
+                <i id="stepper-step-3-icon" class="fa-solid fa-bolt text-[11px] text-slate-600"></i>
+                <span id="stepper-step-3-text">3. Dịch & Xuất bản</span>
+            </button>
+        </div>
+
+        <!-- Right: Primary Action Buttons & Settings -->
+        <div class="flex items-center gap-2">
+            <!-- Demo Quick Load Button -->
+            <button data-action="loadDemoManga"
+                class="hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 text-xs font-semibold hover:text-white transition-all shadow-sm cursor-pointer"
+                title="Dùng thử ngay với 1 trang Manga mẫu (Demo)">
+                <i class="fa-solid fa-play text-amber-400 text-[10px]"></i>
+                <span>Thử ảnh Demo</span>
+            </button>
+
+            <!-- Primary Batch Translate CTA -->
+            <button id="header-btn-batch-translate" data-action="triggerBatchTranslate" disabled
+                class="h-8 px-3.5 rounded-lg bg-gradient-to-r from-pink-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md hover:shadow-indigo-500/20 transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                title="Dịch tự động toàn bộ các trang bằng AI (Batch Translate)">
+                <i class="fa-solid fa-wand-magic-sparkles text-yellow-300 text-xs"></i>
+                <span>Dịch tất cả</span>
+            </button>
+
+            <!-- Export Dropdown / Action -->
+            <button id="header-btn-batch-export" onclick="runBatchExport()" disabled
+                class="h-8 px-3 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                title="Xuất gói ZIP truyện đã dịch">
+                <i class="fa-solid fa-download text-xs text-sky-100"></i>
+                <span class="hidden sm:inline">Xuất ZIP</span>
+            </button>
+
+            <div class="h-4 w-px bg-slate-800 mx-1"></div>
+
+            <!-- Settings Button with API Status Dot -->
+            <button data-action="openSettingsModal"
+                class="relative h-8 px-2.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                title="Cài đặt API Key, Model & Quy tắc dịch">
+                <i class="fa-solid fa-gear text-indigo-400 text-xs"></i>
+                <span class="hidden md:inline">Cài đặt</span>
+                <span id="header-api-status-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+            </button>
+        </div>
+    </header>
 
     <div id="mobile-menu-backdrop" onclick="closeMobileMenus()" aria-hidden="true"></div>
 
@@ -333,16 +423,90 @@
             <!-- Workspace Content Canvas area -->
             <div id="workspace-viewport" class="flex-1 overflow-auto p-0 flex items-start justify-center relative">
 
-                <!-- Center Empty State -->
+                <!-- Center Hero Empty State (Interactive Zero-to-Hero Landing Zone) -->
                 <div id="workspace-empty-state"
-                    class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 text-slate-600 z-10">
-                    <div
-                        class="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 mb-4 shadow-xl">
-                        <i class="fa-solid fa-image-portrait text-3xl"></i>
+                    class="absolute inset-0 flex flex-col items-center justify-center text-center p-6 z-10 select-none overflow-y-auto">
+                    <div class="max-w-xl w-full flex flex-col items-center gap-5 my-auto">
+                        
+                        <!-- Hero Drag & Drop Area -->
+                        <div onclick="document.getElementById('file-input').click()"
+                            class="w-full border-2 border-dashed border-indigo-500/40 hover:border-indigo-400 bg-slate-900/60 hover:bg-slate-900/90 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer shadow-2xl group relative overflow-hidden backdrop-blur-sm">
+                            <div class="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 group-hover:scale-110 group-hover:bg-indigo-600/30 flex items-center justify-center text-indigo-400 group-hover:text-white transition-all shadow-inner">
+                                <i class="fa-solid fa-cloud-arrow-up text-2xl animate-bounce"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-base font-bold text-slate-100 group-hover:text-indigo-200 transition-colors">
+                                    Kéo & Thả các trang truyện Manga vào đây
+                                </h3>
+                                <p class="text-xs text-slate-400 mt-1">
+                                    Hỗ trợ định dạng JPG, PNG, WEBP, AVIF hoặc dán trực tiếp từ Clipboard (<kbd class="px-1.5 py-0.5 rounded bg-slate-950 border border-slate-700 text-slate-300 font-mono text-[10px]">Ctrl+V</kbd>)
+                                </p>
+                            </div>
+                            
+                            <div class="flex items-center gap-3 mt-2">
+                                <button type="button"
+                                    class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-all">
+                                    <i class="fa-solid fa-folder-open text-xs"></i> Chọn file từ máy tính
+                                </button>
+                                <button type="button" onclick="event.stopPropagation(); loadDemoManga();"
+                                    class="px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 hover:text-amber-200 font-bold text-xs flex items-center gap-2 transition-all">
+                                    <i class="fa-solid fa-play text-xs text-amber-400"></i> Dùng thử ảnh mẫu (Demo)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Missing API Key Alert Card (Zero Friction Guide) -->
+                        <div id="empty-state-api-banner" data-action="openSettingsModal"
+                            class="w-full bg-gradient-to-r from-amber-950/40 to-slate-900/80 border border-amber-500/40 rounded-xl p-3.5 flex items-center justify-between text-left cursor-pointer hover:border-amber-400/70 transition-all shadow-md">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-key text-sm animate-pulse"></i>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                                        <span>Chưa có Gemini API Key?</span>
+                                        <span class="text-[9px] px-1.5 py-0.2 rounded bg-amber-400/20 text-amber-300 font-normal">Miễn phí 100%</span>
+                                    </div>
+                                    <p class="text-[11px] text-slate-400">Bấm vào đây để nhập API Key và kích hoạt dịch tự động không giới hạn.</p>
+                                </div>
+                            </div>
+                            <span class="text-xs text-amber-400 font-bold flex items-center gap-1 shrink-0 ml-2">
+                                Nhập Key <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                            </span>
+                        </div>
+
+                        <!-- Feature Badges -->
+                        <div class="grid grid-cols-3 gap-3 w-full text-left">
+                            <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-2.5 flex items-center gap-2.5">
+                                <div class="w-7 h-7 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-crop-simple text-xs"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="text-[11px] font-bold text-slate-200">AI OCR Tự động</div>
+                                    <div class="text-[9px] text-slate-500 truncate">Nhận diện khung & chữ</div>
+                                </div>
+                            </div>
+                            <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-2.5 flex items-center gap-2.5">
+                                <div class="w-7 h-7 rounded-lg bg-pink-500/10 text-pink-400 flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-language text-xs"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="text-[11px] font-bold text-slate-200">Dịch Chuẩn Manga</div>
+                                    <div class="text-[9px] text-slate-500 truncate">Văn phong tự nhiên</div>
+                                </div>
+                            </div>
+                            <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-2.5 flex items-center gap-2.5">
+                                <div class="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
+                                    <i class="fa-solid fa-file-zipper text-xs"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="text-[11px] font-bold text-slate-200">Xuất Siêu Nhanh</div>
+                                    <div class="text-[9px] text-slate-500 truncate">ZIP • PDF • Kịch bản</div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
-                    <h3 class="text-sm font-semibold text-slate-300">Không có ảnh nào đang mở</h3>
-                    <p class="text-xs text-slate-500 max-w-sm mt-1">Vui lòng tải ảnh lên ở thanh bên trái hoặc chọn một
-                        trang đã tải lên để bắt đầu biên dịch.</p>
                 </div>
 
                 <!-- Active Image View Container (Split Mode View Side-by-Side wrapper) -->
@@ -772,28 +936,69 @@
                             class="w-full bg-slate-950 border border-indigo-500/20 focus:border-indigo-500 rounded-lg p-2 text-xs text-slate-100 focus:outline-none transition-colors"
                             placeholder="Nhập bản dịch tiếng Việt..."></textarea>
 
-                        <div class="flex flex-wrap items-center gap-1 mt-1.5">
+                        <!-- 1-Click Manga Style Presets -->
+                        <div class="space-y-1.5 mt-2 pt-2 border-t border-slate-800/80">
+                            <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                <span class="flex items-center gap-1"><i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> Định dạng 1-chạm</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-1.5">
+                                <button onclick="applyStylePreset('dialogue')" data-action="applyStylePreset" data-preset="dialogue"
+                                    class="p-1.5 rounded-lg bg-slate-900 hover:bg-indigo-950/70 border border-slate-800 hover:border-indigo-500/50 text-left transition-all group flex items-center gap-1.5 cursor-pointer shadow-sm">
+                                    <span class="w-6 h-6 rounded bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-xs font-bold shrink-0">💬</span>
+                                    <div class="min-w-0">
+                                        <div class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-300 truncate">Hội thoại</div>
+                                        <div class="text-[8px] text-slate-500 truncate">Nunito • Chuẩn</div>
+                                    </div>
+                                </button>
+                                <button onclick="applyStylePreset('scream')" data-action="applyStylePreset" data-preset="scream"
+                                    class="p-1.5 rounded-lg bg-slate-900 hover:bg-pink-950/70 border border-slate-800 hover:border-pink-500/50 text-left transition-all group flex items-center gap-1.5 cursor-pointer shadow-sm">
+                                    <span class="w-6 h-6 rounded bg-pink-500/20 text-pink-300 flex items-center justify-center text-xs font-bold shrink-0">💥</span>
+                                    <div class="min-w-0">
+                                        <div class="text-[10px] font-bold text-slate-200 group-hover:text-pink-300 truncate">Hét to / SFX</div>
+                                        <div class="text-[8px] text-slate-500 truncate">Bangers • Viền 4px</div>
+                                    </div>
+                                </button>
+                                <button onclick="applyStylePreset('whisper')" data-action="applyStylePreset" data-preset="whisper"
+                                    class="p-1.5 rounded-lg bg-slate-900 hover:bg-sky-950/70 border border-slate-800 hover:border-sky-500/50 text-left transition-all group flex items-center gap-1.5 cursor-pointer shadow-sm">
+                                    <span class="w-6 h-6 rounded bg-sky-500/20 text-sky-300 flex items-center justify-center text-xs font-bold shrink-0">💭</span>
+                                    <div class="min-w-0">
+                                        <div class="text-[10px] font-bold text-slate-200 group-hover:text-sky-300 truncate">Thì thầm</div>
+                                        <div class="text-[8px] text-slate-500 truncate">Patrick Hand • Mờ</div>
+                                    </div>
+                                </button>
+                                <button onclick="applyStylePreset('narration')" data-action="applyStylePreset" data-preset="narration"
+                                    class="p-1.5 rounded-lg bg-slate-900 hover:bg-emerald-950/70 border border-slate-800 hover:border-emerald-500/50 text-left transition-all group flex items-center gap-1.5 cursor-pointer shadow-sm">
+                                    <span class="w-6 h-6 rounded bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-xs font-bold shrink-0">📜</span>
+                                    <div class="min-w-0">
+                                        <div class="text-[10px] font-bold text-slate-200 group-hover:text-emerald-300 truncate">Dẫn chuyện</div>
+                                        <div class="text-[8px] text-slate-500 truncate">Be Vietnam • Khung</div>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-1 mt-1.5 pt-1.5 border-t border-slate-900">
                             <!-- Smart Manga Diamond Balance Button -->
                             <button onclick="applyDiamondFormat()"
-                                class="text-[10px] bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-400 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1">
+                                class="text-[10px] bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-400 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1 cursor-pointer">
                                 <i class="fa-solid fa-gem text-[9px]"></i> Diamond
                             </button>
 
                             <!-- Speak Active Block Button -->
                             <button data-action="speakActiveBlock" onclick="speakActiveBlock()"
-                                class="text-[10px] bg-sky-600/20 hover:bg-sky-600 border border-sky-500/30 text-sky-300 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1"
+                                class="text-[10px] bg-sky-600/20 hover:bg-sky-600 border border-sky-500/30 text-sky-300 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1 cursor-pointer"
                                 title="Phát âm câu thoại này bằng AI Speech">
                                 <i class="fa-solid fa-volume-high text-[9px]"></i> Nghe
                             </button>
                             <!-- TOEIC analysis quick button -->
                             <button onclick="quickOpenToeicAnalysis()"
-                                class="text-[10px] bg-amber-600/20 hover:bg-amber-600 border border-amber-500/30 text-amber-400 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1">
+                                class="text-[10px] bg-amber-600/20 hover:bg-amber-600 border border-amber-500/30 text-amber-400 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1 cursor-pointer">
                                 <i class="fa-solid fa-graduation-cap text-[9px]"></i> TOEIC
                             </button>
                             <!-- Opacity 0% + Stroke 4px quick button -->
                             <button onclick="applyStylePreset('transparent-stroke4')" data-action="applyStylePreset"
                                 data-preset="transparent-stroke4"
-                                class="text-[10px] bg-purple-600/20 hover:bg-purple-600 border border-purple-500/30 text-purple-300 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1"
+                                class="text-[10px] bg-purple-600/20 hover:bg-purple-600 border border-purple-500/30 text-purple-300 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1 cursor-pointer"
                                 title="Định dạng nhanh: Nền trong suốt (Opacity 0%) & Viền chữ 4px (Stroke 4px)">
                                 <i class="fa-solid fa-border-none text-[9px]"></i> Nền 0% + Viền 4px
                             </button>
@@ -894,6 +1099,49 @@
 
             <!-- Tab: STYLE CONTAINER -->
             <div id="panel-tab-style" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
+
+                <!-- 0. PRESETS 1-CHẠM THẦN TỐC -->
+                <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-2.5 shadow-sm">
+                    <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                        <label class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> <span>Presets định dạng 1-chạm</span>
+                        </label>
+                    </div>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <button onclick="applyStylePreset('dialogue')" data-action="applyStylePreset" data-preset="dialogue"
+                            class="p-2 rounded-lg bg-slate-900 hover:bg-indigo-950/70 border border-slate-800 hover:border-indigo-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm">
+                            <span class="w-7 h-7 rounded bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-sm font-bold shrink-0">💬</span>
+                            <div class="min-w-0">
+                                <div class="text-[11px] font-bold text-slate-200 group-hover:text-indigo-300 truncate">Hội thoại</div>
+                                <div class="text-[9px] text-slate-500 truncate">Nunito • Nền trắng</div>
+                            </div>
+                        </button>
+                        <button onclick="applyStylePreset('scream')" data-action="applyStylePreset" data-preset="scream"
+                            class="p-2 rounded-lg bg-slate-900 hover:bg-pink-950/70 border border-slate-800 hover:border-pink-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm">
+                            <span class="w-7 h-7 rounded bg-pink-500/20 text-pink-300 flex items-center justify-center text-sm font-bold shrink-0">💥</span>
+                            <div class="min-w-0">
+                                <div class="text-[11px] font-bold text-slate-200 group-hover:text-pink-300 truncate">Hét to / SFX</div>
+                                <div class="text-[9px] text-slate-500 truncate">Bangers • Viền 4px</div>
+                            </div>
+                        </button>
+                        <button onclick="applyStylePreset('whisper')" data-action="applyStylePreset" data-preset="whisper"
+                            class="p-2 rounded-lg bg-slate-900 hover:bg-sky-950/70 border border-slate-800 hover:border-sky-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm">
+                            <span class="w-7 h-7 rounded bg-sky-500/20 text-sky-300 flex items-center justify-center text-sm font-bold shrink-0">💭</span>
+                            <div class="min-w-0">
+                                <div class="text-[11px] font-bold text-slate-200 group-hover:text-sky-300 truncate">Thì thầm</div>
+                                <div class="text-[9px] text-slate-500 truncate">Patrick Hand • Mờ</div>
+                            </div>
+                        </button>
+                        <button onclick="applyStylePreset('narration')" data-action="applyStylePreset" data-preset="narration"
+                            class="p-2 rounded-lg bg-slate-900 hover:bg-emerald-950/70 border border-slate-800 hover:border-emerald-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm">
+                            <span class="w-7 h-7 rounded bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-sm font-bold shrink-0">📜</span>
+                            <div class="min-w-0">
+                                <div class="text-[11px] font-bold text-slate-200 group-hover:text-emerald-300 truncate">Dẫn chuyện</div>
+                                <div class="text-[9px] text-slate-500 truncate">Be Vietnam • Khung</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
 
                 <!-- 1. QUẢN LÝ PHÔNG CHỮ & BỐ CỤC (Typography & Layout) -->
                 <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-3 shadow-sm">

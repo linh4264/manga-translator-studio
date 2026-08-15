@@ -500,3 +500,61 @@ test('Model 2 Truncated JSON Response Recovery and Parsing Engine', async () => 
     assert.strictEqual(matched[1].translated, 'Hôm nay thời tiết đẹp quá chúng ta cùng đi');
     assert.strictEqual(matched[2].translated, '', 'Unmatched block in truncated stream should safely retain empty or fallback');
 });
+
+// 20. Phase 1 UI: Stepper State, Demo Manga Loader & 1-Click Style Presets Test
+test('Phase 1 UI: Stepper State Synchronization, Demo Manga Loader and Manga Style Presets', async () => {
+    const { globalState } = await import('../public/src/core/state.js');
+    const { applyStylePreset } = await import('../public/src/features/canvas/canvas-styling.js');
+    const { updateStepperUI } = await import('../public/src/ui/layout-ui.js');
+    const { loadDemoManga } = await import('../public/src/ui/pages-ui.js');
+
+    // 1. Check exports
+    assert.strictEqual(typeof updateStepperUI, 'function', 'updateStepperUI must be an exported function');
+    assert.strictEqual(typeof loadDemoManga, 'function', 'loadDemoManga must be an exported function');
+    assert.strictEqual(typeof applyStylePreset, 'function', 'applyStylePreset must be an exported function');
+
+    // 2. Test Presets application
+    const mockBlock = {
+        id: 'test_b1',
+        type: 'dialogue',
+        text: 'Này, cậu có sao không?',
+        style: {}
+    };
+    const mockPage = {
+        id: 'p_test_1',
+        name: 'Page 1',
+        blocks: [mockBlock]
+    };
+
+    globalState.pages = [mockPage];
+    globalState.activePageIndex = 0;
+    globalState.selectedBlockId = 'test_b1';
+
+    // Preset 1: dialogue
+    applyStylePreset('dialogue');
+    assert.strictEqual(mockBlock.style.fontFamily, 'font-manga');
+    assert.strictEqual(mockBlock.style.bold, true);
+    assert.strictEqual(mockBlock.style.bgOpacity, 100);
+    assert.strictEqual(mockBlock.style.strokeWidth, 0);
+
+    // Preset 2: scream
+    applyStylePreset('scream');
+    assert.strictEqual(mockBlock.style.fontFamily, 'font-impact');
+    assert.strictEqual(mockBlock.style.strokeWidth, 4);
+    assert.strictEqual(mockBlock.style.bgOpacity, 0);
+
+    // Preset 3: whisper
+    applyStylePreset('whisper');
+    assert.strictEqual(mockBlock.style.fontFamily, 'font-caveat');
+    assert.strictEqual(mockBlock.style.maskShape, 'ellipse');
+
+    // Preset 4: narration
+    applyStylePreset('narration');
+    assert.strictEqual(mockBlock.style.fontFamily, 'font-vietnamese');
+    assert.strictEqual(mockBlock.style.maskShape, 'rect');
+
+    // 3. Test updateStepperUI execution
+    assert.doesNotThrow(() => {
+        updateStepperUI();
+    }, 'updateStepperUI must execute smoothly without errors');
+});
