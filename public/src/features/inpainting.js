@@ -284,7 +284,7 @@ export function initEraserDrawingEvents() {
         return { x, y, clientX, clientY };
     };
 
-    // --- CASE 0.5: Lasso Selection Mode ---
+    // --- CASE 0.5: Lasso Selection Mode (Strict Single Selection) ---
     if (brushMode === 'lasso') {
         let isDrawing = false;
         let points = [];
@@ -296,9 +296,18 @@ export function initEraserDrawingEvents() {
             isDrawing = true;
             points = [pos];
 
-            // Backup main canvas state before drawing lasso outline
+            // 1. Wipe any previous lasso selection outline/overlay from canvas
+            if (window.lassoOriginalImageData) {
+                ctx.putImageData(window.lassoOriginalImageData, 0, 0);
+            }
+
+            // 2. Capture clean canvas state before this new lasso begins
             preLassoImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             window.lassoOriginalImageData = preLassoImageData;
+            window.activeLassoPoints = null;
+
+            const fillBtn = document.getElementById('btn-lasso-fill');
+            if (fillBtn) fillBtn.disabled = true;
 
             ctx.beginPath();
             ctx.moveTo(pos.x, pos.y);
@@ -332,17 +341,18 @@ export function initEraserDrawingEvents() {
             isDrawing = false;
 
             if (points.length < 3) {
-                // Not enough points for a polygon
+                // Not enough points (e.g. single click) -> Restore clean canvas and clear selection
                 if (preLassoImageData) {
                     ctx.putImageData(preLassoImageData, 0, 0);
                 }
                 points = [];
+                window.activeLassoPoints = null;
                 const fillBtn = document.getElementById('btn-lasso-fill');
                 if (fillBtn) fillBtn.disabled = true;
                 return;
             }
 
-            // Close the path
+            // Close the path and redraw cleanly on the original image
             ctx.putImageData(preLassoImageData, 0, 0);
 
             ctx.save();
@@ -364,6 +374,7 @@ export function initEraserDrawingEvents() {
             ctx.fill();
             ctx.restore();
 
+            // Strictly ONLY the single newest selection is active
             window.activeLassoPoints = points;
 
             const fillBtn = document.getElementById('btn-lasso-fill');
@@ -1267,11 +1278,18 @@ export function clearLassoSelection() {
     const fillBtn = document.getElementById('btn-lasso-fill');
     if (fillBtn) fillBtn.disabled = true;
 
-    const activePage = globalState.pages[globalState.activePageIndex];
-    if (activePage) {
-        restorePageEraserDrawing(activePage).then(() => {
-            requestOverlayRender();
-        });
+    const canvas = elements.eraserCanvas;
+    const ctx = canvas?.getContext('2d');
+    if (window.lassoOriginalImageData && ctx) {
+        ctx.putImageData(window.lassoOriginalImageData, 0, 0);
+        window.lassoOriginalImageData = null;
+    } else {
+        const activePage = globalState.pages[globalState.activePageIndex];
+        if (activePage) {
+            restorePageEraserDrawing(activePage).then(() => {
+                requestOverlayRender();
+            });
+        }
     }
     showToast("Đã hủy vùng chọn Lasso.", "info");
 }
@@ -1538,6 +1556,7 @@ export async function runLassoContentAwareFill() {
         requestOverlayRender();
 
         window.activeLassoPoints = null;
+        window.lassoOriginalImageData = null;
         const fillBtn = document.getElementById('btn-lasso-fill');
         if (fillBtn) fillBtn.disabled = true;
 
