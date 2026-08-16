@@ -11,6 +11,16 @@ export function startBlockDrag(e, block) {
     if (e.target.classList.contains('resize-handle')) return;
     if (e.target.isContentEditable || block._isEditingInline) return;
 
+    // Nếu người dùng giữ Ctrl/Cmd và có bóng thoại Magic Wand vừa được khoanh
+    if ((e.ctrlKey || e.metaKey) && globalState.magicWandDetectedBox) {
+        e.preventDefault();
+        e.stopPropagation();
+        import('./magic-wand.js').then(m => {
+            m.snapBlockToMagicWandBubble(block.id, globalState.magicWandDetectedBox);
+        });
+        return;
+    }
+
     e.preventDefault();
     pushStateToHistory();
 
@@ -346,16 +356,22 @@ export function updateFloatingToolbarPosition() {
         return;
     }
 
-    if (elements.lblFloatingDir) {
-        elements.lblFloatingDir.textContent = block.style?.vertical ? 'Ngang' : 'Dọc';
-    }
-
     const topPos = block.box.y > 12 ? (block.box.y - 6) : (block.box.y + (block.box.h || 0) + 2);
     const leftPos = Math.max(12, Math.min(88, block.box.x + ((block.box.w || 0) / 2)));
 
     elements.canvasFloatingToolbar.style.top = `${topPos}%`;
     elements.canvasFloatingToolbar.style.left = `${leftPos}%`;
     elements.canvasFloatingToolbar.classList.remove('hidden');
+
+    const multiBadge = document.getElementById('floating-toolbar-multi-badge');
+    if (multiBadge) {
+        if (globalState.selectedBlockIds && globalState.selectedBlockIds.length > 1) {
+            multiBadge.textContent = `${globalState.selectedBlockIds.length} ô`;
+            multiBadge.classList.remove('hidden');
+        } else {
+            multiBadge.classList.add('hidden');
+        }
+    }
 }
 
 export function duplicateActiveBlock() {
@@ -363,26 +379,37 @@ export function duplicateActiveBlock() {
 }
 
 export async function deleteActiveBlock() {
-    if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) return;
+    if (globalState.activePageIndex === -1) return;
 
     const page = globalState.pages[globalState.activePageIndex];
-    const targetIdx = page.blocks.findIndex(b => b.id === globalState.selectedBlockId);
+    if (!page || !page.blocks || page.blocks.length === 0) return;
 
-    if (targetIdx !== -1) {
-        const block = page.blocks[targetIdx];
-        if (block.originalBackgroundBackup) {
-            const ui = await import('../../ui/block-editor-ui.js');
-            await ui.restoreBackgroundForBlock(block.id);
+    const targetIds = (globalState.selectedBlockIds && globalState.selectedBlockIds.length > 0)
+        ? [...globalState.selectedBlockIds]
+        : (globalState.selectedBlockId ? [globalState.selectedBlockId] : []);
+
+    if (targetIds.length === 0) return;
+
+    pushStateToHistory();
+
+    const ui = await import('../../ui/block-editor-ui.js');
+    for (const id of targetIds) {
+        const idx = page.blocks.findIndex(b => b.id === id);
+        if (idx !== -1) {
+            const block = page.blocks[idx];
+            if (block.originalBackgroundBackup) {
+                await ui.restoreBackgroundForBlock(block.id);
+            }
+            page.blocks.splice(idx, 1);
         }
-
-        pushStateToHistory();
-        page.blocks.splice(targetIdx, 1);
-        globalState.selectedBlockId = null;
-        requestOverlayRender();
-        uiUpdateActiveBlockEditor();
-        savePageToDB(page);
-        showToast("Đã xóa ô dịch thành công.", "info");
     }
+
+    globalState.selectedBlockId = null;
+    globalState.selectedBlockIds = [];
+    requestOverlayRender();
+    uiUpdateActiveBlockEditor();
+    savePageToDB(page);
+    showToast(`Đã xóa ${targetIds.length} ô thoại thành công.`, "info");
 }
 
 export function addNewBlock() {
@@ -567,5 +594,140 @@ export function initBilingualTooltipEvents() {
 
     container.addEventListener('mouseleave', () => {
         if (tooltip) tooltip.classList.add('hidden');
+    });
+}
+
+/**
+ * Khởi tạo vùng chọn kéo chuột đa điểm (Marquee Drag Box Selection)
+ */
+export function initMarqueeSelection() {
+    const container = elements.mangaCanvasContainer || document.getElementById('manga-canvas-container');
+    const viewport = document.getElementById('workspace-viewport');
+    if (!container || !viewport) return;
+
+    let isMarquee = false;
+    let startClientX = 0;
+    let startClientY = 0;
+    let marqueeBox = document.getElementById('canvas-marquee-box');
+
+    if (!marqueeBox) {
+        marqueeBox = document.createElement('div');
+        marqueeBox.id = 'canvas-marquee-box';
+        marqueeBox.className = 'canvas-marquee-box hidden';
+        container.appendChild(marqueeBox);
+    }
+
+    viewport.addEventListener('mousedown', (e) => {
+        if (window.__isSpacePanPressed || e.button !== 0) return;
+        if (globalState.magicWandActive) return;
+
+        // Tránh kích hoạt marquee nếu nhấp trúng block, handle hoặc button
+        if (e.target.closest('.bubble-overlay') || e.target.closest('#canvas-floating-toolbar') || e.target.closest('button') || e.target.classList.contains('resize-handle')) {
+            return;
+        }
+
+        const imgElement = elements.mangaBgImage || document.getElementById('manga-bg-image');
+        if (!imgElement) return;
+
+        const imgRect = imgElement.getBoundingClientRect();
+        if (e.clientX < imgRect.left || e.clientX > imgRect.right || e.clientY < imgRect.top || e.clientY > imgRect.bottom) {
+            return;
+        }
+
+        isMarquee = true;
+        startClientX = e.clientX;
+        startClientY = e.clientY;
+
+        const relStartX = ((startClientX - imgRect.left) / imgRect.width) * 100;
+        const relStartY = ((startClientY - imgRect.top) / imgRect.height) * 100;
+
+        marqueeBox.style.left = `${relStartX}%`;
+        marqueeBox.style.top = `${relStartY}%`;
+        marqueeBox.style.width = '0%';
+        marqueeBox.style.height = '0%';
+        marqueeBox.classList.remove('hidden');
+
+        function onMarqueeMove(moveEvent) {
+            if (!isMarquee) return;
+            const curClientX = moveEvent.clientX;
+            const curClientY = moveEvent.clientY;
+
+            const minClientX = Math.min(startClientX, curClientX);
+            const maxClientX = Math.max(startClientX, curClientX);
+            const minClientY = Math.min(startClientY, curClientY);
+            const maxClientY = Math.max(startClientY, curClientY);
+
+            const mPctX = ((minClientX - imgRect.left) / imgRect.width) * 100;
+            const mPctY = ((minClientY - imgRect.top) / imgRect.height) * 100;
+            const mPctW = ((maxClientX - minClientX) / imgRect.width) * 100;
+            const mPctH = ((maxClientY - minClientY) / imgRect.height) * 100;
+
+            marqueeBox.style.left = `${Math.max(0, mPctX)}%`;
+            marqueeBox.style.top = `${Math.max(0, mPctY)}%`;
+            marqueeBox.style.width = `${Math.min(100 - mPctX, mPctW)}%`;
+            marqueeBox.style.height = `${Math.min(100 - mPctY, mPctH)}%`;
+        }
+
+        function onMarqueeEnd(endEvent) {
+            if (!isMarquee) return;
+            isMarquee = false;
+            marqueeBox.classList.add('hidden');
+
+            window.removeEventListener('mousemove', onMarqueeMove);
+            window.removeEventListener('mouseup', onMarqueeEnd);
+
+            const curClientX = endEvent.clientX;
+            const curClientY = endEvent.clientY;
+
+            const minClientX = Math.min(startClientX, curClientX);
+            const maxClientX = Math.max(startClientX, curClientX);
+            const minClientY = Math.min(startClientY, curClientY);
+            const maxClientY = Math.max(startClientY, curClientY);
+
+            // Bỏ qua nếu chỉ là cú nhấp đơn lẻ (< 5px)
+            if (maxClientX - minClientX < 8 && maxClientY - minClientY < 8) {
+                if (!endEvent.shiftKey && !endEvent.ctrlKey) {
+                    selectBlock(null);
+                }
+                return;
+            }
+
+            const selMinX = ((minClientX - imgRect.left) / imgRect.width) * 100;
+            const selMaxX = ((maxClientX - imgRect.left) / imgRect.width) * 100;
+            const selMinY = ((minClientY - imgRect.top) / imgRect.height) * 100;
+            const selMaxY = ((maxClientY - imgRect.top) / imgRect.height) * 100;
+
+            const page = globalState.pages[globalState.activePageIndex];
+            if (!page || !page.blocks) return;
+
+            const matchedIds = [];
+            page.blocks.forEach(b => {
+                if (!b.box) return;
+                const bMinX = b.box.x;
+                const bMaxX = b.box.x + b.box.w;
+                const bMinY = b.box.y;
+                const bMaxY = b.box.y + b.box.h;
+
+                // Kiểm tra giao nhau giữa hai hình chữ nhật (AABB Intersection)
+                const isOverlap = !(bMaxX < selMinX || bMinX > selMaxX || bMaxY < selMinY || bMinY > selMaxY);
+                if (isOverlap) {
+                    matchedIds.push(b.id);
+                }
+            });
+
+            if (matchedIds.length > 0) {
+                globalState.selectedBlockIds = matchedIds;
+                globalState.selectedBlockId = matchedIds[matchedIds.length - 1];
+                updateBlockSelectionDOM();
+                uiUpdateActiveBlockEditor();
+                updateFloatingToolbarPosition();
+                showToast(`Đã chọn ${matchedIds.length} ô thoại.`, 'info');
+            } else if (!endEvent.shiftKey && !endEvent.ctrlKey) {
+                selectBlock(null);
+            }
+        }
+
+        window.addEventListener('mousemove', onMarqueeMove);
+        window.addEventListener('mouseup', onMarqueeEnd);
     });
 }

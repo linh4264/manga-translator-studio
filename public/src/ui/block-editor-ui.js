@@ -244,7 +244,7 @@ function syncBlockStyleInputs(block) {
     });
 
     // Sync Line Height & Letter Spacing
-    const currentLineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : (block.style.vertical ? 1.12 : 1.18);
+    const currentLineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : 1.15;
     const sliderLineHeight = document.getElementById('slider-line-height');
     const lblLineHeight = document.getElementById('lbl-line-height');
     if (sliderLineHeight) sliderLineHeight.value = currentLineHeight;

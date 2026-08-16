@@ -180,7 +180,22 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
             if (!displayWidth || isNaN(displayWidth)) displayWidth = 800;
             const scaleFactor = W / Math.max(1, displayWidth);
             const fontSizePx = (block.style.fontSize || 16) * scaleFactor;
-            const paddingPx = (block.style.padding !== undefined ? block.style.padding : 4) * scaleFactor;
+            let padXPx = 4 * scaleFactor;
+            let padYPx = 4 * scaleFactor;
+            if (typeof block.style.padding === 'string' && block.style.padding.includes('%')) {
+                const parts = block.style.padding.trim().split(/\s+/);
+                const pctY = parseFloat(parts[0]) || 9;
+                const pctX = parseFloat(parts[1] || parts[0]) || 12;
+                padYPx = bh * (pctY / 100);
+                padXPx = bw * (pctX / 100);
+            } else if (typeof block.style.padding === 'number') {
+                padXPx = block.style.padding * scaleFactor;
+                padYPx = block.style.padding * scaleFactor;
+            } else {
+                padYPx = bh * 0.09;
+                padXPx = bw * 0.12;
+            }
+            const paddingPx = Math.max(padXPx, padYPx);
 
             const maskShape = block.style.maskShape || 'bubble-fit';
             const maskSize = block.style.maskSize || 'full';
@@ -193,25 +208,25 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
 
             if (maskSize === 'snug' && block.translated && block.translated.trim()) {
                 if (block.style.vertical) {
-                    const maxColHeight = Math.max(10, bh - (paddingPx * 2));
+                    const maxColHeight = Math.max(10, bh - (padYPx * 2));
                     const cols = wrapCanvasVerticalText(block.translated, maxColHeight, fontSizePx);
-                    const colStep = fontSizePx * 1.12;
-                    const charStep = fontSizePx * 1.12;
+                    const colStep = fontSizePx * 1.15;
+                    const charStep = fontSizePx * 1.15;
                     const totalTextWidth = cols.length * colStep;
                     let maxColLength = 0;
                     cols.forEach(c => { if (c.length > maxColLength) maxColLength = c.length; });
                     const totalTextHeight = maxColLength * charStep;
 
-                    const snugW = Math.min(fillBw, totalTextWidth + (paddingPx * 2));
-                    const snugH = Math.min(fillBh, totalTextHeight + (paddingPx * 2));
+                    const snugW = Math.min(fillBw, totalTextWidth + (padXPx * 2));
+                    const snugH = Math.min(fillBh, totalTextHeight + (padYPx * 2));
                     fillBx = bx + (bw - snugW) / 2;
                     fillBy = by + (bh - snugH) / 2;
                     fillBw = snugW;
                     fillBh = snugH;
                 } else {
-                    const maxTextWidth = Math.max(10, bw - (paddingPx * 2));
+                    const maxTextWidth = Math.max(10, bw - (padXPx * 2));
                     const textLines = wrapCanvasText(ctx, block.translated, maxTextWidth);
-                    const lineHeight = fontSizePx * 1.18;
+                    const lineHeight = fontSizePx * 1.15;
                     const totalTextHeight = textLines.length * lineHeight;
                     let maxLineWidth = 0;
                     textLines.forEach(line => {
@@ -220,8 +235,8 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                     });
                     const totalTextWidth = maxLineWidth;
 
-                    const snugW = Math.min(fillBw, totalTextWidth + (paddingPx * 2));
-                    const snugH = Math.min(fillBh, totalTextHeight + (paddingPx * 2));
+                    const snugW = Math.min(fillBw, totalTextWidth + (padXPx * 2));
+                    const snugH = Math.min(fillBh, totalTextHeight + (padYPx * 2));
                     fillBx = bx + (bw - snugW) / 2;
                     if (block.style.align === 'left') fillBx = bx + insetPad;
                     else if (block.style.align === 'right') fillBx = bx + bw - snugW - insetPad;
@@ -320,7 +335,23 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                 ctx.letterSpacing = `${letterSpacingPx}px`;
             }
 
-            const paddingPx = (block.style.padding !== undefined ? block.style.padding : 4) * scaleFactor;
+            let padXPx = 4 * scaleFactor;
+            let padYPx = 4 * scaleFactor;
+            if (typeof block.style.padding === 'string' && block.style.padding.includes('%')) {
+                const parts = block.style.padding.trim().split(/\s+/);
+                const pctY = parseFloat(parts[0]) || 9;
+                const pctX = parseFloat(parts[1] || parts[0]) || 12;
+                padYPx = bh * (pctY / 100);
+                padXPx = bw * (pctX / 100);
+            } else if (typeof block.style.padding === 'number') {
+                padXPx = block.style.padding * scaleFactor;
+                padYPx = block.style.padding * scaleFactor;
+            } else {
+                padYPx = bh * 0.09;
+                padXPx = bw * 0.12;
+            }
+            const paddingPx = Math.max(padXPx, padYPx);
+
             const strokeWidth = parseFloat(block.style.strokeWidth) || 0;
             const strokeColor = block.style.strokeColor || '#ffffff';
             const strokeWidthPx = strokeWidth * scaleFactor;
@@ -336,7 +367,7 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
             const shadowOffsetY = (parseFloat(block.style.shadowOffsetY) || 0) * scaleFactor;
 
             const transformedText = transformCase(block.translated, block.style.textTransform || 'none');
-            const currentLineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : (block.style.vertical ? 1.12 : 1.18);
+            const currentLineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : 1.15;
 
             let textLines = [];
             let columns = [];
@@ -344,7 +375,7 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
             let totalTextHeight = 0;
 
             if (block.style.vertical) {
-                const maxColHeight = Math.max(10, bh - (paddingPx * 2));
+                const maxColHeight = Math.max(10, bh - (padYPx * 2));
                 columns = wrapCanvasVerticalText(transformedText, maxColHeight, fontSizePx);
                 const colStep = fontSizePx * currentLineHeight;
                 const charStep = fontSizePx * currentLineHeight;
@@ -353,7 +384,7 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                 columns.forEach(c => { if (c.length > maxColLength) maxColLength = c.length; });
                 totalTextHeight = maxColLength * charStep;
             } else {
-                const maxTextWidth = Math.max(10, bw - (paddingPx * 2));
+                const maxTextWidth = Math.max(10, bw - (padXPx * 2));
                 textLines = wrapCanvasText(ctx, transformedText, maxTextWidth);
                 const lineHeight = fontSizePx * currentLineHeight;
                 totalTextHeight = textLines.length * lineHeight;
@@ -486,12 +517,12 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
             } else {
                 const lineHeight = fontSizePx * currentLineHeight;
                 let startY = by + (bh / 2) - (totalTextHeight / 2) + (lineHeight / 2) - (fontSizePx * 0.05);
-                const minStartY = by + paddingPx + (lineHeight / 2);
+                const minStartY = by + padYPx + (lineHeight / 2);
                 if (startY < minStartY) startY = minStartY;
 
                 let startX = bx + bw / 2;
-                if (block.style.align === 'left') startX = bx + paddingPx;
-                else if (block.style.align === 'right') startX = bx + bw - paddingPx;
+                if (block.style.align === 'left') startX = bx + padXPx;
+                else if (block.style.align === 'right') startX = bx + bw - padXPx;
 
                 ctx.textBaseline = 'middle';
 

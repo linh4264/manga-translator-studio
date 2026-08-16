@@ -15,6 +15,8 @@ export const elements = {
     get mangaOverlaysContainer() { return document.getElementById('manga-overlays-container'); },
     get canvasFloatingToolbar() { return document.getElementById('canvas-floating-toolbar'); },
     get lblFloatingDir() { return document.getElementById('lbl-floating-dir'); },
+    get btnMagicWand() { return document.getElementById('btn-magic-wand'); },
+    get magicWandHighlightBox() { return document.getElementById('magic-wand-highlight-box'); },
     get workspaceViewport() { return document.getElementById('workspace-viewport'); },
     get zoomIndicator() { return document.getElementById('zoom-indicator'); },
     get backgroundTaskBar() { return document.getElementById('background-task-bar'); },

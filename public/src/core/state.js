@@ -108,6 +108,8 @@ export const globalState = {
     activePageIndex: -1,
     selectedBlockId: null,
     selectedBlockIds: [],
+    magicWandActive: false,
+    magicWandDetectedBox: null,
     viewMode: 'overlay', // 'overlay' | 'split' | 'original'
     zoom: 100,
     activeTab: 'edit', // 'edit' | 'style'

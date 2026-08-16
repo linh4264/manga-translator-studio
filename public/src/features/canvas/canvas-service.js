@@ -4,6 +4,7 @@ export * from './canvas-exporter.js';
 export * from './canvas-interactions.js';
 export * from './canvas-styling.js';
 export * from './canvas-actions.js';
+export * from './magic-wand.js';
 
 import {
     normalizeAllBlocksToHorizontal,
@@ -19,7 +20,9 @@ import {
     autoMatchActiveBlockStyle,
     autoMatchBlockStyle,
     toggleActiveBlockOrientation,
-    alignActiveBlockPosition
+    alignActiveBlockPosition,
+    toggleSelectedBlocksOrientation,
+    batchDiamondBalanceSelectedBlocks
 } from './canvas-styling.js';
 
 import {
@@ -33,8 +36,17 @@ import {
     selectBlock,
     selectAllBlocksOnPage,
     navigateBlocks,
-    initBilingualTooltipEvents
+    initBilingualTooltipEvents,
+    initMarqueeSelection
 } from './canvas-interactions.js';
+
+import {
+    toggleMagicWandMode,
+    autoSnapActiveBlockToUnderlyingBubble,
+    autoSnapSelectedBlocksToBubbles,
+    initMagicWandEvents,
+    clearMagicWandPreview
+} from './magic-wand.js';
 
 import { applyDiamondFormat, batchDiamondBalanceAllPages } from './canvas-renderer.js';
 import { updateImageBlockOpacity, updateImageBlockFit, updateImageBlockBorderRadius } from '../../ui/block-editor-ui.js';
@@ -70,5 +82,13 @@ Object.assign(window, {
     autoMatchActiveBlockStyle,
     autoMatchBlockStyle,
     initBilingualTooltipEvents,
-    alignActiveBlockPosition
+    initMarqueeSelection,
+    alignActiveBlockPosition,
+    toggleMagicWandMode,
+    autoSnapActiveBlockToUnderlyingBubble,
+    autoSnapSelectedBlocksToBubbles,
+    toggleSelectedBlocksOrientation,
+    batchDiamondBalanceSelectedBlocks,
+    initMagicWandEvents,
+    clearMagicWandPreview
 });

@@ -268,7 +268,7 @@ export const MAX_HISTORY_LIMIT = 30;
 export const DEFAULT_BLOCK_STYLE = {
     fontFamily: 'font-manga',
     fontSize: 13,
-    lineHeight: 1.18,
+    lineHeight: 1.15,
     letterSpacing: 0,
     textTransform: 'none',
     bold: false,
@@ -279,7 +279,7 @@ export const DEFAULT_BLOCK_STYLE = {
     bgColor: '#ffffff',
     bgColorHex: '#FFFFFF',
     bgOpacity: 100,
-    padding: 4,
+    padding: '9% 12%',
     rotate: 0,
     vertical: false,
     align: 'center',

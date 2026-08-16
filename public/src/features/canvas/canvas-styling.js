@@ -55,7 +55,7 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
     const maskShape = block.style.maskShape || 'bubble-fit';
     const strokeWidth = block.style.strokeWidth || 0;
     const strokeWidth2 = block.style.strokeWidth2 || 0;
-    const lineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : (block.style.vertical ? 1.12 : 1.18);
+    const lineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : 1.15;
     const letterSpacing = block.style.letterSpacing || 0;
     const textTransform = block.style.textTransform || 'none';
     const isItalic = !!block.style.italic;
@@ -85,8 +85,20 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
         ruler.style.fontFamily = `'${fontStyle}', sans-serif`;
     }
 
-    const padding = block.style.padding !== undefined ? block.style.padding : 4;
-    ruler.style.padding = `${padding}px`;
+    if (typeof block.style.padding === 'string' && block.style.padding.includes('%')) {
+        const parts = block.style.padding.trim().split(/\s+/);
+        const pctY = parseFloat(parts[0]) || 9;
+        const pctX = parseFloat(parts[1] || parts[0]) || 12;
+        const padY = ((block.box.h / 100) * displayHeight) * (pctY / 100);
+        const padX = ((block.box.w / 100) * displayWidth) * (pctX / 100);
+        ruler.style.padding = `${padY}px ${padX}px`;
+    } else if (typeof block.style.padding === 'number') {
+        ruler.style.padding = `${block.style.padding}px`;
+    } else {
+        const padY = ((block.box.h / 100) * displayHeight) * 0.09;
+        const padX = ((block.box.w / 100) * displayWidth) * 0.12;
+        ruler.style.padding = `${padY}px ${padX}px`;
+    }
     ruler.style.textAlign = block.style.align || 'center';
     ruler.style.letterSpacing = `${letterSpacing}px`;
     ruler.style.lineHeight = `${lineHeight}`;
@@ -431,8 +443,12 @@ export function syncActiveBlockStyle(property, value) {
     const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
 
     if (block) {
+        const targetBlocks = (globalState.selectedBlockIds && globalState.selectedBlockIds.length > 1)
+            ? page.blocks.filter(b => globalState.selectedBlockIds.includes(b.id))
+            : [block];
+
         if (property === 'fontSize') {
-            block.style.autoFit = false;
+            targetBlocks.forEach(b => { if (b.style) b.style.autoFit = false; });
             if (elements.styleAutoFit) elements.styleAutoFit.checked = false;
         }
 
@@ -460,7 +476,12 @@ export function syncActiveBlockStyle(property, value) {
             pushStateToHistory();
         }
 
-        block.style[property] = value;
+        targetBlocks.forEach(b => {
+            if (!b.style) b.style = {};
+            b.style[property] = value;
+            b.maskCache = null;
+            b.autoFitCache = null;
+        });
 
         // Sync UI labels
         if (property === 'fontSize') {
@@ -920,6 +941,73 @@ export function applyCurrentStyleToAllPages() {
     showToast(`⚡ Đã đồng bộ style cho ${totalCount} ô thoại trên toàn bộ chương!`, "success");
 }
 
+/**
+ * Đổi hướng chữ Dọc / Ngang cho toàn bộ các ô đang được chọn
+ */
+export function toggleSelectedBlocksOrientation() {
+    if (globalState.activePageIndex === -1) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    if (!page || !page.blocks) return;
+
+    const targetIds = (globalState.selectedBlockIds && globalState.selectedBlockIds.length > 0)
+        ? globalState.selectedBlockIds
+        : (globalState.selectedBlockId ? [globalState.selectedBlockId] : []);
+
+    if (targetIds.length === 0) return;
+
+    pushStateToHistory();
+
+    const targetBlocks = page.blocks.filter(b => targetIds.includes(b.id));
+    const firstVertical = targetBlocks[0]?.style?.vertical || false;
+    const newVertical = !firstVertical;
+
+    targetBlocks.forEach(b => {
+        if (!b.style) b.style = {};
+        b.style.vertical = newVertical;
+        b.maskCache = null;
+        b.autoFitCache = null;
+        if (isBlockAutoFit(b)) {
+            autoFitBlock(b);
+        }
+    });
+
+    requestOverlayRender();
+    uiUpdateActiveBlockEditor();
+    updateFloatingToolbarPosition();
+    savePageToDB(page);
+
+    showToast(`🔠 Đã chuyển ${targetBlocks.length} ô sang kiểu chữ ${newVertical ? 'Dọc' : 'Ngang'}!`, 'success');
+}
+
+/**
+ * Cân chữ Diamond cho toàn bộ các ô đang chọn
+ */
+export function batchDiamondBalanceSelectedBlocks() {
+    if (globalState.activePageIndex === -1) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    if (!page || !page.blocks) return;
+
+    const targetIds = (globalState.selectedBlockIds && globalState.selectedBlockIds.length > 0)
+        ? globalState.selectedBlockIds
+        : (globalState.selectedBlockId ? [globalState.selectedBlockId] : []);
+
+    if (targetIds.length === 0) return;
+
+    pushStateToHistory();
+    import('./canvas-renderer.js').then(r => {
+        targetIds.forEach(id => {
+            const block = page.blocks.find(b => b.id === id);
+            if (block && block.type !== 'image') {
+                r.balanceBlockDiamond?.(block);
+            }
+        });
+        requestOverlayRender();
+        uiUpdateActiveBlockEditor();
+        savePageToDB(page);
+        showToast(`💎 Đã cân đối Diamond cho ${targetIds.length} ô thoại!`, 'success');
+    });
+}
+
 // Window global bindings
 Object.assign(window, {
     applyStylePreset,
@@ -945,5 +1033,7 @@ Object.assign(window, {
     cleanAllBlocksPunctuation,
     applyCurrentStyleToPage,
     applyCurrentStyleToAllPages,
-    alignActiveBlockPosition
+    alignActiveBlockPosition,
+    toggleSelectedBlocksOrientation,
+    batchDiamondBalanceSelectedBlocks
 });

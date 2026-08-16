@@ -100,13 +100,18 @@ export async function initApplication() {
     registerAction('toggleLeftSidebarMoreMenu', () => import('../ui/layout-ui.js').then(m => m.toggleLeftSidebarMoreMenu()));
     registerAction('addNewBlock', () => import('../features/canvas/canvas-service.js').then(m => m.addNewBlock()));
     registerAction('triggerAddImageBlock', () => import('../features/canvas/canvas-service.js').then(m => m.triggerAddImageBlock()));
+    registerAction('toggleMagicWandMode', () => import('../features/canvas/canvas-service.js').then(m => m.toggleMagicWandMode()));
     registerAction('executeUndo', () => import('../core/state.js').then(s => s.executeUndo()));
     registerAction('executeRedo', () => import('../core/state.js').then(s => s.executeRedo()));
     initEventDelegation();
 
     mountSettingsModal();
     initEventListeners();
-    import('../features/canvas/canvas-service.js').then(m => m.initBilingualTooltipEvents?.());
+    import('../features/canvas/canvas-service.js').then(m => {
+        m.initBilingualTooltipEvents?.();
+        m.initMagicWandEvents?.();
+        m.initMarqueeSelection?.();
+    });
     syncMobileToolbarState();
     syncMobileMenuState();
 

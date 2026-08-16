@@ -407,6 +407,13 @@ export function initEventListeners() {
             return;
         }
 
+        // W key: Toggle Magic Wand Tool
+        if (e.key === 'w' || e.key === 'W') {
+            e.preventDefault();
+            import('../features/canvas/canvas-service.js').then(canvas => canvas.toggleMagicWandMode());
+            return;
+        }
+
         // Left/Right Arrow Page Navigation when not editing block text
         if (globalState.selectedBlockId === null) {
             if (e.key === 'ArrowLeft') {
@@ -458,6 +465,14 @@ export function initEventListeners() {
 
         if (e.key === 'Escape') {
             e.preventDefault();
+
+            // Clear Magic Wand preview if active
+            if (globalState.magicWandDetectedBox || globalState.magicWandActive) {
+                import('../features/canvas/canvas-service.js').then(canvas => {
+                    canvas.clearMagicWandPreview();
+                });
+            }
+
             const modalIds = [
                 'help-modal',
                 'settings-modal',

@@ -274,9 +274,20 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
 
             maskContent.style.color = block.style.textColor || '#000000';
             const zoomScale = isMirror ? 1 : ((globalState.zoom || 100) / 100);
-            const padding = block.style.padding !== undefined ? block.style.padding : 4;
-            const displayPadding = forceExportScale !== 1 ? (padding * forceExportScale) : (padding * zoomScale);
-            maskContent.style.padding = `${displayPadding}px`;
+
+            if (block.style.padding !== undefined) {
+                if (typeof block.style.padding === 'string') {
+                    maskContent.style.padding = block.style.padding;
+                } else if (typeof block.style.padding === 'number') {
+                    const displayPadding = forceExportScale !== 1 ? (block.style.padding * forceExportScale) : (block.style.padding * zoomScale);
+                    maskContent.style.padding = `${displayPadding}px`;
+                } else {
+                    maskContent.style.padding = '9% 12%';
+                }
+            } else {
+                maskContent.style.padding = '9% 12%';
+            }
+
             maskContent.style.textAlign = block.style.align || 'center';
 
             let displayFontSize = block.style.fontSize || 16;
@@ -286,7 +297,7 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
                 displayFontSize = displayFontSize * zoomScale;
             }
             maskContent.style.fontSize = `${displayFontSize}px`;
-            const currentLineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : (block.style.vertical ? 1.12 : 1.18);
+            const currentLineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : 1.15;
             const currentLetterSpacing = block.style.letterSpacing !== undefined ? block.style.letterSpacing : 0;
             const displayLetterSpacing = forceExportScale !== 1 ? (currentLetterSpacing * forceExportScale) : (currentLetterSpacing * zoomScale);
 

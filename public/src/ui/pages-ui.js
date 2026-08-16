@@ -4,7 +4,7 @@ import {
 } from '../core/state.js';
 import { elements } from '../core/elements.js';
 import { showToast, escapeHTML } from '../core/utils.js';
-import { requestOverlayRender } from '../features/canvas/canvas-service.js';
+import { requestOverlayRender, clearMagicWandPreview } from '../features/canvas/canvas-service.js';
 import { restorePageEraserDrawing } from '../features/inpainting.js';
 import { updateSplitView } from './layout-ui.js';
 import { updateActiveBlockEditor } from './block-editor-ui.js';
@@ -14,6 +14,7 @@ export async function selectPage(index) {
 
     globalState.activePageIndex = index;
     globalState.selectedBlockId = null;
+    clearMagicWandPreview?.();
 
     saveProjectMeta(globalState.pages.map(p => p.id), globalState.activePageIndex);
 

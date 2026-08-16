@@ -428,6 +428,11 @@
                         title="Chèn ảnh / Sticker">
                         <i class="fa-solid fa-image text-sky-400 text-xs"></i>
                     </button>
+                    <button id="btn-magic-wand" data-action="toggleMagicWandMode" onclick="toggleMagicWandMode()"
+                        class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-purple-600 text-slate-200 hover:text-white border border-slate-700 hover:border-purple-500 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                        title="Gậy Ma Thuật (Phím W): Click bóng thoại gốc để khoanh viền, click ô dịch để khớp vào">
+                        <i class="fa-solid fa-wand-magic-sparkles text-purple-400 text-xs"></i>
+                    </button>
                     <button id="btn-eraser-mode" onclick="openEraserMode()"
                         class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-amber-600 text-slate-200 hover:text-white border border-slate-700 hover:border-amber-500 flex items-center justify-center transition-all cursor-pointer shadow-sm"
                         title="Bật cọ tẩy chữ (Eraser)">
@@ -597,6 +602,10 @@
                     <div id="patch-selection-box"
                         class="hidden absolute border border-dashed border-teal-400 bg-teal-500/10 pointer-events-none z-40 rounded-full">
                     </div>
+                    <div id="magic-wand-highlight-box"
+                        class="hidden absolute border-2 border-dashed border-purple-400 bg-purple-500/15 pointer-events-none z-30 rounded-xl transition-all shadow-lg shadow-purple-500/20">
+                    </div>
+                    <div id="canvas-marquee-box" class="canvas-marquee-box hidden"></div>
 
 
                     <div id="manga-overlays-container"
@@ -607,30 +616,11 @@
                     <!-- Canvas Floating Quick Toolbar for Active Block -->
                     <div id="canvas-floating-toolbar"
                         class="hidden absolute z-40 bg-slate-900/95 border border-indigo-500/40 rounded-xl shadow-2xl p-1 flex items-center gap-0.5 backdrop-blur-md transform -translate-x-1/2">
+                        <span id="floating-toolbar-multi-badge" class="hidden text-[10px] font-bold px-1.5 py-0.5 rounded bg-purple-600 text-white mr-0.5 select-none shadow-sm">2 ô</span>
                         <button onclick="triggerInlineEditActiveBlock()"
                             class="w-7 h-7 hover:bg-indigo-900/50 rounded-lg text-slate-300 hover:text-white flex items-center justify-center transition-all"
                             title="Sửa chữ trực tiếp trên ô dịch (Double-click / F2 / Enter)">
                             <i class="fa-solid fa-pen-to-square text-indigo-400 text-xs"></i>
-                        </button>
-                        <button onclick="toggleActiveBlockBold()"
-                            class="w-7 h-7 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white flex items-center justify-center transition-all font-bold text-xs"
-                            title="Bật/Tắt in đậm (Bold)">
-                            <i class="fa-solid fa-bold text-indigo-400 text-xs"></i>
-                        </button>
-                        <button onclick="toggleActiveBlockItalic()"
-                            class="w-7 h-7 hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white flex items-center justify-center transition-all italic text-xs"
-                            title="Bật/Tắt in nghiêng (Italic)">
-                            <i class="fa-solid fa-italic text-indigo-400 text-xs"></i>
-                        </button>
-                        <button onclick="applyDiamondFormat()"
-                            class="w-7 h-7 hover:bg-indigo-950/70 rounded-lg text-indigo-400 hover:text-indigo-200 flex items-center justify-center transition-all"
-                            title="Cân đối dòng hình quả trám / Manga Diamond (chống rớt chữ đơn)">
-                            <i class="fa-solid fa-gem text-xs"></i>
-                        </button>
-                        <button onclick="cleanActiveBlockPunctuation()"
-                            class="w-7 h-7 hover:bg-emerald-950/70 rounded-lg text-emerald-400 hover:text-emerald-200 flex items-center justify-center transition-all"
-                            title="Chuẩn hóa dấu câu Manga (Dấu 3 chấm, gạch ngang, cảm thán)">
-                            <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
                         </button>
                         <div class="h-4 w-px bg-slate-800 my-auto mx-0.5"></div>
                         <button data-action="copyBlockStyle" onclick="copyBlockStyle()"
@@ -651,7 +641,7 @@
                         <div class="h-4 w-px bg-slate-800 my-auto mx-0.5"></div>
                         <button onclick="deleteActiveBlock()"
                             class="w-7 h-7 hover:bg-red-950 text-red-400 hover:text-red-300 rounded-lg flex items-center justify-center transition-all"
-                            title="Xóa ô thoại (Delete)">
+                            title="Xóa ô thoại đang chọn (Delete)">
                             <i class="fa-solid fa-trash-can text-xs"></i>
                         </button>
                     </div>
@@ -1575,6 +1565,17 @@
                             <div class="min-w-0">
                                 <div class="text-[11px] font-bold text-slate-200 group-hover:text-emerald-300 truncate">Dọn dấu Manga</div>
                                 <div class="text-[9px] text-slate-500 truncate">Chuẩn hóa ..., ?!</div>
+                            </div>
+                        </button>
+
+                        <!-- Magic Snap to Bubble -->
+                        <button onclick="autoSnapSelectedBlocksToBubbles()"
+                            class="col-span-2 p-2 rounded-lg bg-slate-900 hover:bg-purple-950/70 border border-slate-800 hover:border-purple-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm"
+                            title="Tự động nhận diện bóng thoại bên dưới và khớp các ô đang chọn">
+                            <span class="w-6 h-6 rounded bg-purple-500/20 text-purple-300 flex items-center justify-center text-xs font-bold shrink-0">🪄</span>
+                            <div class="min-w-0">
+                                <div class="text-[11px] font-bold text-slate-200 group-hover:text-purple-300 truncate">Khớp bóng thoại AI (Magic Snap)</div>
+                                <div class="text-[9px] text-slate-500 truncate">Tự động co giãn theo viền bóng thoại gốc</div>
                             </div>
                         </button>
                     </div>
