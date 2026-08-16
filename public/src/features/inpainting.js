@@ -99,15 +99,34 @@ export function autoCleanActiveBlock() {
     }
 }
 
-export function toggleEraserMode() {
+export function openEraserMode() {
+    if (globalState.activePageIndex === -1) return;
+    if (isEraserModeActive) {
+        if (elements.eraserSettingsPanel) elements.eraserSettingsPanel.classList.remove('hidden');
+        const trigger = document.getElementById('btn-eraser-floating-trigger');
+        if (trigger) trigger.classList.add('hidden');
+        return;
+    }
+    setEraserMode(true);
+}
+
+export function closeEraserMode() {
+    if (!isEraserModeActive) return;
+    setEraserMode(false);
+}
+
+export function setEraserMode(active) {
     if (globalState.activePageIndex === -1) return;
 
-    isEraserModeActive = !isEraserModeActive;
+    isEraserModeActive = active;
 
     const floatingBtn = document.getElementById('btn-eraser-mode-floating');
 
     if (isEraserModeActive) {
         if (elements.eraserSettingsPanel) elements.eraserSettingsPanel.classList.remove('hidden');
+        const trigger = document.getElementById('btn-eraser-floating-trigger');
+        if (trigger) trigger.classList.add('hidden');
+
         if (elements.btnEraserMode) {
             elements.btnEraserMode.classList.add('bg-indigo-600', 'text-white');
             elements.btnEraserMode.classList.remove('bg-slate-800', 'text-slate-300');
@@ -124,6 +143,9 @@ export function toggleEraserMode() {
         showToast("Đã bật chế độ cọ tẩy. Dùng chuột/bút vẽ trực tiếp lên ảnh để xóa.", "info");
     } else {
         if (elements.eraserSettingsPanel) elements.eraserSettingsPanel.classList.add('hidden');
+        const trigger = document.getElementById('btn-eraser-floating-trigger');
+        if (trigger) trigger.classList.add('hidden');
+
         if (elements.btnEraserMode) {
             elements.btnEraserMode.classList.remove('bg-indigo-600', 'text-white');
             elements.btnEraserMode.classList.add('bg-slate-800', 'text-slate-300');
@@ -137,6 +159,14 @@ export function toggleEraserMode() {
         elements.mangaOverlaysContainer.classList.remove('pointer-events-none');
 
         saveEraserDrawingToPage();
+    }
+}
+
+export function toggleEraserMode(forcedState) {
+    if (typeof forcedState === 'boolean') {
+        setEraserMode(forcedState);
+    } else {
+        openEraserMode();
     }
 }
 
@@ -1579,6 +1609,8 @@ export async function runLassoContentAwareFill() {
 // Window bindings for inline HTML onClick handlers
 window.autoCleanActiveBlock = autoCleanActiveBlock;
 window.toggleEraserMode = toggleEraserMode;
+window.openEraserMode = openEraserMode;
+window.closeEraserMode = closeEraserMode;
 window.updateEraserBrushSize = updateEraserBrushSize;
 window.setEraserColor = setEraserColor;
 window.clearEraserDrawing = clearEraserDrawing;

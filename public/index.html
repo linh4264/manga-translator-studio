@@ -428,9 +428,9 @@
                         title="Chèn ảnh / Sticker">
                         <i class="fa-solid fa-image text-sky-400 text-xs"></i>
                     </button>
-                    <button id="btn-eraser-mode" onclick="toggleEraserMode()"
+                    <button id="btn-eraser-mode" onclick="openEraserMode()"
                         class="w-7 h-7 rounded-lg bg-slate-800 hover:bg-amber-600 text-slate-200 hover:text-white border border-slate-700 hover:border-amber-500 flex items-center justify-center transition-all cursor-pointer shadow-sm"
-                        title="Bật/Tắt cọ tẩy chữ (Eraser)">
+                        title="Bật cọ tẩy chữ (Eraser)">
                         <i class="fa-solid fa-paintbrush text-amber-400 text-xs"></i>
                     </button>
                     <button id="btn-export-page" onclick="exportActivePage()" disabled
@@ -670,7 +670,7 @@
                             title="Ẩn hộp công cụ">
                             <i class="fa-solid fa-minus text-[10px]"></i>
                         </button>
-                        <button onclick="toggleEraserMode()"
+                        <button onclick="closeEraserMode()"
                             class="w-5 h-5 rounded hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
                             title="Tắt chế độ cọ tẩy">
                             <i class="fa-solid fa-xmark text-xs"></i>
@@ -795,7 +795,7 @@
                         class="w-full px-3 py-1.5 rounded-lg bg-red-950/20 border border-red-500/20 hover:bg-red-500/25 text-red-400 hover:text-red-300 text-[10px] font-bold flex items-center justify-center gap-2 transition-all">
                         <i class="fa-solid fa-trash-can text-[10px]"></i> Xóa nét vẽ
                     </button>
-                    <button onclick="toggleEraserMode()"
+                    <button onclick="closeEraserMode()"
                         class="w-full px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-500 hover:shadow-[0_0_12px_rgba(99,102,241,0.4)] text-[10px] font-bold flex items-center justify-center gap-2 transition-all">
                         <i class="fa-solid fa-check text-[10px]"></i> Xong
                     </button>
