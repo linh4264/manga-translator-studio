@@ -1,0 +1,11 @@
+node_modules/
+.DS_Store
+*.log
+*.onnx
+*.bin
+*.pt
+*.pth
+server/models/
+models/
+.env
+.env.local

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Manga Translator Studio Local Server Starter for macOS / Linux
+cd "$(dirname "$0")"
 
 echo "======================================================="
 echo "  Manga Translator Studio - Khởi động máy chủ Cục bộ"

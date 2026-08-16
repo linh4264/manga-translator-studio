@@ -1,5 +1,6 @@
 @echo off
 title Manga Translator Studio Local Server
+cd /d "%~dp0"
 echo =======================================================
 echo   Manga Translator Studio - Khoi dong may chu Cuc bo
 echo =======================================================
@@ -17,9 +18,15 @@ if %errorlevel%==0 (
 
 where node >nul 2>nul
 if %errorlevel%==0 (
-    echo [OK] Phat hien Node.js. Dang chay server.js...
+    echo [OK] Phat hien Node.js.
+    echo [Web] Dang chay server.js tren cong 3000...
     echo.
     node server.js
+    if errorlevel 1 (
+        echo.
+        echo [Loi] May chu Node.js bi dung dot ngot.
+        pause
+    )
 ) else (
     where python >nul 2>nul
     if %errorlevel%==0 (
@@ -27,11 +34,17 @@ if %errorlevel%==0 (
         echo [OK] Phat hien Python. Dang chay python -m http.server 3000...
         echo.
         start http://localhost:3000
+        cd /d "%~dp0\..\public"
         python -m http.server 3000
+        if errorlevel 1 (
+            echo.
+            echo [Loi] May chu Python bi dung.
+            pause
+        )
     ) else (
         echo [Canh bao] May ban chua cai ca Node.js lan Python!
         echo.
-        echo Hay thuc hien mot trong cac cach sau:
+        echo Hay thuc hien mot trong cac cac sau:
         echo 1. Cai dat Node.js tai: https://nodejs.org/
         echo 2. Hoac mo thu muc nay bang VS Code va cai extension "Live Server" de chay.
         echo 3. Hoac su dung extension Chrome "Web Server for Chrome".

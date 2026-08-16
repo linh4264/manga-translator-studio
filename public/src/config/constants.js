@@ -4,6 +4,7 @@ export const DEFAULT_PIPELINE_MODE = "two-step"; // 'two-step' | 'single-step'
 export const DEFAULT_MODEL = "gemini-2.5-flash";
 export const DEFAULT_OCR_MODEL = "gemini-2.5-flash";
 export const DEFAULT_TRANSLATION_MODEL = "gemini-2.5-pro";
+export const DEFAULT_INPAINT_METHOD = "patchmatch";
 export const CUSTOM_MODEL_VALUE = "__custom__";
 export const VALID_MODEL_IDS = [
     "gemini-2.5-flash",

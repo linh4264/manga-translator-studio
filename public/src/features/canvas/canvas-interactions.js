@@ -341,17 +341,17 @@ export function updateFloatingToolbarPosition() {
 
     const page = globalState.pages[globalState.activePageIndex];
     const block = page ? page.blocks.find(b => b.id === globalState.selectedBlockId) : null;
-    if (!block) {
-        elements.canvasFloatingToolbar.classList.add('hidden');
+    if (!block || !block.box) {
+        if (elements.canvasFloatingToolbar) elements.canvasFloatingToolbar.classList.add('hidden');
         return;
     }
 
     if (elements.lblFloatingDir) {
-        elements.lblFloatingDir.textContent = block.style.vertical ? 'Ngang' : 'Dọc';
+        elements.lblFloatingDir.textContent = block.style?.vertical ? 'Ngang' : 'Dọc';
     }
 
-    const topPos = block.box.y > 12 ? (block.box.y - 6) : (block.box.y + block.box.h + 2);
-    const leftPos = Math.max(12, Math.min(88, block.box.x + (block.box.w / 2)));
+    const topPos = block.box.y > 12 ? (block.box.y - 6) : (block.box.y + (block.box.h || 0) + 2);
+    const leftPos = Math.max(12, Math.min(88, block.box.x + ((block.box.w || 0) / 2)));
 
     elements.canvasFloatingToolbar.style.top = `${topPos}%`;
     elements.canvasFloatingToolbar.style.left = `${leftPos}%`;

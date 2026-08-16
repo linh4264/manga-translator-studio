@@ -8,7 +8,7 @@
     <meta name="color-scheme" content="light">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self' data: blob: http: https:; img-src 'self' data: blob: http: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://accounts.google.com https://apis.google.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: blob: https://cdnjs.cloudflare.com https://fonts.gstatic.com; connect-src 'self' data: blob: http: https: http://localhost:* http://127.0.0.1:* ws: wss: https://generativelanguage.googleapis.com https://www.googleapis.com https://accounts.google.com https://apis.google.com https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; frame-src 'self' data: blob: https://accounts.google.com; child-src 'self' data: blob: https://accounts.google.com; object-src 'none'; base-uri 'self';">
+        content="default-src 'self' data: blob: http: https:; img-src 'self' data: blob: http: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://accounts.google.com https://apis.google.com https://huggingface.co; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: blob: https://cdnjs.cloudflare.com https://fonts.gstatic.com; connect-src 'self' data: blob: http: https: http://localhost:* http://127.0.0.1:* ws: wss: https://generativelanguage.googleapis.com https://www.googleapis.com https://accounts.google.com https://apis.google.com https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://huggingface.co https://*.huggingface.co https://cdn-lfs.huggingface.co; frame-src 'self' data: blob: https://accounts.google.com; child-src 'self' data: blob: https://accounts.google.com; object-src 'none'; base-uri 'self';">
     <title>Manga Translator Studio - AI Translation & Typesetting Tool</title>
     <link rel="manifest" href="/manifest.json">
     <!-- Favicon -->
@@ -732,16 +732,6 @@
                                     class="w-10 text-center bg-slate-900 border border-slate-800 focus:border-indigo-500/50 rounded py-0.5 px-0.5 text-[10px] text-slate-200 focus:outline-none font-mono">
                                 <span class="text-[10px] text-slate-500">px</span>
                             </div>
-                        </div>
-                        <!-- Algorithm selection -->
-                        <div class="flex flex-col gap-1">
-                            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none"
-                                data-i18n="lasso-method-label">Thuật toán</span>
-                            <select id="select-lasso-method"
-                                class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-[10px] text-slate-200 focus:outline-none focus:border-indigo-500/50 transition-colors">
-                                <option value="lama" selected>Gemini AI (Online)</option>
-                                <option value="telea">Fast Match (Offline)</option>
-                            </select>
                         </div>
                         <!-- Action buttons -->
                         <button id="btn-lasso-fill" onclick="runLassoContentAwareFill()" disabled

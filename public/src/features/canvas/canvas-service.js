@@ -18,7 +18,8 @@ import {
     pasteBlockStyle,
     autoMatchActiveBlockStyle,
     autoMatchBlockStyle,
-    toggleActiveBlockOrientation
+    toggleActiveBlockOrientation,
+    alignActiveBlockPosition
 } from './canvas-styling.js';
 
 import {

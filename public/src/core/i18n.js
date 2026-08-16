@@ -312,6 +312,12 @@ export const i18nDict = {
     }
 };
 
+export function t(key, lang) {
+    const targetLang = lang || globalState.uiLanguage || 'vi';
+    const dict = i18nDict[targetLang] || i18nDict.vi || {};
+    return dict[key] !== undefined ? dict[key] : key;
+}
+
 export function applyTranslations() {
     const lang = globalState.uiLanguage || 'vi';
     const dict = i18nDict[lang] || i18nDict.vi;

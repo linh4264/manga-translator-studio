@@ -1,47 +1,12 @@
-const test = require('node:test');
-const assert = require('node:assert');
-const path = require('path');
-const fs = require('fs');
-const http = require('http');
-const { spawn } = require('child_process');
+import test from 'node:test';
+import assert from 'node:assert';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import './setup/browser-env.js';
 
-// Polyfill minimal browser globals for ESM testing under Node environment
-if (typeof globalThis.window === 'undefined') {
-    globalThis.window = globalThis;
-}
-if (typeof globalThis.document === 'undefined') {
-    globalThis.document = {
-        getElementById: () => null,
-        querySelector: () => null,
-        querySelectorAll: () => [],
-        createElement: (tag) => {
-            const el = {
-                tagName: tag ? String(tag).toUpperCase() : 'DIV',
-                style: {},
-                children: [],
-                classList: { add: () => {}, remove: () => {}, toggle: () => {} },
-                setAttribute: (k, v) => { el[k] = v; },
-                appendChild: (child) => { el.children.push(child); return child; },
-                addEventListener: () => {}
-            };
-            return el;
-        },
-        createTextNode: (text) => ({ nodeType: 3, textContent: String(text || '') })
-    };
-}
-if (typeof globalThis.requestAnimationFrame === 'undefined') {
-    globalThis.requestAnimationFrame = (cb) => setTimeout(cb, 0);
-    globalThis.cancelAnimationFrame = (id) => clearTimeout(id);
-}
-if (typeof globalThis.localStorage === 'undefined') {
-    const store = new Map();
-    globalThis.localStorage = {
-        getItem: (k) => store.get(k) || null,
-        setItem: (k, v) => store.set(k, String(v)),
-        removeItem: (k) => store.delete(k),
-        clear: () => store.clear()
-    };
-}
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // 1. OCR Box Normalization Test
 test('OCR Box Normalization (scale 0-1000 to 0-100)', async () => {
@@ -542,7 +507,8 @@ test('Phase 1 UI: Stepper State Synchronization, Demo Manga Loader and Manga Sty
         id: 'test_b1',
         type: 'dialogue',
         text: 'Này, cậu có sao không?',
-        style: {}
+        box: { x: 20, y: 20, w: 30, h: 25 },
+        style: { vertical: false }
     };
     const mockPage = {
         id: 'p_test_1',

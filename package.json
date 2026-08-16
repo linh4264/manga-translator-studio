@@ -1,0 +1,30 @@
+{
+  "name": "manga-translator-studio",
+  "version": "2.5.0",
+  "description": "Manga Translator Studio - AI Translation, Inpainting & Typesetting Tool",
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/**/*.test.js",
+    "test:unit": "node --test tests/unit/**/*.test.js",
+    "test:regression": "node --test tests/regression/**/*.test.js",
+    "test:core": "node --test tests/unit/core/**/*.test.js",
+    "test:ai": "node --test tests/unit/ai/**/*.test.js",
+    "test:canvas": "node --test tests/unit/canvas/**/*.test.js",
+    "test:ocr": "node --test tests/unit/ocr/**/*.test.js",
+    "test:io": "node --test tests/unit/io/**/*.test.js",
+    "test:inpainting": "node --test tests/unit/inpainting/**/*.test.js",
+    "start": "node server/server.js"
+  },
+  "keywords": [
+    "manga",
+    "translator",
+    "gemini",
+    "claude",
+    "openai",
+    "typesetting",
+    "inpainting",
+    "scanlation"
+  ],
+  "author": "Manga Translator Studio Team",
+  "license": "MIT"
+}
