@@ -216,7 +216,10 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
         bubble.style.backgroundColor = 'transparent';
         bubble.style.display = 'flex';
         bubble.style.alignItems = 'center';
-        if (block.style.align === 'left') {
+        if (block.style.vertical) {
+            bubble.style.justifyContent = 'center';
+            bubble.style.alignItems = 'center';
+        } else if (block.style.align === 'left') {
             bubble.style.justifyContent = 'flex-start';
         } else if (block.style.align === 'right') {
             bubble.style.justifyContent = 'flex-end';
@@ -283,8 +286,12 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
                 displayFontSize = displayFontSize * zoomScale;
             }
             maskContent.style.fontSize = `${displayFontSize}px`;
-            maskContent.style.lineHeight = block.style.vertical ? '1.12' : '1.18';
-            maskContent.style.letterSpacing = '0';
+            const currentLineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : (block.style.vertical ? 1.12 : 1.18);
+            const currentLetterSpacing = block.style.letterSpacing !== undefined ? block.style.letterSpacing : 0;
+            const displayLetterSpacing = forceExportScale !== 1 ? (currentLetterSpacing * forceExportScale) : (currentLetterSpacing * zoomScale);
+
+            maskContent.style.lineHeight = `${currentLineHeight}`;
+            maskContent.style.letterSpacing = `${displayLetterSpacing}px`;
             maskContent.style.fontKerning = 'normal';
             maskContent.style.fontWeight = block.style.bold ? 'bold' : 'normal';
             maskContent.style.fontStyle = block.style.italic ? 'italic' : 'normal';
@@ -293,7 +300,7 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
                 maskContent.classList.add('text-vertical');
                 maskContent.style.writingMode = 'vertical-rl';
                 maskContent.style.textOrientation = 'upright';
-                maskContent.style.lineHeight = '1.12';
+                maskContent.style.lineHeight = `${currentLineHeight}`;
             }
 
             const strokeWidth = block.style.strokeWidth || 0;
@@ -306,11 +313,31 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
                 maskContent.style.webkitTextStroke = '0px transparent';
             }
 
+            const strokeWidth2 = block.style.strokeWidth2 || 0;
+            const strokeColor2 = block.style.strokeColor2 || '#000000';
             const shadowBlur = block.style.shadowBlur || 0;
             const shadowColor = block.style.shadowColor || '#000000';
-            if (shadowBlur > 0) {
-                const displayBlur = forceExportScale !== 1 ? shadowBlur * forceExportScale : shadowBlur;
-                maskContent.style.textShadow = `0px 0px ${displayBlur}px ${shadowColor}`;
+            const shadowOffsetX = block.style.shadowOffsetX || 0;
+            const shadowOffsetY = block.style.shadowOffsetY || 0;
+
+            const shadowParts = [];
+            const scaleToUse = forceExportScale !== 1 ? forceExportScale : zoomScale;
+
+            if (strokeWidth2 > 0) {
+                const displayStroke2 = strokeWidth2 * scaleToUse;
+                shadowParts.push(`0px 0px ${displayStroke2}px ${strokeColor2}`);
+                shadowParts.push(`0px 0px ${displayStroke2 * 0.75}px ${strokeColor2}`);
+            }
+
+            if (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0) {
+                const displayBlur = shadowBlur * scaleToUse;
+                const displayOffX = shadowOffsetX * scaleToUse;
+                const displayOffY = shadowOffsetY * scaleToUse;
+                shadowParts.push(`${displayOffX}px ${displayOffY}px ${displayBlur}px ${shadowColor}`);
+            }
+
+            if (shadowParts.length > 0) {
+                maskContent.style.textShadow = shadowParts.join(', ');
             } else {
                 maskContent.style.textShadow = 'none';
             }
@@ -320,13 +347,14 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
             if (block.style.vertical) {
                 innerTextDiv.style.writingMode = 'vertical-rl';
                 innerTextDiv.style.textOrientation = 'upright';
-                innerTextDiv.className = `h-full flex flex-row justify-center items-center`;
+                innerTextDiv.className = `max-h-full max-w-full inline-block`;
             } else {
                 innerTextDiv.className = `w-full flex flex-col ${isCenterAlign ? 'items-center justify-center' : block.style.align === 'right' ? 'items-end' : 'items-start'}`;
             }
             innerTextDiv.style.margin = '0';
             innerTextDiv.style.padding = '0';
-            innerTextDiv.style.lineHeight = block.style.vertical ? '1.12' : '1.18';
+            innerTextDiv.style.lineHeight = `${currentLineHeight}`;
+            innerTextDiv.style.letterSpacing = `${displayLetterSpacing}px`;
             innerTextDiv.style.textAlign = block.style.align || 'center';
 
             const warpOpts = {
@@ -334,7 +362,10 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
                 skewX: block.style.skewX || 0,
                 skewY: block.style.skewY || 0,
                 warpWave: block.style.warpWave || 0,
-                warpBulge: block.style.warpBulge || 0
+                warpBulge: block.style.warpBulge || 0,
+                textTransform: block.style.textTransform || 'none',
+                letterSpacing: displayLetterSpacing,
+                underline: !!block.style.underline
             };
             setMultilineText(innerTextDiv, block.translated, warpOpts);
 
@@ -524,7 +555,9 @@ export function wrapCanvasVerticalText(text, maxHeight, fontSizePx) {
 }
 
 export function balanceTextToDiamond(text, boxW, boxH) {
-    const words = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim().split(' ');
+    if (!text) return '';
+    const cleanText = text.replace(/\r\n/g, ' ').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+    const words = cleanText.split(' ');
     if (words.length <= 3) return words.join(' ');
 
     const wordCount = words.length;
@@ -532,16 +565,18 @@ export function balanceTextToDiamond(text, boxW, boxH) {
 
     if (boxW && boxH && boxH > 0) {
         const aspect = boxW / boxH;
-        if (aspect < 0.7) {
-            numLines = Math.min(wordCount, Math.max(3, Math.ceil(wordCount / 2.5)));
-        } else if (aspect > 1.4) {
-            numLines = Math.max(2, Math.min(4, Math.floor(wordCount / 4)));
+        if (aspect < 0.6) {
+            numLines = Math.min(wordCount, Math.max(3, Math.ceil(wordCount / 2.2)));
+        } else if (aspect < 0.9) {
+            numLines = Math.min(wordCount, Math.max(3, Math.ceil(wordCount / 3)));
+        } else if (aspect > 1.6) {
+            numLines = Math.max(2, Math.min(4, Math.floor(wordCount / 4.5)));
         } else {
-            numLines = wordCount <= 5 ? 3 : wordCount <= 10 ? 3 : 4;
+            numLines = wordCount <= 5 ? 2 : wordCount <= 9 ? 3 : wordCount <= 16 ? 4 : 5;
         }
     } else {
-        if (wordCount <= 5) numLines = 3;
-        else if (wordCount <= 10) numLines = 3;
+        if (wordCount <= 5) numLines = 2;
+        else if (wordCount <= 9) numLines = 3;
         else if (wordCount <= 16) numLines = 4;
         else numLines = 5;
     }
@@ -550,7 +585,7 @@ export function balanceTextToDiamond(text, boxW, boxH) {
     let weights = [];
     for (let i = 0; i < numLines; i++) {
         const y = -0.5 + (i + 0.5) / numLines;
-        const widthFactor = Math.sqrt(Math.max(0.08, 1 - 4 * y * y));
+        const widthFactor = Math.sqrt(Math.max(0.12, 1 - 4 * y * y));
         weights.push(widthFactor);
     }
     const totalWeight = weights.reduce((a, b) => a + b, 0);
@@ -570,6 +605,15 @@ export function balanceTextToDiamond(text, boxW, boxH) {
             sum--;
         } else {
             break;
+        }
+    }
+
+    // 🛡️ CHỐNG RỚT TỪ ĐƠN (Orphan Word Prevention): Không để dòng cuối chỉ có 1 từ nếu tổng số từ >= 4
+    if (lineCounts.length >= 2 && lineCounts[lineCounts.length - 1] === 1 && wordCount >= 4) {
+        const prevIdx = lineCounts.length - 2;
+        if (lineCounts[prevIdx] > 2) {
+            lineCounts[prevIdx]--;
+            lineCounts[lineCounts.length - 1]++;
         }
     }
 

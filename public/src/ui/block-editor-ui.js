@@ -210,13 +210,51 @@ function syncBlockStyleInputs(block) {
     if (btnHoriz) btnHoriz.className = isVert ? 'flex-1 py-1 text-[10px] rounded text-slate-400 hover:text-slate-200 font-bold transition-all flex items-center justify-center gap-1' : 'flex-1 py-1 text-[10px] rounded bg-indigo-600 text-white font-bold transition-all flex items-center justify-center gap-1';
     if (btnVert) btnVert.className = isVert ? 'flex-1 py-1 text-[10px] rounded bg-indigo-600 text-white font-bold transition-all flex items-center justify-center gap-1' : 'flex-1 py-1 text-[10px] rounded text-slate-400 hover:text-slate-200 font-bold transition-all flex items-center justify-center gap-1';
 
-    // Sync Bold Toggle Button
+    // Sync Text Style Toggles (Bold, Italic, Underline)
     const btnBold = document.getElementById('btn-toggle-bold');
     if (btnBold) {
         btnBold.className = block.style.bold
-            ? 'py-1 px-2 rounded-lg bg-indigo-600 border border-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition-all shadow'
-            : 'py-1 px-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-bold text-xs flex items-center justify-center gap-1 transition-all hover:border-indigo-500/50';
+            ? 'flex-1 py-1 px-1.5 rounded-lg bg-indigo-600 border border-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition-all shadow'
+            : 'flex-1 py-1 px-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-bold text-xs flex items-center justify-center gap-1 transition-all hover:border-indigo-500/50';
     }
+
+    const btnItalic = document.getElementById('btn-toggle-italic');
+    if (btnItalic) {
+        btnItalic.className = block.style.italic
+            ? 'flex-1 py-1 px-1.5 rounded-lg bg-indigo-600 border border-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition-all shadow'
+            : 'flex-1 py-1 px-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-bold text-xs flex items-center justify-center gap-1 transition-all hover:border-indigo-500/50';
+    }
+
+    const btnUnderline = document.getElementById('btn-toggle-underline');
+    if (btnUnderline) {
+        btnUnderline.className = block.style.underline
+            ? 'flex-1 py-1 px-1.5 rounded-lg bg-indigo-600 border border-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1 transition-all shadow'
+            : 'flex-1 py-1 px-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-bold text-xs flex items-center justify-center gap-1 transition-all hover:border-indigo-500/50';
+    }
+
+    // Sync Text Transform Buttons (none, uppercase, lowercase, capitalize)
+    const currentTransform = block.style.textTransform || 'none';
+    ['none', 'uppercase', 'lowercase', 'capitalize'].forEach(mode => {
+        const btn = document.getElementById(`btn-transform-${mode}`);
+        if (btn) {
+            btn.className = (mode === currentTransform)
+                ? 'flex-1 py-1 text-[10px] rounded bg-indigo-600 text-white font-bold transition-all flex items-center justify-center'
+                : 'flex-1 py-1 text-[10px] rounded text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center';
+        }
+    });
+
+    // Sync Line Height & Letter Spacing
+    const currentLineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : (block.style.vertical ? 1.12 : 1.18);
+    const sliderLineHeight = document.getElementById('slider-line-height');
+    const lblLineHeight = document.getElementById('lbl-line-height');
+    if (sliderLineHeight) sliderLineHeight.value = currentLineHeight;
+    if (lblLineHeight) lblLineHeight.innerText = `${currentLineHeight}`;
+
+    const currentLetterSpacing = block.style.letterSpacing !== undefined ? block.style.letterSpacing : 0;
+    const sliderLetterSpacing = document.getElementById('slider-letter-spacing');
+    const lblLetterSpacing = document.getElementById('lbl-letter-spacing');
+    if (sliderLetterSpacing) sliderLetterSpacing.value = currentLetterSpacing;
+    if (lblLetterSpacing) lblLetterSpacing.innerText = `${currentLetterSpacing}px`;
 
     syncColorAndOpacityInputs(block);
 }
@@ -227,15 +265,22 @@ function syncColorAndOpacityInputs(block) {
     const textColor = block.style.textColor || '#ffffff';
     const bgColor = block.style.bgColor || '#000000';
     const strokeColor = block.style.strokeColor || '#ffffff';
+    const strokeColor2 = block.style.strokeColor2 || '#000000';
     const shadowColor = block.style.shadowColor || '#000000';
 
     const textColorHex = block.style.textColorHex || textColor.toUpperCase();
     const bgColorHex = block.style.bgColorHex || bgColor.toUpperCase();
     const strokeColorHex = block.style.strokeColorHex || strokeColor.toUpperCase();
+    const strokeColor2Hex = block.style.strokeColor2Hex || strokeColor2.toUpperCase();
     const shadowColorHex = block.style.shadowColorHex || shadowColor.toUpperCase();
 
-    const bgOpacity = block.style.bgOpacity || 0;
-    const padding = block.style.padding || 0;
+    const bgOpacity = block.style.bgOpacity !== undefined ? block.style.bgOpacity : 100;
+    const padding = block.style.padding !== undefined ? block.style.padding : 4;
+    const strokeWidth = block.style.strokeWidth || 0;
+    const strokeWidth2 = block.style.strokeWidth2 || 0;
+    const shadowBlur = block.style.shadowBlur || 0;
+    const shadowOffsetX = block.style.shadowOffsetX || 0;
+    const shadowOffsetY = block.style.shadowOffsetY || 0;
 
     if (elements.styleTextColor) elements.styleTextColor.value = textColor;
     if (elements.styleTextColorHex) elements.styleTextColorHex.value = textColorHex;
@@ -246,8 +291,33 @@ function syncColorAndOpacityInputs(block) {
     if (elements.styleStrokeColor) elements.styleStrokeColor.value = strokeColor;
     if (elements.styleStrokeColorHex) elements.styleStrokeColorHex.value = strokeColorHex;
 
+    const pickerStroke2 = document.getElementById('style-stroke-color2');
+    const inputStroke2Hex = document.getElementById('style-stroke-color2-hex');
+    if (pickerStroke2) pickerStroke2.value = strokeColor2;
+    if (inputStroke2Hex) inputStroke2Hex.value = strokeColor2Hex;
+
+    const sliderStrokeWidth2 = document.getElementById('slider-stroke-width2');
+    const lblStrokeWidth2 = document.getElementById('lbl-stroke-width2');
+    if (sliderStrokeWidth2) sliderStrokeWidth2.value = strokeWidth2;
+    if (lblStrokeWidth2) lblStrokeWidth2.innerText = `${strokeWidth2}px`;
+
+    if (elements.styleStrokeWidth) elements.styleStrokeWidth.value = strokeWidth;
+    if (elements.lblStrokeWidth) elements.lblStrokeWidth.innerText = `${strokeWidth}px`;
+
     if (elements.styleShadowColor) elements.styleShadowColor.value = shadowColor;
     if (elements.styleShadowColorHex) elements.styleShadowColorHex.value = shadowColorHex;
+    if (elements.styleShadowBlur) elements.styleShadowBlur.value = shadowBlur;
+    if (elements.lblShadowBlur) elements.lblShadowBlur.innerText = `${shadowBlur}px`;
+
+    const sliderShadowOffX = document.getElementById('slider-shadow-offset-x');
+    const lblShadowOffX = document.getElementById('lbl-shadow-offset-x');
+    if (sliderShadowOffX) sliderShadowOffX.value = shadowOffsetX;
+    if (lblShadowOffX) lblShadowOffX.innerText = `${shadowOffsetX}px`;
+
+    const sliderShadowOffY = document.getElementById('slider-shadow-offset-y');
+    const lblShadowOffY = document.getElementById('lbl-shadow-offset-y');
+    if (sliderShadowOffY) sliderShadowOffY.value = shadowOffsetY;
+    if (lblShadowOffY) lblShadowOffY.innerText = `${shadowOffsetY}px`;
 
     if (elements.styleBgOpacity) {
         elements.styleBgOpacity.value = bgOpacity;

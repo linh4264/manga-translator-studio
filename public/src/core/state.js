@@ -8,6 +8,8 @@ import {
     DEFAULT_INPAINT_METHOD,
     DEFAULT_AI_BLOCK_BOX,
     DEFAULT_VERTICAL_WRITING_MODE,
+    DEFAULT_BLOCK_STYLE,
+    PRO_STYLE_PRESETS,
     MAX_HISTORY_LIMIT,
     TRANSLATION_GENRE_PRESETS,
     COMIC_UNIVERSE_PRESETS,
@@ -21,6 +23,8 @@ export {
     DEFAULT_OCR_MODEL,
     DEFAULT_TRANSLATION_MODEL,
     DEFAULT_INPAINT_METHOD,
+    DEFAULT_BLOCK_STYLE,
+    PRO_STYLE_PRESETS,
     CUSTOM_MODEL_VALUE,
     VALID_MODEL_IDS,
     VALID_OCR_MODEL_IDS,
@@ -144,22 +148,9 @@ export const globalState = {
     maxRetries: 3,     // Số lần thử lại tối đa khi gặp lỗi API tạm thời
     // Global style presets for new/default blocks
     globalStyle: {
+        ...DEFAULT_BLOCK_STYLE,
         fontFamily: localStorage.getItem('manga_default_font') || 'font-manga',
-        fontSize: 13,
-        textColor: '#000000',
-        bgColor: '#ffffff',
-        bgOpacity: 100,
-        padding: 4,
-        rotate: 0,
-        vertical: DEFAULT_VERTICAL_WRITING_MODE,
-        bold: false,
-        align: 'center',
-        maskShape: 'bubble-fit', // Default to bubble-fit for perfect speech bubble fitting
-        maskSize: 'full',      // Default to full width to perfectly erase old text
-        strokeColor: '#ffffff',
-        strokeWidth: 0,
-        shadowColor: '#000000',
-        shadowBlur: 0
+        vertical: DEFAULT_VERTICAL_WRITING_MODE
     }
 };
 

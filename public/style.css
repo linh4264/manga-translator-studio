@@ -568,6 +568,13 @@ button.bg-black,
     text-orientation: upright;
 }
 
+.text-vertical,
+.text-vertical * {
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+}
+
 .bubble-text-span {
     -webkit-font-smoothing: antialiased;
     paint-order: stroke fill;
@@ -687,4 +694,21 @@ button.bg-black,
     #workspace-split-wrapper>div { width: 100%; }
     #workspace-split-wrapper img { max-width: 100% !important; width: 100%; }
     #manga-canvas-container { width: 100%; max-width: 100%; }
+}
+
+/* Custom Scrollbar for Presets & Panels */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.4);
+    border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.8);
 }

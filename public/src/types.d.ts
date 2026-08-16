@@ -12,21 +12,45 @@ export interface BoundingBox {
 export interface BlockStyle {
     fontFamily: string;
     fontSize: number;
+    lineHeight?: number;
+    letterSpacing?: number;
+    textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
+    italic?: boolean;
+    underline?: boolean;
     textColor: string;
+    textColorHex?: string;
     bgColor: string;
+    bgColorHex?: string;
     bgOpacity: number;
     padding: number;
     rotate: number;
     vertical: boolean;
     bold: boolean;
     align: 'left' | 'center' | 'right';
-    maskShape: 'bubble-fit' | 'ellipse' | 'rounded' | 'rectangle';
+    maskShape: 'bubble-fit' | 'ellipse' | 'rounded' | 'rectangle' | 'rect' | 'none';
     maskSize: 'full' | 'snug';
     strokeColor: string;
+    strokeColorHex?: string;
     strokeWidth: number;
+    strokeColor2?: string;
+    strokeColor2Hex?: string;
+    strokeWidth2?: number;
     shadowColor: string;
+    shadowColorHex?: string;
     shadowBlur: number;
+    shadowOffsetX?: number;
+    shadowOffsetY?: number;
+    arcAngle?: number;
+    skewX?: number;
+    skewY?: number;
+    warpWave?: number;
+    warpBulge?: number;
     gender?: 'male' | 'female' | 'neutral';
+    autoFit?: boolean;
+    fit?: 'contain' | 'cover' | 'fill';
+    opacity?: number;
+    borderRadius?: number;
+    bilingualSub?: boolean;
 }
 
 export interface MangaBlock {

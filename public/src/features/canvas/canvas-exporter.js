@@ -1,6 +1,6 @@
 import { globalState } from '../../core/state.js';
 import { elements } from '../../core/elements.js';
-import { waitForNextPaint } from '../../core/utils.js';
+import { waitForNextPaint, transformCase } from '../../core/utils.js';
 import { computeBubbleMask } from '../ocr/ocr-service.js';
 import { renderOverlays, convertHexToRGBA, wrapCanvasText, wrapCanvasVerticalText } from './canvas-renderer.js';
 
@@ -302,9 +302,10 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
             if (!displayWidth || isNaN(displayWidth)) displayWidth = 800;
             const scaleFactor = W / Math.max(1, displayWidth);
             const fontSizePx = (block.style.fontSize || 16) * scaleFactor;
-            const fontWeight = block.style.bold ? 'bold' : 'normal';
+            const fontWeight = block.style.bold ? 'bold ' : '';
+            const fontItalic = block.style.italic ? 'italic ' : '';
 
-            const fontSpec = `${fontWeight} ${fontSizePx}px ${fontName}`;
+            const fontSpec = `${fontItalic}${fontWeight}${fontSizePx}px ${fontName}`;
             ctx.font = fontSpec;
             try {
                 if (document.fonts && document.fonts.load) {
@@ -314,14 +315,28 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
             } catch (e) {}
             ctx.fillStyle = block.style.textColor || '#000000';
 
+            const letterSpacingPx = (block.style.letterSpacing || 0) * scaleFactor;
+            if ('letterSpacing' in ctx) {
+                ctx.letterSpacing = `${letterSpacingPx}px`;
+            }
+
             const paddingPx = (block.style.padding !== undefined ? block.style.padding : 4) * scaleFactor;
             const strokeWidth = parseFloat(block.style.strokeWidth) || 0;
             const strokeColor = block.style.strokeColor || '#ffffff';
             const strokeWidthPx = strokeWidth * scaleFactor;
 
+            const strokeWidth2 = parseFloat(block.style.strokeWidth2) || 0;
+            const strokeColor2 = block.style.strokeColor2 || '#000000';
+            const strokeWidth2Px = strokeWidth2 * scaleFactor;
+
             const shadowBlur = parseFloat(block.style.shadowBlur) || 0;
             const shadowColor = block.style.shadowColor || '#000000';
             const shadowBlurPx = shadowBlur * scaleFactor;
+            const shadowOffsetX = (parseFloat(block.style.shadowOffsetX) || 0) * scaleFactor;
+            const shadowOffsetY = (parseFloat(block.style.shadowOffsetY) || 0) * scaleFactor;
+
+            const transformedText = transformCase(block.translated, block.style.textTransform || 'none');
+            const currentLineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : (block.style.vertical ? 1.12 : 1.18);
 
             let textLines = [];
             let columns = [];
@@ -330,17 +345,17 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
 
             if (block.style.vertical) {
                 const maxColHeight = Math.max(10, bh - (paddingPx * 2));
-                columns = wrapCanvasVerticalText(block.translated, maxColHeight, fontSizePx);
-                const colStep = fontSizePx * 1.12;
-                const charStep = fontSizePx * 1.12;
+                columns = wrapCanvasVerticalText(transformedText, maxColHeight, fontSizePx);
+                const colStep = fontSizePx * currentLineHeight;
+                const charStep = fontSizePx * currentLineHeight;
                 totalTextWidth = columns.length * colStep;
                 let maxColLength = 0;
                 columns.forEach(c => { if (c.length > maxColLength) maxColLength = c.length; });
                 totalTextHeight = maxColLength * charStep;
             } else {
                 const maxTextWidth = Math.max(10, bw - (paddingPx * 2));
-                textLines = wrapCanvasText(ctx, block.translated, maxTextWidth);
-                const lineHeight = fontSizePx * 1.18;
+                textLines = wrapCanvasText(ctx, transformedText, maxTextWidth);
+                const lineHeight = fontSizePx * currentLineHeight;
                 totalTextHeight = textLines.length * lineHeight;
                 let maxLineWidth = 0;
                 textLines.forEach(line => {
@@ -350,7 +365,7 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                 totalTextWidth = maxLineWidth;
             }
 
-            ctx.font = `${fontWeight} ${fontSizePx}px ${fontName}`;
+            ctx.font = `${fontItalic}${fontWeight}${fontSizePx}px ${fontName}`;
             ctx.fillStyle = block.style.textColor || '#000000';
 
             const arcAngle = block.style.arcAngle || 0;
@@ -363,8 +378,8 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
             const hasCharWarp = (arcAngle !== 0) || (warpWave !== 0) || (warpBulge !== 0);
 
             if (block.style.vertical) {
-                const colStep = fontSizePx * 1.12;
-                const charStep = fontSizePx * 1.12;
+                const colStep = fontSizePx * currentLineHeight;
+                const charStep = fontSizePx * currentLineHeight;
                 let rightX = bx + bw / 2 + totalTextWidth / 2 - colStep / 2;
 
                 for (let j = 0; j < columns.length; j++) {
@@ -412,16 +427,37 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
 
                         ctx.save();
                         ctx.translate(charX, charY);
+                        if (char === '…' || char === '―' || char === '—' || char === '~' || char === '～' || char === '-') {
+                            ctx.rotate(Math.PI / 2);
+                        }
                         if (rotRad !== 0) ctx.rotate(rotRad);
                         if (bulgeScale !== 1) ctx.scale(bulgeScale, bulgeScale);
 
-                        if (strokeWidth > 0) {
+                        // Viền 2 (Outer Stroke / Glow)
+                        if (strokeWidth2 > 0) {
                             ctx.save();
-                            if (shadowBlur > 0) {
+                            if (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0) {
                                 ctx.shadowColor = shadowColor;
                                 ctx.shadowBlur = shadowBlurPx;
-                                ctx.shadowOffsetX = 0;
-                                ctx.shadowOffsetY = 0;
+                                ctx.shadowOffsetX = shadowOffsetX;
+                                ctx.shadowOffsetY = shadowOffsetY;
+                            }
+                            ctx.lineWidth = strokeWidthPx + (strokeWidth2Px * 2);
+                            ctx.strokeStyle = strokeColor2;
+                            ctx.lineJoin = 'round';
+                            ctx.miterLimit = 2;
+                            ctx.strokeText(char, 0, 0);
+                            ctx.restore();
+                        }
+
+                        // Viền 1 (Primary Stroke)
+                        if (strokeWidth > 0) {
+                            ctx.save();
+                            if (strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
+                                ctx.shadowColor = shadowColor;
+                                ctx.shadowBlur = shadowBlurPx;
+                                ctx.shadowOffsetX = shadowOffsetX;
+                                ctx.shadowOffsetY = shadowOffsetY;
                             }
                             ctx.lineWidth = strokeWidthPx;
                             ctx.strokeStyle = strokeColor;
@@ -431,12 +467,13 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                             ctx.restore();
                         }
 
+                        // Thân chữ (Fill Text)
                         ctx.save();
-                        if (strokeWidth === 0 && shadowBlur > 0) {
+                        if (strokeWidth === 0 && strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
                             ctx.shadowColor = shadowColor;
                             ctx.shadowBlur = shadowBlurPx;
-                            ctx.shadowOffsetX = 0;
-                            ctx.shadowOffsetY = 0;
+                            ctx.shadowOffsetX = shadowOffsetX;
+                            ctx.shadowOffsetY = shadowOffsetY;
                         }
                         ctx.fillStyle = block.style.textColor || '#000000';
                         ctx.fillText(char, 0, 0);
@@ -447,7 +484,7 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                     ctx.restore();
                 }
             } else {
-                const lineHeight = fontSizePx * 1.18;
+                const lineHeight = fontSizePx * currentLineHeight;
                 let startY = by + (bh / 2) - (totalTextHeight / 2) + (lineHeight / 2) - (fontSizePx * 0.05);
                 const minStartY = by + paddingPx + (lineHeight / 2);
                 if (startY < minStartY) startY = minStartY;
@@ -509,13 +546,31 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                             if (rotRad !== 0) ctx.rotate(rotRad);
                             if (bulgeScale !== 1) ctx.scale(bulgeScale, bulgeScale);
 
-                            if (strokeWidth > 0) {
+                            // Viền 2 (Outer Stroke / Glow)
+                            if (strokeWidth2 > 0) {
                                 ctx.save();
-                                if (shadowBlur > 0) {
+                                if (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0) {
                                     ctx.shadowColor = shadowColor;
                                     ctx.shadowBlur = shadowBlurPx;
-                                    ctx.shadowOffsetX = 0;
-                                    ctx.shadowOffsetY = 0;
+                                    ctx.shadowOffsetX = shadowOffsetX;
+                                    ctx.shadowOffsetY = shadowOffsetY;
+                                }
+                                ctx.lineWidth = strokeWidthPx + (strokeWidth2Px * 2);
+                                ctx.strokeStyle = strokeColor2;
+                                ctx.lineJoin = 'round';
+                                ctx.miterLimit = 2;
+                                ctx.strokeText(char, 0, 0);
+                                ctx.restore();
+                            }
+
+                            // Viền 1 (Primary Stroke)
+                            if (strokeWidth > 0) {
+                                ctx.save();
+                                if (strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
+                                    ctx.shadowColor = shadowColor;
+                                    ctx.shadowBlur = shadowBlurPx;
+                                    ctx.shadowOffsetX = shadowOffsetX;
+                                    ctx.shadowOffsetY = shadowOffsetY;
                                 }
                                 ctx.lineWidth = strokeWidthPx;
                                 ctx.strokeStyle = strokeColor;
@@ -525,12 +580,13 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                                 ctx.restore();
                             }
 
+                            // Thân chữ (Fill Text)
                             ctx.save();
-                            if (strokeWidth === 0 && shadowBlur > 0) {
+                            if (strokeWidth === 0 && strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
                                 ctx.shadowColor = shadowColor;
                                 ctx.shadowBlur = shadowBlurPx;
-                                ctx.shadowOffsetX = 0;
-                                ctx.shadowOffsetY = 0;
+                                ctx.shadowOffsetX = shadowOffsetX;
+                                ctx.shadowOffsetY = shadowOffsetY;
                             }
                             ctx.fillStyle = block.style.textColor || '#000000';
                             ctx.fillText(char, 0, 0);
@@ -542,13 +598,32 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                         }
                     } else {
                         ctx.textAlign = block.style.align || 'center';
-                        if (strokeWidth > 0) {
+
+                        // Viền 2 (Outer Stroke / Glow)
+                        if (strokeWidth2 > 0) {
                             ctx.save();
-                            if (shadowBlur > 0) {
+                            if (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0) {
                                 ctx.shadowColor = shadowColor;
                                 ctx.shadowBlur = shadowBlurPx;
-                                ctx.shadowOffsetX = 0;
-                                ctx.shadowOffsetY = 0;
+                                ctx.shadowOffsetX = shadowOffsetX;
+                                ctx.shadowOffsetY = shadowOffsetY;
+                            }
+                            ctx.lineWidth = strokeWidthPx + (strokeWidth2Px * 2);
+                            ctx.strokeStyle = strokeColor2;
+                            ctx.lineJoin = 'round';
+                            ctx.miterLimit = 2;
+                            ctx.strokeText(lineText, startX, lineY);
+                            ctx.restore();
+                        }
+
+                        // Viền 1 (Primary Stroke)
+                        if (strokeWidth > 0) {
+                            ctx.save();
+                            if (strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
+                                ctx.shadowColor = shadowColor;
+                                ctx.shadowBlur = shadowBlurPx;
+                                ctx.shadowOffsetX = shadowOffsetX;
+                                ctx.shadowOffsetY = shadowOffsetY;
                             }
                             ctx.lineWidth = strokeWidthPx;
                             ctx.strokeStyle = strokeColor;
@@ -558,16 +633,36 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                             ctx.restore();
                         }
 
+                        // Thân chữ (Fill Text)
                         ctx.save();
-                        if (strokeWidth === 0 && shadowBlur > 0) {
+                        if (strokeWidth === 0 && strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
                             ctx.shadowColor = shadowColor;
                             ctx.shadowBlur = shadowBlurPx;
-                            ctx.shadowOffsetX = 0;
-                            ctx.shadowOffsetY = 0;
+                            ctx.shadowOffsetX = shadowOffsetX;
+                            ctx.shadowOffsetY = shadowOffsetY;
                         }
                         ctx.fillStyle = block.style.textColor || '#000000';
                         ctx.fillText(lineText, startX, lineY);
                         ctx.restore();
+
+                        // Gạch chân (Underline)
+                        if (block.style.underline) {
+                            const textMetrics = ctx.measureText(lineText);
+                            const textW = textMetrics.width;
+                            let lineStartX = startX - textW / 2;
+                            if (block.style.align === 'left') lineStartX = startX;
+                            else if (block.style.align === 'right') lineStartX = startX - textW;
+
+                            ctx.save();
+                            ctx.strokeStyle = block.style.textColor || '#000000';
+                            ctx.lineWidth = Math.max(1, fontSizePx * 0.08);
+                            ctx.beginPath();
+                            const underlineY = lineY + (fontSizePx * 0.55);
+                            ctx.moveTo(lineStartX, underlineY);
+                            ctx.lineTo(lineStartX + textW, underlineY);
+                            ctx.stroke();
+                            ctx.restore();
+                        }
                     }
                     ctx.restore();
                 }

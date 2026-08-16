@@ -1,6 +1,6 @@
-import { globalState, pushStateToHistory, savePageToDB, debounceSavePage, uiUpdateActiveBlockEditor, markPageAutoFitDirty } from '../../core/state.js';
+import { globalState, pushStateToHistory, savePageToDB, debounceSavePage, uiUpdateActiveBlockEditor, markPageAutoFitDirty, PRO_STYLE_PRESETS } from '../../core/state.js';
 import { elements } from '../../core/elements.js';
-import { showToast, setMultilineText } from '../../core/utils.js';
+import { showToast, setMultilineText, cleanMangaPunctuation, transformCase } from '../../core/utils.js';
 import { requestOverlayRender } from './canvas-renderer.js';
 import { updateFloatingToolbarPosition } from './canvas-interactions.js';
 
@@ -54,7 +54,14 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
 
     const maskShape = block.style.maskShape || 'bubble-fit';
     const strokeWidth = block.style.strokeWidth || 0;
-    const cacheKey = `${block.translated}_${block.box.w}_${block.box.h}_${block.style.fontFamily}_${block.style.padding}_${strokeWidth}_${block.style.vertical}_${block.style.bold}_${block.style.italic}_${block.style.align}_${maskShape}_${Math.round(displayWidth)}_${Math.round(displayHeight)}`;
+    const strokeWidth2 = block.style.strokeWidth2 || 0;
+    const lineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : (block.style.vertical ? 1.12 : 1.18);
+    const letterSpacing = block.style.letterSpacing || 0;
+    const textTransform = block.style.textTransform || 'none';
+    const isItalic = !!block.style.italic;
+    const isUnderline = !!block.style.underline;
+
+    const cacheKey = `${block.translated}_${block.box.w}_${block.box.h}_${block.style.fontFamily}_${block.style.padding}_${strokeWidth}_${strokeWidth2}_${block.style.vertical}_${block.style.bold}_${isItalic}_${isUnderline}_${lineHeight}_${letterSpacing}_${textTransform}_${block.style.align}_${maskShape}_${Math.round(displayWidth)}_${Math.round(displayHeight)}`;
     if (block.autoFitCache && block.autoFitCache.key === cacheKey) {
         block.style.fontSize = block.autoFitCache.fontSize;
         block.textWidth = block.autoFitCache.textWidth;
@@ -81,7 +88,8 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
     const padding = block.style.padding !== undefined ? block.style.padding : 4;
     ruler.style.padding = `${padding}px`;
     ruler.style.textAlign = block.style.align || 'center';
-    ruler.style.letterSpacing = '0';
+    ruler.style.letterSpacing = `${letterSpacing}px`;
+    ruler.style.lineHeight = `${lineHeight}`;
     ruler.style.fontKerning = 'normal';
     ruler.style.whiteSpace = 'pre-wrap';
     ruler.style.wordBreak = 'keep-all';
@@ -95,22 +103,26 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
         ruler.style.fontWeight = 'normal';
     }
 
-    if (block.style.italic) {
+    if (isItalic) {
         ruler.style.fontStyle = 'italic';
     } else {
         ruler.style.fontStyle = 'normal';
+    }
+
+    if (isUnderline) {
+        ruler.style.textDecoration = 'underline';
+    } else {
+        ruler.style.textDecoration = 'none';
     }
 
     if (block.style.vertical) {
         ruler.classList.add('text-vertical');
         ruler.style.writingMode = 'vertical-rl';
         ruler.style.textOrientation = 'upright';
-        ruler.style.lineHeight = '1.12';
     } else {
         ruler.classList.remove('text-vertical');
         ruler.style.writingMode = 'horizontal-tb';
         ruler.style.textOrientation = 'mixed';
-        ruler.style.lineHeight = '1.18';
     }
 
     const targetWidth = (block.box.w / 100) * displayWidth;
@@ -118,14 +130,15 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
 
     const isEllipseShape = maskShape === 'ellipse' || maskShape === 'bubble-fit';
     const fitMargin = isEllipseShape ? 0.88 : 0.94;
-    const maxAllowedWidth = Math.max(10, (targetWidth * fitMargin) - strokeWidth * 2);
-    const maxAllowedHeight = Math.max(10, (targetHeight * fitMargin) - strokeWidth * 2);
+    const totalExtraBorder = (strokeWidth + strokeWidth2) * 2;
+    const maxAllowedWidth = Math.max(10, (targetWidth * fitMargin) - totalExtraBorder);
+    const maxAllowedHeight = Math.max(10, (targetHeight * fitMargin) - totalExtraBorder);
 
     if (block.style.vertical) {
-        ruler.style.height = 'auto';
-        ruler.style.maxHeight = 'none';
+        ruler.style.height = `${maxAllowedHeight}px`;
+        ruler.style.maxHeight = `${maxAllowedHeight}px`;
         ruler.style.width = 'auto';
-        ruler.style.maxWidth = 'none';
+        ruler.style.maxWidth = `${maxAllowedWidth}px`;
     } else {
         ruler.style.width = `${maxAllowedWidth}px`;
         ruler.style.maxWidth = `${maxAllowedWidth}px`;
@@ -138,7 +151,10 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
         skewX: block.style.skewX || 0,
         skewY: block.style.skewY || 0,
         warpWave: block.style.warpWave || 0,
-        warpBulge: block.style.warpBulge || 0
+        warpBulge: block.style.warpBulge || 0,
+        textTransform: textTransform,
+        letterSpacing: letterSpacing,
+        underline: isUnderline
     };
     setMultilineText(ruler, block.translated, warpOpts);
 
@@ -342,83 +358,24 @@ export function applyStylePreset(presetKey) {
 
     pushStateToHistory();
 
-    const presets = {
-        dialogue: {
-            fontFamily: 'font-manga',
-            bold: true,
-            textColor: '#000000',
-            bgColor: '#ffffff',
-            bgOpacity: 100,
-            strokeWidth: 0,
-            shadowBlur: 0,
-            maskShape: 'bubble-fit',
-            align: 'center'
-        },
-        scream: {
-            fontFamily: 'font-impact',
-            bold: true,
-            textColor: '#ffffff',
-            bgColor: '#ffffff',
-            bgOpacity: 0,
-            strokeColor: '#000000',
-            strokeWidth: 4,
-            shadowColor: '#000000',
-            shadowBlur: 2,
-            maskShape: 'none',
-            align: 'center'
-        },
-        whisper: {
-            fontFamily: 'font-caveat',
-            bold: false,
-            textColor: '#555555',
-            bgColor: '#ffffff',
-            bgOpacity: 60,
-            strokeWidth: 0,
-            shadowBlur: 0,
-            maskShape: 'ellipse',
-            align: 'center'
-        },
-        narration: {
-            fontFamily: 'font-vietnamese',
-            bold: true,
-            textColor: '#000000',
-            bgColor: '#ffffff',
-            bgOpacity: 95,
-            strokeWidth: 0,
-            shadowBlur: 0,
-            maskShape: 'rect',
-            align: 'left'
-        }
+    const legacyMap = {
+        'manga-std': 'dialogue',
+        'shout-sfx': 'scream',
+        'whisper-old': 'whisper',
+        'no-bg-stroke4': 'transparent_sfx',
+        'outline-4px': 'transparent_sfx',
+        'transparent-stroke4': 'transparent_sfx'
     };
 
-    presets['manga-std'] = presets.dialogue;
-    presets['shout-sfx'] = presets.scream;
-    presets['whisper-old'] = presets.whisper;
-    presets['transparent-stroke4'] = {
-        bgOpacity: 0,
-        strokeWidth: 4,
-        strokeColor: block.style?.textColor?.toLowerCase() === '#000000' ? '#ffffff' : (block.style?.strokeColor || '#000000')
-    };
-    presets['no-bg-stroke4'] = presets['transparent-stroke4'];
-    presets['outline-4px'] = presets['transparent-stroke4'];
-    presets['horror'] = {
-        fontFamily: 'font-marker',
-        bold: true,
-        textColor: '#ffffff',
-        bgColor: '#000000',
-        bgOpacity: 0,
-        strokeColor: '#ff0000',
-        strokeWidth: 2,
-        shadowColor: '#000000',
-        shadowBlur: 3,
-        maskShape: 'none',
-        align: 'center'
-    };
+    const targetKey = legacyMap[presetKey] || presetKey;
+    const targetPreset = PRO_STYLE_PRESETS[targetKey];
 
-    const targetPreset = presets[presetKey];
-    if (!targetPreset) return;
+    if (!targetPreset) {
+        showToast(`Không tìm thấy mẫu định dạng "${presetKey}"`, "warn");
+        return;
+    }
 
-    Object.assign(block.style, targetPreset);
+    Object.assign(block.style, JSON.parse(JSON.stringify(targetPreset.style)));
     block.maskCache = null;
     block.autoFitCache = null;
     markPageAutoFitDirty(page);
@@ -427,12 +384,7 @@ export function applyStylePreset(presetKey) {
     updateFloatingToolbarPosition();
     savePageToDB(page);
 
-    const label = presetKey === 'dialogue' || presetKey === 'manga-std' ? 'Thoại thường' :
-        presetKey === 'scream' || presetKey === 'shout-sfx' ? 'Hét lớn / SFX' :
-            presetKey === 'whisper' ? 'Thầm thì' :
-                presetKey === 'narration' ? 'Dẫn truyện' :
-                    presetKey === 'transparent-stroke4' || presetKey === 'no-bg-stroke4' ? 'Nền 0% & Viền 4px' : 'Preset';
-    showToast(`💥 Đã áp dụng mẫu chữ "${label}"`, "success");
+    showToast(`💥 Đã áp dụng mẫu chữ "${targetPreset.name}"`, "success");
 }
 
 export function copyBlockStyle() {
@@ -486,7 +438,9 @@ export function syncActiveBlockStyle(property, value) {
 
         const rangeProperties = [
             'fontSize', 'bgOpacity', 'padding', 'rotate',
-            'strokeWidth', 'shadowBlur', 'arcAngle', 'skewX', 'skewY', 'warpWave', 'warpBulge'
+            'lineHeight', 'letterSpacing',
+            'strokeWidth', 'strokeWidth2', 'shadowBlur', 'shadowOffsetX', 'shadowOffsetY',
+            'arcAngle', 'skewX', 'skewY', 'warpWave', 'warpBulge'
         ];
         if (rangeProperties.includes(property)) {
             if (!isCurrentlySliding) {
@@ -508,6 +462,7 @@ export function syncActiveBlockStyle(property, value) {
 
         block.style[property] = value;
 
+        // Sync UI labels
         if (property === 'fontSize') {
             if (elements.lblFontSize) elements.lblFontSize.innerText = `${value}px`;
             if (elements.styleFontSize) elements.styleFontSize.value = value;
@@ -518,12 +473,27 @@ export function syncActiveBlockStyle(property, value) {
         } else if (property === 'rotate') {
             if (elements.lblRotate) elements.lblRotate.innerText = `${value}°`;
             if (elements.styleRotate) elements.styleRotate.value = value;
+        } else if (property === 'lineHeight') {
+            const lbl = document.getElementById('lbl-line-height');
+            if (lbl) lbl.innerText = `${value}`;
+        } else if (property === 'letterSpacing') {
+            const lbl = document.getElementById('lbl-letter-spacing');
+            if (lbl) lbl.innerText = `${value}px`;
         } else if (property === 'strokeWidth') {
             if (elements.lblStrokeWidth) elements.lblStrokeWidth.innerText = `${value}px`;
             if (elements.styleStrokeWidth) elements.styleStrokeWidth.value = value;
+        } else if (property === 'strokeWidth2') {
+            const lbl = document.getElementById('lbl-stroke-width2');
+            if (lbl) lbl.innerText = `${value}px`;
         } else if (property === 'shadowBlur') {
             if (elements.lblShadowBlur) elements.lblShadowBlur.innerText = `${value}px`;
             if (elements.styleShadowBlur) elements.styleShadowBlur.value = value;
+        } else if (property === 'shadowOffsetX') {
+            const lbl = document.getElementById('lbl-shadow-offset-x');
+            if (lbl) lbl.innerText = `${value}px`;
+        } else if (property === 'shadowOffsetY') {
+            const lbl = document.getElementById('lbl-shadow-offset-y');
+            if (lbl) lbl.innerText = `${value}px`;
         }
 
         block.maskCache = null;
@@ -771,14 +741,209 @@ export function resetSfxAngleControls() {
     resetWarpTransformControls();
 }
 
-window.applyStylePreset = applyStylePreset;
-window.updateSfxSkewX = updateSfxSkewX;
-window.updateSfxSkewY = updateSfxSkewY;
-window.updateSfxWave = updateSfxWave;
-window.updateSfxBulge = updateSfxBulge;
-window.updateSfxArc = updateSfxArc;
-window.updateSfxRotate = updateSfxRotate;
-window.resetWarpTransformControls = resetWarpTransformControls;
-window.resetSfxAngleControls = resetSfxAngleControls;
-window.toggleActiveBlockBold = toggleActiveBlockBold;
-window.alignActiveBlockPosition = alignActiveBlockPosition;
+export function toggleActiveBlockItalic() {
+    const activePage = globalState.pages[globalState.activePageIndex];
+    if (!activePage || !globalState.selectedBlockId) return;
+    const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!block) return;
+    const newItalic = !block.style.italic;
+    syncActiveBlockStyle('italic', newItalic);
+}
+
+export function toggleActiveBlockUnderline() {
+    const activePage = globalState.pages[globalState.activePageIndex];
+    if (!activePage || !globalState.selectedBlockId) return;
+    const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!block) return;
+    const newUnderline = !block.style.underline;
+    syncActiveBlockStyle('underline', newUnderline);
+}
+
+export function setActiveBlockTextTransform(transformMode) {
+    const activePage = globalState.pages[globalState.activePageIndex];
+    if (!activePage || !globalState.selectedBlockId) return;
+    const block = activePage.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!block) return;
+    syncActiveBlockStyle('textTransform', transformMode);
+}
+
+export function updateLineHeight(val) {
+    const num = parseFloat(val) || 1.18;
+    syncActiveBlockStyle('lineHeight', num);
+}
+
+export function updateLetterSpacing(val) {
+    const num = parseFloat(val) || 0;
+    syncActiveBlockStyle('letterSpacing', num);
+}
+
+export function updateStrokeWidth2(val) {
+    const num = parseFloat(val) || 0;
+    syncActiveBlockStyle('strokeWidth2', num);
+}
+
+export function syncStrokeColor2Hex(val) {
+    let color = val;
+    if (color && !color.startsWith('#') && color.length <= 6) {
+        color = '#' + color;
+    }
+    const picker = document.getElementById('style-stroke-color2');
+    const hexInput = document.getElementById('style-stroke-color2-hex');
+    if (picker) picker.value = color;
+    if (hexInput) hexInput.value = color.toUpperCase();
+    syncActiveBlockStyle('strokeColor2', color);
+}
+
+export function updateShadowOffsetX(val) {
+    const num = parseInt(val, 10) || 0;
+    syncActiveBlockStyle('shadowOffsetX', num);
+}
+
+export function updateShadowOffsetY(val) {
+    const num = parseInt(val, 10) || 0;
+    syncActiveBlockStyle('shadowOffsetY', num);
+}
+
+export function cleanActiveBlockPunctuation() {
+    if (globalState.activePageIndex === -1 || !globalState.selectedBlockId) {
+        showToast("Vui lòng chọn ô thoại để dọn dẹp dấu câu.", "warn");
+        return;
+    }
+    const page = globalState.pages[globalState.activePageIndex];
+    const block = page?.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!block || !block.translated) return;
+
+    pushStateToHistory();
+    const cleaned = cleanMangaPunctuation(block.translated);
+    if (cleaned !== block.translated) {
+        block.translated = cleaned;
+        if (elements.editTranslatedText) elements.editTranslatedText.value = cleaned;
+        syncActiveBlockTranslation(cleaned);
+        requestOverlayRender();
+        savePageToDB(page);
+        showToast("✨ Đã chuẩn hóa dấu câu Manga thành công!", "success");
+    } else {
+        showToast("Dấu câu đã chuẩn định dạng Manga.", "info");
+    }
+}
+
+export function cleanAllBlocksPunctuation() {
+    if (globalState.activePageIndex === -1) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    if (!page || !page.blocks || page.blocks.length === 0) return;
+
+    pushStateToHistory();
+    let count = 0;
+    page.blocks.forEach(b => {
+        if (b.translated) {
+            const cleaned = cleanMangaPunctuation(b.translated);
+            if (cleaned !== b.translated) {
+                b.translated = cleaned;
+                b.autoFitCache = null;
+                count++;
+            }
+        }
+    });
+
+    if (count > 0) {
+        markPageAutoFitDirty(page);
+        requestOverlayRender();
+        uiUpdateActiveBlockEditor();
+        savePageToDB(page);
+        showToast(`✨ Đã chuẩn hóa dấu câu cho ${count} ô thoại trên trang này!`, "success");
+    } else {
+        showToast("Tất cả dấu câu trên trang đã chuẩn Manga.", "info");
+    }
+}
+
+export function applyCurrentStyleToPage() {
+    if (globalState.activePageIndex === -1 || !globalState.selectedBlockId) {
+        showToast("Vui lòng chọn ô thoại mẫu trước khi áp dụng toàn trang.", "warn");
+        return;
+    }
+    const page = globalState.pages[globalState.activePageIndex];
+    const sourceBlock = page?.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!sourceBlock || !sourceBlock.style) return;
+
+    pushStateToHistory();
+    const styleCopy = JSON.parse(JSON.stringify(sourceBlock.style));
+    let count = 0;
+
+    page.blocks.forEach(b => {
+        if (b.id !== sourceBlock.id && b.type !== 'image') {
+            b.style = JSON.parse(JSON.stringify(styleCopy));
+            b.autoFitCache = null;
+            b.maskCache = null;
+            count++;
+        }
+    });
+
+    markPageAutoFitDirty(page);
+    requestOverlayRender();
+    uiUpdateActiveBlockEditor();
+    savePageToDB(page);
+    showToast(`🎨 Đã đồng bộ style cho ${count} ô thoại trên trang!`, "success");
+}
+
+export function applyCurrentStyleToAllPages() {
+    if (globalState.activePageIndex === -1 || !globalState.selectedBlockId) {
+        showToast("Vui lòng chọn ô thoại mẫu trước khi áp dụng toàn bộ chương.", "warn");
+        return;
+    }
+    const page = globalState.pages[globalState.activePageIndex];
+    const sourceBlock = page?.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!sourceBlock || !sourceBlock.style) return;
+
+    if (!confirm("Bạn có chắc chắn muốn áp dụng định dạng của ô thoại này cho TOÀN BỘ các ô thoại trong TẤT CẢ các trang?")) {
+        return;
+    }
+
+    pushStateToHistory();
+    const styleCopy = JSON.parse(JSON.stringify(sourceBlock.style));
+    let totalCount = 0;
+
+    globalState.pages.forEach(p => {
+        (p.blocks || []).forEach(b => {
+            if (b.type !== 'image') {
+                b.style = JSON.parse(JSON.stringify(styleCopy));
+                b.autoFitCache = null;
+                b.maskCache = null;
+                totalCount++;
+            }
+        });
+        savePageToDB(p);
+    });
+
+    markPageAutoFitDirty(page);
+    requestOverlayRender();
+    uiUpdateActiveBlockEditor();
+    showToast(`⚡ Đã đồng bộ style cho ${totalCount} ô thoại trên toàn bộ chương!`, "success");
+}
+
+// Window global bindings
+Object.assign(window, {
+    applyStylePreset,
+    updateSfxSkewX,
+    updateSfxSkewY,
+    updateSfxWave,
+    updateSfxBulge,
+    updateSfxArc,
+    updateSfxRotate,
+    resetWarpTransformControls,
+    resetSfxAngleControls,
+    toggleActiveBlockBold,
+    toggleActiveBlockItalic,
+    toggleActiveBlockUnderline,
+    setActiveBlockTextTransform,
+    updateLineHeight,
+    updateLetterSpacing,
+    updateStrokeWidth2,
+    syncStrokeColor2Hex,
+    updateShadowOffsetX,
+    updateShadowOffsetY,
+    cleanActiveBlockPunctuation,
+    cleanAllBlocksPunctuation,
+    applyCurrentStyleToPage,
+    applyCurrentStyleToAllPages,
+    alignActiveBlockPosition
+});
