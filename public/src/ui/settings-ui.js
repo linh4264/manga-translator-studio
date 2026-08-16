@@ -48,7 +48,6 @@ export function updateOcrModel(val) {
             safeSetLocalStorage('gemini_manga_ocr_model', val);
         }
     }
-    showToast(`Model OCR & Khung thoại: ${globalState.ocrModel}`, "info");
 }
 
 export function updateTranslationModel(val) {
@@ -69,7 +68,6 @@ export function updateTranslationModel(val) {
             safeSetLocalStorage('gemini_manga_translation_model', val);
         }
     }
-    showToast(`Model Dịch thuật: ${globalState.translationModel}`, "info");
 }
 
 export function updateSelectedModel(val) {
@@ -95,9 +93,6 @@ export function updateSelectedModel(val) {
         }
     }
     updateModelLockingUI();
-    if (globalState.selectedModel) {
-        showToast(`Đã chọn mô hình: ${globalState.selectedModel}`, "info");
-    }
 }
 
 export function updateAllModelDropdowns(fetchedModels = []) {
@@ -477,7 +472,7 @@ export function updateDefaultFont(value) {
         });
     }
     requestOverlayRender();
-    showToast('Đã cập nhật phông chữ mặc định!', 'info');
+    safeSetLocalStorage('manga_default_font', family);
 }
 
 window.updateDefaultFont = updateDefaultFont;
@@ -682,8 +677,6 @@ export function updateAiProvider(provider) {
             if (modelSelect) modelSelect.value = DEFAULT_MODEL;
         }
     }
-
-    showToast(`Đã chuyển AI Provider sang: ${provider.toUpperCase()}`, "info");
 }
 
 export function updateApiEndpoint(val) {
@@ -694,13 +687,11 @@ export function updateApiEndpoint(val) {
 export function updateExportFormat(value) {
     globalState.exportFormat = value || 'auto';
     safeSetLocalStorage('manga_export_format', globalState.exportFormat);
-    showToast(`Đã đổi định dạng xuất ZIP sang: ${value.toUpperCase()}`, 'info');
 }
 
 export function updateExportPdfQuality(value) {
     globalState.pdfQuality = value || 'hd';
     safeSetLocalStorage('manga_pdf_quality', globalState.pdfQuality);
-    showToast(`Đã đổi chất lượng PDF sang: ${value.toUpperCase()}`, 'info');
 }
 
 window.updatePipelineMode = updatePipelineMode;

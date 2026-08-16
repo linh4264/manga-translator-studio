@@ -651,7 +651,6 @@ export function applyDiamondFormat() {
 
         import('./canvas-styling.js').then(m => m.syncActiveBlockTranslation(formatted));
         requestOverlayRender();
-        showToast("Đã định dạng dòng cân đối hình kim cương bầu dục thành công!", "success");
     }
 }
 

@@ -293,11 +293,9 @@ export function toggleQuickBilingualMode() {
         if (newMode === 'sub') {
             btn.classList.add('bg-indigo-600', 'text-white', 'border-indigo-500');
             btn.classList.remove('bg-slate-950', 'text-slate-400', 'border-slate-800');
-            import('../core/utils/dom.js').then(m => m.showToast("Đã bật hiển thị Song ngữ", "info"));
         } else {
             btn.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-500');
             btn.classList.add('bg-slate-950', 'text-slate-400', 'border-slate-800');
-            import('../core/utils/dom.js').then(m => m.showToast("Đã tắt hiển thị Song ngữ (Đơn ngữ)", "info"));
         }
     }
 }

@@ -97,7 +97,6 @@ export async function removePage(index) {
     garbageCollectPageCaches();
 
     updatePageListUI();
-    showToast('Đã xóa trang truyện', 'info');
 }
 
 let replaceTargetPageIndex = null;

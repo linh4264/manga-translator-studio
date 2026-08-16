@@ -230,7 +230,6 @@ export function toggleAutoFit(enabled) {
     }
     requestOverlayRender();
     uiUpdateActiveBlockEditor();
-    showToast(globalState.autoFitEnabled ? "Đã bật Cỡ chữ Tự động (Auto-Fit) toàn trang" : "Đã tắt Auto-Fit toàn trang", "info");
 }
 
 export function toggleBlockAutoFit(enabled) {
@@ -252,7 +251,6 @@ export function toggleBlockAutoFit(enabled) {
     requestOverlayRender();
     uiUpdateActiveBlockEditor();
     savePageToDB(page);
-    showToast(enabled ? "Đã bật Auto-Fit cho ô dịch này" : "Đã tắt Auto-Fit cho ô dịch này (Chế độ thủ công)", "info");
 }
 
 window.toggleBlockAutoFit = toggleBlockAutoFit;
@@ -587,7 +585,6 @@ export function toggleActiveBlockOrientation() {
 
     const nextVertical = !block.style.vertical;
     syncActiveBlockStyle('vertical', nextVertical);
-    showToast(nextVertical ? "Đã chuyển sang viết chữ Dọc" : "Đã chuyển sang viết chữ Ngang", "info");
 }
 
 export function normalizeAllBlocksToHorizontal() {
@@ -610,8 +607,6 @@ export function normalizeAllBlocksToHorizontal() {
             window.selectPage(globalState.activePageIndex);
         }
         showToast(`✅ Đã chuyển ${count} ô thoại thành chữ viết Ngang!`, "success");
-    } else {
-        showToast("Tất cả ô thoại đã là chữ viết Ngang.", "info");
     }
 }
 

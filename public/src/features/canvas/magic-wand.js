@@ -388,7 +388,6 @@ export function handleMagicWandCanvasClick(e) {
         return true;
     }
 
-    showToast("✨ Đã khoanh viền bóng thoại! Giữ Ctrl + click vào ô dịch muốn khớp vào đây.", "success");
     return true;
 }
 
@@ -441,10 +440,8 @@ export function snapBlockToMagicWandBubble(blockId, targetBox, autoAdvance = tru
     if (autoAdvance && isMagicWandActive && curIdx !== -1 && curIdx < page.blocks.length - 1) {
         const nextBlock = page.blocks[curIdx + 1];
         selectBlock(nextBlock.id);
-        showToast(`🎯 Đã khớp ô #${curIdx + 1}! Tiếp tục nhấp bóng thoại cho ô tiếp theo #${curIdx + 2}...`, 'success');
     } else {
         selectBlock(block.id);
-        showToast("🎯 Đã khớp ô dịch vừa khít với bóng thoại gốc!", "success");
     }
 
     return true;

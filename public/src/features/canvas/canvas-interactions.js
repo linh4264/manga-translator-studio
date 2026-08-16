@@ -314,7 +314,6 @@ export function selectAllBlocksOnPage() {
     updateBlockSelectionDOM();
     uiUpdateActiveBlockEditor();
     updateFloatingToolbarPosition();
-    showToast(`Đã chọn tất cả ${page.blocks.length} ô thoại trên trang.`, 'info');
 }
 
 export function navigateBlocks(direction) {
@@ -455,8 +454,6 @@ export function addNewBlock() {
         selectBlock(newId);
         savePageToDB(page);
     });
-
-    showToast("Đã thêm một ô dịch mới!", "success");
 }
 
 export function triggerAddImageBlock() {
@@ -721,7 +718,6 @@ export function initMarqueeSelection() {
                 updateBlockSelectionDOM();
                 uiUpdateActiveBlockEditor();
                 updateFloatingToolbarPosition();
-                showToast(`Đã chọn ${matchedIds.length} ô thoại.`, 'info');
             } else if (!endEvent.shiftKey && !endEvent.ctrlKey) {
                 selectBlock(null);
             }
