@@ -1038,12 +1038,23 @@
                         </h4>
                         <div class="space-y-1">
                             <div class="flex justify-between text-[10px] text-slate-400">
-                                <span data-i18n="sfx-rotation-label">Góc nghiêng (Rotation):</span>
-                                <span id="lbl-sfx-rotate" class="font-mono text-slate-200">0°</span>
+                                <span><i class="fa-solid fa-font text-[9px] text-sky-400 mr-1"></i> Xoay chữ (Không xoay nền):</span>
+                                <span id="lbl-text-rotate" class="font-mono text-sky-300">0°</span>
+                            </div>
+                            <input type="range" id="slider-text-rotate" min="-180" max="180" value="0"
+                                oninput="updateTextRotate(this.value)"
+                                class="w-full accent-sky-500 bg-slate-900 h-1.5 rounded cursor-pointer"
+                                title="Xoay riêng chữ bên trong mà giữ nguyên nền che bóng thoại">
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-[10px] text-slate-400">
+                                <span><i class="fa-solid fa-vector-square text-[9px] text-amber-400 mr-1"></i> Xoay cả ô (Khung & Nền):</span>
+                                <span id="lbl-sfx-rotate" class="font-mono text-amber-300">0°</span>
                             </div>
                             <input type="range" id="slider-sfx-rotate" min="-180" max="180" value="0"
                                 oninput="updateSfxRotate(this.value)"
-                                class="w-full accent-amber-500 bg-slate-900 h-1.5 rounded cursor-pointer">
+                                class="w-full accent-amber-500 bg-slate-900 h-1.5 rounded cursor-pointer"
+                                title="Xoay toàn bộ cả khung, nền che và chữ">
                         </div>
                         <div class="space-y-1">
                             <div class="flex justify-between text-[10px] text-slate-400">

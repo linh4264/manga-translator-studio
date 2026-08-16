@@ -300,11 +300,12 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
 
             ctx.save();
 
-            if (block.style.rotate) {
+            const totalTextAngle = (parseFloat(block.style.rotate) || 0) + (parseFloat(block.style.textRotate) || 0);
+            if (totalTextAngle !== 0) {
                 const cx = bx + bw / 2;
                 const cy = by + bh / 2;
                 ctx.translate(cx, cy);
-                ctx.rotate((block.style.rotate * Math.PI) / 180);
+                ctx.rotate((totalTextAngle * Math.PI) / 180);
                 ctx.translate(-cx, -cy);
             }
 

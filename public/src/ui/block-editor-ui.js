@@ -147,12 +147,15 @@ function syncBlockGenderUI(block) {
 
 function syncBlockStyleInputs(block) {
     const currentRotate = block.style.rotate || 0;
+    const currentTextRotate = block.style.textRotate || 0;
     const currentArc = block.style.arcAngle || 0;
     const currentSkewX = block.style.skewX || 0;
     const currentSkewY = block.style.skewY || 0;
     const currentWave = block.style.warpWave || 0;
     const currentBulge = block.style.warpBulge || 0;
 
+    const textRotateSlider = document.getElementById('slider-text-rotate');
+    const textRotateLbl = document.getElementById('lbl-text-rotate');
     const sfxRotateSlider = document.getElementById('slider-sfx-rotate') || elements.styleRotate;
     const sfxRotateLbl = document.getElementById('lbl-sfx-rotate') || elements.lblRotate;
     const sfxArcSlider = document.getElementById('slider-sfx-arc');

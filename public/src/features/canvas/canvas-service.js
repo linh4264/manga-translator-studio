@@ -8,6 +8,7 @@ export * from './magic-wand.js';
 
 import {
     normalizeAllBlocksToHorizontal,
+    updateTextRotate,
     updateSfxRotate,
     updateSfxArc,
     resetSfxAngleControls,
@@ -54,6 +55,7 @@ import { updateImageBlockOpacity, updateImageBlockFit, updateImageBlockBorderRad
 // Global window bindings cho inline HTML handlers
 Object.assign(window, {
     normalizeAllBlocksToHorizontal,
+    updateTextRotate,
     updateSfxRotate,
     updateSfxArc,
     resetSfxAngleControls,

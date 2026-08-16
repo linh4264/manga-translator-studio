@@ -480,7 +480,7 @@ export function syncActiveBlockStyle(property, value) {
         }
 
         const rangeProperties = [
-            'fontSize', 'bgOpacity', 'padding', 'rotate',
+            'fontSize', 'bgOpacity', 'padding', 'rotate', 'textRotate',
             'lineHeight', 'letterSpacing',
             'strokeWidth', 'strokeWidth2', 'shadowBlur', 'shadowOffsetX', 'shadowOffsetY',
             'arcAngle', 'skewX', 'skewY', 'warpWave', 'warpBulge'
@@ -521,6 +521,13 @@ export function syncActiveBlockStyle(property, value) {
         } else if (property === 'rotate') {
             if (elements.lblRotate) elements.lblRotate.innerText = `${value}°`;
             if (elements.styleRotate) elements.styleRotate.value = value;
+            const sfxRotateLbl = document.getElementById('lbl-sfx-rotate');
+            if (sfxRotateLbl) sfxRotateLbl.textContent = `${value}°`;
+        } else if (property === 'textRotate') {
+            const lbl = document.getElementById('lbl-text-rotate');
+            if (lbl) lbl.textContent = `${value}°`;
+            const slider = document.getElementById('slider-text-rotate');
+            if (slider) slider.value = value;
         } else if (property === 'lineHeight') {
             const lbl = document.getElementById('lbl-line-height');
             if (lbl) lbl.innerText = `${value}`;
@@ -639,6 +646,13 @@ export function normalizeAllBlocksToHorizontal() {
     }
 }
 
+export function updateTextRotate(val) {
+    const angle = parseInt(val, 10) || 0;
+    const lbl = document.getElementById('lbl-text-rotate');
+    if (lbl) lbl.textContent = `${angle}°`;
+    syncActiveBlockStyle('textRotate', angle);
+}
+
 export function updateSfxRotate(val) {
     const angle = parseInt(val, 10) || 0;
     const lbl = document.getElementById('lbl-sfx-rotate');
@@ -682,6 +696,7 @@ export function updateSfxBulge(val) {
 }
 
 export function resetWarpTransformControls() {
+    updateTextRotate(0);
     updateSfxRotate(0);
     updateSfxArc(0);
     updateSfxSkewX(0);
@@ -689,6 +704,7 @@ export function resetWarpTransformControls() {
     updateSfxWave(0);
     updateSfxBulge(0);
 
+    const trSlider = document.getElementById('slider-text-rotate');
     const rSlider = document.getElementById('slider-sfx-rotate') || document.getElementById('style-rotate');
     const aSlider = document.getElementById('slider-sfx-arc');
     const sxSlider = document.getElementById('slider-sfx-skew-x');
@@ -696,6 +712,7 @@ export function resetWarpTransformControls() {
     const wSlider = document.getElementById('slider-sfx-wave');
     const bSlider = document.getElementById('slider-sfx-bulge');
 
+    if (trSlider) trSlider.value = 0;
     if (rSlider) rSlider.value = 0;
     if (aSlider) aSlider.value = 0;
     if (sxSlider) sxSlider.value = 0;

@@ -307,6 +307,12 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
             maskContent.style.fontWeight = block.style.bold ? 'bold' : 'normal';
             maskContent.style.fontStyle = block.style.italic ? 'italic' : 'normal';
 
+            if (block.style.textRotate) {
+                maskContent.style.transform = `rotate(${block.style.textRotate}deg)`;
+            } else {
+                maskContent.style.transform = '';
+            }
+
             if (block.style.vertical) {
                 maskContent.classList.add('text-vertical');
                 maskContent.style.writingMode = 'vertical-rl';

@@ -281,6 +281,7 @@ export const DEFAULT_BLOCK_STYLE = {
     bgOpacity: 100,
     padding: '9% 12%',
     rotate: 0,
+    textRotate: 0,
     vertical: false,
     align: 'center',
     maskShape: 'bubble-fit',
