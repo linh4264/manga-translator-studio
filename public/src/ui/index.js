@@ -598,6 +598,13 @@ export function initEventListeners() {
             }
         }
     });
+
+    const replaceBgInput = document.getElementById('replace-bg-file-input');
+    if (replaceBgInput) {
+        replaceBgInput.addEventListener('change', (e) => {
+            import('./pages-ui.js').then(p => p.handleReplaceBgFileInput(e));
+        });
+    }
 }
 
 Object.assign(window, {

@@ -116,8 +116,10 @@ export function triggerReplaceBgImage(targetIndex = null) {
 }
 
 export function handleReplaceBgFileInput(files) {
-    if (files && files[0] && replaceTargetPageIndex !== null) {
-        replacePageBackgroundImage(replaceTargetPageIndex, files[0]);
+    const fileList = (files && files.target && files.target.files) ? files.target.files : files;
+    const targetIdx = replaceTargetPageIndex !== null ? replaceTargetPageIndex : globalState.activePageIndex;
+    if (fileList && fileList[0] && targetIdx !== null && targetIdx >= 0 && targetIdx < globalState.pages.length) {
+        replacePageBackgroundImage(targetIdx, fileList[0]);
         replaceTargetPageIndex = null;
     }
 }
@@ -153,19 +155,19 @@ export async function replacePageBackgroundImage(pageIndex, file) {
     page.apiWidth = newWidth;
     page.apiHeight = newHeight;
     page.thumbnailBlob = null;
+    page.imageDataCache = null;
+    delete page.lastDisplayWidth;
 
     const { generateAndSaveThumbnailForPage, savePageToDB } = await import('../core/state.js');
     await generateAndSaveThumbnailForPage(page);
     await savePageToDB(page);
 
     if (globalState.activePageIndex === pageIndex) {
-        elements.mangaBgImage.dataset.loadedSrc = "";
-        elements.mangaBgImage.src = page.src;
-        restorePageEraserDrawing(page);
-        requestOverlayRender();
+        await selectPage(pageIndex);
+    } else {
+        updatePageListUI();
     }
 
-    updatePageListUI();
     showToast(`Đã đổi ảnh gốc cho trang ${pageIndex + 1}! Giữ nguyên toàn bộ ô thoại.`, 'success');
 }
 

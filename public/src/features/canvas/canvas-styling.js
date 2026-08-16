@@ -363,18 +363,43 @@ export function applyStylePreset(presetKey) {
     }
 
     const page = globalState.pages[globalState.activePageIndex];
-    const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
-    if (!block) return;
+    const targetIds = (globalState.selectedBlockIds && globalState.selectedBlockIds.length > 0)
+        ? globalState.selectedBlockIds
+        : [globalState.selectedBlockId];
+
+    const targetBlocks = page.blocks.filter(b => targetIds.includes(b.id));
+    if (targetBlocks.length === 0) return;
 
     pushStateToHistory();
+
+    // Xử lý riêng cho nút định dạng nhanh: Nền 0% + Viền 4px
+    if (presetKey === 'transparent-stroke4' || presetKey === 'no-bg-stroke4' || presetKey === 'outline-4px' || presetKey === 'transparent_sfx') {
+        targetBlocks.forEach(block => {
+            if (!block.style) block.style = {};
+            block.style.bgOpacity = 0;
+            block.style.maskShape = 'none';
+            block.style.strokeWidth = 4;
+            if (!block.style.strokeColor) {
+                const textCol = (block.style.textColor || '#000000').toLowerCase();
+                block.style.strokeColor = (textCol === '#ffffff' || textCol === '#fff') ? '#000000' : '#ffffff';
+            }
+            block.maskCache = null;
+            block.autoFitCache = null;
+        });
+
+        markPageAutoFitDirty(page);
+        requestOverlayRender();
+        uiUpdateActiveBlockEditor();
+        updateFloatingToolbarPosition();
+        savePageToDB(page);
+        showToast("✨ Đã áp dụng: Nền 0% + Viền 4px", "success");
+        return;
+    }
 
     const legacyMap = {
         'manga-std': 'dialogue',
         'shout-sfx': 'scream',
-        'whisper-old': 'whisper',
-        'no-bg-stroke4': 'transparent_sfx',
-        'outline-4px': 'transparent_sfx',
-        'transparent-stroke4': 'transparent_sfx'
+        'whisper-old': 'whisper'
     };
 
     const targetKey = legacyMap[presetKey] || presetKey;
@@ -385,9 +410,13 @@ export function applyStylePreset(presetKey) {
         return;
     }
 
-    Object.assign(block.style, JSON.parse(JSON.stringify(targetPreset.style)));
-    block.maskCache = null;
-    block.autoFitCache = null;
+    targetBlocks.forEach(block => {
+        if (!block.style) block.style = {};
+        Object.assign(block.style, JSON.parse(JSON.stringify(targetPreset.style)));
+        block.maskCache = null;
+        block.autoFitCache = null;
+    });
+
     markPageAutoFitDirty(page);
     requestOverlayRender();
     uiUpdateActiveBlockEditor();

@@ -718,6 +718,47 @@ export function initMarqueeSelection() {
                 updateBlockSelectionDOM();
                 uiUpdateActiveBlockEditor();
                 updateFloatingToolbarPosition();
+            } else if (endEvent.altKey && (selMaxX - selMinX > 2) && (selMaxY - selMinY > 2)) {
+                // Tạo ô thoại mới đúng kích thước và vị trí vừa kéo chuột (Alt + Drag Box)
+                const newId = `manual_block_${Date.now()}`;
+                const newBlock = {
+                    id: newId,
+                    type: 'dialogue',
+                    original: '',
+                    translated: 'Nhập nội dung dịch...',
+                    box: {
+                        x: Math.round(selMinX * 100) / 100,
+                        y: Math.round(selMinY * 100) / 100,
+                        w: Math.round((selMaxX - selMinX) * 100) / 100,
+                        h: Math.round((selMaxY - selMinY) * 100) / 100
+                    },
+                    style: {
+                        fontFamily: globalState.defaultFont || 'font-manga',
+                        fontSize: 13,
+                        lineHeight: 1.15,
+                        letterSpacing: 0,
+                        textTransform: 'none',
+                        bold: false,
+                        italic: false,
+                        underline: false,
+                        textColor: '#000000',
+                        bgColor: '#ffffff',
+                        bgOpacity: 100,
+                        padding: '9% 12%',
+                        rotate: 0,
+                        vertical: false,
+                        align: 'center',
+                        maskShape: 'bubble-fit',
+                        maskSize: 'full'
+                    }
+                };
+                pushStateToHistory();
+                page.blocks.push(newBlock);
+                import('./canvas-renderer.js').then(r => {
+                    r.renderOverlays();
+                    selectBlock(newId);
+                    savePageToDB(page);
+                });
             } else if (!endEvent.shiftKey && !endEvent.ctrlKey) {
                 selectBlock(null);
             }

@@ -314,16 +314,18 @@ export function initEraserDrawingEvents() {
         return { x, y, clientX, clientY };
     };
 
-    // --- CASE 0.5: Lasso Selection Mode (Strict Single Selection) ---
+    // --- CASE 0.5: Lasso Selection Mode (Freehand Polygon & Rectangular Box Selection) ---
     if (brushMode === 'lasso') {
         let isDrawing = false;
         let points = [];
+        let startPos = null;
         let preLassoImageData = null;
 
         const startLasso = (e) => {
             e.preventDefault();
             const pos = getMousePos(e);
             isDrawing = true;
+            startPos = pos;
             points = [pos];
 
             // 1. Wipe any previous lasso selection outline/overlay from canvas
@@ -347,7 +349,18 @@ export function initEraserDrawingEvents() {
             if (!isDrawing) return;
             e.preventDefault();
             const pos = getMousePos(e);
-            points.push(pos);
+
+            if (e.shiftKey) {
+                // Chế độ vẽ Khung chữ nhật / hình vuông (Shift Drag Rectangular Box)
+                points = [
+                    { x: startPos.x, y: startPos.y },
+                    { x: pos.x, y: startPos.y },
+                    { x: pos.x, y: pos.y },
+                    { x: startPos.x, y: pos.y }
+                ];
+            } else {
+                points.push(pos);
+            }
 
             // Redraw backed-up canvas first to remove old lasso path lines
             ctx.putImageData(preLassoImageData, 0, 0);
@@ -359,10 +372,15 @@ export function initEraserDrawingEvents() {
             for (let i = 1; i < points.length; i++) {
                 ctx.lineTo(points[i].x, points[i].y);
             }
+            if (e.shiftKey) ctx.closePath();
             ctx.strokeStyle = '#a855f7'; // Purple dashed line
             ctx.lineWidth = 1.5;
             ctx.setLineDash([4, 4]);
             ctx.stroke();
+            if (e.shiftKey) {
+                ctx.fillStyle = 'rgba(168, 85, 247, 0.12)';
+                ctx.fill();
+            }
             ctx.restore();
         };
 
@@ -400,7 +418,7 @@ export function initEraserDrawingEvents() {
             ctx.stroke();
 
             // Draw transparent overlay
-            ctx.fillStyle = 'rgba(168, 85, 247, 0.1)';
+            ctx.fillStyle = 'rgba(168, 85, 247, 0.12)';
             ctx.fill();
             ctx.restore();
 
@@ -1466,14 +1484,34 @@ export async function runLassoContentAwareFill() {
         const avgBgLum = bgCount > 0 ? (bgLumSum / bgCount) : 120;
 
         const maskBytes = new Uint8Array(cropW * cropH);
+        let activeMaskCount = 0;
         for (let y = 0; y < cropH; y++) {
             for (let x = 0; x < cropW; x++) {
                 const idx = y * cropW + x;
                 if (lmData[idx * 4 + 3] > 0) {
-                    const p = idx * 4;
-                    const lum = 0.299 * cData[p] + 0.587 * cData[p + 1] + 0.114 * cData[p + 2];
-                    const diff = Math.abs(lum - avgBgLum);
-                    if (diff >= fuzziness || (avgBgLum > 180 && lum < 120) || (avgBgLum < 80 && lum > 140)) {
+                    if (fuzziness >= 25) {
+                        // Lấp đầy trọn vẹn toàn bộ vùng chọn bên trong Lasso / Khung hình chữ nhật
+                        maskBytes[idx] = 1;
+                        activeMaskCount++;
+                    } else {
+                        const p = idx * 4;
+                        const lum = 0.299 * cData[p] + 0.587 * cData[p + 1] + 0.114 * cData[p + 2];
+                        const diff = Math.abs(lum - avgBgLum);
+                        if (diff >= fuzziness || (avgBgLum > 180 && lum < 120) || (avgBgLum < 80 && lum > 140)) {
+                            maskBytes[idx] = 1;
+                            activeMaskCount++;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback: nếu không lọc được pixel nào thì phủ trọn vẹn polygon vùng chọn
+        if (activeMaskCount === 0) {
+            for (let y = 0; y < cropH; y++) {
+                for (let x = 0; x < cropW; x++) {
+                    const idx = y * cropW + x;
+                    if (lmData[idx * 4 + 3] > 0) {
                         maskBytes[idx] = 1;
                     }
                 }
