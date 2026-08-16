@@ -18,7 +18,7 @@ import {
     closeSettingsModal,
     fetchGeminiModels
 } from '../ui/settings-ui.js';
-import { selectPage, updatePageListUI } from '../ui/pages-ui.js';
+import { selectPage, updatePageListUI, triggerReplaceBgImage } from '../ui/pages-ui.js';
 import { populateCustomFontsDropdown } from '../ui/font-ui.js';
 import { setBilingualMode } from '../ui/block-editor-ui.js';
 import {
@@ -91,7 +91,7 @@ export async function initApplication() {
         const preset = target.getAttribute('data-preset');
         applyStylePreset(preset);
     });
-    registerAction('triggerReplaceBgImage', () => import('../ui/pages-ui.js').then(m => m.triggerReplaceBgImage()));
+    registerAction('triggerReplaceBgImage', () => triggerReplaceBgImage());
     registerAction('loadDemoManga', () => import('../ui/pages-ui.js').then(m => m.loadDemoManga()));
     registerAction('triggerUploadFiles', () => document.getElementById('file-input')?.click());
     registerAction('triggerBatchTranslate', () => import('../features/ai/ai-service.js').then(m => m.runBatchTranslation()));

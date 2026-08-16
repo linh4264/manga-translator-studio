@@ -7,7 +7,7 @@ import {
     openHelpModal, closeHelpModal, switchHelpTab, toggleLeftSidebarMoreMenu
 } from './layout-ui.js';
 
-import { selectPage, removePage, updatePageListUI, filterPagesList, toggleExportRangeInputs, validateExportRange, setExportRangeToCurrent } from './pages-ui.js';
+import { selectPage, removePage, updatePageListUI, filterPagesList, toggleExportRangeInputs, validateExportRange, setExportRangeToCurrent, triggerReplaceBgImage, handleReplaceBgFileInput } from './pages-ui.js';
 
 import {
     updateActiveBlockEditor, restoreBackgroundForBlock, restoreOriginalBackground,
@@ -143,7 +143,7 @@ export function initEventListeners() {
                 e.stopPropagation();
                 const index = Number(replaceBtn.dataset.index);
                 if (Number.isInteger(index)) {
-                    import('./pages-ui.js').then(p => p.triggerReplaceBgImage(index));
+                    triggerReplaceBgImage(index);
                 }
                 return;
             }
@@ -602,12 +602,22 @@ export function initEventListeners() {
     const replaceBgInput = document.getElementById('replace-bg-file-input');
     if (replaceBgInput) {
         replaceBgInput.addEventListener('change', (e) => {
-            import('./pages-ui.js').then(p => p.handleReplaceBgFileInput(e));
+            handleReplaceBgFileInput(e);
+        });
+    }
+
+    const btnReplaceBg = document.getElementById('btn-replace-bg-image');
+    if (btnReplaceBg) {
+        btnReplaceBg.addEventListener('click', (e) => {
+            e.preventDefault();
+            triggerReplaceBgImage();
         });
     }
 }
 
 Object.assign(window, {
+    triggerReplaceBgImage,
+    handleReplaceBgFileInput,
     uploadCustomFonts,
     updateUndoRedoUI,
     setRightTab,
