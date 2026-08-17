@@ -141,3 +141,125 @@ test('Translation Box Size - refineAiBlockBox Triggers Magic Wand Auto-Snap on S
     assert.strictEqual(refined.w, 40, 'Width must snap to bubble width (40%)');
     assert.strictEqual(refined.h, 40, 'Height must snap to bubble height (40%)');
 });
+
+test('Translation Box Size - Conjoined / Touching Speech Bubbles are Separated at Isthmus', () => {
+    const W = 1000;
+    const H = 1000;
+    const data = new Uint8ClampedArray(W * H * 4);
+    // Dark background (50)
+    for (let i = 0; i < data.length; i += 4) {
+        data[i] = 50; data[i + 1] = 50; data[i + 2] = 50; data[i + 3] = 255;
+    }
+
+    // Upper bubble: x: 300..700 (width=400px = 40%), y: 100..450 (height=350px = 35%)
+    for (let y = 100; y <= 450; y++) {
+        for (let x = 300; x <= 700; x++) {
+            const idx = (y * W + x) * 4;
+            data[idx] = 240; data[idx + 1] = 240; data[idx + 2] = 240;
+        }
+    }
+
+    // Isthmus / Neck (narrow bridge): x: 470..530 (width=60px = 6%), y: 450..500
+    for (let y = 450; y <= 500; y++) {
+        for (let x = 470; x <= 530; x++) {
+            const idx = (y * W + x) * 4;
+            data[idx] = 240; data[idx + 1] = 240; data[idx + 2] = 240;
+        }
+    }
+
+    // Lower bubble: x: 300..700 (width=400px = 40%), y: 500..850 (height=350px = 35%)
+    for (let y = 500; y <= 850; y++) {
+        for (let x = 300; x <= 700; x++) {
+            const idx = (y * W + x) * 4;
+            data[idx] = 240; data[idx + 1] = 240; data[idx + 2] = 240;
+        }
+    }
+
+    const mockImageData = { width: W, height: H, data };
+
+    // AI anchor in Upper bubble [500, 250]
+    const upperRefined = refineAiBlockBox([500, 250], mockImageData);
+    assert.strictEqual(upperRefined.y, 10, 'Upper bubble top edge must be 10%');
+    assert.ok(upperRefined.h <= 40, 'Upper bubble height must not bleed into lower bubble');
+
+    // AI anchor in Lower bubble [500, 650]
+    const lowerRefined = refineAiBlockBox([500, 650], mockImageData);
+    assert.ok(lowerRefined.y >= 45, 'Lower bubble top edge must start at isthmus cutoff');
+    assert.strictEqual(lowerRefined.h + lowerRefined.y, 85, 'Lower bubble bottom edge must be 85%');
+});
+
+test('Translation Box Size - Topological Hole-Filling Bridges Internal Kanji Columns Without Cutting Early', () => {
+    const W = 1000;
+    const H = 1000;
+    const data = new Uint8ClampedArray(W * H * 4);
+    // Dark background (50)
+    for (let i = 0; i < data.length; i += 4) {
+        data[i] = 50; data[i + 1] = 50; data[i + 2] = 50; data[i + 3] = 255;
+    }
+
+    // White speech bubble: x: 200..800 (w=600px = 60%), y: 200..800 (h=600px = 60%)
+    for (let y = 200; y <= 800; y++) {
+        for (let x = 200; x <= 800; x++) {
+            const idx = (y * W + x) * 4;
+            data[idx] = 240; data[idx + 1] = 240; data[idx + 2] = 240;
+        }
+    }
+
+    // Vertical black text column running down the middle: x: 498..504, y: 250..750
+    for (let y = 250; y <= 750; y++) {
+        for (let x = 498; x <= 504; x++) {
+            const idx = (y * W + x) * 4;
+            data[idx] = 20; data[idx + 1] = 20; data[idx + 2] = 20;
+        }
+    }
+
+    const mockImageData = { width: W, height: H, data };
+
+    // Anchor on left side [350, 500] (center at x=350px, y=500px)
+    const refined = refineAiBlockBox([350, 500], mockImageData);
+
+    // Box should automatically fill the text holes and span the full bubble: x: 20%, w: 60%
+    assert.strictEqual(refined.x, 20, 'Left edge must be 20%');
+    assert.strictEqual(refined.w, 60, 'Width must bridge text column and span full 60% of bubble');
+    assert.strictEqual(refined.y, 20, 'Top edge must be 20%');
+    assert.strictEqual(refined.h, 60, 'Height must be 60%');
+});
+
+test('Translation Box Size - Strict Barrier Stops at Continuous Outer Bubble Border Even When Outside is White', () => {
+    const W = 1000;
+    const H = 1000;
+    const data = new Uint8ClampedArray(W * H * 4);
+    // Entire canvas is WHITE (240)
+    for (let i = 0; i < data.length; i += 4) {
+        data[i] = 240; data[i + 1] = 240; data[i + 2] = 240; data[i + 3] = 255;
+    }
+
+    // Draw a continuous black rectangular bubble border: x: 300..700, y: 200..600 (3px border thickness)
+    for (let x = 300; x <= 700; x++) {
+        for (let t = 0; t < 3; t++) {
+            const idxTop = ((200 + t) * W + x) * 4;
+            const idxBot = ((600 - t) * W + x) * 4;
+            data[idxTop] = 10; data[idxTop + 1] = 10; data[idxTop + 2] = 10;
+            data[idxBot] = 10; data[idxBot + 1] = 10; data[idxBot + 2] = 10;
+        }
+    }
+    for (let y = 200; y <= 600; y++) {
+        for (let t = 0; t < 3; t++) {
+            const idxLeft = (y * W + (300 + t)) * 4;
+            const idxRight = (y * W + (700 - t)) * 4;
+            data[idxLeft] = 10; data[idxLeft + 1] = 10; data[idxLeft + 2] = 10;
+            data[idxRight] = 10; data[idxRight + 1] = 10; data[idxRight + 2] = 10;
+        }
+    }
+
+    const mockImageData = { width: W, height: H, data };
+
+    // Anchor inside bubble [500, 400]
+    const refined = refineAiBlockBox([500, 400], mockImageData);
+
+    // Box MUST stop at the black border (inner edge 30.3%), and MUST NOT leak into the white space outside (0%..100%)
+    assert.ok(refined.x >= 30 && refined.x <= 31, 'Left edge must strictly stop at bubble border (~30%)');
+    assert.ok(refined.y >= 20 && refined.y <= 21, 'Top edge must strictly stop at bubble border (~20%)');
+    assert.ok(refined.w <= 40, 'Width must strictly be <= 40% (not leaking to whole white image)');
+    assert.ok(refined.h <= 40, 'Height must strictly be <= 40% (not leaking to whole white image)');
+});

@@ -330,9 +330,9 @@ export function detectSpeechBubbleAtPoint(imageData, clickPixelX, clickPixelY, o
     // Ngưỡng chặn viền đen nghiêm ngặt (Strict Barrier Threshold): không bao giờ nhảy qua viền đen
     const bubbleThreshold = Math.max(160, Math.min(238, Math.round(seedBrightness * 0.80)));
 
-    // Giới hạn vùng tìm kiếm tối đa
-    const maxHalfW = Math.min(Math.round(imgW * 0.30), 500);
-    const maxHalfH = Math.min(Math.round(imgH * 0.30), 600);
+    // Giới hạn vùng tìm kiếm tối đa (đảm bảo bao phủ toàn bộ bóng thoại trong panel)
+    const maxHalfW = Math.min(Math.round(imgW * 0.45), 600);
+    const maxHalfH = Math.min(Math.round(imgH * 0.45), 700);
 
     const winMinX = Math.max(0, startX - maxHalfW);
     const winMaxX = Math.min(imgW - 1, startX + maxHalfW);
@@ -342,6 +342,8 @@ export function detectSpeechBubbleAtPoint(imageData, clickPixelX, clickPixelY, o
     const winW = winMaxX - winMinX + 1;
     const winH = winMaxY - winMinY + 1;
 
+    // 1. LOANG MÀU RUỘT TRẮNG NGHIÊM NGẶT (Strict White-Only Flood Fill)
+    // Tuyệt đối không loang qua bất kỳ nét vẽ đen nào -> BẢO VỆ 100% ĐƯỜNG VIỀN BÓNG THOẠI
     const visited = new Uint8Array(winW * winH);
     const queueX = new Int32Array(winW * winH);
     const queueY = new Int32Array(winW * winH);
@@ -356,41 +358,22 @@ export function detectSpeechBubbleAtPoint(imageData, clickPixelX, clickPixelY, o
     tail++;
     visited[startLocalY * winW + startLocalX] = 1;
 
-    let minX = startX;
-    let maxX = startX;
-    let minY = startY;
-    let maxY = startY;
-    let filledCount = 0;
+    const maxAllowedPixels = Math.floor(imgW * imgH * 0.40);
+    let initialCount = 0;
 
-    // Mảng đếm mật độ điểm ảnh theo hàng và cột để cắt bỏ đuôi bóng thoại (Tail Pruning)
-    const rowCounts = new Int32Array(winH);
-    const colCounts = new Int32Array(winW);
-
-    const maxAllowedPixels = Math.floor(imgW * imgH * 0.15); // Bóng thoại không vượt quá 15% diện tích trang
-
-    while (head < tail && filledCount < maxAllowedPixels) {
+    while (head < tail && initialCount < maxAllowedPixels) {
         const cx = queueX[head];
         const cy = queueY[head];
         head++;
-        filledCount++;
+        initialCount++;
 
-        if (cx < minX) minX = cx;
-        if (cx > maxX) maxX = cx;
-        if (cy < minY) minY = cy;
-        if (cy > maxY) maxY = cy;
-
-        rowCounts[cy - winMinY]++;
-        colCounts[cx - winMinX]++;
-
-        // 4 hướng lân cận trực tiếp
+        // 8 hướng lân cận liên tục
         const neighbors = [
-            [cx + 1, cy],
-            [cx - 1, cy],
-            [cx, cy + 1],
-            [cx, cy - 1]
+            [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1],
+            [cx + 1, cy + 1], [cx - 1, cy - 1], [cx + 1, cy - 1], [cx - 1, cy + 1]
         ];
 
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 8; i++) {
             const nx = neighbors[i][0];
             const ny = neighbors[i][1];
 
@@ -402,7 +385,7 @@ export function detectSpeechBubbleAtPoint(imageData, clickPixelX, clickPixelY, o
                 if (!visited[vIdx]) {
                     const br = brightnessMap[ny * imgW + nx];
 
-                    // CHỈ loang vào vùng ruột sáng của bóng thoại, dừng tuyệt đối tại viền đen nét vẽ
+                    // CHỈ loang vào vùng ruột trắng sáng, DỪNG TUYỆT ĐỐI tại mọi nét đen (viền & chữ)
                     if (br >= bubbleThreshold) {
                         visited[vIdx] = 1;
                         queueX[tail] = nx;
@@ -414,59 +397,279 @@ export function detectSpeechBubbleAtPoint(imageData, clickPixelX, clickPixelY, o
         }
     }
 
-    let bw = maxX - minX;
-    let bh = maxY - minY;
+    // 2. THUẬT TOÁN LẤP LỖ KÍN NÉT CHỮ TỰ ĐỘNG TỪ BÊN NGOÀI (Topological Hole-Filling via Outside BFS)
+    // Quét loang từ 4 mép ngoài cùng của cửa sổ vào trong để xác định vùng "Nằm bên ngoài bóng thoại"
+    const outside = new Uint8Array(winW * winH);
+    let outHead = 0;
+    let outTail = 0;
 
-    // Nếu vùng quá bé hoặc không tạo thành bóng thoại
-    if (bw < 20 || bh < 20 || filledCount < 40) {
+    const pushOutside = (lx, ly) => {
+        const idx = ly * winW + lx;
+        if (idx < 0 || idx >= visited.length) return;
+        if (visited[idx] === 1 || outside[idx] === 1) return;
+        outside[idx] = 1;
+        queueX[outTail] = winMinX + lx;
+        queueY[outTail] = winMinY + ly;
+        outTail++;
+    };
+
+    // Khởi tạo các điểm ở 4 cạnh biên ngoài cửa sổ
+    for (let x = 0; x < winW; x++) {
+        pushOutside(x, 0);
+        if (winH > 1) pushOutside(x, winH - 1);
+    }
+    for (let y = 1; y < winH - 1; y++) {
+        pushOutside(0, y);
+        if (winW > 1) pushOutside(winW - 1, y);
+    }
+
+    // Loang vùng bên ngoài (Outside Flood Fill)
+    while (outHead < outTail) {
+        const cx = queueX[outHead];
+        const cy = queueY[outHead];
+        outHead++;
+
+        const neighbors = [
+            [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]
+        ];
+
+        for (let i = 0; i < 4; i++) {
+            const nx = neighbors[i][0];
+            const ny = neighbors[i][1];
+
+            if (nx >= winMinX && nx <= winMaxX && ny >= winMinY && ny <= winMaxY) {
+                const lx = nx - winMinX;
+                const ly = ny - winMinY;
+                const vIdx = ly * winW + lx;
+
+                if (visited[vIdx] === 0 && outside[vIdx] === 0) {
+                    outside[vIdx] = 1;
+                    queueX[outTail] = nx;
+                    queueY[outTail] = ny;
+                    outTail++;
+                }
+            }
+        }
+    }
+
+    // 3. TÍNH BẢN ĐỒ KHOẢNG CÁCH EUCLID 2 CHIỀU (2D Chamfer Distance Transform trên mặt nạ ruột bóng thoại)
+    // dt[idx] đo khoảng cách chính xác từ pixel (x, y) tới đường viền gần nhất (tỉ lệ 5:1 để giữ độ mịn)
+    const dt = new Int32Array(winW * winH);
+    const INF = 999999;
+
+    // Pass 1: Quét xuôi từ trên-trái xuống dưới-phải (Forward Pass)
+    for (let y = 0; y < winH; y++) {
+        for (let x = 0; x < winW; x++) {
+            const idx = y * winW + x;
+            const isInside = (visited[idx] === 1 || outside[idx] === 0);
+            if (!isInside) {
+                dt[idx] = 0;
+            } else {
+                let minNeighbor = INF;
+                if (x > 0) minNeighbor = Math.min(minNeighbor, dt[idx - 1] + 5);
+                if (y > 0) minNeighbor = Math.min(minNeighbor, dt[idx - winW] + 5);
+                if (x > 0 && y > 0) minNeighbor = Math.min(minNeighbor, dt[idx - winW - 1] + 7);
+                if (x < winW - 1 && y > 0) minNeighbor = Math.min(minNeighbor, dt[idx - winW + 1] + 7);
+                dt[idx] = minNeighbor === INF ? 5 : minNeighbor;
+            }
+        }
+    }
+
+    // Pass 2: Quét ngược từ dưới-phải lên trên-trái (Backward Pass)
+    let maxDistVal = 0;
+    for (let y = winH - 1; y >= 0; y--) {
+        for (let x = winW - 1; x >= 0; x--) {
+            const idx = y * winW + x;
+            if (dt[idx] > 0) {
+                let minNeighbor = dt[idx];
+                if (x < winW - 1) minNeighbor = Math.min(minNeighbor, dt[idx + 1] + 5);
+                if (y < winH - 1) minNeighbor = Math.min(minNeighbor, dt[idx + winW] + 5);
+                if (x < winW - 1 && y < winH - 1) minNeighbor = Math.min(minNeighbor, dt[idx + winW + 1] + 7);
+                if (x > 0 && y < winH - 1) minNeighbor = Math.min(minNeighbor, dt[idx + winW - 1] + 7);
+                dt[idx] = minNeighbor;
+                if (minNeighbor > maxDistVal) maxDistVal = minNeighbor;
+            }
+        }
+    }
+
+    if (maxDistVal < 15) {
         return null;
     }
 
-    // 2. CẮT BỎ ĐUÔI BÓNG THOẠI (Tail Pruning / Peak Body Fitting)
-    let maxRowPixels = 0;
-    for (let y = minY - winMinY; y <= maxY - winMinY; y++) {
-        if (rowCounts[y] > maxRowPixels) maxRowPixels = rowCounts[y];
+    // 4. PHÂN TÁCH BÓNG THOẠI DÍNH NHAU BẰNG THỦY PHÂN GRADIENT (Steepest Ascent Morphological Watershed)
+    // Leo dốc từ điểm bắt đầu (startX, startY) để tìm đỉnh cực đại chính (Primary Catchment Basin)
+    const seedLocalX = startX - winMinX;
+    const seedLocalY = startY - winMinY;
+
+    // Hàm leo dốc tìm đỉnh cực đại của một điểm (Gradient Ascent to Peak)
+    const findPeak = (startX, startY) => {
+        let cx = startX;
+        let cy = startY;
+        let cDt = dt[cy * winW + cx];
+
+        let guard = 0;
+        while (guard < 1000) {
+            guard++;
+            let bestNx = cx;
+            let bestNy = cy;
+            let bestNDt = cDt;
+
+            const nbs = [
+                [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1],
+                [cx + 1, cy + 1], [cx - 1, cy - 1], [cx + 1, cy - 1], [cx - 1, cy + 1]
+            ];
+
+            for (let i = 0; i < 8; i++) {
+                const nx = nbs[i][0];
+                const ny = nbs[i][1];
+                if (nx >= 0 && nx < winW && ny >= 0 && ny < winH) {
+                    const nd = dt[ny * winW + nx];
+                    if (nd > bestNDt) {
+                        bestNDt = nd;
+                        bestNx = nx;
+                        bestNy = ny;
+                    }
+                }
+            }
+
+            if (bestNDt > cDt) {
+                cx = bestNx;
+                cy = bestNy;
+                cDt = bestNDt;
+            } else {
+                break;
+            }
+        }
+        return { peakX: cx, peakY: cy, peakDt: cDt };
+    };
+
+    // Đỉnh hồ chứa của bóng thoại chính
+    const primaryPeak = findPeak(seedLocalX, seedLocalY);
+    const primaryPeakX = primaryPeak.peakX;
+    const primaryPeakY = primaryPeak.peakY;
+
+    // 5. GÁN NHÃN BÓNG THOẠI BẰNG THỦY PHÂN GRADIENT VÀ KIỂM TRA ĐÈO YÊN NGỰA (Saddle-Valley Watershed)
+    // 0: chưa gán, 1: thuộc bóng thoại chính, 2: thuộc bóng thoại khác (dính bên cạnh)
+    const labels = new Uint8Array(winW * winH);
+    const path = new Int32Array(1500);
+
+    // Kiểm tra xem từ một đỉnh đích (cx, cy) nối về đỉnh chính (primaryPeakX, primaryPeakY) có bị chặn bởi eo thắt không
+    const isSeparatedBySaddle = (destX, destY) => {
+        const dx = destX - primaryPeakX;
+        const dy = destY - primaryPeakY;
+        const dist = Math.hypot(dx, dy);
+        if (dist <= 30) return false; // Quá gần, cùng 1 đỉnh
+
+        const steps = Math.min(100, Math.max(10, Math.floor(dist / 3)));
+        let minDtOnLine = INF;
+
+        for (let s = 0; s <= steps; s++) {
+            const t = s / steps;
+            const px = Math.round(primaryPeakX + t * dx);
+            const py = Math.round(primaryPeakY + t * dy);
+            if (px >= 0 && px < winW && py >= 0 && py < winH) {
+                const d = dt[py * winW + px];
+                if (d < minDtOnLine) minDtOnLine = d;
+            }
+        }
+
+        // Nếu trên đường nối thẳng tồn tại điểm eo thắt tụt xuống dưới 45% bán kính đỉnh -> Tách rời 2 bóng
+        const neckThreshold = Math.max(12, Math.floor(primaryPeak.peakDt * 0.45));
+        return (minDtOnLine <= neckThreshold);
+    };
+
+    for (let y = 0; y < winH; y++) {
+        for (let x = 0; x < winW; x++) {
+            const idx = y * winW + x;
+            if (dt[idx] === 0 || labels[idx] > 0) continue;
+
+            let pathLen = 0;
+            let cx = x;
+            let cy = y;
+            let curD = dt[idx];
+            let assignedLabel = 0;
+
+            while (pathLen < 1450) {
+                const pIdx = cy * winW + cx;
+                if (labels[pIdx] > 0) {
+                    assignedLabel = labels[pIdx];
+                    break;
+                }
+
+                path[pathLen++] = pIdx;
+
+                // Tìm lân cận có dt cao nhất
+                let bestNx = cx;
+                let bestNy = cy;
+                let bestNDt = curD;
+
+                const nbs = [
+                    [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1],
+                    [cx + 1, cy + 1], [cx - 1, cy - 1], [cx + 1, cy - 1], [cx - 1, cy + 1]
+                ];
+
+                for (let i = 0; i < 8; i++) {
+                    const nx = nbs[i][0];
+                    const ny = nbs[i][1];
+                    if (nx >= 0 && nx < winW && ny >= 0 && ny < winH) {
+                        const nd = dt[ny * winW + nx];
+                        if (nd > bestNDt) {
+                            bestNDt = nd;
+                            bestNx = nx;
+                            bestNy = ny;
+                        }
+                    }
+                }
+
+                if (bestNDt > curD) {
+                    cx = bestNx;
+                    cy = bestNy;
+                    curD = bestNDt;
+                } else {
+                    // Đã tới đỉnh của đường leo: Kiểm tra xem có bị ngăn cách bởi đèo yên ngựa (saddle valley) không
+                    const isOtherBubble = isSeparatedBySaddle(cx, cy);
+                    assignedLabel = isOtherBubble ? 2 : 1;
+                    break;
+                }
+            }
+
+            if (assignedLabel === 0) assignedLabel = 1;
+
+            // Nén đường đi (Path compression)
+            for (let i = 0; i < pathLen; i++) {
+                labels[path[i]] = assignedLabel;
+            }
+        }
     }
 
-    let maxColPixels = 0;
-    for (let x = minX - winMinX; x <= maxX - winMinX; x++) {
-        if (colCounts[x] > maxColPixels) maxColPixels = colCounts[x];
+    // 6. TRÍCH XUẤT HỘP BAO CHÍNH XÁC CỦA BÓNG THOẠI CHÍNH (Label 1)
+    let minX = winMaxX;
+    let maxX = winMinX;
+    let minY = winMaxY;
+    let maxY = winMinY;
+    let filledCount = 0;
+
+    for (let ly = 0; ly < winH; ly++) {
+        for (let lx = 0; lx < winW; lx++) {
+            const vIdx = ly * winW + lx;
+            if (labels[vIdx] === 1) {
+                const absX = winMinX + lx;
+                const absY = winMinY + ly;
+                if (absX < minX) minX = absX;
+                if (absX > maxX) maxX = absX;
+                if (absY < minY) minY = absY;
+                if (absY > maxY) maxY = absY;
+                filledCount++;
+            }
+        }
     }
 
-    const rowCutoff = Math.max(6, Math.floor(maxRowPixels * 0.18));
-    const colCutoff = Math.max(6, Math.floor(maxColPixels * 0.18));
+    let bw = maxX - minX;
+    let bh = maxY - minY;
 
-    // Thu hẹp từ trên xuống (Top)
-    let trimmedMinY = minY;
-    while (trimmedMinY < maxY - 15 && rowCounts[trimmedMinY - winMinY] < rowCutoff) {
-        trimmedMinY++;
+    if (bw < 20 || bh < 20 || filledCount < 40) {
+        return null;
     }
-
-    // Thu hẹp từ dưới lên (Bottom)
-    let trimmedMaxY = maxY;
-    while (trimmedMaxY > trimmedMinY + 15 && rowCounts[trimmedMaxY - winMinY] < rowCutoff) {
-        trimmedMaxY--;
-    }
-
-    // Thu hẹp từ trái sang (Left)
-    let trimmedMinX = minX;
-    while (trimmedMinX < maxX - 15 && colCounts[trimmedMinX - winMinX] < colCutoff) {
-        trimmedMinX++;
-    }
-
-    // Thu hẹp từ phải sang (Right)
-    let trimmedMaxX = maxX;
-    while (trimmedMaxX > trimmedMinX + 15 && colCounts[trimmedMaxX - winMinX] < colCutoff) {
-        trimmedMaxX--;
-    }
-
-    minX = trimmedMinX;
-    maxX = trimmedMaxX;
-    minY = trimmedMinY;
-    maxY = trimmedMaxY;
-
-    bw = maxX - minX;
-    bh = maxY - minY;
 
     // Giới hạn an toàn [0, imgW, imgH]
     minX = Math.max(0, Math.min(imgW - 1, minX));
