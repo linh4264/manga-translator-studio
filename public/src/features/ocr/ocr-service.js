@@ -337,6 +337,9 @@ export function normalizeAiBlockBox(box, imgW = 1000, imgH = 1000) {
                 x *= 100;
                 y *= 100;
             }
+            // Tâm của ô dịch khớp với tọa độ tâm text box (x = anchorX - 200px, y = anchorY - 200px)
+            x = x - (defaultWPct / 2);
+            y = y - (defaultHPct / 2);
             w = defaultWPct;
             h = defaultHPct;
         } else if (box.length >= 4) {

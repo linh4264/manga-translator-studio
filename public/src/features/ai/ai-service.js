@@ -539,14 +539,14 @@ async function executeOcrVisionStep({
         "You are an expert manga Vision OCR system specialized in pixel-accurate speech bubble and Japanese vertical text detection.",
         "Detect ALL speech bubbles, narration boxes, SFX sound effects, and signs/labels in this manga page.",
         "MANGA READING ORDER: Order detected blocks strictly in natural manga reading flow: Top-Right to Bottom-Left across panels (start from the top-right panel, read right-to-left within each panel, then move downward to lower panels).",
-        "JAPANESE MULTI-COLUMN VERTICAL TEXT RULE:",
-        "1. In Japanese manga, a single speech bubble typically contains 2 to 5 vertical text columns (tatechugaki) reading from Right to Left. Output ONE unified block per speech bubble.",
-        "2. NEVER split adjacent vertical columns of the same speech bubble into separate blocks.",
-        "3. EACH VISUALLY DISTINCT SPEECH BUBBLE IS 1 SEPARATE BLOCK: Never merge multiple separate speech bubbles together.",
-        "4. NO FURIGANA DUPLICATION: In Japanese manga, kanji characters often have tiny ruby text / furigana annotations to their right. Transcribe ONLY the primary kanji word itself. NEVER duplicate the furigana phonetic reading into the transcript (e.g. transcribe 繋がっている, NEVER 繋がつながっている).",
-        "CLEAN RAW TRANSCRIPTION: Read and transcribe the exact raw original text inside each bubble/region in natural Right-to-Left vertical column order. Preserve original punctuation (?, !, ..., ♪, ♡, 「, 」) faithfully. Do not add commentary, explanations, or translations in this step.",
-        "IF NO TEXT PRESENT: If this page is pure artwork, a splash illustration, or contains no readable dialogue/SFX, return an empty array: {\"blocks\": []}.",
-        "POSITION FORMULA (Scale 0 to 1000, where top-left is [0, 0] and bottom-right is [1000, 1000]): For each block, output 2 integers [x, y] representing the top-left position of the bubble/text cluster: x = xmin (left edge), y = ymin (top edge). Example: [250, 150]. Note: Width and height default to 400px square in the app, so you do NOT need to calculate w or h.",
+        "JAPANESE VERTICAL TEXT & MULTI-COLUMN SPECIFICATION (縦書き):",
+        "1. UNIFIED MULTI-COLUMN BUBBLE: In Japanese manga, a single speech bubble typically contains 2 to 5 parallel vertical columns reading from Right to Left. ALL vertical columns of the same speech bubble MUST be output as ONE single unified block. NEVER split vertical columns of the same bubble into separate blocks.",
+        "2. COLUMN READING ORDER: Read and transcribe vertical columns strictly from RIGHT to LEFT (Column 1 is rightmost, Column 2 is next to its left, Column 3 is further left, etc.). Top-to-bottom within each column. Combine columns into a single continuous sentence with natural spacing or line breaks.",
+        "3. NO FURIGANA DUPLICATION: In Japanese manga, kanji characters often have tiny ruby text / furigana annotations to their right. Transcribe ONLY the primary kanji word itself. NEVER duplicate the furigana phonetic reading into the transcript (e.g. transcribe 繋がっている, NEVER 繋がつながっている).",
+        "4. TRUE GEOMETRIC CENTER ANCHOR FOR JAPANESE BUBBLES: For vertical Japanese text (縦書き), you MUST calculate the true geometric center of the ENTIRE bubble or text group bounding box. Do NOT output the top-right start of the first column. Specifically: centerX = horizontal midpoint between the leftmost and rightmost column edges, centerY = vertical midpoint between the topmost and bottommost character edges. Example: If a vertical bubble spans x: 450 to 550 and y: 200 to 400, the center anchor is [500, 300].",
+        "5. SFX & SOUND EFFECTS: Transcribe hand-drawn Japanese onomatopoeia/SFX (e.g. ドン, バキ, ざわざわ, ドキドキ) with their center coordinates and vertical=true if vertical.",
+        "CLEAN RAW TRANSCRIPTION: Read and transcribe the exact raw original text inside each bubble/region. Preserve original Japanese punctuation (?, !, ..., ♪, ♡, 「, 」, ー, っ) faithfully. Do not add commentary, explanations, or translations in this step.",
+        "POSITION FORMULA (Scale 0 to 1000, where top-left is [0, 0] and bottom-right is [1000, 1000]): For each block, output 2 integers [x, y] representing the exact CENTER (tâm) anchor point of the text bubble/box: x = centerX (center horizontal), y = centerY (center vertical). Example: [500, 300]. Note: The app centers a 400px x 400px translation box at this anchor point (x: anchorX - 200, y: anchorY - 200), so you do NOT need to calculate w or h.",
         "Detect vertical text with vertical=true (omit vertical for horizontal text).",
         "Return valid JSON only matching the schema."
     ].join(" ");
@@ -563,7 +563,7 @@ async function executeOcrVisionStep({
                 {
                     role: "user",
                     content: [
-                        { type: "text", text: "Detect each speech bubble, narration box, and SFX with its 0-1000 [x, y] position coordinates and raw original text. Return JSON matching schema {\"blocks\": [{\"id\": \"b1\", \"original\": \"...\", \"box\": [250, 150], \"vertical\": true}]}" },
+                        { type: "text", text: "Detect each speech bubble, narration box, and SFX with its 0-1000 center anchor [x, y] coordinates (x = centerX, y = centerY) and raw original text. Return JSON matching schema {\"blocks\": [{\"id\": \"b1\", \"original\": \"...\", \"box\": [500, 300], \"vertical\": true}]}" },
                         { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
                     ]
                 }
@@ -577,7 +577,7 @@ async function executeOcrVisionStep({
         requestBody = JSON.stringify({
             contents: [{
                 parts: [
-                    { text: "Detect each speech bubble, narration box, SFX label with its 0-1000 integer [x, y] position coordinates and raw original text. Return JSON." },
+                    { text: "Detect each speech bubble, narration box, SFX label with its 0-1000 integer center [x, y] coordinates (x = centerX, y = centerY) and raw original text. Return JSON." },
                     { inlineData: { mimeType, data: rawBase64 } }
                 ]
             }],
@@ -597,7 +597,7 @@ async function executeOcrVisionStep({
                                     box: {
                                         type: "ARRAY",
                                         items: { type: "NUMBER" },
-                                        description: "[x, y] position coordinates from 0 to 1000"
+                                        description: "[x, y] center anchor coordinates from 0 to 1000 (x = centerX, y = centerY)"
                                     },
                                     vertical: { type: "BOOLEAN" }
                                 },
@@ -796,6 +796,7 @@ async function executeTextTranslationStep({
     const transSystemInstruction = [
         `You are a master manga translator and publication editor specializing in translating Japanese/Korean/Chinese comic dialogues into natural, expressive, and fluent ${targetLangName}.`,
         `SEQUENTIAL DIALOGUE CONTEXT: The input dialogue blocks are arranged in sequential manga reading order (Top-Right to Bottom-Left). Treat them as continuous, interactive conversational turns between characters. Infer speaker personalities, emotional tone, and relationship hierarchies.`,
+        `JAPANESE DIALOGUE NUANCES: Japanese manga dialogues often omit pronouns or subjects (I/You). Accurately identify speakers from speech style (e.g. ore/boku/watashi/omae/kisama/anata, ending particles -ne/-yo/-zo/-wa/-kashira). Translate idiomatically and passionately into natural ${targetLangName}.`,
         `COMPACT MANGA DIALOGUE: Speech bubble space is limited. Keep ${targetLangName} translations natural, crisp, punchy, and concise. Avoid verbose explanations or literal word-for-word translation.`,
         `Ensure ${pronounTerm} are consistent across the dialogue blocks and faithfully reflect character dynamics.`,
         globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
@@ -1360,8 +1361,13 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
 
                 const systemInstruction = [
                     "Detect every manga speech bubble, narration box, and SFX label, then return JSON only.",
-                    "JAPANESE MULTI-COLUMN VERTICAL TEXT RULE: Each speech bubble containing 2 to 5 parallel vertical columns (tatechugaki) MUST be output as ONE unified block. NEVER split vertical columns of the same bubble into separate blocks. Transcribe original text in Right-to-Left column order without furigana duplication.",
-                    "POSITION CALCULATION FORMULA: Output 2 integers [x, y] on scale 0 to 1000 (where top-left corner is [0, 0] and bottom-right corner is [1000, 1000]). Set x = xmin (left edge of bubble/text cluster), y = ymin (top edge). Width and height default to 400px square in the app, so you do NOT need to calculate w and h.",
+                    "MANGA READING ORDER: Order detected blocks strictly in natural manga reading flow: Top-Right to Bottom-Left across panels.",
+                    "JAPANESE VERTICAL TEXT & MULTI-COLUMN SPECIFICATION (縦書き):",
+                    "1. In Japanese manga, a single speech bubble typically contains 2 to 5 parallel vertical columns reading from Right to Left. ALL vertical columns of the same bubble MUST be output as ONE single unified block. NEVER split adjacent vertical columns of the same bubble into separate blocks.",
+                    "2. COLUMN READING ORDER: Read and transcribe vertical columns strictly from RIGHT to LEFT (Column 1 is rightmost, Column 2 is next to its left, etc.). Top-to-bottom within each column.",
+                    "3. NO FURIGANA DUPLICATION: Kanji often have tiny ruby text / furigana annotations to their right. Transcribe ONLY the primary kanji word itself without furigana duplication.",
+                    "4. TRUE GEOMETRIC CENTER ANCHOR: For vertical Japanese text, calculate the true geometric center of the ENTIRE bubble bounding box: centerX = (leftmost edge + rightmost edge)/2, centerY = (topmost edge + bottommost edge)/2. Do NOT output the top-right corner of the first column.",
+                    "POSITION CALCULATION FORMULA: Output 2 integers [x, y] on scale 0 to 1000 (where top-left corner is [0, 0] and bottom-right corner is [1000, 1000]). Set x = centerX (center of bubble/text cluster), y = centerY (center vertical). The app centers a 400px x 400px translation box at this anchor point (x: anchorX - 200, y: anchorY - 200), so you do NOT need to calculate w and h.",
                     `Translate to short, natural ${targetLangName} that matches the scene and speaker relationship.`,
                     `Preserve the same ${targetLangName} ${pronounTerm} and terminology within the page whenever the relationship stays the same.`,
                     "Keep line breaks and pacing natural for manga dialogue.",
@@ -1377,7 +1383,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 if (isOpenAiFormat) {
                     apiUrl = `${endpoint.replace(/\/$/, '')}/chat/completions`;
                     let openAiUserContent = [
-                        { type: "text", text: `Detect each speech bubble, narration box, and SFX with [x, y] position coordinates. Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` },
+                        { type: "text", text: `Detect each speech bubble, narration box, and SFX with [x, y] center anchor coordinates (x = centerX, y = centerY). Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` },
                         { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
                     ];
                     if (prevPageContext) {
@@ -1397,7 +1403,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 } else {
                     apiUrl = getGeminiGenerateContentUrl(selectedModel, keyToUse);
                     const contentsParts = [
-                        { text: `Detect each speech bubble, narration box, and SFX with [x, y] position coordinates. Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` }
+                        { text: `Detect each speech bubble, narration box, and SFX with [x, y] center anchor coordinates (x = centerX, y = centerY). Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` }
                     ];
                     if (prevPageContext) {
                         contentsParts.push({ text: prevPageContext });
@@ -1423,7 +1429,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                                                 box: {
                                                     type: "ARRAY",
                                                     items: { type: "NUMBER" },
-                                                    description: "[x, y] position coordinates from 0 to 1000"
+                                                    description: "[x, y] center anchor coordinates from 0 to 1000 (x = centerX, y = centerY)"
                                                 },
                                                 vertical: { type: "BOOLEAN" }
                                             },

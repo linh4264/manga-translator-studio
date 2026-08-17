@@ -12,13 +12,17 @@ import { globalState } from '../../../public/src/core/state.js';
 test('Translation Box Size - Initial Box is Exactly 400px x 400px Equivalent', () => {
     assert.strictEqual(DEFAULT_BLOCK_SIZE_PX, 400, 'DEFAULT_BLOCK_SIZE_PX must be 400');
 
-    // On standard 1000x1000 image, 400px = 40%
-    const aiBox = refineAiBlockBox([250, 150], { width: 1000, height: 1000 });
+    // On standard 1000x1000 image, 400px = 40%, anchor [500, 300] (center) -> top-left x = 500-200=300px (30%), y = 300-200=100px (10%)
+    const aiBox = refineAiBlockBox([500, 300], { width: 1000, height: 1000 });
+    assert.strictEqual(aiBox.x, 30, 'Top-left X must match anchorX - 200px (30%)');
+    assert.strictEqual(aiBox.y, 10, 'Top-left Y must match anchorY - 200px (10%)');
     assert.strictEqual(aiBox.w, 40, 'Width must be 40% for 400px on 1000px width');
     assert.strictEqual(aiBox.h, 40, 'Height must be 40% for 400px on 1000px height');
 
-    // On 800x1200 image
-    const customImgBox = refineAiBlockBox([100, 200], { width: 800, height: 1200 });
+    // On 800x1200 image, anchor [400, 600] -> anchorX=400px (50%), anchorY=600px (50%) -> top-left x = 400-200=200px (25%), y = 600-200=400px (33.33%)
+    const customImgBox = refineAiBlockBox([500, 500], { width: 800, height: 1200 });
+    assert.strictEqual(customImgBox.x, 25, 'Top-left X 200px on 800px image must be 25%');
+    assert.strictEqual(customImgBox.y, 33.34, 'Top-left Y on 1200px image must be 33.34%');
     assert.strictEqual(customImgBox.w, 50, 'Width 400px on 800px image must be 50%');
     assert.strictEqual(customImgBox.h, 33.33, 'Height 400px on 1200px image must be 33.33%');
 });
