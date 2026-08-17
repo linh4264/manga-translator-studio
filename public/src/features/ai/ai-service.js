@@ -31,7 +31,7 @@ import {
 import { elements } from '../../core/elements.js';
 import { showToast } from '../../core/utils/dom.js';
 import { parseGeminiJsonText } from '../../core/utils/json.js';
-import { refineAiBlockBox } from '../ocr/ocr-service.js';
+import { refineAiBlockBox, mergeOverlappingAiBlocks } from '../ocr/ocr-service.js';
 import { requestOverlayRender, autoMatchBlockStyle } from '../canvas/canvas-service.js';
 import { compilePronounMatrixPrompt } from '../pronoun.js';
 import { getConfiguredApiKey, getGeminiGenerateContentUrl, getConfiguredAiProvider, getConfiguredApiEndpoint } from './ai-config.js';
@@ -537,15 +537,17 @@ async function executeOcrVisionStep({
     requestHeaders
 }) {
     const ocrSystemInstruction = [
-        "You are an expert manga speech bubble detector and Vision OCR system.",
-        "Detect ALL speech bubbles, narration boxes, SFX sound effects, and sign labels in this manga page.",
-        "MANGA READING ORDER: Order detected blocks strictly in natural manga reading flow: Top-Right to Bottom-Left across panels (start from the top-right panel, read right-to-left within each panel, then move downward to lower panels). This guarantees dialogue sequence is coherent for translation.",
-        "NO FURIGANA DUPLICATION: In Japanese manga, kanji characters often have tiny ruby text / furigana annotations above or beside them. Transcribe ONLY the primary kanji word itself. NEVER duplicate the furigana phonetic reading into the transcript (e.g. transcribe 運命, NEVER 運命さだめ or 運命(さだめ)).",
-        "CLEAN RAW TRANSCRIPTION: Read and transcribe the exact raw original text (Japanese, Korean, Chinese, or English) inside each region. Preserve original punctuation (?, !, ..., ♪, ♡) faithfully. Do not add commentary, explanations, or translations in this step.",
+        "You are an expert manga Vision OCR system specialized in pixel-accurate speech bubble and Japanese vertical text detection.",
+        "Detect ALL speech bubbles, narration boxes, SFX sound effects, and signs/labels in this manga page.",
+        "MANGA READING ORDER: Order detected blocks strictly in natural manga reading flow: Top-Right to Bottom-Left across panels (start from the top-right panel, read right-to-left within each panel, then move downward to lower panels).",
+        "JAPANESE MULTI-COLUMN VERTICAL TEXT RULE:",
+        "1. In Japanese manga, a single speech bubble typically contains 2 to 5 vertical text columns (tatechugaki) reading from Right to Left. The bounding box [x, y, w, h] MUST ENCOMPASS ALL PARALLEL VERTICAL COLUMNS OF THAT SPEECH BUBBLE AS ONE UNIFIED RECTANGLE (from the leftmost column to the rightmost column including furigana, and from the top of the highest character to the bottom of the lowest character).",
+        "2. NEVER split adjacent vertical columns of the same speech bubble into separate blocks.",
+        "3. EACH VISUALLY DISTINCT SPEECH BUBBLE IS 1 SEPARATE BLOCK: Never merge multiple separate speech bubbles together.",
+        "4. NO FURIGANA DUPLICATION: In Japanese manga, kanji characters often have tiny ruby text / furigana annotations to their right. Transcribe ONLY the primary kanji word itself. NEVER duplicate the furigana phonetic reading into the transcript (e.g. transcribe 繋がっている, NEVER 繋がつながっている or 繋が(つな)っている).",
+        "CLEAN RAW TRANSCRIPTION: Read and transcribe the exact raw original text inside each bubble/region in natural Right-to-Left vertical column order. Preserve original punctuation (?, !, ..., ♪, ♡, 「, 」) faithfully. Do not add commentary, explanations, or translations in this step.",
         "IF NO TEXT PRESENT: If this page is pure artwork, a splash illustration, or contains no readable dialogue/SFX, return an empty array: {\"blocks\": []}.",
-        "COORDINATE FORMULA: Return each bounding box as a 4-integer array [x, y, w, h] on scale 0 to 1000 (where top-left corner is 0, 0 and bottom-right corner is 1000, 1000). Set x = xmin (left edge), y = ymin (top edge), w = (xmax - xmin) (box width), h = (ymax - ymin) (box height). DO NOT return xmax as w or ymax as h. Example: A bubble spanning from xmin=200 to xmax=500 and ymin=100 to ymax=300 MUST return box: [200, 100, 300, 200].",
-        "For speech bubbles and narration boxes, use a box covering the entire inner blank space of the bubble so translated text fits easily. For SFX and signs, use the tightest box covering the characters.",
-        "IMPORTANT RULE FOR CONNECTED BUBBLES: When multiple speech bubbles are attached/connected together (such as double-bubbles, stacked connected lobes, or chained bubbles), treat EACH individual bubble lobe/section as a SEPARATE block with its own bounding box.",
+        "COORDINATE FORMULA (Scale 0 to 1000, where top-left is [0, 0] and bottom-right is [1000, 1000]): For each block, output 4 integers [x, y, w, h] enclosing the full text area: x = xmin (left edge of leftmost column), y = ymin (top edge of highest character), w = (xmax - xmin) (width spanning from leftmost column to rightmost column), h = (ymax - ymin) (height from top to bottom of lowest character). Example: [200, 100, 150, 200].",
         "Detect vertical text with vertical=true (omit vertical for horizontal text).",
         "Return valid JSON only matching the schema."
     ].join(" ");
@@ -562,7 +564,7 @@ async function executeOcrVisionStep({
                 {
                     role: "user",
                     content: [
-                        { type: "text", text: "Detect all text bubbles, narration boxes, and SFX with their 0-1000 [x, y, w, h] box coordinates and raw original text. Return JSON matching schema {\"blocks\": [{\"id\": \"b1\", \"original\": \"...\", \"box\": [0, 0, 100, 100], \"vertical\": true}]}" },
+                        { type: "text", text: "Detect each speech bubble, narration box, and SFX with its 0-1000 [x, y, w, h] box coordinates and raw original text. Return JSON matching schema {\"blocks\": [{\"id\": \"b1\", \"original\": \"...\", \"box\": [0, 0, 100, 100], \"vertical\": true}]}" },
                         { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
                     ]
                 }
@@ -576,7 +578,7 @@ async function executeOcrVisionStep({
         requestBody = JSON.stringify({
             contents: [{
                 parts: [
-                    { text: "Detect all speech bubbles, narration boxes, SFX labels with their 0-1000 integer [x, y, w, h] coordinates and raw original text. Return JSON." },
+                    { text: "Detect each speech bubble, narration box, SFX label with its 0-1000 integer [x, y, w, h] coordinates and raw original text. Return JSON." },
                     { inlineData: { mimeType, data: rawBase64 } }
                 ]
             }],
@@ -653,25 +655,19 @@ async function executeOcrVisionStep({
                 : result.candidates?.[0]?.content?.parts?.[0]?.text;
 
             const data = parseGeminiJsonText(jsonText);
+            let rawBlocks = [];
             if (Array.isArray(data)) {
-                return data;
+                rawBlocks = data;
+            } else if (data && Array.isArray(data.blocks)) {
+                rawBlocks = data.blocks;
+            } else if (data && Array.isArray(data.dialogues)) {
+                rawBlocks = data.dialogues;
+            } else if (data && Array.isArray(data.regions)) {
+                rawBlocks = data.regions;
+            } else if (data && Array.isArray(data.items)) {
+                rawBlocks = data.items;
             }
-            if (data && Array.isArray(data.blocks)) {
-                return data.blocks;
-            }
-            if (data && Array.isArray(data.dialogues)) {
-                return data.dialogues;
-            }
-            if (data && Array.isArray(data.regions)) {
-                return data.regions;
-            }
-            if (data && Array.isArray(data.items)) {
-                return data.items;
-            }
-            if (data && typeof data === 'object') {
-                return [];
-            }
-            return [];
+            return mergeOverlappingAiBlocks(rawBlocks);
         } catch (fetchErr) {
             clearTimeout(timeoutId);
             lastError = fetchErr;
@@ -1364,10 +1360,9 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
 
                 const systemInstruction = [
-                    "Detect every manga text bubble, narration box, SFX label, and sign/label area, then return JSON only.",
-                    "COORDINATE CALCULATION FORMULA: Return each box as a 4-integer array [x, y, w, h] on scale 0 to 1000 (where top-left corner is 0, 0 and bottom-right corner is 1000, 1000). Set x = xmin (left edge), y = ymin (top edge), w = (xmax - xmin) (box width), h = (ymax - ymin) (box height). DO NOT return xmax as w or ymax as h. Example: A bubble spanning from xmin=200 to xmax=500 and ymin=100 to ymax=300 MUST return box: [200, 100, 300, 200].",
-                    "For speech bubbles and narration boxes, use a box that covers the entire inner blank space of the bubble or box. For SFX and signs, use the tightest box covering the characters.",
-                    "IMPORTANT RULE FOR CONNECTED BUBBLES: When multiple speech bubbles are attached or connected together in double-bubbles or stacked lobes, treat EACH individual bubble lobe/section as a SEPARATE block with its own box coordinates.",
+                    "Detect every manga speech bubble, narration box, and SFX label, then return JSON only.",
+                    "JAPANESE MULTI-COLUMN VERTICAL TEXT RULE: Each speech bubble containing 2 to 5 parallel vertical columns (tatechugaki) MUST be output as ONE unified block. The bounding box [x, y, w, h] MUST enclose ALL parallel columns together (from leftmost column to rightmost column + furigana margin). NEVER split vertical columns of the same bubble into separate blocks. Transcribe original text in Right-to-Left column order without furigana duplication.",
+                    "COORDINATE CALCULATION FORMULA: Output 4 integers [x, y, w, h] on scale 0 to 1000 (where top-left corner is [0, 0] and bottom-right corner is [1000, 1000]). Set x = xmin (left edge of leftmost column), y = ymin (top edge of highest character), w = (xmax - xmin) (width spanning all columns), h = (ymax - ymin) (height from top to bottom of lowest character).",
                     `Translate to short, natural ${targetLangName} that matches the scene and speaker relationship.`,
                     `Preserve the same ${targetLangName} ${pronounTerm} and terminology within the page whenever the relationship stays the same.`,
                     "Keep line breaks and pacing natural for manga dialogue.",
@@ -1383,7 +1378,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 if (isOpenAiFormat) {
                     apiUrl = `${endpoint.replace(/\/$/, '')}/chat/completions`;
                     let openAiUserContent = [
-                        { type: "text", text: `Detect all speech bubbles, narration boxes, SFX sound effects, and signs/labels with [x, y, w, h] coordinates. Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` },
+                        { type: "text", text: `Detect each speech bubble, narration box, and SFX with [x, y, w, h] coordinates. Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` },
                         { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
                     ];
                     if (prevPageContext) {
@@ -1403,7 +1398,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 } else {
                     apiUrl = getGeminiGenerateContentUrl(selectedModel, keyToUse);
                     const contentsParts = [
-                        { text: `Detect all speech bubbles, narration boxes, SFX sound effects, and signs/labels with [x, y, w, h] coordinates. Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` }
+                        { text: `Detect each speech bubble, narration box, and SFX with [x, y, w, h] coordinates. Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` }
                     ];
                     if (prevPageContext) {
                         contentsParts.push({ text: prevPageContext });
@@ -1490,7 +1485,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 if (!data || !Array.isArray(data.blocks)) {
                     throw new Error("Phản hồi từ AI bị lỗi định dạng JSON hoặc bị ngắt câu.");
                 }
-                finalBlocks = data.blocks;
+                finalBlocks = mergeOverlappingAiBlocks(data.blocks);
             }
 
             updateProgressMsg(

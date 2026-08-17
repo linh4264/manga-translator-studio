@@ -100,42 +100,206 @@ export function expandAiBox(box, expandXRatio, expandYRatio) {
     };
 }
 
+/**
+ * ⚡ TEXT MASK -> DILATE / EXPAND -> INPAINT REGION Pipeline
+ * Pinpoints the exact inpaint bounding box by segmenting text ink glyphs and dilating them.
+ * 
+ * @param {object|Array} rawBox - Input bounding box (percentage or 0-1000 array)
+ * @param {ImageData} imageData - Full page canvas ImageData
+ * @param {object} options - Configuration options { dilationRadius, paddingPx, darkThreshold }
+ * @returns {{ x: number, y: number, w: number, h: number }} - Precise Inpaint Region Bounding Box (%)
+ */
+export function computeTextMaskDilatedRoi(rawBox, imageData, options = {}) {
+    const normalized = normalizeAiBlockBox(rawBox);
+    if (!imageData || !imageData.width || !imageData.height) return normalized;
+
+    const imgW = imageData.width;
+    const imgH = imageData.height;
+    const data = imageData.data;
+
+    // Vùng tìm kiếm lân cận (+8% viền)
+    const searchBox = expandAiBox(normalized, 0.08, 0.08);
+    let sx = Math.max(0, Math.min(imgW - 1, Math.round((searchBox.x / 100) * imgW)));
+    let sy = Math.max(0, Math.min(imgH - 1, Math.round((searchBox.y / 100) * imgH)));
+    let sw = Math.max(4, Math.min(imgW - sx, Math.round((searchBox.w / 100) * imgW)));
+    let sh = Math.max(4, Math.min(imgH - sy, Math.round((searchBox.h / 100) * imgH)));
+
+    const darkThreshold = options.darkThreshold || 140;
+    const dilationRadius = options.dilationRadius || 3;
+    const paddingPx = options.paddingPx !== undefined ? options.paddingPx : 6;
+
+    // 1. TEXT MASK: Phân tách điểm ảnh tối màu
+    const rawBinary = new Uint8Array(sw * sh);
+    let darkPixelCount = 0;
+
+    for (let ly = 0; ly < sh; ly++) {
+        const rowOffset = (sy + ly) * imgW;
+        for (let lx = 0; lx < sw; lx++) {
+            const idx = (rowOffset + (sx + lx)) * 4;
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
+            const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+
+            if (luminance <= darkThreshold) {
+                rawBinary[ly * sw + lx] = 1;
+                darkPixelCount++;
+            }
+        }
+    }
+
+    if (darkPixelCount < 4 || darkPixelCount > (sw * sh * 0.90)) {
+        return normalized;
+    }
+
+    // 2. CONNECTED COMPONENT ANALYSIS: Lọc bỏ tóc nhân vật, viền khung tranh và mảng màu tối nền
+    const visited = new Uint8Array(sw * sh);
+    const cleanTextMask = new Uint8Array(sw * sh);
+    let validGlyphCount = 0;
+
+    for (let ly = 0; ly < sh; ly++) {
+        for (let lx = 0; lx < sw; lx++) {
+            const pos = ly * sw + lx;
+            if (rawBinary[pos] === 1 && visited[pos] === 0) {
+                let compMinX = lx, compMaxX = lx, compMinY = ly, compMaxY = ly;
+                let compPixelCount = 0;
+                const compPixels = [];
+
+                const queue = [pos];
+                visited[pos] = 1;
+
+                while (queue.length > 0) {
+                    const curr = queue.pop();
+                    const cy = Math.floor(curr / sw);
+                    const cx = curr % sw;
+                    compPixelCount++;
+                    compPixels.push(curr);
+
+                    if (cx < compMinX) compMinX = cx;
+                    if (cx > compMaxX) compMaxX = cx;
+                    if (cy < compMinY) compMinY = cy;
+                    if (cy > compMaxY) compMaxY = cy;
+
+                    const neighbors = [
+                        cy > 0 ? curr - sw : -1,
+                        cy < sh - 1 ? curr + sw : -1,
+                        cx > 0 ? curr - 1 : -1,
+                        cx < sw - 1 ? curr + 1 : -1
+                    ];
+
+                    for (const n of neighbors) {
+                        if (n >= 0 && rawBinary[n] === 1 && visited[n] === 0) {
+                            visited[n] = 1;
+                            queue.push(n);
+                        }
+                    }
+                }
+
+                const compW = compMaxX - compMinX + 1;
+                const compH = compMaxY - compMinY + 1;
+
+                // Loại trừ viền khung tranh dài hoặc mảng tóc/quần áo lớn của nhân vật
+                const isBorderLine = (compW > sw * 0.75 && compH <= 4) || (compH > sh * 0.75 && compW <= 4);
+                const isGiantHairOrFrame = (compW > sw * 0.85 && compH > sh * 0.7) ||
+                                          (compPixelCount > (sw * sh * 0.45)) ||
+                                          (compH > sh * 0.65 && (compMaxY === sh - 1 || compMinY === 0));
+                const isTinyNoise = compPixelCount < 3 && compW < 2 && compH < 2;
+
+                if (!isBorderLine && !isGiantHairOrFrame && !isTinyNoise) {
+                    for (let i = 0; i < compPixels.length; i++) {
+                        cleanTextMask[compPixels[i]] = 1;
+                    }
+                    validGlyphCount++;
+                }
+            }
+        }
+    }
+
+    if (validGlyphCount === 0) {
+        return normalized;
+    }
+
+    // 3. DILATE / EXPAND: Giãn nở hình thái học dạng ellipse kết nối các cột dọc tiếng Nhật và Furigana
+    const dilatedMask = new Uint8Array(sw * sh);
+    const radX = options.dilationRadiusX || 6; // Kết nối các cột dọc song song và lề Furigana
+    const radY = options.dilationRadiusY || 3; // Giữ chặt viền trên/dưới tránh tràn vào tóc/viền tranh
+    const radXSq = radX * radX;
+    const radYSq = radY * radY;
+
+    let minX = sw;
+    let minY = sh;
+    let maxX = -1;
+    let maxY = -1;
+
+    for (let ly = 0; ly < sh; ly++) {
+        for (let lx = 0; lx < sw; lx++) {
+            if (cleanTextMask[ly * sw + lx] === 1) {
+                const yMin = Math.max(0, ly - radY);
+                const yMax = Math.min(sh - 1, ly + radY);
+                const xMin = Math.max(0, lx - radX);
+                const xMax = Math.min(sw - 1, lx + radX);
+
+                for (let dy = yMin; dy <= yMax; dy++) {
+                    const yDist = dy - ly;
+                    const dRowOffset = dy * sw;
+                    for (let dx = xMin; dx <= xMax; dx++) {
+                        const xDist = dx - lx;
+                        if ((xDist * xDist) / radXSq + (yDist * yDist) / radYSq <= 1.0) {
+                            dilatedMask[dRowOffset + dx] = 1;
+                            if (dx < minX) minX = dx;
+                            if (dx > maxX) maxX = dx;
+                            if (dy < minY) minY = dy;
+                            if (dy > maxY) maxY = dy;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (maxX === -1 || maxY === -1) {
+        return normalized;
+    }
+
+    // 4. INPAINT REGION: Tính hộp bao chính xác của vùng chữ kèm padding
+    const roiMinX = Math.max(0, sx + minX - paddingPx);
+    const roiMinY = Math.max(0, sy + minY - paddingPx);
+    const roiMaxX = Math.min(imgW - 1, sx + maxX + paddingPx);
+    const roiMaxY = Math.min(imgH - 1, sy + maxY + paddingPx);
+
+    const roiW = roiMaxX - roiMinX + 1;
+    const roiH = roiMaxY - roiMinY + 1;
+
+    const inpaintBox = {
+        x: Math.round(((roiMinX / imgW) * 100) * 100) / 100,
+        y: Math.round(((roiMinY / imgH) * 100) * 100) / 100,
+        w: Math.round(((roiW / imgW) * 100) * 100) / 100,
+        h: Math.round(((roiH / imgH) * 100) * 100) / 100
+    };
+
+    if (inpaintBox.w < 1 || inpaintBox.h < 1 || isSuspiciousAiBlockBox(inpaintBox)) {
+        return normalized;
+    }
+
+    return inpaintBox;
+}
+
 export function refineAiBlockBox(box, imageData, modelId) {
     const normalized = normalizeAiBlockBox(box);
     if (!imageData) return normalized;
 
-    const weakModel = isWeakTranslationModel(modelId) || isFlash31LiteModel(modelId);
-    const lightExpanded = weakModel ? expandAiBox(normalized, 0.05, 0.06) : expandAiBox(normalized, 0.04, 0.05);
-
-    // Dùng độ giãn vừa phải đối với mô hình Lite để snap không bị văng sang nét vẽ nhân vật bên ngoài
-    const seedBox = weakModel ? expandAiBox(normalized, 0.06, 0.08) : expandAiBox(normalized, 0.04, 0.05);
-    const refined = snapBoxToContours(seedBox, imageData, {
-        searchScale: weakModel ? 1.25 : 1.05,
-        sampleFractions: weakModel ? [0.3, 0.5, 0.7] : [0.35, 0.5, 0.65],
-        darkThreshold: weakModel ? 132 : 130
+    // ⚡ TEXT MASK -> DILATE / EXPAND -> INPAINT REGION Pipeline
+    const inpaintRoiBox = computeTextMaskDilatedRoi(normalized, imageData, {
+        dilationRadius: 4,
+        paddingPx: 6,
+        darkThreshold: 140
     });
 
-    const fallbackBox = weakModel ? (isSuspiciousAiBlockBox(lightExpanded) ? normalized : lightExpanded) : normalized;
-
-    if (!refined || isSuspiciousAiBlockBox(refined)) {
-        return fallbackBox;
+    if (inpaintRoiBox && !isSuspiciousAiBlockBox(inpaintRoiBox)) {
+        return inpaintRoiBox;
     }
 
-    const normalizedCenterX = normalized.x + (normalized.w / 2);
-    const normalizedCenterY = normalized.y + (normalized.h / 2);
-    const refinedCenterX = refined.x + (refined.w / 2);
-    const refinedCenterY = refined.y + (refined.h / 2);
-    const centerShift = Math.max(
-        Math.abs(refinedCenterX - normalizedCenterX),
-        Math.abs(refinedCenterY - normalizedCenterY)
-    );
-    const areaRatio = (refined.w * refined.h) / Math.max(1, normalized.w * normalized.h);
-
-    if (weakModel && (centerShift > 12 || areaRatio < 0.5 || areaRatio > 2.4)) {
-        return fallbackBox;
-    }
-
-    return refined;
+    return normalized;
 }
 
 export function normalizeAiBlockBox(box) {
@@ -195,6 +359,84 @@ export function normalizeAiBlockBox(box) {
         w: Math.round(cleanW * 100) / 100,
         h: Math.round(cleanH * 100) / 100
     };
+}
+
+// Tính tỷ lệ diện tích giao nhau trên diện tích hợp (Intersection over Union - IoU)
+export function calculateBoxIntersectionRatio(box1, box2) {
+    const b1 = normalizeAiBlockBox(box1);
+    const b2 = normalizeAiBlockBox(box2);
+
+    const x1 = Math.max(b1.x, b2.x);
+    const y1 = Math.max(b1.y, b2.y);
+    const x2 = Math.min(b1.x + b1.w, b2.x + b2.w);
+    const y2 = Math.min(b1.y + b1.h, b2.y + b2.h);
+
+    if (x2 <= x1 || y2 <= y1) return 0;
+
+    const intersectionArea = (x2 - x1) * (y2 - y1);
+    const area1 = b1.w * b1.h;
+    const area2 = b2.w * b2.h;
+    const unionArea = area1 + area2 - intersectionArea;
+
+    if (unionArea <= 0) return 0;
+    return intersectionArea / unionArea;
+}
+
+// Tự động hợp nhất các block AI bị trùng lặp / chồng đè vị trí (IoU >= 0.70)
+export function mergeOverlappingAiBlocks(blocks, overlapThreshold = 0.70) {
+    if (!Array.isArray(blocks) || blocks.length <= 1) return blocks || [];
+
+    const result = [];
+    const merged = new Array(blocks.length).fill(false);
+
+    for (let i = 0; i < blocks.length; i++) {
+        if (merged[i]) continue;
+        let current = { ...blocks[i] };
+        let currentBox = normalizeAiBlockBox(current.box);
+
+        for (let j = i + 1; j < blocks.length; j++) {
+            if (merged[j]) continue;
+            const other = blocks[j];
+            const otherBox = normalizeAiBlockBox(other.box);
+
+            const overlapRatio = calculateBoxIntersectionRatio(currentBox, otherBox);
+            if (overlapRatio >= overlapThreshold) {
+                merged[j] = true;
+
+                // Ghép nối câu chữ gốc theo thứ tự xuất hiện
+                const orig1 = (current.original || '').trim();
+                const orig2 = (other.original || '').trim();
+                if (orig2 && !orig1.includes(orig2)) {
+                    current.original = orig1 ? `${orig1} ${orig2}` : orig2;
+                }
+
+                const trans1 = (current.translated || '').trim();
+                const trans2 = (other.translated || '').trim();
+                if (trans2 && !trans1.includes(trans2)) {
+                    current.translated = trans1 ? `${trans1} ${trans2}` : trans2;
+                }
+
+                // Hợp nhất (Union) vùng biên của cả 2 bounding box
+                const minX = Math.min(currentBox.x, otherBox.x);
+                const minY = Math.min(currentBox.y, otherBox.y);
+                const maxX = Math.max(currentBox.x + currentBox.w, otherBox.x + otherBox.w);
+                const maxY = Math.max(currentBox.y + currentBox.h, otherBox.y + otherBox.h);
+
+                currentBox = {
+                    x: Math.round(minX * 100) / 100,
+                    y: Math.round(minY * 100) / 100,
+                    w: Math.round((maxX - minX) * 100) / 100,
+                    h: Math.round((maxY - minY) * 100) / 100
+                };
+                current.box = currentBox;
+                if (other.vertical) current.vertical = true;
+            }
+        }
+
+        result.push(current);
+    }
+
+    return result;
 }
 
 // Tự động tinh chỉnh (snap) 4 cạnh của bounding box khớp sát vào đường viền đen gần nhất của bong bóng thoại
