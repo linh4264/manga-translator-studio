@@ -837,7 +837,7 @@ async function executeTextTranslationStep({
                 { role: "user", content: userPromptText }
             ],
             temperature: 0.3,
-            max_tokens: 8192,
+            max_tokens: 16384,
             response_format: { type: "json_object" }
         });
     } else {
@@ -850,7 +850,7 @@ async function executeTextTranslationStep({
             }],
             generationConfig: {
                 responseMimeType: "application/json",
-                maxOutputTokens: 8192,
+                maxOutputTokens: 16384,
                 responseSchema: {
                     type: "OBJECT",
                     properties: {
@@ -1008,7 +1008,7 @@ async function executeChapterChunkTranslationStep({
                 { role: "user", content: userPromptText }
             ],
             temperature: 0.3,
-            max_tokens: 8192,
+            max_tokens: 16384,
             response_format: { type: "json_object" }
         });
     } else {
@@ -1021,7 +1021,7 @@ async function executeChapterChunkTranslationStep({
             }],
             generationConfig: {
                 responseMimeType: "application/json",
-                maxOutputTokens: 8192,
+                maxOutputTokens: 16384,
                 responseSchema: {
                     type: "OBJECT",
                     properties: {
@@ -1128,9 +1128,9 @@ export async function executeChapterTranslationStep({
 }) {
     if (!allChapterBlocks || allChapterBlocks.length === 0) return [];
 
-    const MAX_CHUNK_BLOCKS = 65; // Ngưỡng an toàn tuyệt đối chống tràn output token 8192 (~65 câu thoại / chunk)
+    const MAX_CHUNK_BLOCKS = 200; // Ngưỡng an toàn chống tràn output token 16384 (~200 câu thoại / chunk)
 
-    // Trường hợp 1: Toàn bộ chapter nhỏ hơn hoặc bằng 65 câu thoại -> Dịch trong đúng 1 request duy nhất (1 RPD)
+    // Trường hợp 1: Toàn bộ chapter nhỏ hơn hoặc bằng 200 câu thoại -> Dịch trong đúng 1 request duy nhất (1 RPD)
     if (allChapterBlocks.length <= MAX_CHUNK_BLOCKS) {
         return executeChapterChunkTranslationStep({
             chunkBlocks: allChapterBlocks,
