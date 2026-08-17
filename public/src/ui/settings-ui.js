@@ -421,6 +421,11 @@ export async function openSettingsModal() {
     globalState.exportFormat = storedFormat;
     if (exportFormatSelect) exportFormatSelect.value = storedFormat;
 
+    const contextPromptInput = elements.contextPromptInput || document.getElementById('translation-context-prompt');
+    if (contextPromptInput) {
+        contextPromptInput.value = globalState.translationContextPrompt || '';
+    }
+
     const exportPdfQualitySelect = document.getElementById('export-pdf-quality-select');
     const storedPdfQuality = localStorage.getItem('manga_pdf_quality') || globalState.pdfQuality || 'hd';
     globalState.pdfQuality = storedPdfQuality;
@@ -448,6 +453,10 @@ export function switchSettingsTab(tabId) {
 window.switchSettingsTab = switchSettingsTab;
 
 export function closeSettingsModal() {
+    const contextPromptInput = elements.contextPromptInput || document.getElementById('translation-context-prompt');
+    if (contextPromptInput) {
+        updateTranslationContextPrompt(contextPromptInput.value);
+    }
     const modal = elements.settingsModal || document.getElementById('settings-modal');
     if (modal) modal.classList.add('hidden');
 }
@@ -624,9 +633,11 @@ export function updateTranslationGenrePreset() {
 }
 
 export function updateTranslationContextPrompt(value) {
-    globalState.translationContextPrompt = value;
-    safeSetLocalStorage('gemini_manga_translation_context_prompt', value);
+    const cleanValue = typeof value === 'string' ? value : (value && typeof value.value === 'string' ? value.value : (value?.target?.value ?? ''));
+    globalState.translationContextPrompt = cleanValue;
+    safeSetLocalStorage('gemini_manga_translation_context_prompt', cleanValue);
 }
+window.updateTranslationContextPrompt = updateTranslationContextPrompt;
 
 export function updateApiDelay(value) {
     globalState.apiDelay = parseInt(value, 10) || 8;

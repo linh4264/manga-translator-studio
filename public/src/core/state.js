@@ -145,7 +145,7 @@ export const globalState = {
         }
     })(),
     comicTone: localStorage.getItem('manga_comic_tone') || 'classic',      // 'classic' | 'comedy' | 'dark' | 'poetic'
-    translationContextPrompt: '', // Prompt ngữ cảnh bổ sung cho dịch thuật
+    translationContextPrompt: localStorage.getItem('gemini_manga_translation_context_prompt') || '', // Prompt ngữ cảnh bổ sung cho dịch thuật
     apiDelay: 2,       // Giãn cách gửi yêu cầu API (giây) tránh lỗi 429
     maxRetries: 3,     // Số lần thử lại tối đa khi gặp lỗi API tạm thời
     // Global style presets for new/default blocks

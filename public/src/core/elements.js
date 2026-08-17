@@ -7,6 +7,7 @@ export const elements = {
     get pageCountBadge() { return document.getElementById('page-count-badge'); },
     get sourceLangSelect() { return document.getElementById('source-lang-select'); },
     get targetLangSelect() { return document.getElementById('target-lang-select'); },
+    get contextPromptInput() { return document.getElementById('translation-context-prompt'); },
     get pronounMatrixInput() { return document.getElementById('pronoun-matrix-input'); },
     get ocrEnhanceChk() { return document.getElementById('ocr-enhance-chk'); },
     get workspaceEmptyState() { return document.getElementById('workspace-empty-state'); },

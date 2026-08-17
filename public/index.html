@@ -2417,6 +2417,8 @@
                                     class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Prompt ngữ cảnh dịch bổ sung:</label>
                                 <textarea id="translation-context-prompt"
                                     oninput="updateTranslationContextPrompt(this.value)"
+                                    onchange="updateTranslationContextPrompt(this.value)"
+                                    onblur="updateTranslationContextPrompt(this.value)"
                                     data-i18n-placeholder="context-prompt-placeholder" rows="3"
                                     placeholder="Ví dụ: Giọng điệu thân mật học đường, ưu tiên dịch tự nhiên, giữ nguyên thuật ngữ kỹ năng..."
                                     class="w-full bg-slate-900 border border-slate-700/80 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 transition-colors resize-y"></textarea>

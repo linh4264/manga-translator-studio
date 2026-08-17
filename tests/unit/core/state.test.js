@@ -30,6 +30,7 @@ test('Core State - Storage Synchronization', () => {
     localStorage.setItem('gemini_manga_target_lang', 'vi');
     localStorage.setItem('manga_comic_universe', 'manhwa');
     localStorage.setItem('gemini_manga_autofit_enabled', 'false');
+    localStorage.setItem('gemini_manga_translation_context_prompt', 'Giọng điệu thân mật học đường');
 
     initializeStateFromStorage();
 
@@ -38,6 +39,7 @@ test('Core State - Storage Synchronization', () => {
     assert.strictEqual(globalState.targetLanguage, 'vi');
     assert.strictEqual(globalState.comicUniverse, 'manhwa');
     assert.strictEqual(globalState.autoFitEnabled, false);
+    assert.strictEqual(globalState.translationContextPrompt, 'Giọng điệu thân mật học đường');
 });
 
 test('Core State - Undo/Redo Invariant Test (Complete Data Preservation)', () => {
