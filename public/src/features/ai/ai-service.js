@@ -524,6 +524,67 @@ export async function enhanceImageForOcr(file) {
     });
 }
 
+// Đảm bảo luôn lấy được ImageData nguyên bản của trang để kích hoạt Gậy Ma Thuật (Magic Wand Snap)
+export async function ensurePageImageData(page) {
+    if (!page) return null;
+    if (page.imageDataCache && page.imageDataCache.data && page.imageDataCache.width > 0) {
+        return page.imageDataCache;
+    }
+
+    // 1. Lấy trực tiếp từ canvas nếu đang là trang hiển thị active
+    if (globalState.activePageIndex >= 0 && globalState.pages[globalState.activePageIndex] === page) {
+        if (elements.mangaCanvas && elements.mangaCanvas.width > 0) {
+            try {
+                const ctx = elements.mangaCanvas.getContext('2d');
+                const data = ctx.getImageData(0, 0, elements.mangaCanvas.width, elements.mangaCanvas.height);
+                page.imageDataCache = data;
+                return data;
+            } catch (e) { }
+        }
+    }
+
+    // 2. Sử dụng createImageBitmap siêu tốc từ File / Blob (Hardware Decoded)
+    if (page.file && typeof createImageBitmap === 'function') {
+        try {
+            const bitmap = await createImageBitmap(page.file);
+            const canvas = document.createElement('canvas');
+            canvas.width = bitmap.width;
+            canvas.height = bitmap.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(bitmap, 0, 0);
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            page.imageDataCache = data;
+            if (typeof bitmap.close === 'function') bitmap.close();
+            return data;
+        } catch (e) { }
+    }
+
+    // 3. Fallback tải qua Image DOM Element
+    if (page.src || (page.file && typeof URL !== 'undefined' && URL.createObjectURL)) {
+        try {
+            const srcUrl = page.src || URL.createObjectURL(page.file);
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.src = srcUrl;
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = reject;
+                setTimeout(reject, 8000);
+            });
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            page.imageDataCache = data;
+            return data;
+        } catch (e) { }
+    }
+
+    return null;
+}
+
 /**
  * ⚡ BƯỚC 1: QUÉT ẢNH VÀ NHẬN DIỆN TỌA ĐỘ KHUNG THOẠI (VISION OCR STEP)
  */
@@ -1515,26 +1576,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 isBackgroundMode ? progressVal : 85
             );
 
-            let pageImageData = page.imageDataCache || null;
-            if (!pageImageData) {
-                try {
-                    const img = new Image();
-                    img.src = page.src;
-                    await new Promise((resolve, reject) => {
-                        img.onload = resolve;
-                        img.onerror = reject;
-                    });
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-                    pageImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    page.imageDataCache = pageImageData;
-                } catch (e) {
-                    console.error("Không thể lấy imageData của trang để chạy snapBoxToContours:", e);
-                }
-            }
+            const pageImageData = await ensurePageImageData(page);
 
             // Lưu trạng thái trước khi thay đổi ô thoại
             pushStateToHistory();
@@ -1771,24 +1813,7 @@ export async function runBatchTranslation() {
                         });
 
                         // Caching ImageData for box contour refinement
-                        let pageImageData = page.imageDataCache || null;
-                        if (!pageImageData) {
-                            try {
-                                const img = new Image();
-                                img.src = page.src;
-                                await new Promise((resolve, reject) => {
-                                    img.onload = resolve;
-                                    img.onerror = reject;
-                                });
-                                const canvas = document.createElement('canvas');
-                                canvas.width = img.width;
-                                canvas.height = img.height;
-                                const ctx = canvas.getContext('2d');
-                                ctx.drawImage(img, 0, 0);
-                                pageImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                                page.imageDataCache = pageImageData;
-                            } catch (e) { }
-                        }
+                        const pageImageData = await ensurePageImageData(page);
 
                         const isVerticalTarget = ['ja', 'zh', 'ko'].includes(targetLang);
                         page.blocks = (detectedRawBlocks || []).map((b, bIdx) => {

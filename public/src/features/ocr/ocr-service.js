@@ -297,12 +297,12 @@ export function detectSpeechBubbleAtPoint(imageData, clickPixelX, clickPixelY, o
     let startX = Math.max(0, Math.min(imgW - 1, Math.round(clickPixelX)));
     let startY = Math.max(0, Math.min(imgH - 1, Math.round(clickPixelY)));
 
-    // 1. Tìm điểm hạt giống sáng nhất trong bán kính 20px (tránh trường hợp user click trúng nét chữ đen)
+    // 1. Tìm điểm hạt giống sáng nhất trong bán kính thăm dò mở rộng (tránh trường hợp AI/user click trúng nét chữ đen)
     let bestSeedX = startX;
     let bestSeedY = startY;
     let maxSeedBrightness = brightnessMap[startY * imgW + startX];
 
-    const probeRadius = 20;
+    const probeRadius = Math.max(45, Math.min(120, Math.round(Math.min(imgW, imgH) * 0.06)));
     for (let dy = -probeRadius; dy <= probeRadius; dy += 2) {
         for (let dx = -probeRadius; dx <= probeRadius; dx += 2) {
             const px = startX + dx;
@@ -321,14 +321,14 @@ export function detectSpeechBubbleAtPoint(imageData, clickPixelX, clickPixelY, o
     startX = bestSeedX;
     startY = bestSeedY;
 
-    // Ngưỡng độ sáng của ruột bóng thoại (Bóng thoại manga ruột trắng sáng >= 110)
+    // Ngưỡng độ sáng của ruột bóng thoại (Bóng thoại manga ruột trắng hoặc screentone nhẹ >= 80)
     const seedBrightness = brightnessMap[startY * imgW + startX];
-    if (seedBrightness < 110) {
+    if (seedBrightness < 80) {
         return null;
     }
 
     // Ngưỡng chặn viền đen nghiêm ngặt (Strict Barrier Threshold): không bao giờ nhảy qua viền đen
-    const bubbleThreshold = Math.max(160, Math.min(238, Math.round(seedBrightness * 0.80)));
+    const bubbleThreshold = Math.max(130, Math.min(238, Math.round(seedBrightness * 0.78)));
 
     // Giới hạn vùng tìm kiếm tối đa (đảm bảo bao phủ toàn bộ bóng thoại trong panel)
     const maxHalfW = Math.min(Math.round(imgW * 0.45), 600);
@@ -667,15 +667,15 @@ export function detectSpeechBubbleAtPoint(imageData, clickPixelX, clickPixelY, o
     let bw = maxX - minX;
     let bh = maxY - minY;
 
-    if (bw < 20 || bh < 20 || filledCount < 40) {
+    if (bw < 12 || bh < 12 || filledCount < 20) {
         return null;
     }
 
     // Giới hạn an toàn [0, imgW, imgH]
     minX = Math.max(0, Math.min(imgW - 1, minX));
     minY = Math.max(0, Math.min(imgH - 1, minY));
-    bw = Math.max(20, Math.min(imgW - minX, bw));
-    bh = Math.max(20, Math.min(imgH - minY, bh));
+    bw = Math.max(12, Math.min(imgW - minX, bw));
+    bh = Math.max(12, Math.min(imgH - minY, bh));
 
     const finalBox = {
         x: (minX / imgW) * 100,
@@ -696,11 +696,23 @@ export function detectSpeechBubbleAtPoint(imageData, clickPixelX, clickPixelY, o
 }
 
 export function refineAiBlockBox(box, imageData, modelId) {
-    const imgW = (imageData && imageData.width > 0) 
-        ? imageData.width 
+    let effectiveImageData = imageData;
+    if (!effectiveImageData) {
+        if (typeof globalState !== 'undefined' && globalState.activePageIndex >= 0) {
+            effectiveImageData = globalState.pages[globalState.activePageIndex]?.imageDataCache || null;
+        }
+        if (!effectiveImageData && typeof elements !== 'undefined' && elements?.mangaCanvas && elements.mangaCanvas.width > 0) {
+            try {
+                effectiveImageData = elements.mangaCanvas.getContext('2d').getImageData(0, 0, elements.mangaCanvas.width, elements.mangaCanvas.height);
+            } catch (e) { }
+        }
+    }
+
+    const imgW = (effectiveImageData && effectiveImageData.width > 0) 
+        ? effectiveImageData.width 
         : ((typeof elements !== 'undefined' && elements?.mangaBgImage?.naturalWidth > 0) ? elements.mangaBgImage.naturalWidth : 1000);
-    const imgH = (imageData && imageData.height > 0) 
-        ? imageData.height 
+    const imgH = (effectiveImageData && effectiveImageData.height > 0) 
+        ? effectiveImageData.height 
         : ((typeof elements !== 'undefined' && elements?.mangaBgImage?.naturalHeight > 0) ? elements.mangaBgImage.naturalHeight : 1000);
 
     const normalized = normalizeAiBlockBox(box, imgW, imgH);
@@ -716,11 +728,11 @@ export function refineAiBlockBox(box, imageData, modelId) {
     normalized.y = Math.max(0, Math.min(100 - defaultHPct, normalized.y));
 
     // Thao tác làm khít viền (Magic Wand Snap): Kích hoạt tại tâm ô thoại để tự động làm khít viền bóng thoại
-    if (imageData && imageData.data && imageData.width > 0 && imageData.height > 0) {
+    if (effectiveImageData && effectiveImageData.data && effectiveImageData.width > 0 && effectiveImageData.height > 0) {
         try {
             const centerX = (normalized.x + normalized.w / 2) * (imgW / 100);
             const centerY = (normalized.y + normalized.h / 2) * (imgH / 100);
-            const bubbleResult = detectSpeechBubbleAtPoint(imageData, centerX, centerY);
+            const bubbleResult = detectSpeechBubbleAtPoint(effectiveImageData, centerX, centerY);
             if (bubbleResult && bubbleResult.box && bubbleResult.box.w >= 2 && bubbleResult.box.h >= 2) {
                 normalized.x = Math.round(bubbleResult.box.x * 100) / 100;
                 normalized.y = Math.round(bubbleResult.box.y * 100) / 100;
