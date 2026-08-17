@@ -869,7 +869,7 @@ export function calculateBoxIntersectionRatio(box1, box2) {
     return intersectionArea / unionArea;
 }
 
-// Tự động hợp nhất các block AI bị trùng lặp / chồng đè vị trí (IoU >= 0.70)
+// Tự động hợp nhất các block AI bị trùng lặp vị trí thực sự (loại bỏ block clone/rác, KHÔNG gộp bóng thoại khác nhau)
 export function mergeOverlappingAiBlocks(blocks, overlapThreshold = 0.70) {
     if (!Array.isArray(blocks) || blocks.length <= 1) return blocks || [];
 
@@ -881,13 +881,34 @@ export function mergeOverlappingAiBlocks(blocks, overlapThreshold = 0.70) {
         let current = { ...blocks[i] };
         let currentBox = normalizeAiBlockBox(current.box);
 
+        const isPointAnchor1 = Array.isArray(current.box) && current.box.length === 2;
+        const c1X = isPointAnchor1 ? (current.box[0] > 100 ? current.box[0] / 10 : current.box[0]) : (currentBox.x + currentBox.w / 2);
+        const c1Y = isPointAnchor1 ? (current.box[1] > 100 ? current.box[1] / 10 : current.box[1]) : (currentBox.y + currentBox.h / 2);
+
         for (let j = i + 1; j < blocks.length; j++) {
             if (merged[j]) continue;
             const other = blocks[j];
             const otherBox = normalizeAiBlockBox(other.box);
 
-            const overlapRatio = calculateBoxIntersectionRatio(currentBox, otherBox);
-            if (overlapRatio >= overlapThreshold) {
+            const isPointAnchor2 = Array.isArray(other.box) && other.box.length === 2;
+            const c2X = isPointAnchor2 ? (other.box[0] > 100 ? other.box[0] / 10 : other.box[0]) : (otherBox.x + otherBox.w / 2);
+            const c2Y = isPointAnchor2 ? (other.box[1] > 100 ? other.box[1] / 10 : other.box[1]) : (otherBox.y + otherBox.h / 2);
+
+            const centerDist = Math.hypot(c1X - c2X, c1Y - c2Y);
+
+            let isDuplicate = false;
+
+            if (isPointAnchor1 || isPointAnchor2) {
+                // Với tọa độ tâm [x, y], chỉ coi là trùng lặp nếu 2 điểm neo cách nhau cực gần (<= 3.5%)
+                // Tuyệt đối không gộp các bóng thoại cách xa nhau!
+                isDuplicate = (centerDist <= 3.5);
+            } else {
+                // Với bounding box đầy đủ [x, y, w, h], kiểm tra IoU và khoảng cách tâm
+                const overlapRatio = calculateBoxIntersectionRatio(currentBox, otherBox);
+                isDuplicate = (overlapRatio >= overlapThreshold && centerDist <= 6.0);
+            }
+
+            if (isDuplicate) {
                 merged[j] = true;
 
                 // Ghép nối câu chữ gốc theo thứ tự xuất hiện
@@ -903,19 +924,21 @@ export function mergeOverlappingAiBlocks(blocks, overlapThreshold = 0.70) {
                     current.translated = trans1 ? `${trans1} ${trans2}` : trans2;
                 }
 
-                // Hợp nhất (Union) vùng biên của cả 2 bounding box
-                const minX = Math.min(currentBox.x, otherBox.x);
-                const minY = Math.min(currentBox.y, otherBox.y);
-                const maxX = Math.max(currentBox.x + currentBox.w, otherBox.x + otherBox.w);
-                const maxY = Math.max(currentBox.y + currentBox.h, otherBox.y + otherBox.h);
+                if (!isPointAnchor1 && !isPointAnchor2) {
+                    // Hợp nhất (Union) vùng biên của cả 2 bounding box
+                    const minX = Math.min(currentBox.x, otherBox.x);
+                    const minY = Math.min(currentBox.y, otherBox.y);
+                    const maxX = Math.max(currentBox.x + currentBox.w, otherBox.x + otherBox.w);
+                    const maxY = Math.max(currentBox.y + currentBox.h, otherBox.y + otherBox.h);
 
-                currentBox = {
-                    x: Math.round(minX * 100) / 100,
-                    y: Math.round(minY * 100) / 100,
-                    w: Math.round((maxX - minX) * 100) / 100,
-                    h: Math.round((maxY - minY) * 100) / 100
-                };
-                current.box = currentBox;
+                    currentBox = {
+                        x: Math.round(minX * 100) / 100,
+                        y: Math.round(minY * 100) / 100,
+                        w: Math.round((maxX - minX) * 100) / 100,
+                        h: Math.round((maxY - minY) * 100) / 100
+                    };
+                    current.box = currentBox;
+                }
                 if (other.vertical) current.vertical = true;
             }
         }
