@@ -76,3 +76,50 @@ test('IO Script - Export and Import Script Roundtrip', () => {
     assert.strictEqual(targetPages[0].blocks[1].translated, 'Khỏe không?');
     assert.strictEqual(targetPages[1].blocks[0].translated, 'Ừ, khỏe!');
 });
+
+test('IO Script - Synchronized Chapter Script JSON Format (Box Array, Vertical, ID, Type)', () => {
+    const synchronizedScript = {
+        chapterName: "Manga Translation Script",
+        totalPages: 2,
+        exportedAt: new Date().toISOString(),
+        pages: [
+            {
+                pageIndex: 0,
+                pageName: "Page 1",
+                blocks: [
+                    {
+                        id: "p1_b1",
+                        type: "dialogue",
+                        original: "おはよう",
+                        translated: "Chào buổi sáng đồng bộ",
+                        box: [10, 20, 30, 40],
+                        vertical: true
+                    },
+                    {
+                        id: "p1_b2",
+                        type: "dialogue",
+                        original: "元気？",
+                        translated: "Khỏe không bạn?",
+                        box: [50, 60, 20, 25]
+                    }
+                ]
+            }
+        ]
+    };
+
+    const targetPages = [
+        {
+            id: 'p1',
+            name: 'Page 1',
+            blocks: [
+                { id: 'p1_b1', original: 'おはよう', translated: '', box: { x: 0, y: 0, w: 0, h: 0 } },
+                { id: 'p1_b2', original: '元気？', translated: '', box: { x: 0, y: 0, w: 0, h: 0 } }
+            ]
+        }
+    ];
+
+    // Verify format fields
+    assert.deepStrictEqual(synchronizedScript.pages[0].blocks[0].box, [10, 20, 30, 40]);
+    assert.strictEqual(synchronizedScript.pages[0].blocks[0].vertical, true);
+    assert.strictEqual(synchronizedScript.pages[0].blocks[1].vertical, undefined, 'Horizontal block should omit vertical property');
+});

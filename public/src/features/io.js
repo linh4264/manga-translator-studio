@@ -31,6 +31,7 @@ import {
     updateProcessingOverlay,
     togglePreserveNames
 } from '../ui/index.js';
+import { normalizeAiBlockBox } from './ocr/ocr-service.js';
 
 // --- SHARED EXPORT HELPERS ---
 
@@ -714,24 +715,29 @@ export function exportTranslationScript(format) {
             exportedAt: new Date().toISOString(),
             pages: globalState.pages.map((page, index) => ({
                 pageIndex: index,
-                pageName: page.name,
+                pageName: page.name || `Trang ${index + 1}`,
                 blocks: (page.blocks || []).map(b => {
+                    const isVertical = (b.vertical !== undefined) ? !!b.vertical : !!(b.style?.vertical);
+                    const boxArray = b.box ? [
+                        Math.round((b.box.x || 0) * 100) / 100,
+                        Math.round((b.box.y || 0) * 100) / 100,
+                        Math.round((b.box.w || 0) * 100) / 100,
+                        Math.round((b.box.h || 0) * 100) / 100
+                    ] : [0, 0, 0, 0];
                     const blockData = {
                         id: b.id,
                         type: b.type || 'dialogue',
                         original: b.original || '',
                         translated: b.translated || '',
-                        speaker: b.speaker || undefined,
-                        target: b.target || undefined,
-                        positionPercent: {
-                            x: b.box.x,
-                            y: b.box.y,
-                            w: b.box.w,
-                            h: b.box.h
-                        }
+                        box: boxArray
                     };
-                    if (b.type === 'image') {
-                        blockData.imageUrl = b.imageUrl || null;
+                    if (isVertical) {
+                        blockData.vertical = true;
+                    }
+                    if (b.speaker) blockData.speaker = b.speaker;
+                    if (b.target) blockData.target = b.target;
+                    if (b.type === 'image' && b.imageUrl) {
+                        blockData.imageUrl = b.imageUrl;
                     }
                     return blockData;
                 })
@@ -773,61 +779,138 @@ export async function importTranslationScript(fileList) {
 
         if (fileName.endsWith('.json')) {
             let scriptData = JSON.parse(text);
-            const pagesArray = Array.isArray(scriptData)
-                ? scriptData
-                : (scriptData && Array.isArray(scriptData.pages) ? scriptData.pages : null);
 
-            if (!pagesArray) {
-                showToast("Dữ liệu kịch bản JSON không hợp lệ (thiếu danh sách trang)!", "error");
-                return;
+            let pagesArray = null;
+            let flatBlocksArray = null;
+
+            if (scriptData && Array.isArray(scriptData.pages)) {
+                pagesArray = scriptData.pages;
+            } else if (Array.isArray(scriptData)) {
+                if (scriptData.length > 0 && Array.isArray(scriptData[0].blocks)) {
+                    pagesArray = scriptData;
+                } else {
+                    flatBlocksArray = scriptData;
+                }
+            } else if (scriptData && Array.isArray(scriptData.blocks)) {
+                flatBlocksArray = scriptData.blocks;
             }
 
-            pagesArray.forEach((scriptPage, pIdx) => {
-                if (!scriptPage.blocks || !Array.isArray(scriptPage.blocks)) return;
+            if (pagesArray) {
+                pagesArray.forEach((scriptPage, pIdx) => {
+                    if (!scriptPage.blocks || !Array.isArray(scriptPage.blocks)) return;
 
-                let targetPage = null;
+                    let targetPage = null;
 
-                if (scriptPage.pageName) {
-                    targetPage = globalState.pages.find(p => p.name === scriptPage.pageName);
-                }
-                if (!targetPage && scriptPage.page) {
-                    targetPage = globalState.pages.find(p => p.name === scriptPage.page);
-                }
-                if (!targetPage && scriptPage.pageIndex !== undefined) {
-                    if (scriptPage.pageIndex >= 0 && scriptPage.pageIndex < globalState.pages.length) {
-                        targetPage = globalState.pages[scriptPage.pageIndex];
+                    if (scriptPage.pageName) {
+                        targetPage = globalState.pages.find(p => p.name === scriptPage.pageName);
                     }
-                }
-                if (!targetPage && pIdx < globalState.pages.length) {
-                    targetPage = globalState.pages[pIdx];
-                }
+                    if (!targetPage && scriptPage.page) {
+                        targetPage = globalState.pages.find(p => p.name === scriptPage.page);
+                    }
+                    if (!targetPage && scriptPage.pageIndex !== undefined) {
+                        const idx = typeof scriptPage.pageIndex === 'number' ? scriptPage.pageIndex : parseInt(scriptPage.pageIndex, 10);
+                        if (!isNaN(idx) && idx >= 0 && idx < globalState.pages.length) {
+                            targetPage = globalState.pages[idx];
+                        }
+                    }
+                    if (!targetPage && pIdx < globalState.pages.length) {
+                        targetPage = globalState.pages[pIdx];
+                    }
 
-                if (!targetPage) return;
-                matchedPages++;
+                    if (!targetPage) return;
+                    matchedPages++;
 
-                scriptPage.blocks.forEach((scriptBlock, blockIdx) => {
+                    scriptPage.blocks.forEach((scriptBlock, blockIdx) => {
+                        let targetBlock = null;
+                        const blockId = scriptBlock.id || scriptBlock.blockId;
+
+                        if (blockId) {
+                            targetBlock = targetPage.blocks.find(b => b.id === blockId);
+                        }
+                        if (!targetBlock && scriptBlock.original) {
+                            const origClean = String(scriptBlock.original).trim();
+                            targetBlock = targetPage.blocks.find(b => b.original && b.original.trim() === origClean);
+                        }
+                        if (!targetBlock && blockIdx < targetPage.blocks.length) {
+                            targetBlock = targetPage.blocks[blockIdx];
+                        }
+
+                        if (!targetBlock) return;
+
+                        if (scriptBlock.translated !== undefined && scriptBlock.translated !== null) {
+                            targetBlock.translated = scriptBlock.translated;
+                            matchedBlocks++;
+                        }
+                        if (scriptBlock.box || scriptBlock.positionPercent) {
+                            targetBlock.box = normalizeAiBlockBox(scriptBlock.box || scriptBlock.positionPercent);
+                        }
+                        if (scriptBlock.speaker) {
+                            targetBlock.speaker = scriptBlock.speaker;
+                        }
+                        if (scriptBlock.vertical !== undefined) {
+                            targetBlock.vertical = scriptBlock.vertical;
+                            if (targetBlock.style) targetBlock.style.vertical = scriptBlock.vertical;
+                        }
+                    });
+
+                    savePageToDB(targetPage);
+                });
+            } else if (flatBlocksArray) {
+                const touchedPages = new Set();
+
+                flatBlocksArray.forEach((scriptBlock) => {
+                    const blockId = scriptBlock.id || scriptBlock.blockId;
                     let targetBlock = null;
+                    let targetPage = null;
 
-                    if (scriptBlock.id) {
-                        targetBlock = targetPage.blocks.find(b => b.id === scriptBlock.id);
-                    }
-                    if (!targetBlock && blockIdx < targetPage.blocks.length) {
-                        targetBlock = targetPage.blocks[blockIdx];
+                    for (const p of globalState.pages) {
+                        if (blockId) {
+                            const found = (p.blocks || []).find(b => b.id === blockId);
+                            if (found) {
+                                targetBlock = found;
+                                targetPage = p;
+                                break;
+                            }
+                        }
                     }
 
-                    if (!targetBlock) return;
-
-                    if (scriptBlock.translated !== undefined && scriptBlock.translated !== null) {
-                        targetBlock.translated = scriptBlock.translated;
-                        matchedBlocks++;
+                    if (!targetBlock && scriptBlock.original) {
+                        const origClean = String(scriptBlock.original).trim();
+                        for (const p of globalState.pages) {
+                            const found = (p.blocks || []).find(b => b.original && b.original.trim() === origClean);
+                            if (found) {
+                                targetBlock = found;
+                                targetPage = p;
+                                break;
+                            }
+                        }
                     }
-                    if (scriptBlock.speaker) {
-                        targetBlock.speaker = scriptBlock.speaker;
+
+                    if (targetBlock && targetPage) {
+                        if (scriptBlock.translated !== undefined && scriptBlock.translated !== null) {
+                            targetBlock.translated = scriptBlock.translated;
+                            matchedBlocks++;
+                        }
+                        if (scriptBlock.box || scriptBlock.positionPercent) {
+                            targetBlock.box = normalizeAiBlockBox(scriptBlock.box || scriptBlock.positionPercent);
+                        }
+                        if (scriptBlock.speaker) {
+                            targetBlock.speaker = scriptBlock.speaker;
+                        }
+                        if (scriptBlock.vertical !== undefined) {
+                            targetBlock.vertical = scriptBlock.vertical;
+                            if (targetBlock.style) targetBlock.style.vertical = scriptBlock.vertical;
+                        }
+                        touchedPages.add(targetPage);
                     }
                 });
 
-                savePageToDB(targetPage);
-            });
+                matchedPages = touchedPages.size;
+                touchedPages.forEach(p => savePageToDB(p));
+            } else {
+                showToast("Dữ liệu kịch bản JSON không hợp lệ!", "error");
+                return;
+            }
         } else if (fileName.endsWith('.txt')) {
             const pageHeaderRegex = /\[TRANG\s+(\d+)(?:\s*:\s*([^\]]+))?\]/gi;
             let match;

@@ -367,9 +367,9 @@ export function getTranslationGuidancePrompt() {
 
     // 4. Writing Direction Rule
     if (['ja', 'zh', 'ko'].includes(targetLang)) {
-        guidanceParts.push(`- WRITING DIRECTION RULE: The target language (${targetLangName}) is traditionally written vertically in manga/comics. Ensure that you set style.vertical = true in the JSON properties for each translated text block.`);
+        guidanceParts.push(`- WRITING DIRECTION RULE: The target language (${targetLangName}) is traditionally written vertically in manga/comics. Set "vertical": true for vertical text blocks.`);
     } else {
-        guidanceParts.push(`- WRITING DIRECTION RULE: The target language (${targetLangName}) is written HORIZONTALLY (left-to-right). You MUST set style.vertical = false for ALL translated text blocks without exception.`);
+        guidanceParts.push(`- WRITING DIRECTION RULE: The target language (${targetLangName}) is written HORIZONTALLY (left-to-right). Do not output the "vertical" property for horizontal text.`);
     }
 
     // 5. 🏛️ 3-Tier Comic Universe, World Setting & Narrative Tone Matrix
@@ -543,10 +543,10 @@ async function executeOcrVisionStep({
         "NO FURIGANA DUPLICATION: In Japanese manga, kanji characters often have tiny ruby text / furigana annotations above or beside them. Transcribe ONLY the primary kanji word itself. NEVER duplicate the furigana phonetic reading into the transcript (e.g. transcribe 運命, NEVER 運命さだめ or 運命(さだめ)).",
         "CLEAN RAW TRANSCRIPTION: Read and transcribe the exact raw original text (Japanese, Korean, Chinese, or English) inside each region. Preserve original punctuation (?, !, ..., ♪, ♡) faithfully. Do not add commentary, explanations, or translations in this step.",
         "IF NO TEXT PRESENT: If this page is pure artwork, a splash illustration, or contains no readable dialogue/SFX, return an empty array: {\"blocks\": []}.",
-        "COORDINATE FORMULA: All box coordinates (x, y, w, h) MUST use integer scale 0 to 1000 (where top-left corner is x=0, y=0 and bottom-right corner is x=1000, y=1000). Set x = xmin (left edge), y = ymin (top edge), w = (xmax - xmin) (box width), h = (ymax - ymin) (box height). DO NOT return xmax as w or ymax as h. Example: A bubble spanning from xmin=200 to xmax=500 and ymin=100 to ymax=300 MUST return x=200, y=100, w=300, h=200.",
+        "COORDINATE FORMULA: Return each bounding box as a 4-integer array [x, y, w, h] on scale 0 to 1000 (where top-left corner is 0, 0 and bottom-right corner is 1000, 1000). Set x = xmin (left edge), y = ymin (top edge), w = (xmax - xmin) (box width), h = (ymax - ymin) (box height). DO NOT return xmax as w or ymax as h. Example: A bubble spanning from xmin=200 to xmax=500 and ymin=100 to ymax=300 MUST return box: [200, 100, 300, 200].",
         "For speech bubbles and narration boxes, use a box covering the entire inner blank space of the bubble so translated text fits easily. For SFX and signs, use the tightest box covering the characters.",
         "IMPORTANT RULE FOR CONNECTED BUBBLES: When multiple speech bubbles are attached/connected together (such as double-bubbles, stacked connected lobes, or chained bubbles), treat EACH individual bubble lobe/section as a SEPARATE block with its own bounding box.",
-        "Detect vertical text in vertical=true (false for horizontal text).",
+        "Detect vertical text with vertical=true (omit vertical for horizontal text).",
         "Return valid JSON only matching the schema."
     ].join(" ");
 
@@ -562,7 +562,7 @@ async function executeOcrVisionStep({
                 {
                     role: "user",
                     content: [
-                        { type: "text", text: "Detect all text bubbles, narration boxes, and SFX with their 0-1000 box coordinates and raw original text. Return JSON matching schema {\"blocks\": [{\"id\": \"b1\", \"original\": \"...\", \"box\": {\"x\":0,\"y\":0,\"w\":100,\"h\":100}, \"vertical\": true}]}" },
+                        { type: "text", text: "Detect all text bubbles, narration boxes, and SFX with their 0-1000 [x, y, w, h] box coordinates and raw original text. Return JSON matching schema {\"blocks\": [{\"id\": \"b1\", \"original\": \"...\", \"box\": [0, 0, 100, 100], \"vertical\": true}]}" },
                         { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
                     ]
                 }
@@ -576,7 +576,7 @@ async function executeOcrVisionStep({
         requestBody = JSON.stringify({
             contents: [{
                 parts: [
-                    { text: "Detect all speech bubbles, narration boxes, SFX labels with their 0-1000 integer coordinates and raw original text. Return JSON." },
+                    { text: "Detect all speech bubbles, narration boxes, SFX labels with their 0-1000 integer [x, y, w, h] coordinates and raw original text. Return JSON." },
                     { inlineData: { mimeType, data: rawBase64 } }
                 ]
             }],
@@ -594,14 +594,9 @@ async function executeOcrVisionStep({
                                     id: { type: "STRING" },
                                     original: { type: "STRING" },
                                     box: {
-                                        type: "OBJECT",
-                                        properties: {
-                                            x: { type: "NUMBER" },
-                                            y: { type: "NUMBER" },
-                                            w: { type: "NUMBER" },
-                                            h: { type: "NUMBER" }
-                                        },
-                                        required: ["x", "y", "w", "h"]
+                                        type: "ARRAY",
+                                        items: { type: "NUMBER" },
+                                        description: "[x, y, w, h] coordinates from 0 to 1000"
                                     },
                                     vertical: { type: "BOOLEAN" }
                                 },
@@ -1370,7 +1365,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
 
                 const systemInstruction = [
                     "Detect every manga text bubble, narration box, SFX label, and sign/label area, then return JSON only.",
-                    "COORDINATE CALCULATION FORMULA: All box coordinates (x, y, w, h) MUST use integer scale 0 to 1000 (where top-left corner is x=0, y=0 and bottom-right corner is x=1000, y=1000). Set x = xmin (left edge), y = ymin (top edge), w = (xmax - xmin) (box width), h = (ymax - ymin) (box height). DO NOT return xmax as w or ymax as h. Example: A bubble spanning from xmin=200 to xmax=500 and ymin=100 to ymax=300 MUST return x=200, y=100, w=300, h=200.",
+                    "COORDINATE CALCULATION FORMULA: Return each box as a 4-integer array [x, y, w, h] on scale 0 to 1000 (where top-left corner is 0, 0 and bottom-right corner is 1000, 1000). Set x = xmin (left edge), y = ymin (top edge), w = (xmax - xmin) (box width), h = (ymax - ymin) (box height). DO NOT return xmax as w or ymax as h. Example: A bubble spanning from xmin=200 to xmax=500 and ymin=100 to ymax=300 MUST return box: [200, 100, 300, 200].",
                     "For speech bubbles and narration boxes, use a box that covers the entire inner blank space of the bubble or box. For SFX and signs, use the tightest box covering the characters.",
                     "IMPORTANT RULE FOR CONNECTED BUBBLES: When multiple speech bubbles are attached or connected together in double-bubbles or stacked lobes, treat EACH individual bubble lobe/section as a SEPARATE block with its own box coordinates.",
                     `Translate to short, natural ${targetLangName} that matches the scene and speaker relationship.`,
@@ -1388,7 +1383,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 if (isOpenAiFormat) {
                     apiUrl = `${endpoint.replace(/\/$/, '')}/chat/completions`;
                     let openAiUserContent = [
-                        { type: "text", text: `Detect all speech bubbles, narration boxes, SFX sound effects, and signs/labels. Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` },
+                        { type: "text", text: `Detect all speech bubbles, narration boxes, SFX sound effects, and signs/labels with [x, y, w, h] coordinates. Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` },
                         { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
                     ];
                     if (prevPageContext) {
@@ -1408,7 +1403,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 } else {
                     apiUrl = getGeminiGenerateContentUrl(selectedModel, keyToUse);
                     const contentsParts = [
-                        { text: `Detect all speech bubbles, narration boxes, SFX sound effects, and signs/labels. Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` }
+                        { text: `Detect all speech bubbles, narration boxes, SFX sound effects, and signs/labels with [x, y, w, h] coordinates. Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` }
                     ];
                     if (prevPageContext) {
                         contentsParts.push({ text: prevPageContext });
@@ -1432,14 +1427,9 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                                                 original: { type: "STRING" },
                                                 translated: { type: "STRING" },
                                                 box: {
-                                                    type: "OBJECT",
-                                                    properties: {
-                                                        x: { type: "NUMBER" },
-                                                        y: { type: "NUMBER" },
-                                                        w: { type: "NUMBER" },
-                                                        h: { type: "NUMBER" }
-                                                    },
-                                                    required: ["x", "y", "w", "h"]
+                                                    type: "ARRAY",
+                                                    items: { type: "NUMBER" },
+                                                    description: "[x, y, w, h] coordinates from 0 to 1000"
                                                 },
                                                 vertical: { type: "BOOLEAN" }
                                             },
