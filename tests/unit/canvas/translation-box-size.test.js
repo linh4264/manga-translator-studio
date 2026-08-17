@@ -114,3 +114,30 @@ test('Translation Box Size - Magic Wand Snapping Fits Contour Dimensions and Pos
     assert.strictEqual(dialogueBlock.box.w, 25, 'Width must tightly snap to detected bubble width');
     assert.strictEqual(dialogueBlock.box.h, 30, 'Height must tightly snap to detected bubble height');
 });
+
+test('Translation Box Size - refineAiBlockBox Triggers Magic Wand Auto-Snap on Speech Bubble', () => {
+    const W = 1000;
+    const H = 1000;
+    const data = new Uint8ClampedArray(W * H * 4);
+    // Dark background (brightness ~50)
+    for (let i = 0; i < data.length; i += 4) {
+        data[i] = 50; data[i + 1] = 50; data[i + 2] = 50; data[i + 3] = 255;
+    }
+    // Draw a bright white speech bubble at x: 300..700 (width 400 = 40%), y: 200..600 (height 400 = 40%)
+    for (let y = 200; y <= 600; y++) {
+        for (let x = 300; x <= 700; x++) {
+            const idx = (y * W + x) * 4;
+            data[idx] = 240; data[idx + 1] = 240; data[idx + 2] = 240;
+        }
+    }
+    const mockImageData = { width: W, height: H, data };
+
+    // AI returns anchor [500, 400] (center at x=500px, y=400px)
+    const refined = refineAiBlockBox([500, 400], mockImageData);
+
+    // Box should automatically snap to the speech bubble contour: x: 30%, y: 20%, w: 40%, h: 40%
+    assert.strictEqual(refined.x, 30, 'X must snap to bubble left edge (30%)');
+    assert.strictEqual(refined.y, 20, 'Y must snap to bubble top edge (20%)');
+    assert.strictEqual(refined.w, 40, 'Width must snap to bubble width (40%)');
+    assert.strictEqual(refined.h, 40, 'Height must snap to bubble height (40%)');
+});

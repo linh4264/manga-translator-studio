@@ -284,6 +284,214 @@ export function computeTextMaskDilatedRoi(rawBox, imageData, options = {}) {
     return inpaintBox;
 }
 
+/**
+ * Thuật toán nhận diện bong bóng thoại chính xác 100% (Strict Anti-Leak Flood Fill & Tail Pruning)
+ */
+export function detectSpeechBubbleAtPoint(imageData, clickPixelX, clickPixelY, options = {}) {
+    if (!imageData) return null;
+
+    const imgW = imageData.width;
+    const imgH = imageData.height;
+    const brightnessMap = getImageBrightnessMap(imageData);
+
+    let startX = Math.max(0, Math.min(imgW - 1, Math.round(clickPixelX)));
+    let startY = Math.max(0, Math.min(imgH - 1, Math.round(clickPixelY)));
+
+    // 1. Tìm điểm hạt giống sáng nhất trong bán kính 20px (tránh trường hợp user click trúng nét chữ đen)
+    let bestSeedX = startX;
+    let bestSeedY = startY;
+    let maxSeedBrightness = brightnessMap[startY * imgW + startX];
+
+    const probeRadius = 20;
+    for (let dy = -probeRadius; dy <= probeRadius; dy += 2) {
+        for (let dx = -probeRadius; dx <= probeRadius; dx += 2) {
+            const px = startX + dx;
+            const py = startY + dy;
+            if (px >= 0 && px < imgW && py >= 0 && py < imgH) {
+                const b = brightnessMap[py * imgW + px];
+                if (b > maxSeedBrightness) {
+                    maxSeedBrightness = b;
+                    bestSeedX = px;
+                    bestSeedY = py;
+                }
+            }
+        }
+    }
+
+    startX = bestSeedX;
+    startY = bestSeedY;
+
+    // Ngưỡng độ sáng của ruột bóng thoại (Bóng thoại manga ruột trắng sáng >= 110)
+    const seedBrightness = brightnessMap[startY * imgW + startX];
+    if (seedBrightness < 110) {
+        return null;
+    }
+
+    // Ngưỡng chặn viền đen nghiêm ngặt (Strict Barrier Threshold): không bao giờ nhảy qua viền đen
+    const bubbleThreshold = Math.max(160, Math.min(238, Math.round(seedBrightness * 0.80)));
+
+    // Giới hạn vùng tìm kiếm tối đa
+    const maxHalfW = Math.min(Math.round(imgW * 0.30), 500);
+    const maxHalfH = Math.min(Math.round(imgH * 0.30), 600);
+
+    const winMinX = Math.max(0, startX - maxHalfW);
+    const winMaxX = Math.min(imgW - 1, startX + maxHalfW);
+    const winMinY = Math.max(0, startY - maxHalfH);
+    const winMaxY = Math.min(imgH - 1, startY + maxHalfH);
+
+    const winW = winMaxX - winMinX + 1;
+    const winH = winMaxY - winMinY + 1;
+
+    const visited = new Uint8Array(winW * winH);
+    const queueX = new Int32Array(winW * winH);
+    const queueY = new Int32Array(winW * winH);
+    let head = 0;
+    let tail = 0;
+
+    const startLocalX = startX - winMinX;
+    const startLocalY = startY - winMinY;
+
+    queueX[tail] = startX;
+    queueY[tail] = startY;
+    tail++;
+    visited[startLocalY * winW + startLocalX] = 1;
+
+    let minX = startX;
+    let maxX = startX;
+    let minY = startY;
+    let maxY = startY;
+    let filledCount = 0;
+
+    // Mảng đếm mật độ điểm ảnh theo hàng và cột để cắt bỏ đuôi bóng thoại (Tail Pruning)
+    const rowCounts = new Int32Array(winH);
+    const colCounts = new Int32Array(winW);
+
+    const maxAllowedPixels = Math.floor(imgW * imgH * 0.15); // Bóng thoại không vượt quá 15% diện tích trang
+
+    while (head < tail && filledCount < maxAllowedPixels) {
+        const cx = queueX[head];
+        const cy = queueY[head];
+        head++;
+        filledCount++;
+
+        if (cx < minX) minX = cx;
+        if (cx > maxX) maxX = cx;
+        if (cy < minY) minY = cy;
+        if (cy > maxY) maxY = cy;
+
+        rowCounts[cy - winMinY]++;
+        colCounts[cx - winMinX]++;
+
+        // 4 hướng lân cận trực tiếp
+        const neighbors = [
+            [cx + 1, cy],
+            [cx - 1, cy],
+            [cx, cy + 1],
+            [cx, cy - 1]
+        ];
+
+        for (let i = 0; i < 4; i++) {
+            const nx = neighbors[i][0];
+            const ny = neighbors[i][1];
+
+            if (nx >= winMinX && nx <= winMaxX && ny >= winMinY && ny <= winMaxY) {
+                const lx = nx - winMinX;
+                const ly = ny - winMinY;
+                const vIdx = ly * winW + lx;
+
+                if (!visited[vIdx]) {
+                    const br = brightnessMap[ny * imgW + nx];
+
+                    // CHỈ loang vào vùng ruột sáng của bóng thoại, dừng tuyệt đối tại viền đen nét vẽ
+                    if (br >= bubbleThreshold) {
+                        visited[vIdx] = 1;
+                        queueX[tail] = nx;
+                        queueY[tail] = ny;
+                        tail++;
+                    }
+                }
+            }
+        }
+    }
+
+    let bw = maxX - minX;
+    let bh = maxY - minY;
+
+    // Nếu vùng quá bé hoặc không tạo thành bóng thoại
+    if (bw < 20 || bh < 20 || filledCount < 40) {
+        return null;
+    }
+
+    // 2. CẮT BỎ ĐUÔI BÓNG THOẠI (Tail Pruning / Peak Body Fitting)
+    let maxRowPixels = 0;
+    for (let y = minY - winMinY; y <= maxY - winMinY; y++) {
+        if (rowCounts[y] > maxRowPixels) maxRowPixels = rowCounts[y];
+    }
+
+    let maxColPixels = 0;
+    for (let x = minX - winMinX; x <= maxX - winMinX; x++) {
+        if (colCounts[x] > maxColPixels) maxColPixels = colCounts[x];
+    }
+
+    const rowCutoff = Math.max(6, Math.floor(maxRowPixels * 0.18));
+    const colCutoff = Math.max(6, Math.floor(maxColPixels * 0.18));
+
+    // Thu hẹp từ trên xuống (Top)
+    let trimmedMinY = minY;
+    while (trimmedMinY < maxY - 15 && rowCounts[trimmedMinY - winMinY] < rowCutoff) {
+        trimmedMinY++;
+    }
+
+    // Thu hẹp từ dưới lên (Bottom)
+    let trimmedMaxY = maxY;
+    while (trimmedMaxY > trimmedMinY + 15 && rowCounts[trimmedMaxY - winMinY] < rowCutoff) {
+        trimmedMaxY--;
+    }
+
+    // Thu hẹp từ trái sang (Left)
+    let trimmedMinX = minX;
+    while (trimmedMinX < maxX - 15 && colCounts[trimmedMinX - winMinX] < colCutoff) {
+        trimmedMinX++;
+    }
+
+    // Thu hẹp từ phải sang (Right)
+    let trimmedMaxX = maxX;
+    while (trimmedMaxX > trimmedMinX + 15 && colCounts[trimmedMaxX - winMinX] < colCutoff) {
+        trimmedMaxX--;
+    }
+
+    minX = trimmedMinX;
+    maxX = trimmedMaxX;
+    minY = trimmedMinY;
+    maxY = trimmedMaxY;
+
+    bw = maxX - minX;
+    bh = maxY - minY;
+
+    // Giới hạn an toàn [0, imgW, imgH]
+    minX = Math.max(0, Math.min(imgW - 1, minX));
+    minY = Math.max(0, Math.min(imgH - 1, minY));
+    bw = Math.max(20, Math.min(imgW - minX, bw));
+    bh = Math.max(20, Math.min(imgH - minY, bh));
+
+    const finalBox = {
+        x: (minX / imgW) * 100,
+        y: (minY / imgH) * 100,
+        w: (bw / imgW) * 100,
+        h: (bh / imgH) * 100
+    };
+
+    return {
+        box: finalBox,
+        pixelBox: {
+            bx: minX,
+            by: minY,
+            bw: bw,
+            bh: bh
+        }
+    };
+}
+
 export function refineAiBlockBox(box, imageData, modelId) {
     const imgW = (imageData && imageData.width > 0) 
         ? imageData.width 
@@ -298,11 +506,26 @@ export function refineAiBlockBox(box, imageData, modelId) {
     const defaultWPct = Math.round(((wPx / imgW) * 100) * 100) / 100;
     const defaultHPct = Math.round(((hPx / imgH) * 100) * 100) / 100;
 
-    // Đảm bảo ô dịch xuất hiện lần đầu luôn có w = h = 400px
+    // Khởi tạo kích thước ban đầu 400px x 400px căn giữa theo tâm neo [anchorX, anchorY]
     normalized.w = defaultWPct;
     normalized.h = defaultHPct;
     normalized.x = Math.max(0, Math.min(100 - defaultWPct, normalized.x));
     normalized.y = Math.max(0, Math.min(100 - defaultHPct, normalized.y));
+
+    // Thao tác làm khít viền (Magic Wand Snap): Kích hoạt tại tâm ô thoại để tự động làm khít viền bóng thoại
+    if (imageData && imageData.data && imageData.width > 0 && imageData.height > 0) {
+        try {
+            const centerX = (normalized.x + normalized.w / 2) * (imgW / 100);
+            const centerY = (normalized.y + normalized.h / 2) * (imgH / 100);
+            const bubbleResult = detectSpeechBubbleAtPoint(imageData, centerX, centerY);
+            if (bubbleResult && bubbleResult.box && bubbleResult.box.w >= 2 && bubbleResult.box.h >= 2) {
+                normalized.x = Math.round(bubbleResult.box.x * 100) / 100;
+                normalized.y = Math.round(bubbleResult.box.y * 100) / 100;
+                normalized.w = Math.round(bubbleResult.box.w * 100) / 100;
+                normalized.h = Math.round(bubbleResult.box.h * 100) / 100;
+            }
+        } catch (err) { }
+    }
 
     return normalized;
 }

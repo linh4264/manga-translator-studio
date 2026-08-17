@@ -33,6 +33,7 @@ import { showToast } from '../../core/utils/dom.js';
 import { parseGeminiJsonText } from '../../core/utils/json.js';
 import { refineAiBlockBox, mergeOverlappingAiBlocks } from '../ocr/ocr-service.js';
 import { requestOverlayRender, autoMatchBlockStyle } from '../canvas/canvas-service.js';
+import { autoFitBlock, isBlockAutoFit } from '../canvas/canvas-styling.js';
 import { compilePronounMatrixPrompt } from '../pronoun.js';
 import { getConfiguredApiKey, getGeminiGenerateContentUrl, getConfiguredAiProvider, getConfiguredApiEndpoint } from './ai-config.js';
 
@@ -1576,14 +1577,21 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 } catch (e) { }
             }
 
-            page.blocks.forEach(b => { b.autoFitCache = null; });
+            page.blocks.forEach(b => {
+                b.autoFitCache = null;
+                if (isBlockAutoFit(b)) {
+                    autoFitBlock(b);
+                }
+            });
             page.status = 'done';
             recordPageToStoryMemory(pageIndex, page.blocks);
             uiUpdatePageListUI();
             savePageToDB(page);
 
             if (globalState.activePageIndex === pageIndex) {
-                globalState.selectedBlockId = null;
+                if (page.blocks.length > 0 && !globalState.selectedBlockId) {
+                    globalState.selectedBlockId = page.blocks[0].id;
+                }
                 requestOverlayRender();
                 uiUpdateActiveBlockEditor();
             }
