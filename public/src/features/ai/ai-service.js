@@ -546,8 +546,7 @@ async function executeOcrVisionStep({
         "COORDINATE FORMULA: All box coordinates (x, y, w, h) MUST use integer scale 0 to 1000 (where top-left corner is x=0, y=0 and bottom-right corner is x=1000, y=1000). Set x = xmin (left edge), y = ymin (top edge), w = (xmax - xmin) (box width), h = (ymax - ymin) (box height). DO NOT return xmax as w or ymax as h. Example: A bubble spanning from xmin=200 to xmax=500 and ymin=100 to ymax=300 MUST return x=200, y=100, w=300, h=200.",
         "For speech bubbles and narration boxes, use a box covering the entire inner blank space of the bubble so translated text fits easily. For SFX and signs, use the tightest box covering the characters.",
         "IMPORTANT RULE FOR CONNECTED BUBBLES: When multiple speech bubbles are attached/connected together (such as double-bubbles, stacked connected lobes, or chained bubbles), treat EACH individual bubble lobe/section as a SEPARATE block with its own bounding box.",
-        "Set positionKnown=true whenever text is visible and can be localized.",
-        "Detect text orientation in style.vertical (true for vertical text, false for horizontal text).",
+        "Detect vertical text in vertical=true (false for horizontal text).",
         "Return valid JSON only matching the schema."
     ].join(" ");
 
@@ -563,7 +562,7 @@ async function executeOcrVisionStep({
                 {
                     role: "user",
                     content: [
-                        { type: "text", text: "Detect all text bubbles, narration boxes, and SFX with their 0-1000 box coordinates and raw original text. Return JSON matching schema {\"blocks\": [{\"id\": \"b1\", \"original\": \"...\", \"box\": {\"x\":0,\"y\":0,\"w\":100,\"h\":100}, \"positionKnown\": true, \"style\": {\"vertical\": true}}]}" },
+                        { type: "text", text: "Detect all text bubbles, narration boxes, and SFX with their 0-1000 box coordinates and raw original text. Return JSON matching schema {\"blocks\": [{\"id\": \"b1\", \"original\": \"...\", \"box\": {\"x\":0,\"y\":0,\"w\":100,\"h\":100}, \"vertical\": true}]}" },
                         { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
                     ]
                 }
@@ -604,15 +603,9 @@ async function executeOcrVisionStep({
                                         },
                                         required: ["x", "y", "w", "h"]
                                     },
-                                    positionKnown: { type: "BOOLEAN" },
-                                    style: {
-                                        type: "OBJECT",
-                                        properties: {
-                                            vertical: { type: "BOOLEAN" }
-                                        }
-                                    }
+                                    vertical: { type: "BOOLEAN" }
                                 },
-                                required: ["id", "original", "box", "positionKnown"]
+                                required: ["id", "original", "box"]
                             }
                         }
                     },
@@ -1376,13 +1369,11 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
 
                 const systemInstruction = [
-                    "Detect every manga text bubble, narration box, SFX label, and sign/label area, then return JSON only. Use a single dialogue-only block format for all outputs.",
+                    "Detect every manga text bubble, narration box, SFX label, and sign/label area, then return JSON only.",
                     "COORDINATE CALCULATION FORMULA: All box coordinates (x, y, w, h) MUST use integer scale 0 to 1000 (where top-left corner is x=0, y=0 and bottom-right corner is x=1000, y=1000). Set x = xmin (left edge), y = ymin (top edge), w = (xmax - xmin) (box width), h = (ymax - ymin) (box height). DO NOT return xmax as w or ymax as h. Example: A bubble spanning from xmin=200 to xmax=500 and ymin=100 to ymax=300 MUST return x=200, y=100, w=300, h=200.",
                     "For speech bubbles and narration boxes, use a box that covers the entire inner blank space of the bubble or box. For SFX and signs, use the tightest box covering the characters.",
                     "IMPORTANT RULE FOR CONNECTED BUBBLES: When multiple speech bubbles are attached or connected together in double-bubbles or stacked lobes, treat EACH individual bubble lobe/section as a SEPARATE block with its own box coordinates.",
-                    "Set positionKnown=true whenever the text region is visible enough to place a box.",
                     `Translate to short, natural ${targetLangName} that matches the scene and speaker relationship.`,
-                    "Do not infer or output multiple block types; every block must be dialogue.",
                     `Preserve the same ${targetLangName} ${pronounTerm} and terminology within the page whenever the relationship stays the same.`,
                     "Keep line breaks and pacing natural for manga dialogue.",
                     globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
@@ -1450,15 +1441,9 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                                                     },
                                                     required: ["x", "y", "w", "h"]
                                                 },
-                                                positionKnown: { type: "BOOLEAN" },
-                                                style: {
-                                                    type: "OBJECT",
-                                                    properties: {
-                                                        vertical: { type: "BOOLEAN" }
-                                                    }
-                                                }
+                                                vertical: { type: "BOOLEAN" }
                                             },
-                                            required: ["id", "original", "translated", "box", "positionKnown"]
+                                            required: ["id", "original", "translated", "box"]
                                         }
                                     }
                                 },
@@ -1555,7 +1540,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
 
                 const isVerticalTarget = ['ja', 'zh', 'ko'].includes(targetLang);
                 const blockVertical = isVerticalTarget
-                    ? ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true)
+                    ? (typeof b.vertical === 'boolean' ? b.vertical : ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true))
                     : false;
 
                 return {
@@ -1799,7 +1784,7 @@ export async function runBatchTranslation() {
                                 : refineAiBlockBox(b.box, pageImageData, globalState.selectedModel);
 
                             const blockVertical = isVerticalTarget
-                                ? ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true)
+                                ? (typeof b.vertical === 'boolean' ? b.vertical : ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true))
                                 : false;
 
                             return {

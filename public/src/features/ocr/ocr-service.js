@@ -143,10 +143,25 @@ export function normalizeAiBlockBox(box) {
         return { ...DEFAULT_AI_BLOCK_BOX };
     }
 
-    let x = Number(box.x);
-    let y = Number(box.y);
-    let w = Number(box.w);
-    let h = Number(box.h);
+    let x, y, w, h;
+
+    if (Array.isArray(box)) {
+        if (box.length >= 4) {
+            x = Number(box[0]);
+            y = Number(box[1]);
+            w = Number(box[2]);
+            h = Number(box[3]);
+        } else {
+            return { ...DEFAULT_AI_BLOCK_BOX };
+        }
+    } else if (typeof box === 'object') {
+        x = Number(box.x !== undefined ? box.x : box.left);
+        y = Number(box.y !== undefined ? box.y : box.top);
+        w = Number(box.w !== undefined ? box.w : box.width);
+        h = Number(box.h !== undefined ? box.h : box.height);
+    } else {
+        return { ...DEFAULT_AI_BLOCK_BOX };
+    }
 
     // Kiểm tra tính hợp lệ cơ bản
     if (![x, y, w, h].every(Number.isFinite) || w <= 0 || h <= 0) {
@@ -175,10 +190,10 @@ export function normalizeAiBlockBox(box) {
     const cleanH = Math.max(1, Math.min(100 - cleanY, h));
 
     return {
-        x: cleanX,
-        y: cleanY,
-        w: cleanW,
-        h: cleanH
+        x: Math.round(cleanX * 100) / 100,
+        y: Math.round(cleanY * 100) / 100,
+        w: Math.round(cleanW * 100) / 100,
+        h: Math.round(cleanH * 100) / 100
     };
 }
 

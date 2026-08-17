@@ -39,7 +39,7 @@ test('Core Utils - Vertical Japanese Text Stacking (Intl Segmenter & Word Break)
     const line2 = vertContainer.children[1];
 
     assert.strictEqual(line1.style.wordBreak, 'keep-all');
-    assert.strictEqual(line1.style.flexDirection, 'column');
+    assert.strictEqual(line1.style.writingMode, 'vertical-rl');
     assert.strictEqual(line1.children.length, 6, 'Line 1 has 6 characters: こ, ん, に, ち, は, ！');
     assert.strictEqual(line2.children.length, 6, 'Line 2 has 6 characters: さ, よ, う, な, ら, …');
 

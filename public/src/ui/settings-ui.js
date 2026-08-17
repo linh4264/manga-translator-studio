@@ -457,7 +457,7 @@ export function updateDefaultFont(value) {
     globalState.globalStyle.fontFamily = value;
     const el = document.getElementById('default-font');
     if (el) el.value = value;
-    localStorage.setItem('manga_default_font', value);
+    safeSetLocalStorage('manga_default_font', value);
 
     // Invalidate autoFitCache for all blocks across all pages and request re-render
     if (globalState.pages && Array.isArray(globalState.pages)) {
@@ -472,7 +472,6 @@ export function updateDefaultFont(value) {
         });
     }
     requestOverlayRender();
-    safeSetLocalStorage('manga_default_font', family);
 }
 
 window.updateDefaultFont = updateDefaultFont;
