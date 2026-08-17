@@ -404,7 +404,7 @@ export function snapBlockToMagicWandBubble(blockId, targetBox, autoAdvance = tru
 
     pushStateToHistory();
 
-    // Cập nhật vị trí & kích thước theo bóng thoại
+    // Cập nhật vị trí & kích thước khớp khít theo bóng thoại từ Gậy Ma Thuật
     block.box = {
         x: Math.round(targetBox.x * 100) / 100,
         y: Math.round(targetBox.y * 100) / 100,

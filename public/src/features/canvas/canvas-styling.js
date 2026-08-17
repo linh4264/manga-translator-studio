@@ -363,9 +363,9 @@ export function applyStylePreset(presetKey) {
     }
 
     const page = globalState.pages[globalState.activePageIndex];
-    const targetIds = (globalState.selectedBlockIds && globalState.selectedBlockIds.length > 0)
+    const targetIds = (globalState.selectedBlockIds && globalState.selectedBlockIds.length > 0 && globalState.selectedBlockIds.includes(globalState.selectedBlockId))
         ? globalState.selectedBlockIds
-        : [globalState.selectedBlockId];
+        : (globalState.selectedBlockId ? [globalState.selectedBlockId] : []);
 
     const targetBlocks = page.blocks.filter(b => targetIds.includes(b.id));
     if (targetBlocks.length === 0) return;

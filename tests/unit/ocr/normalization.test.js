@@ -23,6 +23,11 @@ test('OCR Normalization - Coordinate Scale Conversions (0-1000, 0-1, 0-100)', ()
     const standardBox = { x: 10, y: 15, w: 50, h: 60 };
     const norm3 = normalizeAiBlockBox(standardBox);
     assert.deepStrictEqual(norm3, { x: 10, y: 15, w: 50, h: 60 });
+
+    // 4. Scale 0-1000 2-Element Array [x, y] (Defaults w=400px, h=400px -> 40% x 40%)
+    const array2DBox = [250, 150];
+    const norm4 = normalizeAiBlockBox(array2DBox);
+    assert.deepStrictEqual(norm4, { x: 25, y: 15, w: 40, h: 40 });
 });
 
 test('OCR Normalization - Boundary Clamping & Invalid Box Sanitization', () => {

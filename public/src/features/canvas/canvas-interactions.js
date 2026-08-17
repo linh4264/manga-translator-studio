@@ -1,7 +1,6 @@
 import { globalState, pushStateToHistory, savePageToDB, uiUpdateActiveBlockEditor, uiUpdateSplitView } from '../../core/state.js';
 import { elements } from '../../core/elements.js';
-import { showToast } from '../../core/utils.js';
-import { DEFAULT_VERTICAL_WRITING_MODE } from '../../config/constants.js';
+import { DEFAULT_VERTICAL_WRITING_MODE, DEFAULT_BLOCK_SIZE_PX } from '../../config/constants.js';
 import { requestOverlayRender } from './canvas-renderer.js';
 import { autoFitBlock, isBlockAutoFit, copiedStyle } from './canvas-styling.js';
 import { duplicateActiveBlock as duplicateActiveBlockLogic } from './canvas-actions.js';
@@ -420,12 +419,20 @@ export function addNewBlock() {
     const page = globalState.pages[globalState.activePageIndex];
     const newId = `manual_block_${Date.now()}`;
 
+    const imgElement = elements.mangaBgImage;
+    const imgW = (imgElement && imgElement.naturalWidth > 0) ? imgElement.naturalWidth : 1000;
+    const imgH = (imgElement && imgElement.naturalHeight > 0) ? imgElement.naturalHeight : 1000;
+    const wPct = Math.round(((DEFAULT_BLOCK_SIZE_PX / imgW) * 100) * 100) / 100;
+    const hPct = Math.round(((DEFAULT_BLOCK_SIZE_PX / imgH) * 100) * 100) / 100;
+    const xPct = Math.max(0, Math.min(100 - wPct, Math.round((50 - wPct / 2) * 100) / 100));
+    const yPct = Math.max(0, Math.min(100 - hPct, Math.round((50 - hPct / 2) * 100) / 100));
+
     const newBlock = {
         id: newId,
         type: 'dialogue',
         original: '',
         translated: 'Nhập nội dung dịch...',
-        box: { x: 35, y: 40, w: 30, h: 20 },
+        box: { x: xPct, y: yPct, w: wPct, h: hPct },
         style: {
             fontFamily: globalState.defaultFont || globalState.globalStyle?.fontFamily || 'font-manga',
             fontSize: globalState.globalStyle.fontSize,
@@ -719,18 +726,23 @@ export function initMarqueeSelection() {
                 uiUpdateActiveBlockEditor();
                 updateFloatingToolbarPosition();
             } else if (endEvent.altKey && (selMaxX - selMinX > 2) && (selMaxY - selMinY > 2)) {
-                // Tạo ô thoại mới đúng kích thước và vị trí vừa kéo chuột (Alt + Drag Box)
+                // Tạo ô thoại mới với kích thước chuẩn 400px x 400px tại vị trí vừa kéo chuột (Alt + Drag Box)
                 const newId = `manual_block_${Date.now()}`;
+                const imgElement = elements.mangaBgImage;
+                const imgW = (imgElement && imgElement.naturalWidth > 0) ? imgElement.naturalWidth : 1000;
+                const imgH = (imgElement && imgElement.naturalHeight > 0) ? imgElement.naturalHeight : 1000;
+                const wPct = Math.round(((DEFAULT_BLOCK_SIZE_PX / imgW) * 100) * 100) / 100;
+                const hPct = Math.round(((DEFAULT_BLOCK_SIZE_PX / imgH) * 100) * 100) / 100;
                 const newBlock = {
                     id: newId,
                     type: 'dialogue',
                     original: '',
                     translated: 'Nhập nội dung dịch...',
                     box: {
-                        x: Math.round(selMinX * 100) / 100,
-                        y: Math.round(selMinY * 100) / 100,
-                        w: Math.round((selMaxX - selMinX) * 100) / 100,
-                        h: Math.round((selMaxY - selMinY) * 100) / 100
+                        x: Math.max(0, Math.min(100 - wPct, Math.round(selMinX * 100) / 100)),
+                        y: Math.max(0, Math.min(100 - hPct, Math.round(selMinY * 100) / 100)),
+                        w: wPct,
+                        h: hPct
                     },
                     style: {
                         fontFamily: globalState.defaultFont || 'font-manga',

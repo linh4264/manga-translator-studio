@@ -262,7 +262,8 @@ export const TRANSLATION_GENRE_PRESETS = {
 };
 
 export const DEFAULT_VERTICAL_WRITING_MODE = false;
-export const DEFAULT_AI_BLOCK_BOX = { x: 37.5, y: 37.5, w: 25, h: 25 };
+export const DEFAULT_BLOCK_SIZE_PX = 400;
+export const DEFAULT_AI_BLOCK_BOX = { x: 30, y: 30, w: 40, h: 40 };
 export const MAX_HISTORY_LIMIT = 30;
 
 export const DEFAULT_BLOCK_STYLE = {

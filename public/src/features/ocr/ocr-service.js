@@ -1,6 +1,6 @@
 // OCR Processing & Bubble Snap to Contours
 import { isWeakTranslationModel, isFlash31LiteModel, globalState, pushStateToHistory, savePageToDB, uiUpdateProcessingOverlay } from '../../core/state.js';
-import { DEFAULT_AI_BLOCK_BOX } from '../../config/constants.js';
+import { DEFAULT_AI_BLOCK_BOX, DEFAULT_BLOCK_SIZE_PX } from '../../config/constants.js';
 import { detectLocalTextRegions } from './local-ocr.js';
 import { elements } from '../../core/elements.js';
 import { showToast } from '../../core/utils/dom.js';
@@ -285,67 +285,125 @@ export function computeTextMaskDilatedRoi(rawBox, imageData, options = {}) {
 }
 
 export function refineAiBlockBox(box, imageData, modelId) {
-    const normalized = normalizeAiBlockBox(box);
-    if (!imageData) return normalized;
+    const imgW = (imageData && imageData.width > 0) 
+        ? imageData.width 
+        : ((typeof elements !== 'undefined' && elements?.mangaBgImage?.naturalWidth > 0) ? elements.mangaBgImage.naturalWidth : 1000);
+    const imgH = (imageData && imageData.height > 0) 
+        ? imageData.height 
+        : ((typeof elements !== 'undefined' && elements?.mangaBgImage?.naturalHeight > 0) ? elements.mangaBgImage.naturalHeight : 1000);
 
-    // ⚡ TEXT MASK -> DILATE / EXPAND -> INPAINT REGION Pipeline
-    const inpaintRoiBox = computeTextMaskDilatedRoi(normalized, imageData, {
-        dilationRadius: 4,
-        paddingPx: 6,
-        darkThreshold: 140
-    });
+    const normalized = normalizeAiBlockBox(box, imgW, imgH);
+    const wPx = DEFAULT_BLOCK_SIZE_PX || 400;
+    const hPx = DEFAULT_BLOCK_SIZE_PX || 400;
+    const defaultWPct = Math.round(((wPx / imgW) * 100) * 100) / 100;
+    const defaultHPct = Math.round(((hPx / imgH) * 100) * 100) / 100;
 
-    if (inpaintRoiBox && !isSuspiciousAiBlockBox(inpaintRoiBox)) {
-        return inpaintRoiBox;
-    }
+    // Đảm bảo ô dịch xuất hiện lần đầu luôn có w = h = 400px
+    normalized.w = defaultWPct;
+    normalized.h = defaultHPct;
+    normalized.x = Math.max(0, Math.min(100 - defaultWPct, normalized.x));
+    normalized.y = Math.max(0, Math.min(100 - defaultHPct, normalized.y));
 
     return normalized;
 }
 
-export function normalizeAiBlockBox(box) {
+export function normalizeAiBlockBox(box, imgW = 1000, imgH = 1000) {
+    const wPx = DEFAULT_BLOCK_SIZE_PX || 400;
+    const hPx = DEFAULT_BLOCK_SIZE_PX || 400;
+
+    const defaultWPct = Math.round(((wPx / imgW) * 100) * 100) / 100;
+    const defaultHPct = Math.round(((hPx / imgH) * 100) * 100) / 100;
+
     if (!box) {
-        return { ...DEFAULT_AI_BLOCK_BOX };
+        return {
+            x: Math.max(0, Math.round((50 - defaultWPct / 2) * 100) / 100),
+            y: Math.max(0, Math.round((50 - defaultHPct / 2) * 100) / 100),
+            w: defaultWPct,
+            h: defaultHPct
+        };
     }
 
     let x, y, w, h;
 
     if (Array.isArray(box)) {
-        if (box.length >= 4) {
+        if (box.length === 2) {
+            x = Number(box[0]);
+            y = Number(box[1]);
+            // Nếu x, y ở hệ 0-1000
+            if (x > 100 || y > 100) {
+                x /= 10;
+                y /= 10;
+            } else if (x <= 1.0 && y <= 1.0 && (x > 0 || y > 0)) {
+                x *= 100;
+                y *= 100;
+            }
+            w = defaultWPct;
+            h = defaultHPct;
+        } else if (box.length >= 4) {
             x = Number(box[0]);
             y = Number(box[1]);
             w = Number(box[2]);
             h = Number(box[3]);
+
+            if (x <= 1.0 && y <= 1.0 && w <= 1.0 && h <= 1.0) {
+                x *= 100;
+                y *= 100;
+                w *= 100;
+                h *= 100;
+            } else if ((x > 100 || y > 100 || w > 100 || h > 100 || (x + w > 100) || (y + h > 100)) && (x <= 1000 && y <= 1000 && w <= 1000 && h <= 1000)) {
+                x /= 10;
+                y /= 10;
+                w /= 10;
+                h /= 10;
+            }
         } else {
-            return { ...DEFAULT_AI_BLOCK_BOX };
+            return {
+                x: Math.max(0, Math.round((50 - defaultWPct / 2) * 100) / 100),
+                y: Math.max(0, Math.round((50 - defaultHPct / 2) * 100) / 100),
+                w: defaultWPct,
+                h: defaultHPct
+            };
         }
     } else if (typeof box === 'object') {
         x = Number(box.x !== undefined ? box.x : box.left);
         y = Number(box.y !== undefined ? box.y : box.top);
-        w = Number(box.w !== undefined ? box.w : box.width);
-        h = Number(box.h !== undefined ? box.h : box.height);
+        const rawW = box.w !== undefined ? box.w : box.width;
+        const rawH = box.h !== undefined ? box.h : box.height;
+
+        w = rawW !== undefined ? Number(rawW) : defaultWPct;
+        h = rawH !== undefined ? Number(rawH) : defaultHPct;
+
+        if (x <= 1.0 && y <= 1.0 && w <= 1.0 && h <= 1.0) {
+            x *= 100;
+            y *= 100;
+            w *= 100;
+            h *= 100;
+        } else if ((x > 100 || y > 100 || w > 100 || h > 100 || (x + w > 100) || (y + h > 100)) && (x <= 1000 && y <= 1000 && w <= 1000 && h <= 1000)) {
+            x /= 10;
+            y /= 10;
+            w /= 10;
+            h /= 10;
+        }
     } else {
-        return { ...DEFAULT_AI_BLOCK_BOX };
+        return {
+            x: Math.max(0, Math.round((50 - defaultWPct / 2) * 100) / 100),
+            y: Math.max(0, Math.round((50 - defaultHPct / 2) * 100) / 100),
+            w: defaultWPct,
+            h: defaultHPct
+        };
     }
 
     // Kiểm tra tính hợp lệ cơ bản
-    if (![x, y, w, h].every(Number.isFinite) || w <= 0 || h <= 0) {
-        return { ...DEFAULT_AI_BLOCK_BOX };
+    if (![x, y].every(Number.isFinite)) {
+        return {
+            x: Math.max(0, Math.round((50 - defaultWPct / 2) * 100) / 100),
+            y: Math.max(0, Math.round((50 - defaultHPct / 2) * 100) / 100),
+            w: defaultWPct,
+            h: defaultHPct
+        };
     }
-
-    // Tự động nhận dạng hệ toạ độ 0.0 - 1.0 (Nếu tất cả đều <= 1.0 và chiều rộng, chiều cao > 0)
-    if (x <= 1.0 && y <= 1.0 && w <= 1.0 && h <= 1.0) {
-        x *= 100;
-        y *= 100;
-        w *= 100;
-        h *= 100;
-    }
-    // Tự động nhận dạng hệ toạ độ 0 - 1000 (Thang đo Object Detection chuẩn của Gemini)
-    else if ((x > 100 || y > 100 || w > 100 || h > 100 || (x + w > 100) || (y + h > 100)) && (x <= 1000 && y <= 1000 && w <= 1000 && h <= 1000)) {
-        x /= 10;
-        y /= 10;
-        w /= 10;
-        h /= 10;
-    }
+    if (!Number.isFinite(w) || w <= 0) w = defaultWPct;
+    if (!Number.isFinite(h) || h <= 0) h = defaultHPct;
 
     // Giới hạn giá trị trong khoảng hợp lệ [0, 100]
     const cleanX = Math.max(0, Math.min(100, x));

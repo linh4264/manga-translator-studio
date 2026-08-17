@@ -297,10 +297,14 @@ export function applyStateFromSnapshot(snapshot) {
         onSnapshotRestored(snapshot);
     } else {
         uiUpdatePageListUI();
-        uiUpdateActiveBlockEditor();
         if (typeof window !== 'undefined' && typeof window.selectPage === 'function' && globalState.activePageIndex !== -1) {
             window.selectPage(globalState.activePageIndex);
         }
+        globalState.selectedBlockId = snapshot.selectedBlockId;
+        globalState.selectedBlockIds = Array.isArray(snapshot.selectedBlockIds)
+            ? [...snapshot.selectedBlockIds]
+            : (snapshot.selectedBlockId ? [snapshot.selectedBlockId] : []);
+        uiUpdateActiveBlockEditor();
     }
 }
 
