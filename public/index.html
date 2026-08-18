@@ -3502,103 +3502,123 @@
             <div class="flex-1 overflow-y-auto p-6 space-y-6">
                 <!-- TAB 1: KEYBOARD SHORTCUTS -->
                 <div id="help-tab-content-shortcuts" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div
-                            class="p-3 rounded-xl bg-slate-950 border-2 border-black shadow-[2.5px_2.5px_0px_#000] flex items-center justify-between">
-                            <span class="text-xs text-slate-200 font-bold">Hoàn tác (Undo)</span>
-                            <kbd
-                                class="px-2 py-1 rounded bg-sky-400 border-2 border-black text-slate-950 font-mono text-xs font-bold shadow-[1.5px_1.5px_0px_#000]">Ctrl
-                                + Z</kbd>
+                    <!-- CATEGORY: FAST WORKFLOW & AI -->
+                    <div class="space-y-2">
+                        <h4 class="text-[11px] font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-bolt text-yellow-400"></i>
+                            <span>Dịch thuật & Thao tác nhanh</span>
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-indigo-500/30 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-semibold">Dịch AI trang hiện tại</span>
+                                <kbd class="px-2 py-1 rounded bg-indigo-600/30 border border-indigo-500/50 font-mono text-xs text-indigo-300 font-bold">Ctrl + Enter</kbd>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Thêm ô thoại mới nhanh</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-emerald-400 font-bold">N / Ctrl + B</kbd>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Nhân bản ô thoại đang chọn</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Ctrl + D</kbd>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Tìm kiếm & Thay thế toàn tập</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-amber-300 font-bold">Ctrl + F</kbd>
+                            </div>
                         </div>
-                        <div
-                            class="p-3 rounded-xl bg-slate-950 border-2 border-black shadow-[2.5px_2.5px_0px_#000] flex items-center justify-between">
-                            <span class="text-xs text-slate-200 font-bold">Làm lại (Redo)</span>
-                            <kbd
-                                class="px-2 py-1 rounded bg-sky-400 border-2 border-black text-slate-950 font-mono text-xs font-bold shadow-[1.5px_1.5px_0px_#000]">Ctrl
-                                + Y / Ctrl+Shift+Z</kbd>
+                    </div>
+
+                    <!-- CATEGORY: TOOLS & MODES -->
+                    <div class="space-y-2 pt-2">
+                        <h4 class="text-[11px] font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-wrench text-sky-400"></i>
+                            <span>Công cụ & Chế độ xem</span>
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Bật / Tắt Cọ tẩy & Inpainting</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-sky-300 font-bold">E</kbd>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Đũa thần bắt bóng thoại (Magic Wand)</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-purple-300 font-bold">W</kbd>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Đổi chế độ xem (Overlay / Split / Gốc)</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">V</kbd>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Căn vừa khung hình (Fit Canvas)</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">F</kbd>
+                            </div>
                         </div>
-                        <div
-                            class="p-3 rounded-xl bg-slate-950 border-2 border-black shadow-[2.5px_2.5px_0px_#000] flex items-center justify-between">
-                            <span class="text-xs text-slate-200 font-bold">Chọn tất cả ô thoại</span>
-                            <kbd
-                                class="px-2 py-1 rounded bg-sky-400 border-2 border-black text-slate-950 font-mono text-xs font-bold shadow-[1.5px_1.5px_0px_#000]">Ctrl
-                                + A</kbd>
+                    </div>
+
+                    <!-- CATEGORY: EDITING & TYPESETTING -->
+                    <div class="space-y-2 pt-2">
+                        <h4 class="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-font text-emerald-400"></i>
+                            <span>Chỉnh sửa & Typesetting</span>
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Sao chép / Dán Style ô thoại</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Ctrl + C / Ctrl + V</kbd>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Căn chỉnh vị trí vi mô (Micro-nudge 0.5%)</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Shift + Mũi tên</kbd>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Sửa chữ trực tiếp (Inline Edit)</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Enter / F2</kbd>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Chuyển ô thoại kế tiếp / trước</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Tab / Shift + Tab</kbd>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Tăng / Giảm cỡ phông hoặc cỡ cọ</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">[ / ]</kbd>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Xóa ô thoại chọn</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-red-400 font-bold">Delete / Backspace</kbd>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Hoàn tác / Làm lại</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-sky-300 font-bold">Ctrl + Z / Ctrl + Y</kbd>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Bỏ chọn / Đóng hộp thoại</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-amber-300 font-bold">Esc</kbd>
+                            </div>
                         </div>
-                        <div
-                            class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
-                            <span class="text-xs text-slate-300 font-medium">Sửa chữ trực tiếp (Inline Edit)</span>
-                            <kbd
-                                class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Enter
-                                / F2</kbd>
-                        </div>
-                        <div
-                            class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
-                            <span class="text-xs text-slate-300 font-medium">Chuyển ô thoại kế tiếp / trước</span>
-                            <kbd
-                                class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Tab
-                                / Shift + Tab</kbd>
-                        </div>
-                        <div
-                            class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
-                            <span class="text-xs text-slate-300 font-medium">Tăng / Giảm phông chữ</span>
-                            <kbd
-                                class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">[
-                                / ]</kbd>
-                        </div>
-                        <div
-                            class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
-                            <span class="text-xs text-slate-300 font-medium">Xóa ô thoại chọn</span>
-                            <kbd
-                                class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-red-400 font-bold">Delete
-                                / Backspace</kbd>
-                        </div>
-                        <div
-                            class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
-                            <span class="text-xs text-slate-300 font-medium">Sao chép kiểu dáng (Style)</span>
-                            <kbd
-                                class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Ctrl
-                                + Shift + C</kbd>
-                        </div>
-                        <div
-                            class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
-                            <span class="text-xs text-slate-300 font-medium">Dán kiểu dáng (Style)</span>
-                            <kbd
-                                class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-indigo-300 font-bold">Ctrl
-                                + Shift + V</kbd>
-                        </div>
-                        <div
-                            class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
-                            <span class="text-xs text-slate-300 font-medium">Bỏ chọn / Đóng Inline Edit</span>
-                            <kbd
-                                class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-amber-300 font-bold">Esc</kbd>
-                        </div>
-                        <div
-                            class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
-                            <span class="text-xs text-slate-300 font-medium">Chuyển trang truyện trước / sau</span>
-                            <kbd
-                                class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-sky-300 font-bold">PageUp
-                                / PageDown</kbd>
-                        </div>
-                        <div
-                            class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
-                            <span class="text-xs text-slate-300 font-medium">Phóng to / Thu nhỏ / Zoom 100%</span>
-                            <kbd
-                                class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-sky-300 font-bold">Ctrl
-                                + (+ / - / 0)</kbd>
-                        </div>
-                        <div
-                            class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
-                            <span class="text-xs text-slate-300 font-medium">Zoom tại vị trí con trỏ chuột</span>
-                            <kbd
-                                class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-emerald-300 font-bold">Alt
-                                + Cuộn chuột</kbd>
-                        </div>
-                        <div
-                            class="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 flex items-center justify-between">
-                            <span class="text-xs text-slate-300 font-medium">Cuộn ngang Viewport</span>
-                            <kbd
-                                class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-emerald-300 font-bold">Ctrl
-                                + Cuộn chuột</kbd>
+                    </div>
+
+                    <!-- CATEGORY: NAVIGATION & CANVAS -->
+                    <div class="space-y-2 pt-2">
+                        <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-compass text-slate-400"></i>
+                            <span>Điều hướng & Canvas</span>
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Chuyển trang truyện trước / sau</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-sky-300 font-bold">← / → hoặc PageUp / Down</kbd>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Kéo rê màn hình (Pan Canvas)</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-emerald-300 font-bold">Space + Kéo chuột / Chuột giữa</kbd>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Phóng to / Thu nhỏ / Zoom 100%</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-sky-300 font-bold">Ctrl + (+ / - / 0)</kbd>
+                            </div>
+                            <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+                                <span class="text-xs text-slate-200 font-medium">Zoom tại vị trí con trỏ chuột</span>
+                                <kbd class="px-2 py-1 rounded bg-slate-800 border border-slate-700 font-mono text-xs text-emerald-300 font-bold">Ctrl / Alt + Cuộn chuột</kbd>
+                            </div>
                         </div>
                     </div>
                 </div>

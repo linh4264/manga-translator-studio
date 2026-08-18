@@ -61,7 +61,9 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
     const isItalic = !!block.style.italic;
     const isUnderline = !!block.style.underline;
 
-    const cacheKey = `${block.translated}_${block.box.w}_${block.box.h}_${block.style.fontFamily}_${block.style.padding}_${strokeWidth}_${strokeWidth2}_${block.style.vertical}_${block.style.bold}_${isItalic}_${isUnderline}_${lineHeight}_${letterSpacing}_${textTransform}_${block.style.align}_${maskShape}_${Math.round(displayWidth)}_${Math.round(displayHeight)}`;
+    const quantWidth = Math.round(displayWidth / 2) * 2;
+    const quantHeight = Math.round(displayHeight / 2) * 2;
+    const cacheKey = `${block.translated}_${block.box.w}_${block.box.h}_${block.style.fontFamily}_${block.style.padding}_${strokeWidth}_${strokeWidth2}_${block.style.vertical}_${block.style.bold}_${isItalic}_${isUnderline}_${lineHeight}_${letterSpacing}_${textTransform}_${block.style.align}_${maskShape}_${quantWidth}_${quantHeight}`;
     if (block.autoFitCache && block.autoFitCache.key === cacheKey) {
         block.style.fontSize = block.autoFitCache.fontSize;
         block.textWidth = block.autoFitCache.textWidth;
@@ -194,8 +196,6 @@ export function autoFitBlock(block, customImgElement = null, forceExportScale = 
     block.style.fontSize = optimalSize;
 
     ruler.style.fontSize = `${optimalSize}px`;
-    ruler.style.padding = '1px';
-    setMultilineText(ruler, block.translated, warpOpts);
     block.textWidth = ruler.scrollWidth;
     block.textHeight = ruler.scrollHeight;
 

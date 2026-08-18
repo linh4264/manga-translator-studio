@@ -390,10 +390,41 @@ export function initEventListeners() {
                 import('../core/state.js').then(s => s.executeRedo());
                 return;
             }
+            // Ctrl + Enter: Fast AI Translation for current page
+            if (e.key === 'Enter' || e.code === 'Enter') {
+                e.preventDefault();
+                if (globalState.activePageIndex !== -1) {
+                    import('../features/ai/ai-service.js').then(m => m.translateActivePage());
+                } else {
+                    import('../core/utils.js').then(m => m.showToast("Hãy chọn một trang truyện trước khi dịch.", "warn"));
+                }
+                return;
+            }
+            // Ctrl + F: Quick Find & Replace Modal
+            if (e.key.toLowerCase() === 'f' && !e.shiftKey) {
+                e.preventDefault();
+                import('../features/io.js').then(m => m.openFindReplaceModal());
+                return;
+            }
+            // Ctrl + D: Duplicate Active Block
+            if (e.key.toLowerCase() === 'd' && !e.shiftKey) {
+                if (globalState.selectedBlockId !== null) {
+                    e.preventDefault();
+                    import('../features/canvas/canvas-actions.js').then(m => m.duplicateActiveBlock());
+                    return;
+                }
+            }
+            // Ctrl + B: Quick Add Dialogue Block
+            if (e.key.toLowerCase() === 'b' && !e.shiftKey) {
+                e.preventDefault();
+                import('../features/canvas/canvas-service.js').then(canvas => canvas.addNewBlock());
+                return;
+            }
         }
 
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+        if (isTextInputActive(e.target)) return;
 
+        // Ctrl + A: Select all blocks on active page
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
             e.preventDefault();
             selectAllBlocksOnPage();
@@ -401,21 +432,63 @@ export function initEventListeners() {
         }
 
         // F key: Fit Canvas to Screen
-        if (e.key === 'f' || e.key === 'F') {
+        if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey) {
             e.preventDefault();
             fitCanvasToScreen();
             return;
         }
 
         // W key: Toggle Magic Wand Tool
-        if (e.key === 'w' || e.key === 'W') {
+        if ((e.key === 'w' || e.key === 'W') && !e.ctrlKey && !e.metaKey) {
             e.preventDefault();
             import('../features/canvas/canvas-service.js').then(canvas => canvas.toggleMagicWandMode());
             return;
         }
 
+        // E key: Toggle Eraser / Inpainting Mode
+        if ((e.key === 'e' || e.key === 'E') && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            import('../features/inpainting.js').then(inpainting => inpainting.toggleEraserMode());
+            return;
+        }
+
+        // N key: Quick Add New Dialogue Block
+        if ((e.key === 'n' || e.key === 'N') && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            import('../features/canvas/canvas-service.js').then(canvas => canvas.addNewBlock());
+            return;
+        }
+
+        // V key: Cycle View Mode (overlay -> split -> original)
+        if ((e.key === 'v' || e.key === 'V') && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            const nextMode = globalState.viewMode === 'overlay' ? 'split' : (globalState.viewMode === 'split' ? 'original' : 'overlay');
+            setViewMode(nextMode);
+            import('../core/utils.js').then(u => u.showToast(`Chế độ xem: ${nextMode.toUpperCase()}`, 'info'));
+            return;
+        }
+
+        // Precision Arrow Key Nudging for Selected Block (Shift + Arrow = 0.5%, Alt + Shift = 0.1%)
+        if (globalState.selectedBlockId !== null && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && (e.shiftKey || e.altKey)) {
+            const activePage = globalState.pages[globalState.activePageIndex];
+            const block = activePage ? activePage.blocks.find(b => b.id === globalState.selectedBlockId) : null;
+            if (block && block.box) {
+                e.preventDefault();
+                pushStateToHistory();
+                const step = e.altKey ? 0.1 : 0.5;
+                if (e.key === 'ArrowLeft') block.box.x = Math.max(0, Number((block.box.x - step).toFixed(2)));
+                if (e.key === 'ArrowRight') block.box.x = Math.min(100 - block.box.w, Number((block.box.x + step).toFixed(2)));
+                if (e.key === 'ArrowUp') block.box.y = Math.max(0, Number((block.box.y - step).toFixed(2)));
+                if (e.key === 'ArrowDown') block.box.y = Math.min(100 - block.box.h, Number((block.box.y + step).toFixed(2)));
+                block.maskCache = null;
+                import('../features/canvas/canvas-service.js').then(cs => cs.requestOverlayRender());
+                import('../core/state.js').then(st => st.savePageToDB(activePage));
+                return;
+            }
+        }
+
         // Left/Right Arrow Page Navigation when not editing block text
-        if (globalState.selectedBlockId === null) {
+        if (globalState.selectedBlockId === null && !e.shiftKey && !e.altKey) {
             if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 if (globalState.activePageIndex > 0) selectPage(globalState.activePageIndex - 1);
@@ -428,6 +501,7 @@ export function initEventListeners() {
             }
         }
 
+        // Selected block shortcut handlers
         if (globalState.selectedBlockId !== null) {
             const activePage = globalState.pages[globalState.activePageIndex];
             if (!activePage) return;
@@ -455,6 +529,23 @@ export function initEventListeners() {
                 e.preventDefault();
                 import('../features/canvas/canvas-service.js').then(canvas => canvas.deleteActiveBlock());
             }
+        }
+
+        // Eraser Brush Size Adjustment when in Eraser Mode
+        if ((e.key === '[' || e.key === ']') && globalState.selectedBlockId === null) {
+            import('../features/inpainting.js').then(inpainting => {
+                if (inpainting.isEraserModeActive) {
+                    e.preventDefault();
+                    const delta = e.key === '[' ? -5 : 5;
+                    const newSize = Math.max(3, Math.min(100, (inpainting.eraserBrushSize || 15) + delta));
+                    inpainting.setEraserBrushSize?.(newSize);
+                    const slider = document.getElementById('slider-eraser-size');
+                    const lbl = document.getElementById('lbl-eraser-size');
+                    if (slider) slider.value = newSize;
+                    if (lbl) lbl.textContent = `${newSize}px`;
+                    import('../core/utils.js').then(u => u.showToast(`Kích thước cọ: ${newSize}px`, 'info'));
+                }
+            });
         }
 
         if (e.key === 'Tab') {
@@ -519,12 +610,13 @@ export function initEventListeners() {
             return;
         }
 
-        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'c') {
+        // Copy / Paste Style Shortcuts
+        if ((e.ctrlKey || e.metaKey) && ((e.shiftKey && e.key.toLowerCase() === 'c') || (e.key.toLowerCase() === 'c' && globalState.selectedBlockId !== null))) {
             e.preventDefault();
             copyBlockStyle();
             return;
         }
-        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'v') {
+        if ((e.ctrlKey || e.metaKey) && ((e.shiftKey && e.key.toLowerCase() === 'v') || (e.key.toLowerCase() === 'v' && globalState.selectedBlockId !== null && copiedStyle))) {
             e.preventDefault();
             pasteBlockStyle();
             return;

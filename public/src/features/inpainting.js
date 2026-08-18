@@ -171,11 +171,12 @@ export function toggleEraserMode(forcedState) {
 }
 
 export function updateEraserBrushSize(val) {
-    eraserBrushSize = parseInt(val);
+    eraserBrushSize = parseInt(val, 10);
     if (elements.lblEraserBrushSize) {
         elements.lblEraserBrushSize.innerText = `${val}px`;
     }
 }
+export const setEraserBrushSize = updateEraserBrushSize;
 
 export function setEraserColor(color) {
     eraserColor = color;

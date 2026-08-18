@@ -44,6 +44,16 @@ export function cleanMangaPunctuation(text) {
     return cleaned.trim();
 }
 
+const cachedSegmenter = (typeof Intl !== 'undefined' && Intl.Segmenter) ? new Intl.Segmenter() : null;
+
+export function segmentString(str) {
+    if (!str) return [];
+    if (cachedSegmenter) {
+        return Array.from(cachedSegmenter.segment(str)).map(s => s.segment);
+    }
+    return Array.from(str);
+}
+
 export function setMultilineText(target, value, warpOptions = {}) {
     if (!target) return;
     target.textContent = '';
@@ -110,9 +120,7 @@ export function setMultilineText(target, value, warpOptions = {}) {
         const hasCharWarp = (arcAngle !== 0) || (warpWave !== 0) || (warpBulge !== 0);
 
         if (isVertical) {
-            const chars = (typeof Intl !== 'undefined' && Intl.Segmenter)
-                ? Array.from(new Intl.Segmenter().segment(normLine)).map(s => s.segment)
-                : Array.from(normLine);
+            const chars = segmentString(normLine);
             const count = chars.length;
             const arcDepth = (arcAngle / 45) * 8;
             const waveAmp = (warpWave / 50) * 10;
@@ -143,9 +151,7 @@ export function setMultilineText(target, value, warpOptions = {}) {
                 });
             }
         } else if (hasCharWarp && normLine.length > 1) {
-            const chars = (typeof Intl !== 'undefined' && Intl.Segmenter)
-                ? Array.from(new Intl.Segmenter().segment(normLine)).map(s => s.segment)
-                : Array.from(normLine);
+            const chars = segmentString(normLine);
             const count = chars.length;
             const arcDepth = (arcAngle / 45) * 8;
             const waveAmp = (warpWave / 50) * 10;
@@ -168,7 +174,7 @@ export function setMultilineText(target, value, warpOptions = {}) {
                 lineDiv.appendChild(span);
             });
         } else {
-            lineDiv.appendChild(document.createTextNode(line || ' '));
+            lineDiv.textContent = normLine || '\u00A0';
         }
 
         target.appendChild(lineDiv);
