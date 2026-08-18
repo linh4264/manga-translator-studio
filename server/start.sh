@@ -39,13 +39,13 @@ elif command -v python3 >/dev/null 2>&1; then
     echo "[OK] Phát hiện Python3. Đang chạy python3 -m http.server 3000..."
     echo ""
     open_browser "http://localhost:3000"
-    python3 -m http.server 3000
+    cd ../dist && python3 -m http.server 3000
 elif command -v python >/dev/null 2>&1; then
     echo "[Gợi ý] Không tìm thấy Node.js."
     echo "[OK] Phát hiện Python. Đang chạy python -m http.server 3000..."
     echo ""
     open_browser "http://localhost:3000"
-    python -m http.server 3000
+    cd ../dist && python -m http.server 3000
 else
     echo "[Cảnh báo] Máy bạn chưa cài cả Node.js lẫn Python!"
     echo ""

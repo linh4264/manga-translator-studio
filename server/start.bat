@@ -34,7 +34,7 @@ if %errorlevel%==0 (
         echo [OK] Phat hien Python. Dang chay python -m http.server 3000...
         echo.
         start http://localhost:3000
-        cd /d "%~dp0\..\public"
+        cd /d "%~dp0\..\dist"
         python -m http.server 3000
         if errorlevel 1 (
             echo.

@@ -62,7 +62,9 @@ const server = http.createServer((req, res) => {
 
     // Extract path name without query strings
     const urlPath = decodedUrl.split('?')[0];
-    const rootPath = path.join(__dirname, '..', 'public');
+    const distPath = path.join(__dirname, '..', 'dist');
+    const publicPath = path.join(__dirname, '..', 'public');
+    const rootPath = fs.existsSync(distPath) ? distPath : publicPath;
 
     // Security check to prevent directory traversal outside rootPath
     let rawFilePath = path.join(rootPath, urlPath === '/' ? 'index.html' : urlPath);
