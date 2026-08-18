@@ -30,6 +30,7 @@ import { parseGeminiJsonText } from '../../core/utils/json';
 import { refineAiBlockBox, mergeOverlappingAiBlocks } from '../ocr/ocr-service';
 import { requestOverlayRender, autoMatchBlockStyle } from '../canvas/canvas-service';
 import { autoFitBlock, isBlockAutoFit } from '../canvas/canvas-styling';
+import { balanceTextToDiamond } from '../canvas/canvas-renderer';
 import { compilePronounMatrixPrompt } from '../pronoun';
 import { getConfiguredApiKey, getGeminiGenerateContentUrl, getConfiguredAiProvider, getConfiguredApiEndpoint } from './ai-config';
 import { MangaBlock, MangaPage } from '../../types/index';
@@ -1532,7 +1533,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                     id: b.id || `block_${Date.now()}_${idx}`,
                     type: blockType,
                     original: b.original || '',
-                    translated: b.translated || '',
+                    translated: b.translated ? balanceTextToDiamond(b.translated, normalisedBox.w, normalisedBox.h) : '',
                     box: normalisedBox,
                     style: {
                         fontFamily: chosenFont,
@@ -1864,10 +1865,11 @@ export async function runBatchTranslation(): Promise<void> {
                             if (p.status === 'queued' && p.blocks) {
                                 p.blocks.forEach((b, bIdx) => {
                                     const expectedId = `p${i + 1}_b${bIdx + 1}`;
-                                    b.translated = lookupMap.get(String(b.id)) ||
+                                    const rawTrans = lookupMap.get(String(b.id)) ||
                                         lookupMap.get(expectedId) ||
                                         lookupMap.get(expectedId.toLowerCase()) ||
                                         b.translated || '';
+                                    b.translated = rawTrans ? balanceTextToDiamond(rawTrans, b.box ? b.box.w : null, b.box ? b.box.h : null) : '';
                                     b.autoFitCache = null;
                                 });
 
