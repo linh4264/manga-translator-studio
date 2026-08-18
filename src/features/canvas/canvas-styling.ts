@@ -21,7 +21,7 @@ export function isBlockAutoFit(block?: MangaBlock | null): boolean {
     return globalState.autoFitEnabled;
 }
 
-export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageElement | null = null, _forceExportScale: number = 1): void {
+export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageElement | null = null, _forceExportScale: number = 1, targetPage: MangaPage | null = null): void {
     if (!block || !block.box || !block.style) return;
     if (!isBlockAutoFit(block)) return;
 
@@ -30,7 +30,7 @@ export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageEleme
         return;
     }
 
-    const page = globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null;
+    const page = targetPage || (globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null);
     const imgEl = customImgElement || elements.mangaBgImage;
     const zoomScale = (globalState.zoom || 100) / 100;
 
@@ -47,6 +47,9 @@ export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageEleme
     }
     if (!displayWidth) {
         displayWidth = 800;
+    }
+    if (page && !(page as any).lastDisplayWidth) {
+        (page as any).lastDisplayWidth = displayWidth;
     }
 
     const naturalW = (imgEl && imgEl.naturalWidth > 0) ? imgEl.naturalWidth : 800;
@@ -212,7 +215,7 @@ export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageEleme
 export function autoFitAllBlocksOnPage(page: MangaPage | null = null, customImgElement: HTMLImageElement | null = null, forceExportScale: number = 1): void {
     const targetPage = page || (globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null);
     if (!targetPage) return;
-    targetPage.blocks.forEach(block => autoFitBlock(block, customImgElement, forceExportScale));
+    targetPage.blocks.forEach(block => autoFitBlock(block, customImgElement, forceExportScale, targetPage));
 }
 
 export function toggleAutoFit(enabled: boolean): void {
@@ -608,11 +611,11 @@ export function syncActiveBlockTranslation(val: string): void {
                 const maskElem = overlayElem.firstElementChild as HTMLElement | null;
                 const zoomScale = (globalState.zoom || 100) / 100;
                 if (maskElem) {
-                    maskElem.style.fontSize = `${(block.style.fontSize || 16) * zoomScale}px`;
+                    maskElem.style.fontSize = `${(block.style.fontSize || 13) * zoomScale}px`;
                 }
                 const isAutoFit = isBlockAutoFit(block);
                 if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px${isAutoFit ? ' (Auto)' : ''}`;
-                if (elements.styleFontSize) elements.styleFontSize.value = String(block.style.fontSize || 16);
+                if (elements.styleFontSize) elements.styleFontSize.value = String(block.style.fontSize || 13);
             }
         }
 

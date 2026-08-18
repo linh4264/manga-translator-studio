@@ -252,10 +252,10 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
                     const zoomScale = (globalState.zoom || 100) / 100;
                     const maskElem = blockElem?.firstElementChild as HTMLElement | null;
                     if (maskElem) {
-                        maskElem.style.fontSize = `${(block.style.fontSize || 16) * zoomScale}px`;
+                        maskElem.style.fontSize = `${(block.style.fontSize || 13) * zoomScale}px`;
                     }
                     if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px (Auto)`;
-                    if (elements.styleFontSize) elements.styleFontSize.value = String(block.style.fontSize || 16);
+                    if (elements.styleFontSize) elements.styleFontSize.value = String(block.style.fontSize || 13);
                 });
             }
         }

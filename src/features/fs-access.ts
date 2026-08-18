@@ -7,7 +7,8 @@ import { globalState, saveMetaToDB, loadMetaFromDB, deleteMetaFromDB } from '../
 import { showToast, getCleanFileBaseName } from '../core/utils';
 import { uiUpdateProcessingOverlay } from '../core/state';
 import { getPageExportMimeType } from './io';
-import { renderPageToCanvas2D } from './canvas/canvas-service';
+import { renderPageToCanvas2D, commitActiveEditingState } from './canvas/canvas-service';
+import { saveEraserDrawingToPage } from './inpainting';
 
 export let activeDirectoryHandle: any = null;
 export let pendingDirectoryHandle: any = null;
@@ -212,6 +213,9 @@ export async function exportPagesDirectlyToDisk(): Promise<void> {
     }
 
     try {
+        commitActiveEditingState();
+        await saveEraserDrawingToPage();
+
         const outDirHandle = await targetDirHandle.getDirectoryHandle('translated', { create: true });
 
         const total = globalState.pages.length;

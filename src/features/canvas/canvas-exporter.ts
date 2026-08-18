@@ -10,7 +10,7 @@ function getFontFamilyName(fontClass?: string): string {
     const cleanFont = String(fontClass).trim();
 
     const fontMap: Record<string, string> = {
-        'font-comic': "'Patrick Hand', cursive",
+        'font-comic': "'Patrick Hand', 'Pangolin', cursive",
         'font-manga': "'Nunito', sans-serif",
         'font-vietnamese': "'Be Vietnam Pro', 'Inter', sans-serif",
         'font-comicneue': "'Comic Neue', cursive",
@@ -28,7 +28,24 @@ function getFontFamilyName(fontClass?: string): string {
 }
 
 export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTMLImageElement | null = null): Promise<HTMLCanvasElement> {
-    const imgElement = bgImageOverride || elements.mangaBgImage;
+    let imgElement = bgImageOverride || elements.mangaBgImage;
+    if (!imgElement || !imgElement.naturalWidth || !imgElement.naturalHeight) {
+        const pageFile = page.originalFile || page.file;
+        const srcToLoad = pageFile ? URL.createObjectURL(pageFile as Blob) : page.src;
+        if (srcToLoad) {
+            const offImg = new Image();
+            offImg.crossOrigin = 'anonymous';
+            await new Promise<void>((resolve) => {
+                offImg.onload = () => resolve();
+                offImg.onerror = () => resolve();
+                offImg.src = srcToLoad;
+            });
+            if (offImg.naturalWidth > 0) {
+                imgElement = offImg;
+            }
+        }
+    }
+
     if (!imgElement || !imgElement.naturalWidth || !imgElement.naturalHeight) {
         throw new Error("Dữ liệu ảnh gốc chưa sẵn sàng.");
     }
@@ -44,7 +61,9 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
 
     ctx.drawImage(imgElement, 0, 0, W, H);
 
-    if (page.eraserLayerBlob) {
+    if (page === globalState.pages[globalState.activePageIndex] && elements.eraserCanvas && elements.eraserCanvas.width > 0) {
+        ctx.drawImage(elements.eraserCanvas, 0, 0, W, H);
+    } else if (page.eraserLayerBlob) {
         await new Promise<void>((resolve) => {
             const eraserImg = new Image();
             const url = URL.createObjectURL(page.eraserLayerBlob!);
@@ -59,8 +78,16 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
             };
             eraserImg.src = url;
         });
-    } else if (page === globalState.pages[globalState.activePageIndex] && elements.eraserCanvas && elements.eraserCanvas.width > 0) {
-        ctx.drawImage(elements.eraserCanvas, 0, 0, W, H);
+    } else if ((page as any).eraserCanvasDataUrl) {
+        await new Promise<void>((resolve) => {
+            const eraserImg = new Image();
+            eraserImg.onload = () => {
+                ctx.drawImage(eraserImg, 0, 0, W, H);
+                resolve();
+            };
+            eraserImg.onerror = () => resolve();
+            eraserImg.src = (page as any).eraserCanvasDataUrl;
+        });
     }
 
     await document.fonts.ready;
@@ -174,13 +201,19 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
             }
 
             let displayWidth = (page as any).lastDisplayWidth;
-            if (!displayWidth && imgElement) {
+            if (!displayWidth && imgElement && imgElement.clientWidth > 0) {
                 const zoomScale = (globalState.zoom || 100) / 100;
                 displayWidth = imgElement.clientWidth / zoomScale;
             }
+            if (!displayWidth) {
+                const activePage = globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null;
+                if (activePage && (activePage as any).lastDisplayWidth) {
+                    displayWidth = (activePage as any).lastDisplayWidth;
+                }
+            }
             if (!displayWidth || isNaN(displayWidth)) displayWidth = 800;
             const scaleFactor = W / Math.max(1, displayWidth);
-            const fontSizePx = (block.style.fontSize || 16) * scaleFactor;
+            const fontSizePx = (block.style.fontSize || 13) * scaleFactor;
             let padXPx = 4 * scaleFactor;
             let padYPx = 4 * scaleFactor;
             if (typeof block.style.padding === 'string' && block.style.padding.includes('%')) {
@@ -296,6 +329,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
             const by = (block.box.y / 100) * H;
             const bw = (block.box.w / 100) * W;
             const bh = (block.box.h / 100) * H;
+            const maskShape = block.style.maskShape || 'bubble-fit';
 
             ctx.save();
 
@@ -310,13 +344,19 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
 
             const fontName = getFontFamilyName(block.style.fontFamily);
             let displayWidth = (page as any).lastDisplayWidth;
-            if (!displayWidth && imgElement) {
+            if (!displayWidth && imgElement && imgElement.clientWidth > 0) {
                 const zoomScale = (globalState.zoom || 100) / 100;
                 displayWidth = imgElement.clientWidth / zoomScale;
             }
+            if (!displayWidth) {
+                const activePage = globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null;
+                if (activePage && (activePage as any).lastDisplayWidth) {
+                    displayWidth = (activePage as any).lastDisplayWidth;
+                }
+            }
             if (!displayWidth || isNaN(displayWidth)) displayWidth = 800;
             const scaleFactor = W / Math.max(1, displayWidth);
-            const fontSizePx = (block.style.fontSize || 16) * scaleFactor;
+            const fontSizePx = (block.style.fontSize || 13) * scaleFactor;
             const fontWeight = block.style.bold ? 'bold ' : '';
             const fontItalic = block.style.italic ? 'italic ' : '';
 
@@ -369,6 +409,35 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
             const transformedText = transformCase(block.translated, block.style.textTransform || 'none');
             const currentLineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : 1.15;
 
+            let blockGradient: CanvasGradient | null = null;
+            if (block.style.gradientEnabled) {
+                const startCol = block.style.gradientColorStart || '#ff7e5f';
+                const endCol = block.style.gradientColorEnd || '#feb47b';
+                if (block.style.gradientType === 'radial') {
+                    const cx = bx + bw / 2;
+                    const cy = by + bh / 2;
+                    const r = Math.max(bw, bh) / 2;
+                    const radGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+                    radGrad.addColorStop(0, startCol);
+                    radGrad.addColorStop(1, endCol);
+                    blockGradient = radGrad;
+                } else {
+                    const angle = block.style.gradientAngle !== undefined ? block.style.gradientAngle : 90;
+                    const rad = ((angle - 90) * Math.PI) / 180;
+                    const cx = bx + bw / 2;
+                    const cy = by + bh / 2;
+                    const halfDiag = Math.sqrt(bw * bw + bh * bh) / 2;
+                    const gx1 = cx - halfDiag * Math.cos(rad);
+                    const gy1 = cy - halfDiag * Math.sin(rad);
+                    const gx2 = cx + halfDiag * Math.cos(rad);
+                    const gy2 = cy + halfDiag * Math.sin(rad);
+                    const linGrad = ctx.createLinearGradient(gx1, gy1, gx2, gy2);
+                    linGrad.addColorStop(0, startCol);
+                    linGrad.addColorStop(1, endCol);
+                    blockGradient = linGrad;
+                }
+            }
+
             let columns: string[][] = [];
             let totalTextWidth = 0;
             let totalTextHeight = 0;
@@ -383,15 +452,16 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                 columns.forEach(c => { if (c.length > maxColLength) maxColLength = c.length; });
                 totalTextHeight = maxColLength * charStep;
             } else {
-                const maxTextWidth = Math.max(10, bw - (padXPx * 2));
+                const isEllipseShape = maskShape === 'ellipse';
+                const fitMargin = isEllipseShape ? 0.88 : 1.0;
+                const maxTextWidth = Math.max(10, (bw - (padXPx * 2)) * fitMargin);
                 const lineHeight = fontSizePx * currentLineHeight;
-                const isDiamond = block.style.diamondWrap || block.style.maskShape === 'ellipse' || block.style.maskShape === 'bubble-fit';
+                const isDiamond = !!block.style.diamondWrap;
 
                 const tokenLines = parseRichTextLines(transformedText, {
                     bold: !!block.style.bold,
                     italic: !!block.style.italic,
-                    underline: !!block.style.underline,
-                    color: block.style.textColor || '#000000'
+                    underline: !!block.style.underline
                 });
 
                 const getFontFn = (tok: any) => {
@@ -519,7 +589,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                             ctx.shadowOffsetX = shadowOffsetX;
                             ctx.shadowOffsetY = shadowOffsetY;
                         }
-                        ctx.fillStyle = block.style.textColor || '#000000';
+                        ctx.fillStyle = blockGradient || (block.style.textColor || '#000000');
                         ctx.fillText(char, 0, 0);
                         ctx.restore();
 
@@ -542,12 +612,13 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                 const tokenLines = parseRichTextLines(transformedText, {
                     bold: !!block.style.bold,
                     italic: !!block.style.italic,
-                    underline: !!block.style.underline,
-                    color: block.style.textColor || '#000000'
+                    underline: !!block.style.underline
                 });
 
-                const maxTextWidth = Math.max(10, bw - (padXPx * 2));
-                const isDiamond = block.style.diamondWrap || block.style.maskShape === 'ellipse' || block.style.maskShape === 'bubble-fit';
+                const isEllipseShape = maskShape === 'ellipse';
+                const fitMargin = isEllipseShape ? 0.88 : 1.0;
+                const maxTextWidth = Math.max(10, (bw - (padXPx * 2)) * fitMargin);
+                const isDiamond = !!block.style.diamondWrap;
 
                 const getFontFn = (tok: any) => {
                     const tokItalic = tok.italic ? 'italic ' : '';
@@ -657,7 +728,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                                 ctx.shadowOffsetX = shadowOffsetX;
                                 ctx.shadowOffsetY = shadowOffsetY;
                             }
-                            ctx.fillStyle = tok.color || block.style.textColor || '#000000';
+                            ctx.fillStyle = tok.color || (block.style.gradientEnabled && blockGradient ? blockGradient : (block.style.textColor || '#000000'));
                             ctx.fillText(char, 0, 0);
                             ctx.restore();
 
@@ -721,8 +792,10 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                             }
 
                             ctx.save();
-                            if (block.style.blendMode && block.style.blendMode !== 'normal') {
+                            if (block.style.blendMode && block.style.blendMode !== 'normal' && (!block.style.bgOpacity || block.style.bgOpacity === 0)) {
                                 ctx.globalCompositeOperation = (block.style.blendMode as GlobalCompositeOperation) || 'source-over';
+                            } else {
+                                ctx.globalCompositeOperation = 'source-over';
                             }
                             if (strokeWidth === 0 && strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
                                 ctx.shadowColor = shadowColor;
@@ -731,29 +804,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                                 ctx.shadowOffsetY = shadowOffsetY;
                             }
 
-                            let fillToApply: any = tok.color || block.style.textColor || '#000000';
-                            if (block.style.gradientEnabled && !tok.color) {
-                                const startCol = block.style.gradientColorStart || '#ff7e5f';
-                                const endCol = block.style.gradientColorEnd || '#feb47b';
-                                if (block.style.gradientType === 'radial') {
-                                    const radGrad = ctx.createRadialGradient(startX, lineY, 2, startX, lineY, Math.max(measuredLineWidth, fontSizePx));
-                                    radGrad.addColorStop(0, startCol);
-                                    radGrad.addColorStop(1, endCol);
-                                    fillToApply = radGrad;
-                                } else {
-                                    const angleRad = ((block.style.gradientAngle || 90) * Math.PI) / 180;
-                                    const halfW = measuredLineWidth / 2;
-                                    const halfH = fontSizePx / 2;
-                                    const gx1 = startX - halfW * Math.cos(angleRad);
-                                    const gy1 = lineY - halfH * Math.sin(angleRad);
-                                    const gx2 = startX + halfW * Math.cos(angleRad);
-                                    const gy2 = lineY + halfH * Math.sin(angleRad);
-                                    const linGrad = ctx.createLinearGradient(gx1, gy1, gx2, gy2);
-                                    linGrad.addColorStop(0, startCol);
-                                    linGrad.addColorStop(1, endCol);
-                                    fillToApply = linGrad;
-                                }
-                            }
+                            let fillToApply: any = tok.color || (block.style.gradientEnabled && blockGradient ? blockGradient : (block.style.textColor || '#000000'));
 
                             ctx.fillStyle = fillToApply;
                             ctx.fillText(tok.text, curTokenX, lineY);
@@ -784,6 +835,25 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
 
                             curTokenX += tokenW;
                         });
+                    }
+                    ctx.restore();
+                }
+
+                // Render bilingual subtitles below translated text if enabled
+                if ((globalState.bilingualMode === 'sub' || block.style.bilingualSub) && block.original && block.original.trim()) {
+                    const subFontSizePx = Math.max(8, fontSizePx * 0.7);
+                    const subFontSpec = `italic ${subFontSizePx}px ${fontName}`;
+                    ctx.save();
+                    ctx.font = subFontSpec;
+                    ctx.fillStyle = block.style.textColor || '#000000';
+                    ctx.globalAlpha = 0.75;
+                    const subY = startY + (wrappedTokenLines.length * lineHeight) + (subFontSizePx * 0.5);
+                    const subLines = wrapCanvasText(ctx, block.original, maxTextWidth);
+                    const subLineHeight = subFontSizePx * 1.1;
+                    ctx.textAlign = (!block.style.align || block.style.align === 'center') ? 'center' : (block.style.align === 'right' ? 'right' : 'left');
+                    let subStartX = startX;
+                    for (let si = 0; si < subLines.length; si++) {
+                        ctx.fillText(subLines[si], subStartX, subY + (si * subLineHeight));
                     }
                     ctx.restore();
                 }

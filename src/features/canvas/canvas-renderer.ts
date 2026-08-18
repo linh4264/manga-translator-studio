@@ -280,22 +280,40 @@ export function renderOverlays(
             maskContent.style.color = block.style.textColor || '#000000';
             const zoomScale = isMirror ? 1 : ((globalState.zoom || 100) / 100);
 
+            const displayW = (page as any).lastDisplayWidth ? (page as any).lastDisplayWidth * zoomScale : (imgElement && imgElement.clientWidth > 0 ? imgElement.clientWidth : 800);
+            const naturalW = (imgElement && imgElement.naturalWidth > 0) ? imgElement.naturalWidth : 800;
+            const naturalH = (imgElement && imgElement.naturalHeight > 0) ? imgElement.naturalHeight : 1200;
+            const displayH = displayW * (naturalH / Math.max(1, naturalW));
+            const bubblePxW = (block.box.w / 100) * displayW;
+            const bubblePxH = (block.box.h / 100) * displayH;
+
             if (block.style.padding !== undefined) {
-                if (typeof block.style.padding === 'string') {
+                if (typeof block.style.padding === 'string' && block.style.padding.includes('%')) {
+                    const parts = block.style.padding.trim().split(/\s+/);
+                    const pctY = parseFloat(parts[0]) || 9;
+                    const pctX = parseFloat(parts[1] || parts[0]) || 12;
+                    const padY = forceExportScale !== 1 ? (bubblePxH * (pctY / 100) * forceExportScale) : (bubblePxH * (pctY / 100));
+                    const padX = forceExportScale !== 1 ? (bubblePxW * (pctX / 100) * forceExportScale) : (bubblePxW * (pctX / 100));
+                    maskContent.style.padding = `${padY}px ${padX}px`;
+                } else if (typeof block.style.padding === 'string') {
                     maskContent.style.padding = block.style.padding;
                 } else if (typeof block.style.padding === 'number') {
                     const displayPadding = forceExportScale !== 1 ? (block.style.padding * forceExportScale) : (block.style.padding * zoomScale);
                     maskContent.style.padding = `${displayPadding}px`;
                 } else {
-                    maskContent.style.padding = '9% 12%';
+                    const padY = forceExportScale !== 1 ? (bubblePxH * 0.09 * forceExportScale) : (bubblePxH * 0.09);
+                    const padX = forceExportScale !== 1 ? (bubblePxW * 0.12 * forceExportScale) : (bubblePxW * 0.12);
+                    maskContent.style.padding = `${padY}px ${padX}px`;
                 }
             } else {
-                maskContent.style.padding = '9% 12%';
+                const padY = forceExportScale !== 1 ? (bubblePxH * 0.09 * forceExportScale) : (bubblePxH * 0.09);
+                const padX = forceExportScale !== 1 ? (bubblePxW * 0.12 * forceExportScale) : (bubblePxW * 0.12);
+                maskContent.style.padding = `${padY}px ${padX}px`;
             }
 
             maskContent.style.textAlign = block.style.align || 'center';
 
-            let displayFontSize = block.style.fontSize || 16;
+            let displayFontSize = block.style.fontSize || 13;
             if (forceExportScale !== 1) {
                 displayFontSize = displayFontSize * forceExportScale;
             } else {
@@ -695,20 +713,44 @@ export function wrapRichTextTokens(
         const wordTokens: any[] = [];
         for (const tok of lineTokens) {
             if (!tok.text) continue;
-            const words = tok.text.split(/(\s+)/);
-            for (const w of words) {
-                if (!w) continue;
-                wordTokens.push({
-                    text: w,
-                    isSpace: /^\s+$/.test(w),
-                    bold: !!tok.bold,
-                    italic: !!tok.italic,
-                    underline: !!tok.underline,
-                    strikethrough: !!tok.strikethrough,
-                    color: tok.color || null,
-                    sizeRatio: tok.sizeRatio || 1.0,
-                    font: tok.font || null
-                });
+            const spaceChunks = tok.text.split(/(\s+)/);
+            for (const chunk of spaceChunks) {
+                if (!chunk) continue;
+                if (/^\s+$/.test(chunk)) {
+                    wordTokens.push({
+                        text: chunk,
+                        isSpace: true,
+                        bold: !!tok.bold,
+                        italic: !!tok.italic,
+                        underline: !!tok.underline,
+                        strikethrough: !!tok.strikethrough,
+                        color: tok.color || null,
+                        sizeRatio: tok.sizeRatio || 1.0,
+                        font: tok.font || null
+                    });
+                } else {
+                    const subParts = chunk.split(/([-–—/])/);
+                    let acc = '';
+                    for (let p = 0; p < subParts.length; p++) {
+                        const part = subParts[p];
+                        if (!part) continue;
+                        acc += part;
+                        if (part === '-' || part === '–' || part === '—' || part === '/' || p === subParts.length - 1) {
+                            wordTokens.push({
+                                text: acc,
+                                isSpace: false,
+                                bold: !!tok.bold,
+                                italic: !!tok.italic,
+                                underline: !!tok.underline,
+                                strikethrough: !!tok.strikethrough,
+                                color: tok.color || null,
+                                sizeRatio: tok.sizeRatio || 1.0,
+                                font: tok.font || null
+                            });
+                            acc = '';
+                        }
+                    }
+                }
             }
         }
 
@@ -987,9 +1029,9 @@ export function startInlineEditing(block: MangaBlock, bubble: HTMLElement, maskC
             block.autoFitCache = null;
             autoFitBlock(block, imgElement);
             const zoomScale = (globalState.zoom || 100) / 100;
-            maskContent.style.fontSize = `${(block.style.fontSize || 16) * zoomScale}px`;
+            maskContent.style.fontSize = `${(block.style.fontSize || 13) * zoomScale}px`;
             if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px (Auto)`;
-            if (elements.styleFontSize) elements.styleFontSize.value = String(block.style.fontSize || 16);
+            if (elements.styleFontSize) elements.styleFontSize.value = String(block.style.fontSize || 13);
         }
     }
 
@@ -1047,6 +1089,99 @@ export function triggerInlineEditActiveBlock(): void {
     }
 }
 
+export function commitActiveEditingState(): void {
+    try {
+        const page = globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null;
+        if (page && page.blocks) {
+            page.blocks.forEach(b => {
+                if ((b as any)._isEditingInline) {
+                    (b as any)._isEditingInline = false;
+                    const bubble = typeof document !== 'undefined' ? (document.getElementById(b.id) || (document.querySelector && document.querySelector(`#${b.id}`))) : null;
+                    if (bubble) {
+                        if (bubble.classList && typeof bubble.classList.remove === 'function') {
+                            bubble.classList.remove('editing-inline');
+                        }
+                        const inner = (typeof bubble.querySelector === 'function' && bubble.querySelector('[contenteditable="true"]'))
+                            ? (bubble.querySelector('[contenteditable="true"]') as HTMLElement | null)
+                            : ((bubble.children && bubble.children.length > 0)
+                                ? (Array.isArray(bubble.children) ? (bubble.children.find((c: any) => c.contentEditable === 'true' || c.contentEditable === true) || bubble.children[0]) : bubble.children[0])
+                                : null);
+                        if (inner) {
+                            let newText = (inner.textContent || inner.innerText || '').replace(/\r\n/g, '\n');
+                            if (newText.endsWith('\n') && !(b.translated || '').endsWith('\n')) {
+                                newText = newText.slice(0, -1);
+                            }
+                            if (newText) b.translated = newText;
+                            inner.contentEditable = 'false';
+                            if (inner.style) {
+                                inner.style.outline = 'none';
+                                inner.style.cursor = '';
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        const activeEditingEl = (typeof document !== 'undefined' && typeof document.querySelector === 'function')
+            ? (document.querySelector('.editing-inline') as HTMLElement | null)
+            : null;
+        if (activeEditingEl) {
+            const rawId = String(activeEditingEl.id || '');
+            const blockId = rawId.replace('mirror-', '');
+            const block = page?.blocks?.find(b => b.id === blockId);
+            const innerTextDiv = (typeof activeEditingEl.querySelector === 'function')
+                ? (activeEditingEl.querySelector('[contenteditable="true"]') as HTMLElement | null)
+                : null;
+            if (block && innerTextDiv) {
+                let newText = innerTextDiv.textContent || innerTextDiv.innerText || '';
+                newText = newText.replace(/\r\n/g, '\n');
+                if (newText.endsWith('\n') && !(block.translated || '').endsWith('\n')) {
+                    newText = newText.slice(0, -1);
+                }
+                if (newText) block.translated = newText;
+                (block as any)._isEditingInline = false;
+                innerTextDiv.contentEditable = 'false';
+                if (innerTextDiv.style) {
+                    innerTextDiv.style.outline = 'none';
+                    innerTextDiv.style.cursor = '';
+                }
+                if (activeEditingEl.classList && typeof activeEditingEl.classList.remove === 'function') {
+                    activeEditingEl.classList.remove('editing-inline');
+                }
+            }
+        }
+
+        if (typeof document !== 'undefined') {
+            const transInput = elements.editTranslatedText || (document.getElementById('edit-translated-text') as HTMLTextAreaElement | null);
+            if (transInput && (document.activeElement === transInput || (transInput.value && globalState.selectedBlockId))) {
+                const block = page?.blocks?.find(b => b.id === globalState.selectedBlockId);
+                if (block && transInput.value !== undefined) {
+                    block.translated = transInput.value;
+                }
+            }
+            const origInput = elements.editOriginalText || (document.getElementById('edit-original-text') as HTMLTextAreaElement | null);
+            if (origInput && (document.activeElement === origInput || (origInput.value && globalState.selectedBlockId))) {
+                const block = page?.blocks?.find(b => b.id === globalState.selectedBlockId);
+                if (block && origInput.value !== undefined) {
+                    block.original = origInput.value;
+                }
+            }
+
+            if (document.activeElement && typeof (document.activeElement as HTMLElement).blur === 'function') {
+                (document.activeElement as HTMLElement).blur();
+            }
+        }
+
+        if (page) {
+            savePageToDB(page);
+        }
+    } catch (e) {
+        console.warn("commitActiveEditingState error:", e);
+    }
+}
+
 if (typeof window !== 'undefined') {
     (window as any).triggerInlineEditActiveBlock = triggerInlineEditActiveBlock;
+    (window as any).commitActiveEditingState = commitActiveEditingState;
 }

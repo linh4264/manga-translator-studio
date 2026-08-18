@@ -529,6 +529,15 @@ function applyColorSync(val: string, styleProperty: keyof MangaBlock['style'], i
 }
 
 export function syncTextColorHex(val: string): void {
+    const page = globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null;
+    const block = page?.blocks?.find(b => b.id === globalState.selectedBlockId);
+    if (block && block.style) {
+        block.style.gradientEnabled = false;
+        const chk = document.getElementById('style-gradient-enabled') as HTMLInputElement | null;
+        if (chk) chk.checked = false;
+        const row = document.getElementById('gradient-settings-row');
+        if (row) row.classList.add('hidden');
+    }
     applyColorSync(val, 'textColor', elements.styleTextColor, elements.styleTextColorHex);
 }
 

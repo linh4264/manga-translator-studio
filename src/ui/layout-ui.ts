@@ -485,7 +485,7 @@ export function changeMobileActiveFontSize(delta: number): void {
     if (!block) return;
 
     if (!block.style) block.style = {} as any;
-    const curSize = block.style.fontSize || 16;
+    const curSize = block.style.fontSize || 13;
     const newSize = Math.max(8, Math.min(120, curSize + delta));
     block.style.fontSize = newSize;
     block.autoFitCache = null;

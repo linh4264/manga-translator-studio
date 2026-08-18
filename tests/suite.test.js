@@ -175,7 +175,7 @@ test('Per-Block Auto-Fit Toggle Functions', async () => {
     assert.strictEqual(canvasStyling.isBlockAutoFit(testBlock), false, 'isBlockAutoFit must return block.style.autoFit override if present');
 
     const testBlockDefault = { id: 'b2', style: { fontSize: 18 } };
-    assert.strictEqual(canvasStyling.isBlockAutoFit(testBlockDefault), true, 'isBlockAutoFit must fallback to global state if undefined');
+    assert.strictEqual(canvasStyling.isBlockAutoFit(testBlockDefault), false, 'isBlockAutoFit must fallback to global state (false) if undefined');
 });
 
 // 10. Arc & Full Warp Suite Rendering Test

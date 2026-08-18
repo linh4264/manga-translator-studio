@@ -1318,18 +1318,12 @@ export function computeBubbleMask(page: MangaPage, block: MangaBlock, imageData:
         return null;
     }
 
-    const trimPad = Math.max(1, Math.round(Math.min(bw, bh) * 0.03));
-    const finalBx = Math.max(0, minX - trimPad);
-    const finalBy = Math.max(0, minY - trimPad);
-    const finalBw = Math.min(bw - finalBx, boxSpanX + trimPad * 2);
-    const finalBh = Math.min(bh - finalBy, boxSpanY + trimPad * 2);
-
     const maskCanvas = document.createElement('canvas');
-    maskCanvas.width = finalBw;
-    maskCanvas.height = finalBh;
+    maskCanvas.width = bw;
+    maskCanvas.height = bh;
     const maskCtx = maskCanvas.getContext('2d');
     if (!maskCtx) return null;
-    const maskImgData = maskCtx.createImageData(finalBw, finalBh);
+    const maskImgData = maskCtx.createImageData(bw, bh);
 
     const hexBgColor = block.style.bgColor || '#ffffff';
     const bgOpacity = block.style.bgOpacity !== undefined ? block.style.bgOpacity : 100;
@@ -1340,11 +1334,11 @@ export function computeBubbleMask(page: MangaPage, block: MangaBlock, imageData:
     const bb = parseInt(cleanHex.substring(4, 6), 16) || 0;
     const ba = Math.round((bgOpacity / 100) * 255);
 
-    for (let y = 0; y < finalBh; y++) {
-        for (let x = 0; x < finalBw; x++) {
-            const idx = (y + finalBy) * bw + (x + finalBx);
+    for (let y = 0; y < bh; y++) {
+        for (let x = 0; x < bw; x++) {
+            const idx = y * bw + x;
             const isInsideBubble = visited[idx] === 1 || outside[idx] === 0;
-            const canvasIdx = (y * finalBw + x) * 4;
+            const canvasIdx = idx * 4;
 
             if (isInsideBubble) {
                 maskImgData.data[canvasIdx] = br;
@@ -1366,10 +1360,10 @@ export function computeBubbleMask(page: MangaPage, block: MangaBlock, imageData:
     block.maskCache = {
         key: cacheKey,
         canvas: maskCanvas,
-        finalBx,
-        finalBy,
-        finalBw,
-        finalBh,
+        finalBx: 0,
+        finalBy: 0,
+        finalBw: bw,
+        finalBh: bh,
         dataUrl: maskDataUrl
     };
 

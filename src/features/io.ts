@@ -14,8 +14,8 @@ import {
 import { elements } from '../core/elements';
 import { showToast, getCleanFileBaseName, waitForNextPaint, escapeHTML, waitForImageReady } from '../core/utils';
 import { ensureModalElement } from '../core/component-loader';
-import { renderPageToCanvas2D, renderOverlays } from './canvas/canvas-service';
-import { restorePageEraserDrawing } from './inpainting';
+import { renderPageToCanvas2D, renderOverlays, commitActiveEditingState } from './canvas/canvas-service';
+import { restorePageEraserDrawing, saveEraserDrawingToPage } from './inpainting';
 import {
     updatePageListUI,
     selectPage,
@@ -249,6 +249,9 @@ export function sortPagesByName(): void {
 export async function exportActivePage(): Promise<void> {
     if (globalState.activePageIndex === -1) return;
 
+    commitActiveEditingState();
+    await saveEraserDrawingToPage();
+
     const page = globalState.pages[globalState.activePageIndex];
     updateProcessingOverlay(true, "Đang kết xuất ảnh...", "Đang xử lý từng nét vẽ ở độ phân giải gốc...", 30);
 
@@ -271,23 +274,7 @@ export async function exportActivePage(): Promise<void> {
         await document.fonts.ready;
 
         const { mimeType, quality, ext } = getPageExportMimeType(page);
-
-        let canvas: HTMLCanvasElement;
-        try {
-            canvas = await renderPageToCanvas2D(page);
-        } catch (c2dErr) {
-            console.warn("Canvas 2D Export fallback to html2canvas:", c2dErr);
-            const html2canvas = (window as any).html2canvas;
-            canvas = await html2canvas(container, {
-                useCORS: true,
-                allowTaint: true,
-                scale: 2,
-                backgroundColor: null,
-                logging: false,
-                scrollX: 0,
-                scrollY: 0
-            });
-        }
+        const canvas = await renderPageToCanvas2D(page);
 
         const pngBlob = await new Promise<Blob>((resolve, reject) => {
             canvas.toBlob((blob) => {
@@ -348,6 +335,9 @@ export async function exportCurrentPagePSD(): Promise<void> {
         return;
     }
 
+    commitActiveEditingState();
+    await saveEraserDrawingToPage();
+
     const page = globalState.pages[globalState.activePageIndex];
     if (!page) return;
 
@@ -402,6 +392,9 @@ function getExportRange(): { startIndex: number; endIndex: number } {
 export async function runBatchExport(): Promise<void> {
     if (globalState.pages.length === 0) return;
 
+    commitActiveEditingState();
+    await saveEraserDrawingToPage();
+
     const { startIndex, endIndex } = getExportRange();
     const totalToExport = endIndex - startIndex + 1;
 
@@ -439,8 +432,13 @@ export async function runBatchExport(): Promise<void> {
                 });
 
                 const zoomScale = (globalState.zoom || 100) / 100;
-                const displayWidth = (elements.mangaCanvasContainer?.clientWidth || 800) / zoomScale;
-                (page as any).lastDisplayWidth = displayWidth;
+                const containerW = elements.mangaCanvasContainer && elements.mangaCanvasContainer.clientWidth > 0
+                    ? elements.mangaCanvasContainer.clientWidth
+                    : (elements.workspaceViewport?.clientWidth ? Math.min(elements.workspaceViewport.clientWidth - 32, 1000) : 800);
+                const displayWidth = Math.max(200, Math.round(containerW / zoomScale));
+                if (!(page as any).lastDisplayWidth) {
+                    (page as any).lastDisplayWidth = displayWidth;
+                }
 
                 if (globalState.autoFitEnabled && autoFitAllBlocksOnPage) {
                     autoFitAllBlocksOnPage(page, img);
@@ -546,6 +544,9 @@ export async function runPdfExport(): Promise<void> {
         return;
     }
 
+    commitActiveEditingState();
+    await saveEraserDrawingToPage();
+
     const jsPDFClass = ((window as any).jspdf && (window as any).jspdf.jsPDF) || (window as any).jsPDF;
     if (!jsPDFClass) {
         showToast("Thư viện jsPDF chưa sẵn sàng. Vui lòng tải lại trang.", "error");
@@ -579,19 +580,7 @@ export async function runPdfExport(): Promise<void> {
             await waitForNextPaint();
             await document.fonts.ready;
 
-            let canvas: HTMLCanvasElement;
-            try {
-                canvas = await renderPageToCanvas2D(page);
-            } catch (c2dErr) {
-                const html2canvas = (window as any).html2canvas;
-                canvas = await html2canvas(elements.mangaCanvasContainer, {
-                    useCORS: true,
-                    allowTaint: true,
-                    scale: 1.5,
-                    backgroundColor: null,
-                    logging: false
-                });
-            }
+            const canvas = await renderPageToCanvas2D(page);
 
             const pdfQualityMode = globalState.pdfQuality || 'hd';
             let imgData: string;

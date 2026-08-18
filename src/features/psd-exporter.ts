@@ -63,7 +63,7 @@ export async function createMangaPSD(page: MangaPage, originalImgEl: HTMLImageEl
                 const tCtx = tCanvas.getContext('2d');
                 if (!tCtx) return null;
 
-                const fontSize = block.style?.fontSize ? Math.round(block.style.fontSize * (width / 800)) : 16;
+                const fontSize = block.style?.fontSize ? Math.round(block.style.fontSize * (width / 800)) : 13;
                 tCtx.font = `${block.style?.bold ? 'bold ' : ''}${fontSize}px sans-serif`;
                 tCtx.fillStyle = block.style?.textColor || '#000000';
                 tCtx.textAlign = 'center';
