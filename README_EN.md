@@ -2,19 +2,24 @@
 
 [![Vietnamese](https://img.shields.io/badge/Language-Tiếng%20Việt-red)](README.md)
 [![English](https://img.shields.io/badge/Language-English-blue)](#)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Online-success?style=flat-square&logo=cloudflare)](https://manga-translator-studio.pages.dev/)
 
 ![Manga Translator Studio Banner](https://img.shields.io/badge/Manga%20Translator-Studio-indigo?style=for-the-badge&logo=google-gemini)
+[![Try Online](https://img.shields.io/badge/Live%20Web-manga--translator--studio.pages.dev-success?style=for-the-badge&logo=cloudflare)](https://manga-translator-studio.pages.dev/)
 ![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)
 ![AI Powered](https://img.shields.io/badge/AI-Google%20Gemini%203.1-orange?style=for-the-badge&logo=google)
 
 > [!NOTE]
 > **Vietnamese Version**: [README.md](README.md) is available for Vietnamese-speaking users.
 
+> [!TIP]
+> 🌐 **Try it directly in your browser (No installation required)**: Access the live web app at **[https://manga-translator-studio.pages.dev/](https://manga-translator-studio.pages.dev/)**
+
 ### 📸 Translation Preview
 
 ![Manga Translation Demo](public/demo.jpg)
 
-**Manga Translator Studio** is a professional web application designed for automatic translation and typesetting of comic books (*Manga, Manhua, Manhwa, Comic, Scanlation*). Leveraging Google's state-of-the-art multimodal AI **Google Gemini** (Gemini 3.1 Flash-Lite, Gemini 3.5 Flash, Gemini Pro...), this tool automatically detects speech bubbles (OCR), translates them into natural target languages while preserving comic writing styles, and automatically typesets the translated text to fit perfectly inside the bubbles.
+**Manga Translator Studio** is a professional web application designed for automatic translation and typesetting of comic books (*Manga, Manhua, Manhwa, Comic, Scanlation*). Leveraging Google's state-of-the-art multimodal AI **Google Gemini** (Gemini 3.1 Flash-Lite, Gemini 3.5 Flash, Gemini Pro...), this tool automatically detects speech bubbles (OCR), translates them into natural target languages while preserving comic writing styles, and automatically typesets the translated text to fit perfectly inside the bubbles. You can try it directly online at [manga-translator-studio.pages.dev](https://manga-translator-studio.pages.dev/) or self-host it locally.
 
 ---
 
@@ -88,28 +93,38 @@ Click **"Copy"** to save your new key (which starts with `AIzaSy...`).
 
 ## 🚀 How to Run the App
 
+### 🌐 Option 1: Use Directly on the Web (Fastest - No Setup Needed)
+
+Access the free live online version directly in your browser without installing any tools or configuring environments:
+👉 **Live Web App:** **[https://manga-translator-studio.pages.dev/](https://manga-translator-studio.pages.dev/)**  
+*(Simply enter your personal Gemini API Key and start translating right away)*
+
+---
+
+### 💻 Running Locally on your Machine
+
 > [!IMPORTANT]
-> **ES Modules Requirement**: Since this app is built with modern ES Modules (`import`/`export`), opening `index.html` directly using the `file://` protocol will result in CORS blocks. **You must run the application using a local web server.**
+> **ES Modules Requirement**: Since this app is built with modern ES Modules (`import`/`export`), opening `index.html` directly using the `file://` protocol will result in CORS blocks. **You must run the application using a local web server when running locally.**
 
-Choose one of these easy methods to run the app:
+Choose one of these easy methods to run locally:
 
-### Method 1: Launch in One Click (Recommended)
+#### Method 2: Launch in One Click (Recommended for local host)
 *   **On Windows:** Double-click the [start.bat](start.bat) script in the root directory. It automatically spins up a local web server (Node.js or Python) and opens the app at `http://localhost:3000`.
 *   **On macOS/Linux:** Open a terminal in the project directory, grant execution permission with `chmod +x start.sh` (only needed once), then double-click or run `./start.sh`.
 
-### Method 2: Run via Node.js Server
+#### Method 3: Run via Node.js Server
 Open your Command Prompt / Terminal in the project folder and run:
 ```bash
 node server.js
 ```
 The zero-dependency static file server will launch and automatically open the application in your default browser.
 
-### Method 3: Use VS Code Live Server Extension
+#### Method 4: Use VS Code Live Server Extension
 1. Open the project folder in **VS Code**.
 2. Install the **Live Server** extension (by *Ritwick Dey*).
 3. Right-click [index.html](public/index.html) -> select **"Open with Live Server"** (or click **"Go Live"** in the status bar at the bottom right).
 
-### Method 4: CLI Utilities
+#### Method 5: CLI Utilities
 *   **Using npx:** Run `npx serve public` and open `http://localhost:3000`.
 *   **Using Python:** Run `python -m http.server 3000 --directory public` and open `http://localhost:3000`.
 

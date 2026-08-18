@@ -2,19 +2,24 @@
 
 [![Vietnamese](https://img.shields.io/badge/Language-Tiếng%20Việt-red)](#)
 [![English](https://img.shields.io/badge/Language-English-blue)](README_EN.md)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Online-success?style=flat-square&logo=cloudflare)](https://manga-translator-studio.pages.dev/)
 
 ![Manga Translator Studio Banner](https://img.shields.io/badge/Manga%20Translator-Studio-indigo?style=for-the-badge&logo=google-gemini)
+[![Try Online](https://img.shields.io/badge/Live%20Web-manga--translator--studio.pages.dev-success?style=for-the-badge&logo=cloudflare)](https://manga-translator-studio.pages.dev/)
 ![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)
 ![AI Powered](https://img.shields.io/badge/AI-Google%20Gemini%203.1-orange?style=for-the-badge&logo=google)
 
 > [!NOTE]
 > **English Version**: [README_EN.md](README_EN.md) is available for English-speaking users.
 
+> [!TIP]
+> 🌐 **Dùng ngay trên trình duyệt (Không cần cài đặt)**: Truy cập phiên bản trực tuyến tại **[https://manga-translator-studio.pages.dev/](https://manga-translator-studio.pages.dev/)**
+
 ### 📸 Kết quả dịch mẫu (Translation Preview)
 
 ![Manga Translation Demo](public/demo.jpg)
 
-**Manga Translator Studio** là ứng dụng web chuyên nghiệp hỗ trợ dịch thuật tự động và typeset (trình bày chữ) cho truyện tranh (*Manga, Manhua, Manhwa, Comic, Scanlation*). Tích hợp công nghệ AI đa phương thức hàng đầu của **Google Gemini** (Gemini 3.1 Flash-Lite, Gemini 3.5 Flash, Gemini Pro...), ứng dụng giúp tự động nhận diện bong bóng thoại (OCR), dịch sang tiếng Việt (hoặc các ngôn ngữ khác) tự nhiên chuẩn văn phong comic, và tự động điền chữ (Typeset) vừa vặn vào khung thoại.
+**Manga Translator Studio** là ứng dụng web chuyên nghiệp hỗ trợ dịch thuật tự động và typeset (trình bày chữ) cho truyện tranh (*Manga, Manhua, Manhwa, Comic, Scanlation*). Tích hợp công nghệ AI đa phương thức hàng đầu của **Google Gemini** (Gemini 3.1 Flash-Lite, Gemini 3.5 Flash, Gemini Pro...), ứng dụng giúp tự động nhận diện bong bóng thoại (OCR), dịch sang tiếng Việt (hoặc các ngôn ngữ khác) tự nhiên chuẩn văn phong comic, và tự động điền chữ (Typeset) vừa vặn vào khung thoại. Bạn có thể sử dụng trực tiếp trên web tại [manga-translator-studio.pages.dev](https://manga-translator-studio.pages.dev/) hoặc tự host trên máy tính cá nhân.
 
 ---
 
@@ -88,27 +93,38 @@ Nhấn nút **"Copy"** để sao chép chuỗi mã API Key (có dạng bắt đ�
 
 ## 🚀 Hướng dẫn chạy ứng dụng
 
-> [!IMPORTANT]
-> **Lưu ý về ES Modules**: Vì ứng dụng sử dụng cấu trúc mã nguồn dạng mô-đun hiện đại (ES Modules `import`/`export`), trình duyệt sẽ chặn tải file nếu mở trực tiếp bằng giao thức `file://` (Double-click vào `index.html` sẽ gặp lỗi CORS). **Bạn bắt buộc phải chạy ứng dụng thông qua một máy chủ Web cục bộ (Local Web Server).**
+### 🌐 Cách 1: Dùng trực tiếp trên Web (Nhanh nhất - Không cần cài đặt)
 
-Dưới đây là các cách cực kỳ đơn giản để khởi chạy:
-### Cách 1: Khởi chạy nhanh một-click (Khuyên dùng) (nhớ cài node.js hoặc python)
+Bạn có thể sử dụng ngay ứng dụng phiên bản trực tuyến mà không cần cài đặt hay cấu hình môi trường:
+👉 **Truy cập ngay:** **[https://manga-translator-studio.pages.dev/](https://manga-translator-studio.pages.dev/)**  
+*(Chỉ cần nhập Gemini API Key cá nhân và sử dụng ngay lập tức)*
+
+---
+
+### 💻 Chạy cục bộ trên máy tính (Local Host)
+
+> [!IMPORTANT]
+> **Lưu ý về ES Modules**: Vì ứng dụng sử dụng cấu trúc mã nguồn dạng mô-đun hiện đại (ES Modules `import`/`export`), trình duyệt sẽ chặn tải file nếu mở trực tiếp bằng giao thức `file://` (Double-click vào `index.html` sẽ gặp lỗi CORS). **Bạn bắt buộc phải chạy ứng dụng thông qua một máy chủ Web cục bộ (Local Web Server) nếu chạy offline.**
+
+Dưới đây là các cách cực kỳ đơn giản để khởi chạy cục bộ:
+
+#### Cách 2: Khởi chạy nhanh một-click (Khuyên dùng khi chạy local) (nhớ cài node.js hoặc python)
 *   **Trên Windows:** Nhấp đúp chuột vào tệp [start.bat](/manga-translator-studio/server/start.bat). Hệ thống sẽ tự động khởi chạy máy chủ web Node.js thuần (hoặc Python) và mở trình duyệt tại địa chỉ `http://localhost:3000`. Nếu chưa cài node.js, hãy cài đặt tại [https://nodejs.org/](https://nodejs.org/) CMD: `winget install OpenJS.NodeJS.LTS` hoặc [https://www.python.org/](https://www.python.org/) CMD: `winget install Python.Python.3.11`
 *   **Trên macOS/Linux:** Mở Terminal tại thư mục dự án, chạy lệnh cấp quyền `chmod +x start.sh` (chỉ cần chạy một lần duy nhất), sau đó nhấp đúp hoặc chạy `./start.sh` để mở máy chủ.
 
-### Cách 2: Chạy trực tiếp qua Node.js (server.js có sẵn)
+#### Cách 3: Chạy trực tiếp qua Node.js (server.js có sẵn)
 Mở cửa sổ Command Prompt / Terminal tại thư mục dự án và chạy:
 ```bash
 node server.js
 ```
 Máy chủ tĩnh zero-dependency sẽ khởi chạy và tự động mở trình duyệt web.
 
-### Cách 3: Sử dụng VS Code Live Server (Cho lập trình viên)
+#### Cách 4: Sử dụng VS Code Live Server (Cho lập trình viên)
 1. Mở thư mục dự án trong phần mềm **VS Code**.
 2. Cài đặt extension **Live Server** (của nhà phát triển *Ritwick Dey*).
 3. Nhấp chuột phải vào file [index.html](/manga-translator-studio/public/index.html) -> chọn **"Open with Live Server"** (hoặc bấm nút **"Go Live"** ở góc dưới cùng bên phải VS Code).
 
-### Cách 4: Sử dụng CLI npx serve hoặc Python
+#### Cách 5: Sử dụng CLI npx serve hoặc Python
 *   **Dùng Node npx:** Chạy lệnh `npx serve public` và truy cập `http://localhost:3000`.
 *   **Dùng Python:** Chạy lệnh `python -m http.server 3000 --directory public` và truy cập `http://localhost:3000`.
 
