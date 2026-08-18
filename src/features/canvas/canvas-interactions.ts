@@ -87,34 +87,8 @@ export function startBlockDrag(e: any, block: MangaBlock): void {
                 }
             });
         } else {
-            let targetX = Math.max(0, Math.min(100 - block.box.w, startPercentX + deltaPercentX));
-            let targetY = Math.max(0, Math.min(100 - block.box.h, startPercentY + deltaPercentY));
-
-            if (!moveEvent.altKey && activePage && activePage.blocks) {
-                const snapThreshold = 1.2;
-                const curCenterX = targetX + block.box.w / 2;
-                const curCenterY = targetY + block.box.h / 2;
-
-                if (Math.abs(curCenterX - 50) < snapThreshold) {
-                    targetX = 50 - block.box.w / 2;
-                }
-                if (Math.abs(curCenterY - 50) < snapThreshold) {
-                    targetY = 50 - block.box.h / 2;
-                }
-
-                for (const other of activePage.blocks) {
-                    if (other.id === block.id || !other.box) continue;
-                    const otherCenterX = other.box.x + other.box.w / 2;
-                    const otherCenterY = other.box.y + other.box.h / 2;
-
-                    if (Math.abs(curCenterX - otherCenterX) < snapThreshold) {
-                        targetX = otherCenterX - block.box.w / 2;
-                    }
-                    if (Math.abs(curCenterY - otherCenterY) < snapThreshold) {
-                        targetY = otherCenterY - block.box.h / 2;
-                    }
-                }
-            }
+            const targetX = Math.max(0, Math.min(100 - block.box.w, startPercentX + deltaPercentX));
+            const targetY = Math.max(0, Math.min(100 - block.box.h, startPercentY + deltaPercentY));
 
             block.box.x = targetX;
             block.box.y = targetY;
