@@ -627,6 +627,12 @@ export function wrapCanvasDiamondText(ctx: CanvasRenderingContext2D, text: strin
         let targetLines = Math.max(2, Math.min(Math.floor(maxH / Math.max(1, lineHeight)), Math.ceil(totalCleanWidth / Math.max(10, avgAvailableWidth))));
         targetLines = Math.max(2, Math.min(words.length, targetLines));
 
+        // Enforce block height >= block width: increase targetLines if needed
+        while (targetLines < words.length && (targetLines * lineHeight) < (totalCleanWidth / targetLines)) {
+            targetLines++;
+        }
+        targetLines = Math.max(2, Math.min(words.length, targetLines));
+
         let currentLine = words[0];
         let currentLineIdx = 0;
 
@@ -774,6 +780,13 @@ export function wrapRichTextTokens(
             ? Math.max(2, Math.min(Math.floor(maxH / Math.max(1, lineHeight)), Math.ceil(totalCleanWidth / Math.max(10, avgAvailableWidth))))
             : 1;
 
+        if (isDiamond) {
+            while (targetLines < wordTokens.length && (targetLines * lineHeight) < (totalCleanWidth / targetLines)) {
+                targetLines++;
+            }
+            targetLines = Math.max(2, Math.min(wordTokens.length, targetLines));
+        }
+
         let currentLine: any[] = [];
         let currentLineWidth = 0;
         let currentLineIdx = 0;
@@ -830,7 +843,7 @@ export function balanceTextToDiamond(text: string, boxW: number | null = null, b
     const tokens = tokenLines.flat();
     if (tokens.length === 0) return cleanText;
 
-    const wordsWithTags: Array<{ raw: string; clean: string }> = [];
+    const wordsWithTags: Array<{ raw: string; clean: string; charLen: number }> = [];
     tokens.forEach(tok => {
         const segs = tok.text.trim().split(/\s+/);
         segs.forEach((seg: string) => {
@@ -849,67 +862,159 @@ export function balanceTextToDiamond(text: string, boxW: number | null = null, b
             if (tok.font) { tagPrefix += `[font=${tok.font}]`; tagSuffix = '[/font]' + tagSuffix; }
             wordsWithTags.push({
                 raw: `${tagPrefix}${seg}${tagSuffix}`,
-                clean: seg
+                clean: seg,
+                charLen: seg.length
             });
         });
     });
 
     const wordCount = wordsWithTags.length;
-    if (wordCount <= 3) return wordsWithTags.map(w => w.raw).join(' ');
+    if (wordCount <= 1) return wordsWithTags.map(w => w.raw).join(' ');
 
-    let numLines = 3;
-    if (wordCount <= 5) numLines = 2;
-    else if (wordCount <= 10) numLines = 3;
-    else if (wordCount <= 18) numLines = 4;
-    else numLines = Math.min(5, Math.ceil(wordCount / 4));
+    const totalCleanChars = wordsWithTags.reduce((sum, w) => sum + w.charLen, 0) + (wordCount - 1);
 
-    if (boxW && boxH && boxH > 0) {
-        const aspect = boxW / boxH;
-        if (aspect < 0.65 && wordCount >= 6) {
-            numLines = Math.min(wordCount, Math.max(3, Math.min(5, Math.ceil(wordCount / 3))));
-        } else if (aspect > 1.5 && wordCount >= 4) {
-            numLines = Math.max(2, Math.min(3, Math.floor(wordCount / 4)));
+    // ==========================================
+    // TIER 1: Siêu ngắn (1 - 3 từ)
+    // ==========================================
+    // - Dưới 14 ký tự (VD: "Cảm ơn!", "Đi thôi nào!", "Thật vậy sao?"): giữ 1 dòng duy nhất để chữ to tròn, nằm giữa bóng thoại
+    // - Nếu dài hơn: chia tối đa 2 dòng. Tuyệt đối KHÔNG chia 3 dòng 1 chữ.
+    if (wordCount <= 3) {
+        if (totalCleanChars <= 14 || wordCount === 2) {
+            if (boxW && boxH && (boxW / boxH) < 0.45 && wordCount === 2) {
+                return `${wordsWithTags[0].raw}\n${wordsWithTags[1].raw}`;
+            }
+            if (totalCleanChars <= 14) {
+                return wordsWithTags.map(w => w.raw).join(' ');
+            }
+        }
+        if (wordCount === 3) {
+            const len1 = wordsWithTags[0].charLen + wordsWithTags[1].charLen;
+            const len2 = wordsWithTags[1].charLen + wordsWithTags[2].charLen;
+            if (len1 <= len2) {
+                return `${wordsWithTags[0].raw} ${wordsWithTags[1].raw}\n${wordsWithTags[2].raw}`;
+            } else {
+                return `${wordsWithTags[0].raw}\n${wordsWithTags[1].raw} ${wordsWithTags[2].raw}`;
+            }
         }
     }
-    numLines = Math.max(2, Math.min(wordCount, numLines));
 
-    let weights: number[] = [];
-    for (let i = 0; i < numLines; i++) {
-        const y = -0.5 + (i + 0.5) / numLines;
-        const widthFactor = Math.sqrt(Math.max(0.25, 1 - 4 * y * y));
-        weights.push(widthFactor);
+    const calcPartitionDimensions = (counts: number[]) => {
+        let maxChars = 0;
+        let wordIdx = 0;
+        counts.forEach(count => {
+            const lineWords = wordsWithTags.slice(wordIdx, wordIdx + count);
+            const lineChars = lineWords.reduce((sum, w) => sum + w.charLen, 0) + Math.max(0, lineWords.length - 1);
+            if (lineChars > maxChars) maxChars = lineChars;
+            wordIdx += count;
+        });
+        const estWidth = maxChars * 0.52;
+        const estHeight = counts.length * 1.18;
+        return { estWidth, estHeight, maxChars, ratio: estHeight / Math.max(0.01, estWidth) };
+    };
+
+    const buildDiamondCounts = (k: number): number[] => {
+        k = Math.max(1, Math.min(wordCount, k));
+        let weights: number[] = [];
+        for (let i = 0; i < k; i++) {
+            const y = -0.5 + (i + 0.5) / k;
+            const widthFactor = Math.sqrt(Math.max(0.25, 1 - 4 * y * y));
+            weights.push(widthFactor);
+        }
+        const totalWeight = weights.reduce((a, b) => a + b, 0);
+
+        let lineCounts = weights.map(w => Math.max(1, Math.round((w / totalWeight) * wordCount)));
+        let sum = lineCounts.reduce((a, b) => a + b, 0);
+
+        while (sum < wordCount) {
+            const mid = Math.floor(k / 2);
+            lineCounts[mid]++;
+            sum++;
+        }
+        while (sum > wordCount) {
+            const maxIdx = lineCounts.indexOf(Math.max(...lineCounts));
+            if (lineCounts[maxIdx] > 1) {
+                lineCounts[maxIdx]--;
+                sum--;
+            } else {
+                break;
+            }
+        }
+
+        // Anti-orphan on last line
+        if (lineCounts.length >= 2 && lineCounts[lineCounts.length - 1] === 1 && wordCount >= 5) {
+            const prevIdx = lineCounts.length - 2;
+            if (lineCounts[prevIdx] > 2) {
+                lineCounts[prevIdx]--;
+                lineCounts[lineCounts.length - 1]++;
+            }
+        }
+
+        return lineCounts;
+    };
+
+    // ==========================================
+    // TIER 2: Ngắn (4 - 6 từ)
+    // ==========================================
+    // - Dáng Oval nhẹ tự nhiên (2 - 3 dòng). Dòng dài nhất phải có ít nhất 2 từ.
+    if (wordCount <= 6) {
+        let candidateLines = 2;
+        if (wordCount >= 5 && totalCleanChars >= 22) {
+            candidateLines = 3;
+        }
+        if (boxW && boxH && (boxW / boxH) < 0.65) {
+            candidateLines = Math.min(3, Math.ceil(wordCount / 2));
+        }
+
+        const counts = buildDiamondCounts(candidateLines);
+        let resultLines: string[] = [];
+        let wordIdx = 0;
+        counts.forEach(count => {
+            const lineWords = wordsWithTags.slice(wordIdx, wordIdx + count);
+            if (lineWords.length > 0) {
+                resultLines.push(lineWords.map(w => w.raw).join(' '));
+            }
+            wordIdx += count;
+        });
+        return resultLines.join('\n');
     }
-    const totalWeight = weights.reduce((a, b) => a + b, 0);
 
-    let lineCounts = weights.map(w => Math.max(1, Math.round((w / totalWeight) * wordCount)));
-    let sum = lineCounts.reduce((a, b) => a + b, 0);
+    // ==========================================
+    // TIER 3: Trung bình & Dài (>= 7 từ)
+    // ==========================================
+    // - Áp dụng đầy đủ thuật toán Diamond Height >= Width, chống cột 1 chữ
+    let minLines = 3;
+    if (wordCount >= 12) minLines = 4;
+    if (wordCount >= 20) minLines = 5;
 
-    while (sum < wordCount) {
-        const mid = Math.floor(numLines / 2);
-        lineCounts[mid]++;
-        sum++;
-    }
-    while (sum > wordCount) {
-        const maxIdx = lineCounts.indexOf(Math.max(...lineCounts));
-        if (lineCounts[maxIdx] > 1) {
-            lineCounts[maxIdx]--;
-            sum--;
-        } else {
+    let bestNumLines = minLines;
+    const maxAllowedLines = Math.min(wordCount, Math.ceil(wordCount / 1.8));
+
+    for (let k = minLines; k <= maxAllowedLines; k++) {
+        const counts = buildDiamondCounts(k);
+        const { estWidth, estHeight } = calcPartitionDimensions(counts);
+        bestNumLines = k;
+        if (estHeight >= estWidth) {
             break;
         }
     }
 
-    if (lineCounts.length >= 2 && lineCounts[lineCounts.length - 1] === 1 && wordCount >= 5) {
-        const prevIdx = lineCounts.length - 2;
-        if (lineCounts[prevIdx] > 2) {
-            lineCounts[prevIdx]--;
-            lineCounts[lineCounts.length - 1]++;
+    if (boxW && boxH && boxH > 0) {
+        const boxAspect = boxW / boxH;
+        if (boxAspect < 0.8) {
+            const candidateLines = Math.min(maxAllowedLines, Math.max(bestNumLines, Math.ceil(bestNumLines * (1 / boxAspect) * 0.7)));
+            const counts = buildDiamondCounts(candidateLines);
+            const { estWidth, estHeight } = calcPartitionDimensions(counts);
+            if (estHeight >= estWidth || candidateLines > bestNumLines) {
+                bestNumLines = candidateLines;
+            }
         }
     }
 
+    const finalCounts = buildDiamondCounts(bestNumLines);
+
     let resultLines: string[] = [];
     let wordIdx = 0;
-    lineCounts.forEach(count => {
+    finalCounts.forEach(count => {
         const lineWords = wordsWithTags.slice(wordIdx, wordIdx + count);
         if (lineWords.length > 0) {
             resultLines.push(lineWords.map(w => w.raw).join(' '));
