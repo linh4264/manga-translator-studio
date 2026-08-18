@@ -2,6 +2,7 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { exec } from 'child_process';
 import { fileURLToPath } from 'url';
 
@@ -40,6 +41,36 @@ const MIME_TYPES = {
     '.otf': 'font/otf'
 };
 
+let ts = null;
+try {
+    const tsPath = path.join(__dirname, '..', 'node_modules', 'typescript', 'lib', 'typescript.js');
+    if (fs.existsSync(tsPath)) {
+        const tsModule = await import(`file://${tsPath.replace(/\\/g, '/')}`);
+        ts = tsModule.default || tsModule;
+    }
+} catch (e) {
+    console.warn('TypeScript module not found:', e.message);
+}
+
+function resolveTsImports(code, currentDir) {
+    return code
+        .replace(/(import|export)\s+([\s\S]*?from\s+['"])([\.\/][^'"]+)(['"])/g, (match, p1, p2, p3, p4) => {
+            if (p3.endsWith('.js') || p3.endsWith('.ts') || p3.endsWith('.json')) return match;
+            const absTarget = path.resolve(currentDir, p3);
+            if (fs.existsSync(absTarget + '.ts')) return `${p1} ${p2}${p3}.ts${p4}`;
+            if (fs.existsSync(path.join(absTarget, 'index.ts'))) return `${p1} ${p2}${p3}/index.ts${p4}`;
+            if (fs.existsSync(absTarget + '.js')) return `${p1} ${p2}${p3}.js${p4}`;
+            return match;
+        })
+        .replace(/import\s*\(\s*['"]([\.\/][^'"]+)['"]\s*\)/g, (match, p1) => {
+            if (p1.endsWith('.js') || p1.endsWith('.ts') || p1.endsWith('.json')) return match;
+            const absTarget = path.resolve(currentDir, p1);
+            if (fs.existsSync(absTarget + '.ts')) return `import('${p1}.ts')`;
+            if (fs.existsSync(path.join(absTarget, 'index.ts'))) return `import('${p1}/index.ts')`;
+            return match;
+        });
+}
+
 const server = http.createServer((req, res) => {
     // Enable CORS for ease of development and API testing
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -62,13 +93,12 @@ const server = http.createServer((req, res) => {
 
     // Extract path name without query strings
     const urlPath = decodedUrl.split('?')[0];
-    const distPath = path.join(__dirname, '..', 'dist');
-    const publicPath = path.join(__dirname, '..', 'public');
-    const rootPath = fs.existsSync(distPath) ? distPath : publicPath;
+    const projectRoot = path.join(__dirname, '..');
+    const publicPath = path.join(projectRoot, 'public');
 
-    // Security check to prevent directory traversal outside rootPath
-    let rawFilePath = path.join(rootPath, urlPath === '/' ? 'index.html' : urlPath);
-    const relative = path.relative(rootPath, rawFilePath);
+    // Security check to prevent directory traversal outside projectRoot
+    let rawFilePath = path.join(projectRoot, urlPath === '/' ? 'index.html' : urlPath);
+    const relative = path.relative(projectRoot, rawFilePath);
     const isSafe = relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
     if (!isSafe) {
         res.statusCode = 403;
@@ -76,69 +106,138 @@ const server = http.createServer((req, res) => {
         res.end('403 Cấm truy cập: Yêu cầu ngoài phạm vi thư mục dự án.');
         return;
     }
-    const safePath = path.normalize(urlPath);
-    let filePath = path.join(rootPath, safePath === '/' || safePath === '.' ? 'index.html' : safePath);
 
-    // If target is directory or missing extension, check index.html or .html
+    let safePath = path.normalize(urlPath);
+    if (safePath === '/' || safePath === '.' || safePath === '\\') {
+        safePath = 'index.html';
+    }
+
+    let filePath = path.join(projectRoot, safePath);
+    if (!fs.existsSync(filePath)) {
+        // Fallback to public/ directory
+        const pubCandidate = path.join(publicPath, safePath);
+        if (fs.existsSync(pubCandidate)) {
+            filePath = pubCandidate;
+        } else if (fs.existsSync(filePath + '.ts')) {
+            filePath = filePath + '.ts';
+        } else if (fs.existsSync(filePath + '.js')) {
+            filePath = filePath + '.js';
+        } else if (fs.existsSync(path.join(filePath, 'index.ts'))) {
+            filePath = path.join(filePath, 'index.ts');
+        }
+    }
+
     fs.stat(filePath, (err, stats) => {
-        if (err && !path.extname(filePath)) {
-            if (fs.existsSync(filePath + '.html')) {
-                filePath = filePath + '.html';
-            } else if (fs.existsSync(path.join(filePath, 'index.html'))) {
-                filePath = path.join(filePath, 'index.html');
-            }
-        } else if (!err && stats.isDirectory()) {
-            filePath = path.join(filePath, 'index.html');
+        if (err || (stats && stats.isDirectory())) {
+            res.setHeader('Content-Type', 'text/html; charset=utf-8');
+            res.statusCode = 404;
+            res.end(`
+                <div style="font-family: sans-serif; text-align: center; padding: 50px; background: #0f172a; color: #f8fafc; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <h1 style="color: #f43f5e; font-size: 48px; margin: 0 0 10px 0;">404 Not Found</h1>
+                    <p style="color: #94a3b8; font-size: 16px;">Tệp tin không tồn tại: <code>${escapeHTML(urlPath)}</code></p>
+                    <a href="/" style="margin-top: 20px; color: #6366f1; text-decoration: none; font-weight: bold; border: 1px solid #6366f1; padding: 10px 20px; border-radius: 8px; background: rgba(99,102,241,0.1);">Về Trang Chủ</a>
+                </div>
+            `);
+            return;
         }
 
         const ext = path.extname(filePath).toLowerCase();
-        const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
+        if (ext === '.ts') {
+            fs.readFile(filePath, 'utf-8', (readErr, tsContent) => {
+                if (readErr) {
+                    res.statusCode = 500;
+                    res.end(`<h1>Lỗi Đọc File TypeScript: ${escapeHTML(readErr.code)}</h1>`);
+                    return;
+                }
+
+                try {
+                    const resolvedTs = resolveTsImports(tsContent, path.dirname(filePath));
+                    let jsCode = resolvedTs;
+                    if (ts) {
+                        const resObj = ts.transpileModule(resolvedTs, {
+                            compilerOptions: {
+                                module: ts.ModuleKind.ESNext,
+                                target: ts.ScriptTarget.ES2022,
+                                isolatedModules: true
+                            }
+                        });
+                        jsCode = resObj.outputText;
+                    }
+                    res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' });
+                    res.end(jsCode, 'utf-8');
+                } catch (compileErr) {
+                    console.error('Lỗi biên dịch TypeScript:', compileErr);
+                    res.statusCode = 500;
+                    res.end(`console.error("TypeScript Error: ${escapeHTML(compileErr.message)}");`);
+                }
+            });
+            return;
+        }
+
+        const contentType = MIME_TYPES[ext] || 'application/octet-stream';
         fs.readFile(filePath, (readErr, content) => {
             if (readErr) {
-                res.setHeader('Content-Type', 'text/html; charset=utf-8');
-                if (readErr.code === 'ENOENT') {
-                    res.statusCode = 404;
-                    res.end(`
-                        <div style="font-family: sans-serif; text-align: center; padding: 50px; background: #0f172a; color: #f8fafc; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                            <h1 style="color: #f43f5e; font-size: 48px; margin: 0 0 10px 0;">404 Not Found</h1>
-                            <p style="color: #94a3b8; font-size: 16px;">Tệp tin bạn yêu cầu không tồn tại: <code>${escapeHTML(urlPath)}</code></p>
-                            <a href="/" style="margin-top: 20px; color: #6366f1; text-decoration: none; font-weight: bold; border: 1px solid #6366f1; padding: 10px 20px; border-radius: 8px; background: rgba(99,102,241,0.1);">Về Trang Chủ</a>
-                        </div>
-                    `);
-                } else {
-                    res.statusCode = 500;
-                    res.end(`<h1>Lỗi Máy Chủ: ${escapeHTML(readErr.code)}</h1>`);
-                }
-            } else {
-                res.writeHead(200, { 'Content-Type': contentType });
-                res.end(content, 'utf-8');
+                res.statusCode = 500;
+                res.end(`<h1>Lỗi Máy Chủ: ${escapeHTML(readErr.code)}</h1>`);
+                return;
             }
+            res.writeHead(200, { 'Content-Type': contentType });
+            res.end(content);
         });
     });
 });
 
-server.listen(PORT, () => {
-    const localUrl = `http://localhost:${PORT}`;
-    console.log('\x1b[32m%s\x1b[0m', '==================================================');
-    console.log('\x1b[36m%s\x1b[0m', '  🚀 Manga Translator Studio local server started!');
-    console.log('\x1b[32m%s\x1b[0m', '==================================================');
-    console.log(`  🔗 Local URL:  \x1b[35m%s\x1b[0m`, localUrl);
-    console.log(`  📁 Directory:  %s`, __dirname);
-    console.log('\x1b[33m%s\x1b[0m', '  💡 Bấm Ctrl + C để dừng máy chủ.');
-    console.log('\x1b[32m%s\x1b[0m', '==================================================');
+function startServer(port) {
+    server.listen(port, '0.0.0.0', () => {
+        const localUrl = `http://localhost:${port}`;
+        const interfaces = os.networkInterfaces();
+        const networkIps = [];
 
-    // Automatically open the default browser based on platform (only in normal run)
-    if (process.env.NODE_ENV !== 'test' && !process.env.CI) {
-        try {
-            const cmd = process.platform === 'win32'
-                ? `start ${localUrl}`
-                : process.platform === 'darwin'
-                    ? `open ${localUrl}`
-                    : `xdg-open ${localUrl}`;
-            exec(cmd);
-        } catch (e) {
-            console.warn('⚠️ Không thể tự động mở trình duyệt. Bạn hãy click trực tiếp vào link trên nhé.');
+        for (const name of Object.keys(interfaces)) {
+            for (const iface of interfaces[name]) {
+                if (iface.family === 'IPv4' && !iface.internal) {
+                    networkIps.push(iface.address);
+                }
+            }
         }
+
+        console.log('\x1b[32m%s\x1b[0m', '==================================================');
+        console.log('\x1b[36m%s\x1b[0m', '  🚀 Manga Translator Studio local server started!');
+        console.log('\x1b[32m%s\x1b[0m', '==================================================');
+        console.log(`  💻 Trên máy tính (Local):    \x1b[35m%s\x1b[0m`, localUrl);
+        networkIps.forEach(ip => {
+            console.log(`  📱 Trên điện thoại (Mobile): \x1b[32mhttp://%s:%s\x1b[0m`, ip, port);
+        });
+        console.log('\x1b[32m%s\x1b[0m', '==================================================');
+        console.log(`  📁 Directory:  %s`, __dirname);
+        console.log('\x1b[33m%s\x1b[0m', '  💡 Bấm Ctrl + C để dừng máy chủ.');
+        console.log('\x1b[32m%s\x1b[0m', '==================================================');
+
+        // Automatically open the default browser based on platform (only in normal run)
+        if (process.env.NODE_ENV !== 'test' && !process.env.CI) {
+            try {
+                const cmd = process.platform === 'win32'
+                    ? `start ${localUrl}`
+                    : process.platform === 'darwin'
+                        ? `open ${localUrl}`
+                        : `xdg-open ${localUrl}`;
+                exec(cmd);
+            } catch (e) {
+                console.warn('⚠️ Không thể tự động mở trình duyệt. Bạn hãy click trực tiếp vào link trên nhé.');
+            }
+        }
+    });
+}
+
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        const nextPort = (server.address()?.port || PORT) + 1;
+        console.warn(`\x1b[33m⚠️ Cổng ${PORT} đang được tiến trình khác sử dụng, tự động chuyển sang cổng ${nextPort}...\x1b[0m`);
+        startServer(nextPort);
+    } else {
+        console.error('Lỗi máy chủ:', err);
     }
 });
+
+startServer(PORT);

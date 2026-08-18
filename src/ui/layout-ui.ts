@@ -274,26 +274,282 @@ export function toggleSidebarToolsMenu(): void {
 }
 
 export function toggleMobileSidebar(): void {
-    elements.sidebarPanel?.classList.toggle('mobile-open');
+    toggleMobileLeftPanel();
+}
+
+export function openMobileLeftPanel(): void {
+    document.body.classList.remove('mobile-menu-right-open');
+    document.body.classList.add('mobile-menu-left-open');
+    closeMobileMoreMenu();
+}
+
+export function openMobileRightPanel(tab?: string): void {
+    document.body.classList.remove('mobile-menu-left-open');
+    document.body.classList.add('mobile-menu-right-open');
+    closeMobileMoreMenu();
+    if (tab) {
+        setRightTab(tab);
+    }
+}
+
+export function toggleMobileLeftPanel(): void {
+    if (document.body.classList.contains('mobile-menu-left-open')) {
+        closeMobileMenus();
+    } else {
+        openMobileLeftPanel();
+    }
+}
+
+export function toggleMobileRightPanel(tab?: string): void {
+    if (document.body.classList.contains('mobile-menu-right-open')) {
+        closeMobileMenus();
+    } else {
+        openMobileRightPanel(tab);
+    }
+}
+
+export function closeMobileMenus(): void {
+    document.body.classList.remove('mobile-menu-left-open');
+    document.body.classList.remove('mobile-menu-right-open');
+    elements.sidebarPanel?.classList.remove('mobile-open');
+    document.getElementById('right-panel')?.classList.remove('mobile-open');
+    closeMobileMoreMenu();
+}
+
+export function toggleMobileMoreMenu(): void {
+    const sheet = document.getElementById('mobile-more-sheet');
+    const backdrop = document.getElementById('mobile-more-backdrop');
+    if (!sheet) return;
+
+    const isHidden = sheet.classList.contains('hidden');
+    if (isHidden) {
+        closeMobileMenus();
+        sheet.classList.remove('hidden');
+        if (backdrop) backdrop.classList.remove('hidden');
+    } else {
+        closeMobileMoreMenu();
+    }
+}
+
+export function closeMobileMoreMenu(): void {
+    const sheet = document.getElementById('mobile-more-sheet');
+    const backdrop = document.getElementById('mobile-more-backdrop');
+    if (sheet) sheet.classList.add('hidden');
+    if (backdrop) backdrop.classList.add('hidden');
+}
+
+export function navigateMobilePage(direction: number): void {
+    const total = globalState.pages?.length || 0;
+    if (total === 0) return;
+
+    let nextIndex = globalState.activePageIndex + direction;
+    if (nextIndex < 0) nextIndex = 0;
+    if (nextIndex >= total) nextIndex = total - 1;
+
+    if (nextIndex !== globalState.activePageIndex) {
+        import('./pages-ui').then(m => m.selectPage(nextIndex));
+    }
+}
+
+export function updateMobileNavUI(): void {
+    const pageCount = globalState.pages?.length || 0;
+    const curIndex = globalState.activePageIndex;
+
+    const mobileCanvasDock = document.getElementById('mobile-canvas-dock');
+    const mobilePageIndicator = document.getElementById('mobile-dock-page-indicator');
+    const mobileNavPageText = document.getElementById('mobile-nav-page-text');
+    const mobileBtnPrev = document.getElementById('btn-mobile-prev-page') as HTMLButtonElement | null;
+    const mobileBtnNext = document.getElementById('btn-mobile-next-page') as HTMLButtonElement | null;
+    const mobileBadgePages = document.getElementById('mobile-nav-page-badge');
+    const mobileBtnTranslate = document.getElementById('btn-mobile-dock-translate') as HTMLButtonElement | null;
+
+    const pageStr = pageCount > 0 ? `${curIndex + 1} / ${pageCount}` : "0 / 0";
+    if (mobilePageIndicator) {
+        mobilePageIndicator.innerText = pageStr;
+    }
+    if (mobileNavPageText) {
+        mobileNavPageText.innerText = pageStr;
+    }
+
+    if (mobileCanvasDock) {
+        if (pageCount > 0 && curIndex !== -1) {
+            mobileCanvasDock.classList.remove('hidden');
+        } else {
+            mobileCanvasDock.classList.add('hidden');
+        }
+    }
+
+    if (mobileBadgePages) {
+        if (pageCount > 0) {
+            mobileBadgePages.innerText = String(pageCount);
+            mobileBadgePages.classList.remove('hidden');
+        } else {
+            mobileBadgePages.classList.add('hidden');
+        }
+    }
+
+    if (mobileBtnPrev) {
+        mobileBtnPrev.disabled = curIndex <= 0;
+    }
+    if (mobileBtnNext) {
+        mobileBtnNext.disabled = curIndex >= pageCount - 1 || curIndex === -1;
+    }
+    if (mobileBtnTranslate) {
+        mobileBtnTranslate.disabled = pageCount === 0 || curIndex === -1;
+    }
+}
+
+export function openMobileQuickEditor(blockId?: string): void {
+    if (globalState.activePageIndex === -1) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    if (!page || !page.blocks || page.blocks.length === 0) {
+        import('../core/utils/dom').then(m => m.showToast("Chưa có ô thoại nào. Nhấn [+ Thêm ô] để tạo!", "info"));
+        return;
+    }
+
+    if (blockId) {
+        globalState.selectedBlockId = blockId;
+    } else if (!globalState.selectedBlockId || !page.blocks.some(b => b.id === globalState.selectedBlockId)) {
+        globalState.selectedBlockId = page.blocks[0].id;
+    }
+
+    const activeBlock = page.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!activeBlock) return;
+
+    const sheet = document.getElementById('mobile-quick-edit-sheet');
+    const backdrop = document.getElementById('mobile-quick-edit-backdrop');
+    const title = document.getElementById('mobile-quick-edit-title');
+    const origPreview = document.getElementById('mobile-quick-edit-orig-preview');
+    const textarea = document.getElementById('mobile-quick-edit-textarea') as HTMLTextAreaElement | null;
+    const fontSizeText = document.getElementById('mobile-quick-font-size-text');
+    const orientText = document.getElementById('mobile-quick-orientation-text');
+
+    if (title) title.innerText = `Ô thoại #${activeBlock.id.slice(-4)}`;
+    if (origPreview) origPreview.innerText = activeBlock.original ? `Gốc: ${activeBlock.original}` : '';
+    if (textarea) {
+        textarea.value = activeBlock.translated || '';
+        if (!textarea.dataset.bound) {
+            textarea.dataset.bound = "true";
+            textarea.addEventListener('input', () => {
+                const curPage = globalState.pages[globalState.activePageIndex];
+                const curBlock = curPage?.blocks?.find(b => b.id === globalState.selectedBlockId);
+                if (curBlock) {
+                    curBlock.translated = textarea.value;
+                    curBlock.autoFitCache = null;
+                    import('../features/canvas/canvas-service').then(m => m.requestOverlayRender());
+                }
+            });
+        }
+    }
+
+    const curSize = activeBlock.style?.fontSize || 16;
+    if (fontSizeText) fontSizeText.innerText = `${curSize}px`;
+    if (orientText) orientText.innerText = activeBlock.style?.vertical ? "Dọc" : "Ngang";
+
+    if (backdrop) backdrop.classList.remove('hidden');
+    if (sheet) sheet.classList.remove('hidden');
+
+    closeMobileMenus();
+
+    setTimeout(() => {
+        textarea?.focus();
+    }, 100);
+}
+
+export function closeMobileQuickEditor(): void {
+    const sheet = document.getElementById('mobile-quick-edit-sheet');
+    const backdrop = document.getElementById('mobile-quick-edit-backdrop');
+    if (sheet) sheet.classList.add('hidden');
+    if (backdrop) backdrop.classList.add('hidden');
+
+    if (globalState.activePageIndex !== -1) {
+        const page = globalState.pages[globalState.activePageIndex];
+        if (page) {
+            import('../core/state').then(m => m.savePageToDB(page));
+        }
+    }
+}
+
+export function triggerMobileQuickEdit(): void {
+    if (window.innerWidth < 1024) {
+        openMobileQuickEditor();
+    } else {
+        openMobileRightPanel('edit');
+    }
+}
+
+export function changeMobileActiveFontSize(delta: number): void {
+    if (globalState.activePageIndex === -1 || !globalState.selectedBlockId) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    const block = page?.blocks?.find(b => b.id === globalState.selectedBlockId);
+    if (!block) return;
+
+    if (!block.style) block.style = {} as any;
+    const curSize = block.style.fontSize || 16;
+    const newSize = Math.max(8, Math.min(120, curSize + delta));
+    block.style.fontSize = newSize;
+    block.autoFitCache = null;
+
+    const fontSizeText = document.getElementById('mobile-quick-font-size-text');
+    if (fontSizeText) fontSizeText.innerText = `${newSize}px`;
+
+    import('../features/canvas/canvas-service').then(m => m.requestOverlayRender());
+}
+
+export function toggleMobileActiveOrientation(): void {
+    if (globalState.activePageIndex === -1 || !globalState.selectedBlockId) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    const block = page?.blocks?.find(b => b.id === globalState.selectedBlockId);
+    if (!block) return;
+
+    if (!block.style) block.style = {} as any;
+    block.style.vertical = !block.style.vertical;
+    block.autoFitCache = null;
+
+    const orientText = document.getElementById('mobile-quick-orientation-text');
+    if (orientText) orientText.innerText = block.style.vertical ? "Dọc" : "Ngang";
+
+    import('../features/canvas/canvas-service').then(m => m.requestOverlayRender());
+}
+
+export function balanceMobileActiveDiamond(): void {
+    if (globalState.activePageIndex === -1 || !globalState.selectedBlockId) return;
+    import('../features/canvas/canvas-styling').then(m => {
+        (m as any).batchDiamondBalanceSelectedBlocks?.();
+    });
+}
+
+export function deleteMobileActiveBlock(): void {
+    if (globalState.activePageIndex === -1 || !globalState.selectedBlockId) return;
+    import('../features/canvas/canvas-actions').then(m => {
+        (m as any).deleteSelectedBlock?.();
+        closeMobileQuickEditor();
+    });
 }
 
 export function syncMobileMenuState(): void {
     if (window.innerWidth >= 1024) {
-        elements.sidebarPanel?.classList.remove('mobile-open');
+        closeMobileMenus();
     }
+    updateMobileNavUI();
 }
 
 export function syncMobileToolbarState(): void {
     const toolbar = document.getElementById('mobile-bottom-toolbar');
     if (toolbar) toolbar.classList.toggle('hidden', window.innerWidth >= 1024);
-}
-
-export function closeMobileMenus(): void {
-    elements.sidebarPanel?.classList.remove('mobile-open');
-    document.getElementById('right-panel')?.classList.remove('mobile-open');
+    updateMobileNavUI();
 }
 
 function toggleSidebar(panelId: string, handleId: string, openIconClass: string, closeIconClass: string): void {
+    if (window.innerWidth < 1024) {
+        if (panelId === 'left-panel') {
+            toggleMobileLeftPanel();
+        } else {
+            toggleMobileRightPanel();
+        }
+        return;
+    }
+
     const panel = document.getElementById(panelId);
     const toggleBtn = document.getElementById(handleId);
     if (!panel) return;
@@ -472,12 +728,30 @@ export function updateStepperUI(): void {
     if (headerPageCountText) {
         headerPageCountText.innerText = pageCount > 0 ? `${pageCount} trang` : "Chưa có trang";
     }
+
+    updateMobileNavUI();
 }
 
 if (typeof window !== 'undefined') {
     Object.assign(window, {
         updateStepperUI,
         fitCanvasToScreen,
-        toggleLeftSidebarMoreMenu
+        toggleLeftSidebarMoreMenu,
+        openMobileLeftPanel,
+        openMobileRightPanel,
+        toggleMobileLeftPanel,
+        toggleMobileRightPanel,
+        closeMobileMenus,
+        toggleMobileMoreMenu,
+        closeMobileMoreMenu,
+        navigateMobilePage,
+        updateMobileNavUI,
+        openMobileQuickEditor,
+        closeMobileQuickEditor,
+        triggerMobileQuickEdit,
+        changeMobileActiveFontSize,
+        toggleMobileActiveOrientation,
+        balanceMobileActiveDiamond,
+        deleteMobileActiveBlock
     });
 }

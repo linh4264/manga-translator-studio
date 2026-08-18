@@ -579,7 +579,7 @@
                                     class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-lg shadow-indigo-600/30 flex items-center gap-2 transition-all">
                                     <i class="fa-solid fa-folder-open text-xs"></i> Chọn file từ máy tính
                                 </button>
-                                <button type="button" onclick="event.stopPropagation(); loadDemoManga();"
+                                <button type="button" data-action="loadDemoManga"
                                     class="px-4 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 hover:text-amber-200 font-bold text-xs flex items-center gap-2 transition-all">
                                     <i class="fa-solid fa-play text-xs text-amber-400"></i> Dùng thử ảnh mẫu (Demo)
                                 </button>
@@ -729,26 +729,9 @@
 
             </div>
 
-            <!-- Left Sidebar Toggle Handle (Desktop & Mobile) -->
-            <button id="left-sidebar-toggle-handle" onclick="toggleLeftSidebar()"
-                class="absolute left-0 top-1/2 -translate-y-1/2 z-50 w-5 h-16 bg-slate-900 border-y border-r border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white rounded-r-lg flex items-center justify-center shadow-md pointer-events-auto"
-                title="Ẩn/Hiện thanh bên trái">
-                <i class="fa-solid fa-chevron-left text-[10px]"></i>
-            </button>
-
-            <!-- Right Sidebar Toggle Handle (Desktop & Mobile) -->
-            <button id="right-sidebar-toggle-handle" onclick="toggleRightSidebar()"
-                class="absolute right-0 top-1/2 -translate-y-1/2 z-50 w-5 h-16 bg-slate-900 border-y border-l border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white rounded-l-lg flex items-center justify-center shadow-md pointer-events-auto"
-                title="Ẩn/Hiện thanh bên phải">
-                <i class="fa-solid fa-chevron-right text-[10px]"></i>
-            </button>
-        </main>
-
-        <!-- RIGHT PANEL: Editor, Customization & Font styling -->
-        <aside id="right-panel" class="relative w-80 bg-slate-900 border-l border-slate-800 flex flex-col shrink-0">
-            <!-- Popover Eraser Settings Panel -->
+            <!-- Popover Eraser Settings Panel (Independent of Sidebars) -->
             <div id="eraser-settings-panel"
-                class="hidden absolute right-[calc(100%+0.6rem)] top-14 z-50 w-64 bg-slate-950/95 border border-slate-800 rounded-xl shadow-2xl backdrop-blur-md p-3.5 flex flex-col gap-3.5 transition-all duration-200 pointer-events-auto max-h-[85vh] overflow-y-auto">
+                class="hidden absolute right-3 top-12 z-50 w-64 bg-slate-950/95 border border-slate-800 rounded-xl shadow-2xl backdrop-blur-md p-3.5 flex flex-col gap-3.5 transition-all duration-200 pointer-events-auto max-h-[85vh] overflow-y-auto">
                 <!-- Header -->
                 <div class="flex items-center justify-between pb-1.5 border-b border-slate-800/80">
                     <span
@@ -835,7 +818,7 @@
                             <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> Lấp đầy (Fill)
                         </button>
                         <button id="btn-lasso-clear" onclick="clearLassoSelection()" data-i18n-clear-btn
-                            class="w-full px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-450 hover:text-slate-200 text-[10px] font-semibold flex items-center justify-center gap-1 transition-all">
+                            class="w-full px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-855 text-slate-450 hover:text-slate-200 text-[10px] font-semibold flex items-center justify-center gap-1 transition-all">
                             Hủy chọn
                         </button>
                     </div>
@@ -902,6 +885,23 @@
                 </div>
             </div>
 
+            <!-- Left Sidebar Toggle Handle (Desktop & Mobile) -->
+            <button id="left-sidebar-toggle-handle" onclick="toggleLeftSidebar()"
+                class="absolute left-0 top-1/2 -translate-y-1/2 z-50 w-5 h-16 bg-slate-900 border-y border-r border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white rounded-r-lg flex items-center justify-center shadow-md pointer-events-auto"
+                title="Ẩn/Hiện thanh bên trái">
+                <i class="fa-solid fa-chevron-left text-[10px]"></i>
+            </button>
+
+            <!-- Right Sidebar Toggle Handle (Desktop & Mobile) -->
+            <button id="right-sidebar-toggle-handle" onclick="toggleRightSidebar()"
+                class="absolute right-0 top-1/2 -translate-y-1/2 z-50 w-5 h-16 bg-slate-900 border-y border-l border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white rounded-l-lg flex items-center justify-center shadow-md pointer-events-auto"
+                title="Ẩn/Hiện thanh bên phải">
+                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+            </button>
+        </main>
+
+        <!-- RIGHT PANEL: Editor, Customization & Font styling -->
+        <aside id="right-panel" class="relative w-80 bg-slate-900 border-l border-slate-800 flex flex-col shrink-0">
             <!-- Tab Headers -->
             <div class="flex items-center gap-2 border-b border-slate-800 shrink-0 px-2 pt-2">
                 <button onclick="closeMobileMenus()"
@@ -3962,6 +3962,275 @@
     <!-- Hidden input for quick background image replacement -->
     <input type="file" id="replace-bg-file-input" accept="image/*" class="hidden"
         onchange="handleReplaceBgFileInput(this.files)">
+
+    <!-- ============================================================
+         UNIFIED MOBILE BOTTOM ACTION BAR (One-Thumb Studio Bar)
+         ============================================================ -->
+    <nav id="mobile-bottom-bar"
+        class="md:hidden fixed bottom-0 inset-x-0 z-40 bg-slate-950/95 backdrop-blur-2xl border-t border-slate-800/90 px-2 py-1.5 flex items-center justify-between select-none safe-area-bottom shadow-[0_-10px_35px_rgba(0,0,0,0.8)]">
+        
+        <!-- Left: Page Navigator Pill (Prev / Index / Next) -->
+        <div class="flex items-center gap-0.5 bg-slate-900/90 border border-slate-800 rounded-xl p-0.5 shadow-inner">
+            <button id="btn-mobile-prev-page" onclick="navigateMobilePage(-1)" disabled
+                class="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-xs transition-all disabled:opacity-25 disabled:pointer-events-none active:scale-95 cursor-pointer"
+                title="Trang trước">
+                <i class="fa-solid fa-chevron-left text-[10px]"></i>
+            </button>
+            <button id="mobile-dock-page-indicator" onclick="toggleMobileLeftPanel()"
+                class="px-2 h-7 rounded-lg text-[11px] font-bold font-mono text-slate-200 hover:text-indigo-400 hover:bg-slate-800/70 flex items-center justify-center whitespace-nowrap active:scale-95 transition-all cursor-pointer"
+                title="Bấm để mở danh sách trang">
+                <span id="mobile-nav-page-text">0 / 0</span>
+            </button>
+            <button id="btn-mobile-next-page" onclick="navigateMobilePage(1)" disabled
+                class="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-xs transition-all disabled:opacity-25 disabled:pointer-events-none active:scale-95 cursor-pointer"
+                title="Trang tiếp">
+                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+            </button>
+        </div>
+
+        <div class="h-5 w-px bg-slate-800/80 mx-0.5"></div>
+
+        <!-- Center Actions: Add Box & 1-Click AI Translate -->
+        <div class="flex items-center gap-1.5">
+            <!-- Add Bubble -->
+            <button onclick="addNewBlock()"
+                class="h-8 px-2.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/40 text-indigo-300 hover:text-white flex items-center gap-1 text-[11px] font-bold transition-all active:scale-95 cursor-pointer shadow-sm"
+                title="Thêm ô thoại mới (+)">
+                <i class="fa-solid fa-plus text-[10px]"></i>
+                <span class="hidden xs:inline">Thêm ô</span>
+            </button>
+
+            <!-- Quick AI Translate This Page -->
+            <button id="btn-mobile-dock-translate" onclick="translateActivePage()"
+                class="h-8 px-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white flex items-center gap-1 text-[11px] font-bold transition-all active:scale-95 cursor-pointer shadow-md shadow-indigo-600/30 whitespace-nowrap">
+                <i class="fa-solid fa-wand-magic-sparkles text-[10px] text-yellow-300"></i>
+                <span>Dịch</span>
+            </button>
+        </div>
+
+        <div class="h-5 w-px bg-slate-800/80 mx-0.5"></div>
+
+        <!-- Right Quick Tools: Sửa, Tẩy, Menu -->
+        <div class="flex items-center gap-1">
+            <!-- Quick Edit / Format Active Bubble -->
+            <button id="btn-mobile-quick-edit" onclick="triggerMobileQuickEdit()"
+                class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-indigo-400 flex items-center justify-center text-xs transition-all active:scale-95 cursor-pointer"
+                title="Chỉnh sửa nhanh ô thoại">
+                <i class="fa-solid fa-pen text-[11px]"></i>
+            </button>
+
+            <!-- Inpainting / Eraser Mode -->
+            <button onclick="openEraserMode()"
+                class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-amber-400 hover:text-amber-300 flex items-center justify-center text-xs transition-all active:scale-95 cursor-pointer"
+                title="Chế độ tẩy xóa (Inpainting)">
+                <i class="fa-solid fa-eraser text-[11px]"></i>
+            </button>
+
+            <!-- More Utilities Bottom Sheet -->
+            <button onclick="toggleMobileMoreMenu()"
+                class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-xs transition-all active:scale-95 cursor-pointer"
+                title="Tiện ích khác">
+                <i class="fa-solid fa-ellipsis text-[11px]"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ============================================================
+         MOBILE QUICK EDIT TEXT BOTTOM SHEET
+         ============================================================ -->
+    <div id="mobile-quick-edit-backdrop" onclick="closeMobileQuickEditor()"
+        class="hidden fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 transition-opacity"></div>
+
+    <div id="mobile-quick-edit-sheet"
+        class="hidden fixed bottom-0 inset-x-0 z-50 bg-slate-900/98 border-t border-indigo-500/40 rounded-t-2xl p-3.5 shadow-2xl transition-transform max-h-[85vh] overflow-y-auto safe-area-bottom flex flex-col gap-3">
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div class="flex items-center gap-2 min-w-0">
+                <span id="mobile-quick-edit-title" class="text-xs font-bold text-indigo-300 uppercase tracking-wider truncate font-mono">Chỉnh sửa ô thoại</span>
+                <span id="mobile-quick-edit-orig-preview" class="text-[10px] text-slate-400 truncate max-w-[160px] italic"></span>
+            </div>
+            <button onclick="closeMobileQuickEditor()"
+                class="w-7 h-7 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors">
+                <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
+        </div>
+
+        <!-- Fast Translation Textarea -->
+        <div class="relative">
+            <textarea id="mobile-quick-edit-textarea" rows="3"
+                placeholder="Nhập nội dung bản dịch..."
+                class="w-full bg-slate-950 border border-slate-700 focus:border-indigo-500 rounded-xl p-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 leading-relaxed font-sans"></textarea>
+        </div>
+
+        <!-- Fast Controls Bar: Font size, Vertical/Horizontal, Diamond, Done -->
+        <div class="flex items-center justify-between gap-1.5 flex-wrap">
+            <!-- Font Size Adjuster -->
+            <div class="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-0.5">
+                <button onclick="changeMobileActiveFontSize(-2)"
+                    class="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-300 font-bold text-xs flex items-center justify-center active:scale-95 transition-all">A-</button>
+                <span id="mobile-quick-font-size-text" class="px-2 text-xs font-mono font-bold text-indigo-400">16px</span>
+                <button onclick="changeMobileActiveFontSize(2)"
+                    class="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-300 font-bold text-xs flex items-center justify-center active:scale-95 transition-all">A+</button>
+            </div>
+
+            <!-- Orientation Toggle -->
+            <button onclick="toggleMobileActiveOrientation()"
+                class="h-8 px-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all">
+                <i class="fa-solid fa-arrows-up-down text-[10px] text-indigo-400"></i>
+                <span id="mobile-quick-orientation-text">Dọc/Ngang</span>
+            </button>
+
+            <!-- Diamond Balance -->
+            <button onclick="balanceMobileActiveDiamond()"
+                class="h-8 px-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all"
+                title="Tự động cân bằng dáng kim cương">
+                <i class="fa-solid fa-gem text-[10px] text-amber-400"></i>
+                <span>Cân đối</span>
+            </button>
+
+            <!-- Open Full Style Drawer Trigger -->
+            <button onclick="openMobileRightPanel('style'); closeMobileQuickEditor();"
+                class="h-8 px-2 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 text-xs flex items-center gap-1"
+                title="Mở thêm tùy chọn màu sắc, font, viền, bóng">
+                <i class="fa-solid fa-palette text-[10px] text-purple-400"></i>
+            </button>
+
+            <!-- Delete Block -->
+            <button onclick="deleteMobileActiveBlock()"
+                class="h-8 w-8 rounded-xl bg-red-950/30 hover:bg-red-900/50 border border-red-500/30 text-red-400 flex items-center justify-center text-xs active:scale-95 transition-all"
+                title="Xóa ô thoại này">
+                <i class="fa-solid fa-trash-can text-[11px]"></i>
+            </button>
+
+            <!-- Done / Apply Button -->
+            <button onclick="closeMobileQuickEditor()"
+                class="flex-1 min-w-[70px] h-8 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1 shadow-md shadow-indigo-600/30 active:scale-95 transition-all">
+                <i class="fa-solid fa-check text-[10px]"></i>
+                <span>Xong</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         MOBILE MORE UTILITIES BOTTOM SHEET
+         ============================================================ -->
+    <div id="mobile-more-backdrop" onclick="closeMobileMoreMenu()"
+        class="hidden fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-50 transition-opacity"></div>
+
+    <div id="mobile-more-sheet"
+        class="hidden fixed bottom-0 inset-x-0 z-50 bg-slate-900 border-t border-slate-800 rounded-t-2xl p-4 shadow-2xl transition-transform max-h-[85vh] overflow-y-auto safe-area-bottom">
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-toolbox text-indigo-400 text-sm"></i>
+                <span class="text-xs font-bold text-slate-200 uppercase tracking-wider">Tiện ích & Thao tác</span>
+            </div>
+            <button onclick="closeMobileMoreMenu()"
+                class="w-7 h-7 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors">
+                <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
+        </div>
+
+        <!-- Sheet Grid -->
+        <div class="grid grid-cols-2 gap-2 mt-3.5">
+            <!-- Batch Translate -->
+            <button onclick="closeMobileMoreMenu(); triggerBatchTranslate();"
+                class="p-2.5 rounded-xl bg-gradient-to-r from-pink-600/15 to-indigo-600/15 border border-indigo-500/30 text-slate-200 hover:text-white flex items-center gap-2.5 transition-all active:scale-98">
+                <div class="w-8 h-8 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-wand-magic-sparkles text-xs text-yellow-300"></i>
+                </div>
+                <div class="text-left min-w-0">
+                    <div class="text-xs font-bold truncate">Dịch tất cả</div>
+                    <div class="text-[9.5px] text-slate-400 truncate">Batch Translate</div>
+                </div>
+            </button>
+
+            <!-- Export ZIP -->
+            <button onclick="closeMobileMoreMenu(); runBatchExport();"
+                class="p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/30 text-slate-200 hover:text-white flex items-center gap-2.5 transition-all active:scale-98">
+                <div class="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-download text-xs text-sky-200"></i>
+                </div>
+                <div class="text-left min-w-0">
+                    <div class="text-xs font-bold truncate">Xuất ZIP</div>
+                    <div class="text-[9.5px] text-slate-400 truncate">Tải bộ ảnh đã dịch</div>
+                </div>
+            </button>
+
+            <!-- Single Page Export -->
+            <button onclick="closeMobileMoreMenu(); exportActivePage();"
+                class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 hover:text-white flex items-center gap-2.5 transition-all active:scale-98">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 text-indigo-400 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-file-arrow-down text-xs"></i>
+                </div>
+                <div class="text-left min-w-0">
+                    <div class="text-xs font-bold truncate">Xuất trang này</div>
+                    <div class="text-[9.5px] text-slate-400 truncate">Lưu PNG/JPG</div>
+                </div>
+            </button>
+
+            <!-- Bilingual Mode Toggle -->
+            <button onclick="closeMobileMoreMenu(); toggleQuickBilingualMode();"
+                class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 hover:text-white flex items-center gap-2.5 transition-all active:scale-98">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 text-purple-400 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-language text-xs"></i>
+                </div>
+                <div class="text-left min-w-0">
+                    <div class="text-xs font-bold truncate">Song ngữ</div>
+                    <div class="text-[9.5px] text-slate-400 truncate">Hiện chữ gốc & dịch</div>
+                </div>
+            </button>
+
+            <!-- Audio Drama -->
+            <button onclick="closeMobileMoreMenu(); toggleQuickAudioDrama();"
+                class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 hover:text-white flex items-center gap-2.5 transition-all active:scale-98">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 text-sky-400 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-headphones text-xs"></i>
+                </div>
+                <div class="text-left min-w-0">
+                    <div class="text-xs font-bold truncate">Audio Drama</div>
+                    <div class="text-[9.5px] text-slate-400 truncate">Phát lồng tiếng AI</div>
+                </div>
+            </button>
+
+            <!-- Lorebook -->
+            <button onclick="closeMobileMoreMenu(); openLorebookModal();"
+                class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 hover:text-white flex items-center gap-2.5 transition-all active:scale-98">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 text-emerald-400 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-address-card text-xs"></i>
+                </div>
+                <div class="text-left min-w-0">
+                    <div class="text-xs font-bold truncate">Lorebook</div>
+                    <div class="text-[9.5px] text-slate-400 truncate">Từ vựng & Nhân vật</div>
+                </div>
+            </button>
+
+            <!-- Google Drive -->
+            <button onclick="closeMobileMoreMenu(); openGDriveModal();"
+                class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 hover:text-white flex items-center gap-2.5 transition-all active:scale-98">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 text-sky-400 flex items-center justify-center shrink-0">
+                    <i class="fa-brands fa-google-drive text-xs"></i>
+                </div>
+                <div class="text-left min-w-0">
+                    <div class="text-xs font-bold truncate">Google Drive</div>
+                    <div class="text-[9.5px] text-slate-400 truncate">Đồng bộ đám mây</div>
+                </div>
+            </button>
+
+            <!-- Settings & API Key -->
+            <button onclick="closeMobileMoreMenu(); openSettingsModal();"
+                class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-300 hover:text-white flex items-center gap-2.5 transition-all active:scale-98">
+                <div class="w-8 h-8 rounded-lg bg-slate-800 text-amber-400 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-gear text-xs"></i>
+                </div>
+                <div class="text-left min-w-0">
+                    <div class="text-xs font-bold truncate">Cài đặt & API</div>
+                    <div class="text-[9.5px] text-slate-400 truncate">Model & API Key</div>
+                </div>
+            </button>
+        </div>
+    </div>
+
     <script type="module" src="/src/main.ts"></script>
 </body>
 

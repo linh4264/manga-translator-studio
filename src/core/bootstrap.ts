@@ -228,4 +228,10 @@ export async function initApplication(): Promise<void> {
     } catch (dbErr) {
         console.error("Lỗi khởi tạo/khôi phục dữ liệu từ IndexedDB:", dbErr);
     }
+
+    if (typeof window !== 'undefined') {
+        Object.assign(window, {
+            loadDemoManga: () => import('../ui/pages-ui').then(m => m.loadDemoManga())
+        });
+    }
 }

@@ -22,6 +22,7 @@ export function isBlockAutoFit(block?: MangaBlock | null): boolean {
 }
 
 export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageElement | null = null, _forceExportScale: number = 1): void {
+    if (!block || !block.box || !block.style) return;
     if (!isBlockAutoFit(block)) return;
 
     if (!block.translated || block.translated.trim() === '') {

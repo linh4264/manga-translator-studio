@@ -125,6 +125,9 @@ export function setEraserMode(active: boolean): void {
     const floatingBtn = document.getElementById('btn-eraser-mode-floating');
 
     if (isEraserModeActive) {
+        if (typeof window !== 'undefined' && (window as any).closeMobileMenus) {
+            (window as any).closeMobileMenus();
+        }
         if (elements.eraserSettingsPanel) elements.eraserSettingsPanel.classList.remove('hidden');
         const trigger = document.getElementById('btn-eraser-floating-trigger');
         if (trigger) trigger.classList.add('hidden');

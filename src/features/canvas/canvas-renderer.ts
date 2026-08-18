@@ -460,6 +460,10 @@ export function renderOverlays(
                     lastTouchTime = 0;
                     e.preventDefault();
                     e.stopPropagation();
+                    if (window.innerWidth < 1024) {
+                        import('../../ui/layout-ui').then(m => m.openMobileQuickEditor(block.id));
+                        return;
+                    }
                     if (block.type !== 'image') {
                         const innerText = maskContent.firstElementChild as HTMLElement;
                         startInlineEditing(block, bubble, maskContent, innerText);

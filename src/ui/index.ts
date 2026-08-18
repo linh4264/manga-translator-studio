@@ -1,11 +1,13 @@
-import { debounceSavePage } from '../core/state';
 import {
     setRightTab, updateProcessingOverlay, updateBackgroundTaskOverlay,
     setViewMode, updateSplitView, changeZoom, resetZoom, fitCanvasToScreen,
     toggleSidebarToolsMenu, toggleMobileSidebar, syncMobileMenuState, syncMobileToolbarState,
     closeMobileMenus, toggleLeftSidebar, toggleRightSidebar, toggleQuickBilingualMode, toggleQuickAudioDrama,
-    openHelpModal, closeHelpModal, switchHelpTab, toggleLeftSidebarMoreMenu
+    openHelpModal, closeHelpModal, switchHelpTab, toggleLeftSidebarMoreMenu,
+    openMobileLeftPanel, openMobileRightPanel, toggleMobileLeftPanel, toggleMobileRightPanel,
+    toggleMobileMoreMenu, closeMobileMoreMenu, navigateMobilePage, updateMobileNavUI
 } from './layout-ui';
+import { initTouchGestures, toggleMobileHandMode, isMobileHandModeActive } from '../features/canvas/touch-gestures';
 
 import {
     selectPage, removePage, updatePageListUI, filterPagesList,
@@ -47,7 +49,7 @@ import {
     exportLorebookJSON, importLorebookJSON
 } from './lorebook-ui';
 
-import { globalState, stateEvents } from '../core/state';
+import { globalState, stateEvents, debounceSavePage } from '../core/state';
 import { CUSTOM_MODEL_VALUE } from '../config/constants';
 import { globalBus } from '../core/events';
 import { elements } from '../core/elements';
@@ -140,6 +142,7 @@ export function initEventListeners(): void {
 
     const viewport = document.getElementById('workspace-viewport');
     if (viewport) {
+        initTouchGestures();
         viewport.addEventListener('dragover', (e) => {
             e.preventDefault();
         });
@@ -277,6 +280,11 @@ export function initEventListeners(): void {
             }
         }
     }, { passive: false });
+
+    window.addEventListener('resize', () => {
+        syncMobileMenuState();
+        syncMobileToolbarState();
+    });
 
     (window as any).__isSpacePanPressed = false;
     let isPanning = false;
@@ -809,6 +817,16 @@ if (typeof window !== 'undefined') {
         updateExportPdfQuality,
         toggleSidebarToolsMenu,
         toggleMobileSidebar,
+        openMobileLeftPanel,
+        openMobileRightPanel,
+        toggleMobileLeftPanel,
+        toggleMobileRightPanel,
+        toggleMobileMoreMenu,
+        closeMobileMoreMenu,
+        navigateMobilePage,
+        updateMobileNavUI,
+        toggleMobileHandMode,
+        isMobileHandModeActive,
         syncMobileMenuState,
         syncMobileToolbarState,
         closeMobileMenus,
