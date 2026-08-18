@@ -10,3 +10,4 @@ models/
 .env
 .env.local
 .agents
+.vscode
