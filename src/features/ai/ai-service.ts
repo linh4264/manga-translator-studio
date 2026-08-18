@@ -205,28 +205,43 @@ export function getTranslationGuidancePrompt(): string {
     const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
 
     guidanceParts.push(
-        `- ROLE: You are a professional Scanlation Localizer and Manga Editor. Translate meaning, tone, and emotion—NEVER translate word-for-word.`
+        `- ROLE: You are a Master Scanlation Localizer and Manga Publication Editor. Translate meaning, subtext, tone, and character emotions—NEVER translate word-for-word or produce rigid, literal machine translations.`
     );
 
     if (targetLang === 'vi') {
         guidanceParts.push(
-            `- MANGA LOCALIZATION RULES (BẮT BUỘC BẢN DỊCH TIẾNG VIỆT):`,
-            `  1. VĂN NÓI / KHẨU NGỮ: Dùng văn nói giao tiếp tự nhiên của giới trẻ/truyện tranh. Tận dụng tối đa từ đệm ngữ điệu phù hợp ngữ cảnh: "hả, đấy, chứ, nha, nhé, cơ, sao, đâu, thiệt luôn, chứ lị, mất thôi...".`,
-            `  2. TRIỆT TIÊU VĂN MÁY MÓC & DỊCH THÔ:`,
-            `     - TRÁNH lạm dụng đại từ "tôi/bạn" sượng sùng. Bỏ bớt đại từ nhân xưng khi ngữ cảnh đã rõ ai đang nói.`,
-            `     - TRÁNH câu dịch xuôi cấu trúc Anh/Nhật (VD: KHÔNG dịch "Bạn đang làm gì vậy?", HÃY dịch "Làm gì đấy?" / "Tính làm gì hả?").`,
-            `     - TRÁNH từ nối khô cứng ("Bởi vì...", "Mặc dù...", "Bị/Được...").`,
-            `  3. XƯNG HÔ NĂNG ĐỘNG (DỌN ĐƯỜNG CHO I/YOU): Tiếng Anh chỉ có "I/You". Cần tự động suy đoán vị thế, tuổi tác và thái độ nhân vật để chọn cặp xưng hô tự nhiên (mày-tao, cậu-tớ, anh-em, sếp-em...), tuyệt đối không giữ tôi-bạn trung tính.`,
-            `  4. CHUYỂN ĐỔI TỪ CẢM THÁN & TỪ LÓNG (SLANG/IDIOMS): Dịch linh hoạt từ lóng, cụm từ cố định và từ cảm thán sang khẩu ngữ tiếng Việt tương đương (VD: "Guh/Ugh" -> "Hừ/Haiz", "Holy crap" -> "Vãi thật/Trời ơi", "No way" -> "Làm gì có/Không đời nào", "I'm on it" -> "Để đó cho tôi/Có ngay").`,
-            `  5. NGẮN GỌN & ĐẤM THÉP: Ô thoại truyện tranh rất nhỏ. Ưu tiên câu ngắn, súc tích, giật gân, nói đổng hoặc lược bỏ chủ ngữ nếu cần thiết.`,
-            `  6. VÍ DỤ CHUẨN MẪU (FEW-SHOT EXAMPLES):`,
-            `     - "What are you doing?" -> Dịch dở: "Bạn đang làm gì?" | Dịch chuẩn Manga: "Làm gì đấy?" / "Tính làm trò gì hả?"`,
-            `     - "I see..." -> Dịch dở: "Tôi hiểu rồi." | Dịch chuẩn Manga: "Ra thế..." / "Thế à..."`,
-            `     - "It can't be helped." -> Dịch dở: "Nó không thể giúp được." | Dịch chuẩn Manga: "Đành chịu thôi." / "Biết sao giờ."`,
-            `     - "Really?" -> Dịch dở: "Thật sao?" | Dịch chuẩn Manga: "Thật luôn?" / "Thiệt hả?"`,
-            `     - "Unbelievable!" -> Dịch dở: "Không thể tin được!" | Dịch chuẩn Manga: "Ảo thật đấy!" / "Vô lý!"`,
-            `     - "Holy crap!" -> Dịch dở: "Thánh phân!" | Dịch chuẩn Manga: "Vãi thật!" / "Trời đất ơi!"`,
-            `     - "No way!" -> Dịch dở: "Không có đường!" | Dịch chuẩn Manga: "Làm gì có!" / "Không đời nào!"`
+            `- MANGA LOCALIZATION RULES (QUY TẮC BẢN DỊCH TIẾNG VIỆT CHUẨN XUẤT BẢN - CHỐNG DỊCH THÔ LỦNG CỦNG):`,
+            `  1. VĂN NÓI / KHẨU NGỮ TỰ NHIÊN (SPEAKABILITY & SPOKEN FLOW):`,
+            `     - Câu thoại truyện tranh phải đọc to lên nghe êm tai, nhịp điệu dứt khoát, tự nhiên như lời ăn tiếng nói ngoài đời thực.`,
+            `     - Tận dụng tối đa từ đệm ngữ khí và thán từ phù hợp cảm xúc nhân vật: "hả, đấy, chứ, nha, nhé, cơ, sao, đâu, thiệt luôn, chứ lị, mất thôi, cơ mà, vãi thật, ôi trời, thôi xong...".`,
+            `  2. TRIỆT TIÊU VĂN MÁY MÓC & DỊCH THÔ (ANTI-MACHINE TRANSLATION & ANTI-LITERAL):`,
+            `     - 🚫 CẤM dịch bám trật tự từ nguyên gốc (nhất là cấu trúc câu SOV tiếng Nhật/Hàn hoặc Hán thô tiếng Trung). Hãy sắp xếp lại hoàn toàn theo trật tự tự nhiên của tiếng Việt.`,
+            `     - 🚫 CẤM lạm dụng đại từ "tôi/bạn", "hắn/cô ấy" sượng sùng. BẮT BUỘC TỈNH LƯỢC CHỦ NGỮ TỰ NHIÊN (Pro-drop) khi đối thoại trực tiếp (VD: "Ăn chưa?" thay vì "Bạn đã ăn cơm chưa?", "Đi đâu đấy?" thay vì "Anh đang đi đâu vậy?").`,
+            `     - 🚫 CẤM dùng câu bị động giả tạo ("bị/được... bởi..."). Chuyển thành câu chủ động mượt mà (VD: "Tôi bị đánh bại bởi hắn" ➔ "Tôi thua nó rồi" / "Bị nó hạ gục rồi").`,
+            `     - 🚫 CẤM các từ nối sách vở rườm rà ("Bởi vì...", "Mặc dù...", "Tuy nhiên...", "Sau đó thì...", "Có lẽ là...").`,
+            `  3. XƯNG HÔ NĂNG ĐỘNG & ĐỒNG BỘ PHÂN CẢNH (PRONOUN DYNAMICS & DIALOGUE COHERENCE):`,
+            `     - Đọc toàn bộ các câu thoại trong trang như một hoạt cảnh kịch liên tục để hiểu rõ quan hệ, tuổi tác, bối cảnh và tâm lý.`,
+            `     - Tự động chọn cặp xưng hô sống động: bạn bè thân (mày-tao, cậu-tớ, ông-tôi), tình cảm (anh-em), gia đình (bố-con, mẹ-con), thứ bậc (sếp-em, tiền bối-em, chú-cháu), đối địch/tức giận (mày-tao, thằng ranh, tên khốn).`,
+            `     - TUYỆT ĐỐI GIỮ THỐNG NHẤT 100% cặp xưng hô xuyên suốt trang đối thoại, không nhảy lung tung giữa các ô thoại.`,
+            `  4. CHUYỂN ĐỔI TỪ CẢM THÁN & TỪ LÓNG (SLANG/IDIOMS/EXCLAMATIONS):`,
+            `     - Dịch thoát ý linh hoạt từ lóng, quán ngữ và từ cảm thán sang khẩu ngữ tiếng Việt tương đương, giữ trọn năng lượng và thần thái của nhân vật.`,
+            `  5. SÚC TÍCH, ĐẮM THÉP & VỪA KHUNG BÓNG THOẠI (COMPACT MANGA BUBBLE FIT):`,
+            `     - Ô thoại truyện tranh có không gian giới hạn. Ưu tiên câu thoại ngắn, súc tích, ngắt nhịp đúng chỗ, giàu sức biểu đạt, tránh dài dòng giải thích.`,
+            `  6. VÍ DỤ CHUẨN MẪU ĐA NGÔN NGỮ (FEW-SHOT CALIBRATION EXAMPLES):`,
+            `     - [EN] "What are you doing?" ➔ Dịch dở: "Bạn đang làm gì?" | Dịch chuẩn Manga: "Làm gì đấy?" / "Tính làm trò gì hả?"`,
+            `     - [EN] "I see..." ➔ Dịch dở: "Tôi hiểu rồi." | Dịch chuẩn Manga: "Ra thế..." / "Thế à..."`,
+            `     - [EN] "It can't be helped." ➔ Dịch dở: "Nó không thể giúp được." | Dịch chuẩn Manga: "Đành chịu thôi." / "Biết sao giờ."`,
+            `     - [EN] "Really?" ➔ Dịch dở: "Thật sao?" | Dịch chuẩn Manga: "Thật luôn?" / "Thiệt hả?"`,
+            `     - [EN] "Unbelievable!" ➔ Dịch dở: "Không thể tin được!" | Dịch chuẩn Manga: "Ảo thật đấy!" / "Vô lý!"`,
+            `     - [EN] "Holy crap!" ➔ Dịch dở: "Thánh phân!" | Dịch chuẩn Manga: "Vãi thật!" / "Trời đất ơi!"`,
+            `     - [EN] "No way!" ➔ Dịch dở: "Không có đường!" | Dịch chuẩn Manga: "Làm gì có!" / "Không đời nào!"`,
+            `     - [JA] "私には無理だよ" ➔ Dịch dở: "Cái đó là không thể đối với tôi." | Dịch chuẩn Manga: "Quá sức tôi rồi!" / "Làm sao mà làm nổi!"`,
+            `     - [JA] "嘘だろ…！？" ➔ Dịch dở: "Nó là một sự dối trá đúng không?" | Dịch chuẩn Manga: "Đùa nhau à...?" / "Xạo hả...?"`,
+            `     - [JA] "そんな顔するなよ" ➔ Dịch dở: "Đừng làm khuôn mặt như vậy." | Dịch chuẩn Manga: "Làm cái mặt gì đấy?" / "Bớt bày cái vẻ mặt đó ra đi."`,
+            `     - [ZH] "你找死吗？" ➔ Dịch dở: "Ngươi đây là tìm chết sao?" | Dịch chuẩn Manhua: "Chán sống rồi à?" / "Muốn chết hả mày?"`,
+            `     - [ZH] "这是怎么回事？" ➔ Dịch dở: "Chuyện này là thế nào?" | Dịch chuẩn Manhua: "Chuyện quái gì thế này?" / "Rốt cuộc là sao?"`,
+            `     - [KO] "미쳤어?" ➔ Dịch dở: "Bạn có bị điên không?" | Dịch chuẩn Manhwa: "Điên à?" / "Khùng hả?"`,
+            `     - [KO] "어쩌라고?" ➔ Dịch dở: "Tôi nên làm cái gì?" | Dịch chuẩn Manhwa: "Thế tính sao?" / "Thì đã làm sao?"`
         );
     }
 
@@ -803,7 +818,7 @@ async function executeTextTranslationStep({
         glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
         getTranslationGuidancePrompt().trim(),
         "Strict Rule: Maintain the exact same block IDs. Return valid JSON only with schema: {\"blocks\": [{\"id\": \"...\", \"translated\": \"...\"}]}"
-    ].filter(Boolean).join(" ");
+    ].filter(Boolean).join("\n\n");
 
     const textPayloadList = blocksToTranslate.map(b => ({
         id: b.id,
@@ -827,7 +842,7 @@ async function executeTextTranslationStep({
                 { role: "system", content: transSystemInstruction },
                 { role: "user", content: userPromptText }
             ],
-            temperature: 0.3,
+            temperature: 0.35,
             max_tokens: 16384,
             response_format: { type: "json_object" }
         });
@@ -841,6 +856,7 @@ async function executeTextTranslationStep({
             }],
             generationConfig: {
                 responseMimeType: "application/json",
+                temperature: 0.35,
                 maxOutputTokens: 16384,
                 responseSchema: {
                     type: "OBJECT",
@@ -960,7 +976,7 @@ async function executeChapterChunkTranslationStep({
         glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
         getTranslationGuidancePrompt().trim(),
         "Strict Rule: Maintain the exact same block IDs. Return valid JSON only containing all block translations with schema: {\"blocks\": [{\"id\": \"...\", \"translated\": \"...\"}]}"
-    ].filter(Boolean).join(" ");
+    ].filter(Boolean).join("\n\n");
 
     const groupedNarrative: string[] = [];
     let currentPage = -1;
@@ -998,7 +1014,7 @@ async function executeChapterChunkTranslationStep({
                 { role: "system", content: transSystemInstruction },
                 { role: "user", content: userPromptText }
             ],
-            temperature: 0.3,
+            temperature: 0.35,
             max_tokens: 16384,
             response_format: { type: "json_object" }
         });
@@ -1012,6 +1028,7 @@ async function executeChapterChunkTranslationStep({
             }],
             generationConfig: {
                 responseMimeType: "application/json",
+                temperature: 0.35,
                 maxOutputTokens: 16384,
                 responseSchema: {
                     type: "OBJECT",
@@ -1358,7 +1375,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                     globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
                     glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
                     getTranslationGuidancePrompt().trim()
-                ].filter(Boolean).join(" ");
+                ].filter(Boolean).join("\n\n");
 
                 const selectedModel = globalState.selectedModel || DEFAULT_MODEL;
                 let apiUrl = '';
