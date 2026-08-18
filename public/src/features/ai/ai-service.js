@@ -1628,7 +1628,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
 
                 if (blockType === 'narration') {
                     maskShape = 'rect';
-                    bold = true;
+                    bold = false;
                 } else if (blockType === 'thought') {
                     maskShape = 'ellipse';
                     italic = true;
@@ -1879,7 +1879,7 @@ export async function runBatchTranslation() {
 
                             if (blockType === 'narration') {
                                 maskShape = 'rect';
-                                bold = true;
+                                bold = false;
                             } else if (blockType === 'thought') {
                                 maskShape = 'ellipse';
                                 italic = true;

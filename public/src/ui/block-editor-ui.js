@@ -20,7 +20,10 @@ export function updateActiveBlockEditor() {
     const textOriginalContainer = elements.editOriginalText?.parentElement;
     const textTranslatedContainer = elements.editTranslatedText?.parentElement;
 
-    if (elements.lblBlockId) elements.lblBlockId.innerText = activeBlock.id;
+    const blockIdElements = document.querySelectorAll('#lbl-block-id, #lbl-block-id-top, .lbl-block-id');
+    blockIdElements.forEach(el => {
+        el.textContent = activeBlock.id;
+    });
 
     if (activeBlock.type === 'image') {
         if (imageControls) imageControls.classList.remove('hidden');
@@ -97,6 +100,11 @@ function resetBlockEditorUI() {
     if (elements.noBlockSelectedState) elements.noBlockSelectedState.classList.remove('hidden');
     if (elements.blockEditorContainer) elements.blockEditorContainer.classList.add('hidden');
 
+    const blockIdElements = document.querySelectorAll('#lbl-block-id, #lbl-block-id-top, .lbl-block-id');
+    blockIdElements.forEach(el => {
+        el.textContent = 'none';
+    });
+
     if (elements.toeicNoBlockSelectedState) elements.toeicNoBlockSelectedState.classList.remove('hidden');
     if (elements.toeicAnalysisContainer) elements.toeicAnalysisContainer.classList.add('hidden');
     globalState.activeBlockToeicAnalysis = null;
@@ -109,9 +117,12 @@ function getActiveBlock() {
 }
 
 function syncBlockTextInputs(block) {
-    elements.editOriginalText.value = block.original;
-    elements.editTranslatedText.value = block.translated;
-    elements.lblBlockId.innerText = block.id;
+    elements.editOriginalText.value = block.original || '';
+    elements.editTranslatedText.value = block.translated || '';
+    const blockIdElements = document.querySelectorAll('#lbl-block-id, #lbl-block-id-top, .lbl-block-id');
+    blockIdElements.forEach(el => {
+        el.textContent = block.id;
+    });
     const speakerInput = document.getElementById('edit-block-speaker');
     const targetInput = document.getElementById('edit-block-target');
     if (speakerInput) speakerInput.value = block.speaker || '';
@@ -137,6 +148,8 @@ export function setBlockType(type) {
 
     if (type === 'narration' && activeBlock.style) {
         activeBlock.style.maskShape = 'rect';
+        activeBlock.style.bold = false;
+        if (elements.styleBold) elements.styleBold.checked = false;
     } else if (type === 'thought' && activeBlock.style) {
         activeBlock.style.maskShape = 'ellipse';
     }

@@ -1222,6 +1222,42 @@ export async function importTranslationScript(fileList) {
     if (importScriptInput) importScriptInput.value = '';
 }
 
+// Xây dựng JSON sao lưu dự án
+export async function buildProjectBackupJSON() {
+    const pagesData = [];
+    for (const page of globalState.pages) {
+        const imgDataURL = await getPageDataURL(page);
+        pagesData.push({
+            id: page.id,
+            name: page.name,
+            status: page.status,
+            src: imgDataURL,
+            blocks: (page.blocks || []).map(b => ({
+                id: b.id,
+                type: b.type,
+                imageUrl: b.imageUrl || null,
+                original: b.original,
+                translated: b.translated,
+                box: { ...b.box },
+                style: { ...b.style }
+            }))
+        });
+    }
+
+    return {
+        version: '2.0',
+        exportedAt: new Date().toISOString(),
+        sourceLanguage: globalState.sourceLanguage,
+        targetLanguage: globalState.targetLanguage,
+        pronounMatrix: globalState.pronounMatrix,
+        preserveNames: globalState.preserveNames,
+        glossaryNames: globalState.glossaryNames,
+        characterDossier: globalState.characterDossier || [],
+        lorebook: globalState.lorebook || [],
+        pages: pagesData
+    };
+}
+
 // Sao lưu toàn bộ dự án .manga
 export async function exportProjectBackup() {
     if (globalState.pages.length === 0) {
@@ -1245,39 +1281,7 @@ export async function exportProjectBackup() {
     try {
         showToast("Đang đóng gói file dự án (.manga)... Vui lòng chờ.", "info");
 
-        // Lấy Data URL base64 cho mỗi trang (cả trang active và inactive)
-        const pagesData = [];
-        for (const page of globalState.pages) {
-            const imgDataURL = await getPageDataURL(page);
-            pagesData.push({
-                id: page.id,
-                name: page.name,
-                status: page.status,
-                src: imgDataURL,
-                blocks: (page.blocks || []).map(b => ({
-                    id: b.id,
-                    type: b.type,
-                    imageUrl: b.imageUrl || null,
-                    original: b.original,
-                    translated: b.translated,
-                    box: { ...b.box },
-                    style: { ...b.style }
-                }))
-            });
-        }
-
-        const backupData = {
-            version: '2.0',
-            exportedAt: new Date().toISOString(),
-            sourceLanguage: globalState.sourceLanguage,
-            targetLanguage: globalState.targetLanguage,
-            pronounMatrix: globalState.pronounMatrix,
-            preserveNames: globalState.preserveNames,
-            glossaryNames: globalState.glossaryNames,
-            characterDossier: globalState.characterDossier || [],
-            lorebook: globalState.lorebook || [],
-            pages: pagesData
-        };
+        const backupData = await buildProjectBackupJSON();
 
         const blob = new Blob([JSON.stringify(backupData)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -1288,7 +1292,7 @@ export async function exportProjectBackup() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        showToast(`Đã xuất file sao lưu dự án (${fileName}) thành công! (${pagesData.length} trang)`, "success");
+        showToast(`Đã xuất file sao lưu dự án (${fileName}) thành công! (${backupData.pages.length} trang)`, "success");
     } catch (e) {
         console.error("Lỗi sao lưu dự án:", e);
         showToast("Không thể xuất file sao lưu dự án.", "error");

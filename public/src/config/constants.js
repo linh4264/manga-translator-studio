@@ -370,7 +370,7 @@ export const PRO_STYLE_PRESETS = {
         icon: '📜',
         style: {
             fontFamily: 'font-vietnamese',
-            bold: true,
+            bold: false,
             italic: false,
             underline: false,
             textTransform: 'none',

@@ -193,6 +193,9 @@ export async function initApplication() {
             showToast("Đã khôi phục phiên làm việc trước đó!", "success");
         }
 
+        // 3. KHÔI PHỤC THƯ MỤC LIÊN KẾT Ổ CỨNG (NATIVE FILE SYSTEM ACCESS)
+        import('../features/fs-access.js').then(fs => fs.restoreStoredDirectoryHandle());
+
         // Register Undo/Redo UI update callback
         import('./state.js').then(state => {
             state.registerStateCallbacks({

@@ -523,6 +523,51 @@ export function saveProjectMeta(pageIds, activePageIndex) {
     });
 }
 
+export function saveMetaToDB(key, val) {
+    if (!dbInstance) return Promise.resolve(false);
+    return new Promise((resolve) => {
+        try {
+            const tx = dbInstance.transaction([STORE_META], 'readwrite');
+            const store = tx.objectStore(STORE_META);
+            store.put(val, key);
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => resolve(false);
+        } catch (e) {
+            resolve(false);
+        }
+    });
+}
+
+export function loadMetaFromDB(key) {
+    if (!dbInstance) return Promise.resolve(null);
+    return new Promise((resolve) => {
+        try {
+            const tx = dbInstance.transaction([STORE_META], 'readonly');
+            const store = tx.objectStore(STORE_META);
+            const req = store.get(key);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => resolve(null);
+        } catch (e) {
+            resolve(null);
+        }
+    });
+}
+
+export function deleteMetaFromDB(key) {
+    if (!dbInstance) return Promise.resolve(false);
+    return new Promise((resolve) => {
+        try {
+            const tx = dbInstance.transaction([STORE_META], 'readwrite');
+            const store = tx.objectStore(STORE_META);
+            store.delete(key);
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => resolve(false);
+        } catch (e) {
+            resolve(false);
+        }
+    });
+}
+
 export async function loadProjectFromDB() {
     if (!dbInstance) return null;
 

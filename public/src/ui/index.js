@@ -877,5 +877,25 @@ Object.assign(window, {
     exportCurrentPagePSD: async () => {
         const io = await import('../features/io.js');
         return io.exportCurrentPagePSD();
+    },
+    openLocalFolderPicker: async () => {
+        const fs = await import('../features/fs-access.js');
+        return fs.openLocalFolderPicker();
+    },
+    exportPagesDirectlyToDisk: async () => {
+        const fs = await import('../features/fs-access.js');
+        return fs.exportPagesDirectlyToDisk();
+    },
+    saveProjectDirectlyToDisk: async () => {
+        const fs = await import('../features/fs-access.js');
+        return fs.saveProjectDirectlyToDisk();
+    },
+    reconnectDirectoryHandle: async () => {
+        const fs = await import('../features/fs-access.js');
+        return fs.reconnectDirectoryHandle();
+    },
+    unlinkConnectedFolder: async () => {
+        const fs = await import('../features/fs-access.js');
+        return fs.unlinkConnectedFolder();
     }
 });

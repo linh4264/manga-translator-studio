@@ -193,48 +193,82 @@
         <aside id="left-panel"
             class="w-80 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 min-h-0 relative">
             <!-- Header: Streamlined Project & Pages Bar -->
-            <div class="p-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/60 shrink-0 gap-2">
-                <div class="flex items-center gap-1.5 min-w-0">
-                    <span
-                        class="text-xs font-black text-slate-200 tracking-wider uppercase flex items-center gap-1.5 truncate">
+            <div class="p-2.5 border-b border-slate-800 bg-slate-950/70 shrink-0 space-y-2">
+                <!-- Top Row: Title + Count + Action Icons -->
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-1.5 min-w-0">
                         <i class="fa-solid fa-layer-group text-indigo-400 text-xs"></i>
-                        <span data-i18n="page-list-label">Trang</span>
+                        <span class="text-xs font-bold text-slate-200 uppercase tracking-wide whitespace-nowrap" data-i18n="page-list-label">Danh sách trang</span>
                         <span id="page-count-badge"
-                            class="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">0</span>
-                    </span>
+                            class="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-mono">0</span>
+                    </div>
+
+                    <div class="flex items-center gap-1 shrink-0">
+                        <!-- Sort Button -->
+                        <button type="button" onclick="sortPagesByName()" data-i18n-title="title-sort-pages"
+                            class="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                            title="Sắp xếp trang theo tên file (1, 2, 3...)">
+                            <i class="fa-solid fa-arrow-down-1-9 text-[11px]"></i>
+                        </button>
+
+                        <!-- More Actions Dropdown Toggle -->
+                        <button type="button" id="btn-left-more-actions" data-action="toggleLeftSidebarMoreMenu"
+                            class="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                            title="Thao tác & Tiện ích khác">
+                            <i class="fa-solid fa-ellipsis-vertical text-[11px]"></i>
+                        </button>
+
+                        <button type="button" onclick="closeMobileMenus()"
+                            class="md:hidden shrink-0 h-7 w-7 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white flex items-center justify-center transition-colors"
+                            title="Đóng menu">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
                 </div>
 
-                <div class="flex items-center gap-1.5 shrink-0">
-                    <!-- Quick Add Page Button -->
-                    <div id="dropzone" class="relative inline-flex">
+                <!-- Bottom Row: Primary 2-Button Upload & Folder Grid -->
+                <div class="grid grid-cols-2 gap-1.5">
+                    <!-- Open Local Folder (Native File System Access API) -->
+                    <button type="button" onclick="openLocalFolderPicker()"
+                        class="h-7 px-2 text-[11px] font-bold rounded-lg bg-amber-600/15 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm truncate"
+                        title="Mở trực tiếp thư mục Manga từ máy tính (Native File System)">
+                        <i class="fa-solid fa-folder-open text-[10px] text-amber-400"></i>
+                        <span>Mở Thư mục</span>
+                    </button>
+
+                    <!-- Quick Add Single Files Button -->
+                    <div id="dropzone" class="relative">
                         <input type="file" id="file-input" multiple accept="image/*"
                             class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10">
                         <button type="button"
-                            class="h-7 px-2.5 text-[11px] font-bold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                            class="w-full h-7 px-2 text-[11px] font-bold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm truncate"
                             title="Tải thêm ảnh truyện">
                             <i class="fa-solid fa-plus text-[10px]"></i>
-                            <span>Thêm</span>
+                            <span>Thêm ảnh</span>
                         </button>
                     </div>
 
-                    <!-- Sort Button -->
-                    <button type="button" onclick="sortPagesByName()" data-i18n-title="title-sort-pages"
-                        class="w-7 h-7 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 flex items-center justify-center transition-all cursor-pointer"
-                        title="Sắp xếp trang theo tên file (1, 2, 3...)">
-                        <i class="fa-solid fa-arrow-down-1-9 text-[11px]"></i>
-                    </button>
+                    <!-- Hidden Fallback Folder Input -->
+                    <input type="file" id="folder-upload-input" webkitdirectory directory multiple class="hidden"
+                        onchange="import('../features/io.js').then(io => io.handleUploadedFiles(this.files))">
+                </div>
+            </div>
 
-                    <!-- More Actions Dropdown Toggle -->
-                    <button type="button" id="btn-left-more-actions" data-action="toggleLeftSidebarMoreMenu"
-                        class="w-7 h-7 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-200 flex items-center justify-center transition-all cursor-pointer"
-                        title="Thao tác & Tiện ích khác">
-                        <i class="fa-solid fa-ellipsis-vertical text-[11px]"></i>
-                    </button>
-
-                    <button type="button" onclick="closeMobileMenus()"
-                        class="md:hidden shrink-0 h-7 w-7 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-350 hover:text-white flex items-center justify-center transition-colors"
-                        title="Đóng menu">
-                        <i class="fa-solid fa-xmark"></i>
+            <!-- Connected Local Folder Live Indicator Badge -->
+            <div id="connected-folder-badge" class="hidden px-3 py-1.5 bg-amber-950/40 border-b border-amber-500/20 flex items-center justify-between text-[10.5px]">
+                <div class="flex items-center gap-1.5 text-amber-300 font-medium truncate min-w-0 mr-2">
+                    <i class="fa-solid fa-hard-drive text-amber-400 text-xs shrink-0"></i>
+                    <span class="text-slate-400 shrink-0">Ổ cứng:</span>
+                    <span id="connected-folder-name" class="font-bold truncate text-amber-200"></span>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                    <div id="connected-folder-action-container">
+                        <button onclick="exportPagesDirectlyToDisk()" class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/25 hover:bg-amber-500/40 text-amber-300 cursor-pointer transition-colors flex items-center gap-1 shadow-sm" title="Lưu nhanh toàn bộ vào thư mục /translated/">
+                            <i class="fa-solid fa-bolt text-amber-400"></i> Xuất đĩa
+                        </button>
+                    </div>
+                    <button onclick="unlinkConnectedFolder()" class="w-5 h-5 rounded hover:bg-red-950/50 text-slate-500 hover:text-red-300 flex items-center justify-center transition-colors cursor-pointer" title="Ngắt kết nối thư mục này">
+                        <i class="fa-solid fa-xmark text-[10px]"></i>
                     </button>
                 </div>
             </div>
@@ -250,13 +284,21 @@
                     </button>
                 </div>
 
-                <!-- Primary Single Page Export Action -->
-                <button onclick="exportActivePage()"
-                    class="w-full h-8 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-md shadow-indigo-600/20"
-                    title="Xuất ảnh trang hiện tại ra máy (PNG/JPG/WEBP)">
-                    <i class="fa-solid fa-download text-xs"></i>
-                    <span>Xuất ảnh trang này</span>
-                </button>
+                <!-- Primary Single Page Export Action & Direct Disk Save -->
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button onclick="exportActivePage()"
+                        class="h-8 px-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-indigo-600/20"
+                        title="Xuất ảnh trang hiện tại ra máy (PNG/JPG/WEBP)">
+                        <i class="fa-solid fa-download text-xs"></i>
+                        <span>Xuất trang này</span>
+                    </button>
+                    <button onclick="exportPagesDirectlyToDisk()"
+                        class="h-8 px-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-md shadow-amber-600/20"
+                        title="Lưu tất cả ảnh đã dịch thẳng vào thư mục ổ cứng (Native FS)">
+                        <i class="fa-solid fa-hard-drive text-xs"></i>
+                        <span>Lưu vào ổ cứng</span>
+                    </button>
+                </div>
 
                 <!-- Secondary Export & View Options -->
                 <div class="grid grid-cols-2 gap-1.5">
@@ -989,7 +1031,7 @@
                     <div class="space-y-1.5 pb-2 border-b border-slate-800/80">
                         <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             <span data-i18n="block-type-label"><i class="fa-solid fa-tags text-indigo-400 mr-1"></i> Phân loại ô</span>
-                            <span id="lbl-block-id" class="text-[9px] text-slate-500 font-mono"></span>
+                            <span id="lbl-block-id-top" class="lbl-block-id text-[10px] text-indigo-400 font-mono font-bold"></span>
                         </div>
                         <div class="grid grid-cols-4 gap-1">
                             <button id="btn-block-type-dialogue" onclick="setBlockType('dialogue')"
@@ -1271,7 +1313,7 @@
                             <i class="fa-solid fa-trash-can"></i> Xóa ô dịch này
                         </button>
                         <div class="text-[10px] text-slate-500 font-mono">
-                            ID: <span id="lbl-block-id" class="text-slate-400">none</span>
+                            ID: <span id="lbl-block-id" class="lbl-block-id text-indigo-400 font-bold">none</span>
                         </div>
                     </div>
                 </div>
@@ -3581,6 +3623,11 @@
                         <button onclick="closeExportModal()"
                             class="px-3.5 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer">Đóng
                             lại</button>
+                        <button onclick="exportPagesDirectlyToDisk()"
+                            class="px-3.5 py-2 text-xs font-bold rounded-lg bg-amber-600 hover:bg-amber-500 text-white shadow-lg shadow-amber-600/20 flex items-center gap-1.5 cursor-pointer"
+                            title="Lưu tất cả ảnh đã dịch thẳng vào thư mục ổ cứng (Native File System)">
+                            <i class="fa-solid fa-hard-drive"></i> Lưu vào ổ cứng
+                        </button>
                         <button onclick="exportCurrentPagePSD()"
                             class="px-3.5 py-2 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 flex items-center gap-1.5 cursor-pointer"
                             title="Xuất file Photoshop (.PSD) phân lớp đầy đủ: Background, Inpaint Mask, Text Layers">
