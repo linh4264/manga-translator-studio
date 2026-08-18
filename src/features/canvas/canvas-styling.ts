@@ -102,15 +102,13 @@ export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageEleme
     } else if (typeof block.style.padding === 'number') {
         ruler.style.padding = `${block.style.padding}px`;
     } else {
-        const padY = ((block.box.h / 100) * displayHeight) * 0.09;
-        const padX = ((block.box.w / 100) * displayWidth) * 0.12;
-        ruler.style.padding = `${padY}px ${padX}px`;
+        ruler.style.padding = '4px';
     }
     ruler.style.textAlign = block.style.align || 'center';
     ruler.style.letterSpacing = `${letterSpacing}px`;
     ruler.style.lineHeight = `${lineHeight}`;
     ruler.style.fontKerning = 'normal';
-    ruler.style.whiteSpace = 'pre-wrap';
+    ruler.style.whiteSpace = 'pre';
     ruler.style.wordBreak = 'keep-all';
     ruler.style.overflowWrap = 'normal';
     ruler.style.hyphens = 'none';

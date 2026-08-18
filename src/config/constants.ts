@@ -288,7 +288,7 @@ export const DEFAULT_BLOCK_STYLE: BlockStyle = {
     bgColor: '#ffffff',
     bgColorHex: '#FFFFFF',
     bgOpacity: 100,
-    padding: 10,
+    padding: 4,
     rotate: 0,
     vertical: false,
     align: 'center',

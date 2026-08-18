@@ -745,7 +745,7 @@ export function initMarqueeSelection(): void {
                         textColor: '#000000',
                         bgColor: '#ffffff',
                         bgOpacity: 100,
-                        padding: '9% 12%',
+                        padding: 4,
                         rotate: 0,
                         vertical: false,
                         align: 'center',

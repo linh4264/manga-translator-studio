@@ -146,7 +146,7 @@ export const globalState: GlobalState & Record<string, any> = {
     toeicMode: 'learn', // 'learn' | 'recall'
     activeToeicQuestionIndex: 0,
     toolbarCollapsedMobile: false,
-    autoFitEnabled: false, // Auto-scale font size disabled by default
+    autoFitEnabled: true, // Auto-scale font size enabled by default
     preserveNames: true, // Không dịch tên riêng / nhân vật
     glossaryNames: '',   // Danh sách tên riêng cụ thể giữ nguyên
     sourceLanguage: 'auto', // Ngôn ngữ nguồn ('ja' | 'zh' | 'ko' | 'en' | 'auto')

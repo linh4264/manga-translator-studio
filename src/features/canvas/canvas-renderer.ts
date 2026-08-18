@@ -301,14 +301,12 @@ export function renderOverlays(
                     const displayPadding = forceExportScale !== 1 ? (block.style.padding * forceExportScale) : (block.style.padding * zoomScale);
                     maskContent.style.padding = `${displayPadding}px`;
                 } else {
-                    const padY = forceExportScale !== 1 ? (bubblePxH * 0.09 * forceExportScale) : (bubblePxH * 0.09);
-                    const padX = forceExportScale !== 1 ? (bubblePxW * 0.12 * forceExportScale) : (bubblePxW * 0.12);
-                    maskContent.style.padding = `${padY}px ${padX}px`;
+                    const displayPadding = forceExportScale !== 1 ? (4 * forceExportScale) : (4 * zoomScale);
+                    maskContent.style.padding = `${displayPadding}px`;
                 }
             } else {
-                const padY = forceExportScale !== 1 ? (bubblePxH * 0.09 * forceExportScale) : (bubblePxH * 0.09);
-                const padX = forceExportScale !== 1 ? (bubblePxW * 0.12 * forceExportScale) : (bubblePxW * 0.12);
-                maskContent.style.padding = `${padY}px ${padX}px`;
+                const displayPadding = forceExportScale !== 1 ? (4 * forceExportScale) : (4 * zoomScale);
+                maskContent.style.padding = `${displayPadding}px`;
             }
 
             maskContent.style.textAlign = block.style.align || 'center';
