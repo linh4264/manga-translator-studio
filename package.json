@@ -23,7 +23,6 @@
     "start": "node server/server.js"
   },
   "devDependencies": {
-    "@esbuild/win32-x64": "^0.28.2",
     "@types/node": "^20.12.7",
     "typescript": "^5.4.5",
     "vite": "^5.2.11",
