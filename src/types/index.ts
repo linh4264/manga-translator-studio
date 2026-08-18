@@ -145,6 +145,16 @@ export interface ToeicWord {
     easeFactor?: number;
 }
 
+export interface CustomStylePreset {
+    id: string;
+    name: string;
+    icon?: string;
+    desc?: string;
+    style: Partial<BlockStyle>;
+    createdAt?: number;
+    updatedAt?: number;
+}
+
 export interface GlobalState {
     apiKey: string;
     aiProvider: 'gemini' | 'claude' | 'openai' | 'custom';
@@ -199,6 +209,7 @@ export interface GlobalState {
     magicWandDetectedBox?: BoundingBox | null;
     globalStyle: BlockStyle;
     audioSettings?: AudioSettings;
+    customStylePresets?: CustomStylePreset[];
 }
 
 export interface OcrBoundingBox {

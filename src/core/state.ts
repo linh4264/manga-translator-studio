@@ -177,8 +177,24 @@ export const globalState: GlobalState & Record<string, any> = {
         ...DEFAULT_BLOCK_STYLE,
         fontFamily: localStorage.getItem('manga_default_font') || 'font-manga',
         vertical: DEFAULT_VERTICAL_WRITING_MODE
-    }
+    },
+    customStylePresets: (() => {
+        try {
+            const saved = localStorage.getItem('manga_custom_style_presets');
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            return [];
+        }
+    })()
 };
+
+export function saveCustomPresetsToStorage(): void {
+    try {
+        localStorage.setItem('manga_custom_style_presets', JSON.stringify(globalState.customStylePresets || []));
+    } catch (e) {
+        console.error('Không thể lưu custom style presets vào localStorage:', e);
+    }
+}
 
 export function initializeStateFromStorage(): void {
     const keysToLoad: Record<string, string> = {
@@ -232,6 +248,18 @@ export function initializeStateFromStorage(): void {
             }
         }
     });
+
+    try {
+        const savedCustomPresets = localStorage.getItem('manga_custom_style_presets');
+        if (savedCustomPresets) {
+            globalState.customStylePresets = JSON.parse(savedCustomPresets);
+        } else if (!globalState.customStylePresets) {
+            globalState.customStylePresets = [];
+        }
+    } catch (e) {
+        console.warn('Lỗi đọc manga_custom_style_presets:', e);
+        globalState.customStylePresets = [];
+    }
 
     const savedGenrePreset = localStorage.getItem('gemini_manga_translation_genre_preset');
     if (savedGenrePreset !== null) {

@@ -35,6 +35,7 @@ import { renderPronounMatrixTable } from '../features/pronoun';
 import { updateToeicNotebookUI, persistToeicWordsToStorage } from '../features/toeic';
 import { toggleEraserMode } from '../features/inpainting';
 import { copyBlockStyle, pasteBlockStyle, applyStylePreset } from '../features/canvas/canvas-service';
+import { renderCustomPresetsUI, openPresetModal, closePresetModal, savePresetFromActiveBlockUI } from '../ui/preset-ui';
 import { playPageAudioDrama, pauseAudioDrama, stopAudioDrama, speakActiveBlock, openAudioSettingsModal, closeAudioSettingsModal } from '../features/audio';
 import { initI18n, changeUILanguage } from './i18n';
 
@@ -49,6 +50,9 @@ export async function initApplication(): Promise<void> {
     // Register actions for global event delegation router
     registerAction('openSettingsModal', openSettingsModal);
     registerAction('closeSettingsModal', closeSettingsModal);
+    registerAction('openPresetModal', () => openPresetModal('create'));
+    registerAction('closePresetModal', closePresetModal);
+    registerAction('savePresetFromActiveBlockUI', savePresetFromActiveBlockUI);
     registerAction('openHelpModal', () => import('../ui/layout-ui').then(m => m.openHelpModal()));
     registerAction('closeHelpModal', () => import('../ui/layout-ui').then(m => m.closeHelpModal()));
     registerAction('openLorebookModal', () => import('../ui/lorebook-ui').then(m => m.openLorebookModal()));
@@ -118,6 +122,7 @@ export async function initApplication(): Promise<void> {
     // Centralized state initialization
     initializeStateFromStorage();
     import('../ui/layout-ui').then(m => m.updateStepperUI());
+    renderCustomPresetsUI();
 
     // UI synchronization based on initialized state
     if (elements.apiKeyInput) elements.apiKeyInput.value = globalState.apiKey;

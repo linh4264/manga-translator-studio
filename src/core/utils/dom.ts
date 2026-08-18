@@ -8,6 +8,7 @@ export function escapeHTML(value: any): string {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 }
+export const escapeHtml = escapeHTML;
 
 export function setMultilineText(target: HTMLElement | null, value: string): void {
     if (!target) return;

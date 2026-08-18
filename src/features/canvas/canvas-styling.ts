@@ -395,6 +395,26 @@ export function applyStylePreset(presetKey: string): void {
         return;
     }
 
+    // 1. Kiểm tra trong danh sách Custom Presets của người dùng
+    const customPreset = (globalState.customStylePresets || []).find(p => p.id === presetKey);
+    if (customPreset && customPreset.style) {
+        targetBlocks.forEach(block => {
+            if (!block.style) block.style = {} as BlockStyle;
+            Object.assign(block.style, JSON.parse(JSON.stringify(customPreset.style)));
+            block.maskCache = null;
+            block.autoFitCache = null;
+        });
+
+        markPageAutoFitDirty(page);
+        requestOverlayRender();
+        uiUpdateActiveBlockEditor();
+        updateFloatingToolbarPosition();
+        savePageToDB(page);
+
+        showToast(`✨ Đã áp dụng mẫu "${customPreset.name}"`, "success");
+        return;
+    }
+
     const legacyMap: Record<string, string> = {
         'manga-std': 'dialogue',
         'shout-sfx': 'scream',

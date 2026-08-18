@@ -4,6 +4,7 @@ import { showToast, stripRichTextTags } from '../core/utils';
 import { requestOverlayRender, syncActiveBlockStyle, isBlockAutoFit } from '../features/canvas/canvas-service';
 import { saveEraserDrawingToPage } from '../features/inpainting';
 import { MangaBlock, BlockStyle } from '../types/index';
+import { renderQuickPresetsBar } from './preset-ui';
 
 export function updateActiveBlockEditor(): void {
     const activeBlock = getActiveBlock();
@@ -56,6 +57,7 @@ export function updateActiveBlockEditor(): void {
         syncBlockTypeUI(activeBlock);
         syncBlockGenderUI(activeBlock);
         syncBlockStyleInputs(activeBlock);
+        renderQuickPresetsBar();
     }
 }
 

@@ -9,6 +9,7 @@ export function escapeHTML(value: any): string {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 }
+export const escapeHtml = escapeHTML;
 
 export function transformCase(text: string, mode: string = 'none'): string {
     if (!text) return '';

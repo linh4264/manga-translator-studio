@@ -1127,63 +1127,20 @@
                             class="w-full bg-slate-950 border border-indigo-500/20 focus:border-indigo-500 rounded-lg p-2 text-xs text-slate-100 focus:outline-none transition-colors"
                             placeholder="Nhập bản dịch tiếng Việt..."></textarea>
 
-                        <!-- 1-Click Manga Style Presets -->
+                        <!-- 1-Click Manga Style Presets (Dynamic Custom Presets) -->
                         <div class="space-y-1.5 mt-2 pt-2 border-t border-slate-800/80">
                             <div
                                 class="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                 <span class="flex items-center gap-1"><i
-                                        class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> Định dạng
-                                    1-chạm</span>
+                                        class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> Mẫu định dạng
+                                    nhanh</span>
+                                <button onclick="savePresetFromActiveBlockUI()"
+                                    class="text-[9px] text-indigo-400 hover:text-indigo-300 font-normal flex items-center gap-0.5 cursor-pointer">
+                                    <i class="fa-solid fa-plus text-[8px]"></i> Lưu mẫu
+                                </button>
                             </div>
-                            <div class="grid grid-cols-2 gap-1.5">
-                                <button onclick="applyStylePreset('dialogue')" data-action="applyStylePreset"
-                                    data-preset="dialogue"
-                                    class="p-1.5 rounded-lg bg-slate-900 hover:bg-indigo-950/70 border border-slate-800 hover:border-indigo-500/50 text-left transition-all group flex items-center gap-1.5 cursor-pointer shadow-sm">
-                                    <span
-                                        class="w-6 h-6 rounded bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-xs font-bold shrink-0">💬</span>
-                                    <div class="min-w-0">
-                                        <div
-                                            class="text-[10px] font-bold text-slate-200 group-hover:text-indigo-300 truncate">
-                                            Hội thoại</div>
-                                        <div class="text-[8px] text-slate-500 truncate">Nunito • Chuẩn</div>
-                                    </div>
-                                </button>
-                                <button onclick="applyStylePreset('scream')" data-action="applyStylePreset"
-                                    data-preset="scream"
-                                    class="p-1.5 rounded-lg bg-slate-900 hover:bg-pink-950/70 border border-slate-800 hover:border-pink-500/50 text-left transition-all group flex items-center gap-1.5 cursor-pointer shadow-sm">
-                                    <span
-                                        class="w-6 h-6 rounded bg-pink-500/20 text-pink-300 flex items-center justify-center text-xs font-bold shrink-0">💥</span>
-                                    <div class="min-w-0">
-                                        <div
-                                            class="text-[10px] font-bold text-slate-200 group-hover:text-pink-300 truncate">
-                                            Hét to / SFX</div>
-                                        <div class="text-[8px] text-slate-500 truncate">Bangers • Viền 4px</div>
-                                    </div>
-                                </button>
-                                <button onclick="applyStylePreset('whisper')" data-action="applyStylePreset"
-                                    data-preset="whisper"
-                                    class="p-1.5 rounded-lg bg-slate-900 hover:bg-sky-950/70 border border-slate-800 hover:border-sky-500/50 text-left transition-all group flex items-center gap-1.5 cursor-pointer shadow-sm">
-                                    <span
-                                        class="w-6 h-6 rounded bg-sky-500/20 text-sky-300 flex items-center justify-center text-xs font-bold shrink-0">💭</span>
-                                    <div class="min-w-0">
-                                        <div
-                                            class="text-[10px] font-bold text-slate-200 group-hover:text-sky-300 truncate">
-                                            Thì thầm</div>
-                                        <div class="text-[8px] text-slate-500 truncate">Patrick Hand • Mờ</div>
-                                    </div>
-                                </button>
-                                <button onclick="applyStylePreset('narration')" data-action="applyStylePreset"
-                                    data-preset="narration"
-                                    class="p-1.5 rounded-lg bg-slate-900 hover:bg-emerald-950/70 border border-slate-800 hover:border-emerald-500/50 text-left transition-all group flex items-center gap-1.5 cursor-pointer shadow-sm">
-                                    <span
-                                        class="w-6 h-6 rounded bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-xs font-bold shrink-0">📜</span>
-                                    <div class="min-w-0">
-                                        <div
-                                            class="text-[10px] font-bold text-slate-200 group-hover:text-emerald-300 truncate">
-                                            Dẫn chuyện</div>
-                                        <div class="text-[8px] text-slate-500 truncate">Be Vietnam • Khung</div>
-                                    </div>
-                                </button>
+                            <div id="active-block-quick-presets" class="w-full">
+                                <!-- Rendered dynamically by preset-ui.ts -->
                             </div>
                         </div>
 
@@ -1323,161 +1280,49 @@
             <!-- Tab: STYLE CONTAINER -->
             <div id="panel-tab-style" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
 
-                <!-- 0. PRESETS ĐỊNH DẠNG 1-CHẠM (10 Scanlation Presets) -->
+                <!-- 0. MẪU ĐỊNH DẠNG TÙY CHỈNH (CUSTOM STYLE PRESETS) -->
                 <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 space-y-2.5 shadow-sm">
-                    <div class="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                    <div class="flex items-center justify-between border-b border-slate-800/80 pb-2 gap-2">
                         <label
-                            class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-                            <i class="fa-solid fa-wand-magic-sparkles"></i> <span>Mẫu định dạng Manga (10
-                                Presets)</span>
+                            class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap min-w-0">
+                            <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i>
+                            <span>Mẫu định dạng</span>
+                            <span id="custom-presets-count-badge" class="text-[9px] text-slate-500 font-mono font-normal">(0)</span>
                         </label>
-                    </div>
-                    <div class="grid grid-cols-2 gap-1.5 max-h-60 overflow-y-auto pr-0.5 custom-scrollbar">
-                        <button onclick="applyStylePreset('dialogue')" data-action="applyStylePreset"
-                            data-preset="dialogue"
-                            class="p-2 rounded-lg bg-slate-900 hover:bg-indigo-950/70 border border-slate-800 hover:border-indigo-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm">
-                            <span
-                                class="w-7 h-7 rounded bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-sm font-bold shrink-0">💬</span>
-                            <div class="min-w-0">
-                                <div class="text-[11px] font-bold text-slate-200 group-hover:text-indigo-300 truncate">
-                                    Hội thoại</div>
-                                <div class="text-[9px] text-slate-500 truncate">Nunito • Nền trắng</div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button onclick="savePresetFromActiveBlockUI()"
+                                class="px-2.5 py-1 rounded-md bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer whitespace-nowrap shadow-sm"
+                                title="Lưu định dạng từ ô thoại đang chọn thành mẫu mới">
+                                <i class="fa-solid fa-floppy-disk text-[9px]"></i> <span>Lưu mẫu</span>
+                            </button>
+                            <!-- Extra actions dropdown/menu -->
+                            <div class="relative group">
+                                <button class="px-1.5 py-1 rounded-md bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white text-[10px] transition-all cursor-pointer" title="Tùy chọn khác">
+                                    <i class="fa-solid fa-ellipsis-vertical text-[9px]"></i>
+                                </button>
+                                <div class="absolute right-0 top-full mt-1 hidden group-hover:flex flex-col bg-slate-900 border border-slate-800 rounded-lg shadow-xl py-1 z-30 min-w-[140px]">
+                                    <button onclick="openPresetModal('create')" class="px-2.5 py-1 text-[10px] text-slate-300 hover:bg-indigo-600 hover:text-white text-left flex items-center gap-1.5 transition-colors cursor-pointer">
+                                        <i class="fa-solid fa-plus text-[9px]"></i> Tạo mẫu thủ công
+                                    </button>
+                                    <div class="border-t border-slate-800 my-0.5"></div>
+                                    <button onclick="exportPresetsJSON()" class="px-2.5 py-1 text-[10px] text-slate-300 hover:bg-indigo-600 hover:text-white text-left flex items-center gap-1.5 transition-colors cursor-pointer">
+                                        <i class="fa-solid fa-file-export text-[9px]"></i> Xuất file JSON
+                                    </button>
+                                    <button onclick="triggerImportPresetsFile()" class="px-2.5 py-1 text-[10px] text-slate-300 hover:bg-indigo-600 hover:text-white text-left flex items-center gap-1.5 transition-colors cursor-pointer">
+                                        <i class="fa-solid fa-file-import text-[9px]"></i> Nhập file JSON
+                                    </button>
+                                    <div class="border-t border-slate-800 my-0.5"></div>
+                                    <button onclick="clearAllPresetsWithConfirm()" class="px-2.5 py-1 text-[10px] text-red-400 hover:bg-red-600 hover:text-white text-left flex items-center gap-1.5 transition-colors cursor-pointer">
+                                        <i class="fa-solid fa-trash-can text-[9px]"></i> Xóa tất cả mẫu
+                                    </button>
+                                </div>
                             </div>
-                        </button>
-                        <button onclick="applyStylePreset('scream')" data-action="applyStylePreset" data-preset="scream"
-                            class="p-2 rounded-lg bg-slate-900 hover:bg-pink-950/70 border border-slate-800 hover:border-pink-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm">
-                            <span
-                                class="w-7 h-7 rounded bg-pink-500/20 text-pink-300 flex items-center justify-center text-sm font-bold shrink-0">💥</span>
-                            <div class="min-w-0">
-                                <div class="text-[11px] font-bold text-slate-200 group-hover:text-pink-300 truncate">Hét
-                                    lớn / SFX</div>
-                                <div class="text-[9px] text-slate-500 truncate">Bangers • Viền đen</div>
-                            </div>
-                        </button>
-                        <button onclick="applyStylePreset('whisper')" data-action="applyStylePreset"
-                            data-preset="whisper"
-                            class="p-2 rounded-lg bg-slate-900 hover:bg-sky-950/70 border border-slate-800 hover:border-sky-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm">
-                            <span
-                                class="w-7 h-7 rounded bg-sky-500/20 text-sky-300 flex items-center justify-center text-sm font-bold shrink-0">💭</span>
-                            <div class="min-w-0">
-                                <div class="text-[11px] font-bold text-slate-200 group-hover:text-sky-300 truncate">Thầm
-                                    thì</div>
-                                <div class="text-[9px] text-slate-500 truncate">Caveat • Mờ ảo</div>
-                            </div>
-                        </button>
-                        <button onclick="applyStylePreset('narration')" data-action="applyStylePreset"
-                            data-preset="narration"
-                            class="p-2 rounded-lg bg-slate-900 hover:bg-emerald-950/70 border border-slate-800 hover:border-emerald-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm">
-                            <span
-                                class="w-7 h-7 rounded bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-sm font-bold shrink-0">📜</span>
-                            <div class="min-w-0">
-                                <div class="text-[11px] font-bold text-slate-200 group-hover:text-emerald-300 truncate">
-                                    Dẫn truyện</div>
-                                <div class="text-[9px] text-slate-500 truncate">Be Vietnam • Khung</div>
-                            </div>
-                        </button>
-                        <button onclick="applyStylePreset('monologue')" data-action="applyStylePreset"
-                            data-preset="monologue"
-                            class="p-2 rounded-lg bg-slate-900 hover:bg-purple-950/70 border border-slate-800 hover:border-purple-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm">
-                            <span
-                                class="w-7 h-7 rounded bg-purple-500/20 text-purple-300 flex items-center justify-center text-sm font-bold shrink-0">🧘</span>
-                            <div class="min-w-0">
-                                <div class="text-[11px] font-bold text-slate-200 group-hover:text-purple-300 truncate">
-                                    Độc thoại nội tâm</div>
-                                <div class="text-[9px] text-slate-500 truncate">Patrick Hand • Nghiêng</div>
-                            </div>
-                        </button>
-                        <button onclick="applyStylePreset('magic')" data-action="applyStylePreset" data-preset="magic"
-                            class="p-2 rounded-lg bg-slate-900 hover:bg-cyan-950/70 border border-slate-800 hover:border-cyan-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm">
-                            <span
-                                class="w-7 h-7 rounded bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-sm font-bold shrink-0">✨</span>
-                            <div class="min-w-0">
-                                <div class="text-[11px] font-bold text-slate-200 group-hover:text-cyan-300 truncate">
-                                    Phép thuật / Neon</div>
-                                <div class="text-[9px] text-slate-500 truncate">Bangers • Hào quang xanh</div>
-                            </div>
-                        </button>
-                        <button onclick="applyStylePreset('horror')" data-action="applyStylePreset" data-preset="horror"
-                            class="p-2 rounded-lg bg-slate-900 hover:bg-red-950/70 border border-slate-800 hover:border-red-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm">
-                            <span
-                                class="w-7 h-7 rounded bg-red-500/20 text-red-300 flex items-center justify-center text-sm font-bold shrink-0">🩸</span>
-                            <div class="min-w-0">
-                                <div class="text-[11px] font-bold text-slate-200 group-hover:text-red-300 truncate">Kinh
-                                    dị / U ám</div>
-                                <div class="text-[9px] text-slate-500 truncate">Marker • Viền đỏ rực</div>
-                            </div>
-                        </button>
-                        <button onclick="applyStylePreset('system_rpg')" data-action="applyStylePreset"
-                            data-preset="system_rpg"
-                            class="p-2 rounded-lg bg-slate-900 hover:bg-amber-950/70 border border-slate-800 hover:border-amber-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm">
-                            <span
-                                class="w-7 h-7 rounded bg-amber-500/20 text-amber-300 flex items-center justify-center text-sm font-bold shrink-0">🤖</span>
-                            <div class="min-w-0">
-                                <div class="text-[11px] font-bold text-slate-200 group-hover:text-amber-300 truncate">Hệ
-                                    thống / RPG</div>
-                                <div class="text-[9px] text-slate-500 truncate">Chakra Petch • Công nghệ</div>
-                            </div>
-                        </button>
-                        <button onclick="applyStylePreset('shojo')" data-action="applyStylePreset" data-preset="shojo"
-                            class="p-2 rounded-lg bg-slate-900 hover:bg-rose-950/70 border border-slate-800 hover:border-rose-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm">
-                            <span
-                                class="w-7 h-7 rounded bg-rose-500/20 text-rose-300 flex items-center justify-center text-sm font-bold shrink-0">🌸</span>
-                            <div class="min-w-0">
-                                <div class="text-[11px] font-bold text-slate-200 group-hover:text-rose-300 truncate">
-                                    Shojo lãng mạn</div>
-                                <div class="text-[9px] text-slate-500 truncate">Patrick Hand • Mềm mại</div>
-                            </div>
-                        </button>
-                        <button onclick="applyStylePreset('transparent_sfx')" data-action="applyStylePreset"
-                            data-preset="transparent_sfx"
-                            class="p-2 rounded-lg bg-slate-900 hover:bg-yellow-950/70 border border-slate-800 hover:border-yellow-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm">
-                            <span
-                                class="w-7 h-7 rounded bg-yellow-500/20 text-yellow-300 flex items-center justify-center text-sm font-bold shrink-0">🏷️</span>
-                            <div class="min-w-0">
-                                <div class="text-[11px] font-bold text-slate-200 group-hover:text-yellow-300 truncate">
-                                    Nền trong suốt</div>
-                                <div class="text-[9px] text-slate-500 truncate">Nền 0% • Viền nổi 4px</div>
-                            </div>
-                        </button>
+                        </div>
                     </div>
 
-                    <!-- Kho SFX Manga Hành động 1-Chạm (Photoshop SFX Styles) -->
-                    <div class="pt-2 border-t border-slate-800/80">
-                        <label class="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
-                            <i class="fa-solid fa-bolt"></i> <span>Kho Hiệu ứng Âm thanh SFX (1-Chạm)</span>
-                        </label>
-                        <div class="grid grid-cols-3 gap-1">
-                            <button onclick="applyStylePreset('sfx_boom')" data-action="applyStylePreset" data-preset="sfx_boom"
-                                class="p-1.5 rounded-lg bg-slate-900 hover:bg-orange-950/70 border border-slate-800 hover:border-orange-500/50 text-center transition-all group flex flex-col items-center justify-center gap-0.5 cursor-pointer shadow-sm">
-                                <span class="text-sm">💥</span>
-                                <span class="text-[10px] font-black text-orange-400 group-hover:text-white">BÙM!</span>
-                            </button>
-                            <button onclick="applyStylePreset('sfx_slash')" data-action="applyStylePreset" data-preset="sfx_slash"
-                                class="p-1.5 rounded-lg bg-slate-900 hover:bg-cyan-950/70 border border-slate-800 hover:border-cyan-500/50 text-center transition-all group flex flex-col items-center justify-center gap-0.5 cursor-pointer shadow-sm">
-                                <span class="text-sm">⚡</span>
-                                <span class="text-[10px] font-black text-cyan-400 group-hover:text-white">XOẸT!</span>
-                            </button>
-                            <button onclick="applyStylePreset('sfx_clash')" data-action="applyStylePreset" data-preset="sfx_clash"
-                                class="p-1.5 rounded-lg bg-slate-900 hover:bg-amber-950/70 border border-slate-800 hover:border-amber-500/50 text-center transition-all group flex flex-col items-center justify-center gap-0.5 cursor-pointer shadow-sm">
-                                <span class="text-sm">🔔</span>
-                                <span class="text-[10px] font-black text-amber-300 group-hover:text-white">KENG!</span>
-                            </button>
-                            <button onclick="applyStylePreset('sfx_whoosh')" data-action="applyStylePreset" data-preset="sfx_whoosh"
-                                class="p-1.5 rounded-lg bg-slate-900 hover:bg-emerald-950/70 border border-slate-800 hover:border-emerald-500/50 text-center transition-all group flex flex-col items-center justify-center gap-0.5 cursor-pointer shadow-sm">
-                                <span class="text-sm">💨</span>
-                                <span class="text-[10px] font-black text-emerald-400 group-hover:text-white">VÚT...</span>
-                            </button>
-                            <button onclick="applyStylePreset('sfx_crack')" data-action="applyStylePreset" data-preset="sfx_crack"
-                                class="p-1.5 rounded-lg bg-slate-900 hover:bg-red-950/70 border border-slate-800 hover:border-red-500/50 text-center transition-all group flex flex-col items-center justify-center gap-0.5 cursor-pointer shadow-sm">
-                                <span class="text-sm">🩸</span>
-                                <span class="text-[10px] font-black text-red-400 group-hover:text-white">RẮC!</span>
-                            </button>
-                            <button onclick="applyStylePreset('sfx_heartbeat')" data-action="applyStylePreset" data-preset="sfx_heartbeat"
-                                class="p-1.5 rounded-lg bg-slate-900 hover:bg-rose-950/70 border border-slate-800 hover:border-rose-500/50 text-center transition-all group flex flex-col items-center justify-center gap-0.5 cursor-pointer shadow-sm">
-                                <span class="text-sm">💓</span>
-                                <span class="text-[10px] font-black text-rose-400 group-hover:text-white">THỊNH THỊCH</span>
-                            </button>
-                        </div>
+                    <!-- Danh sách Mẫu Preset Tùy chỉnh (Được render động bởi preset-ui.ts) -->
+                    <div id="custom-presets-container" class="space-y-2">
+                        <!-- Rendered by JS -->
                     </div>
                 </div>
 
@@ -4028,6 +3873,91 @@
         </div>
     </div>
 
+
+    <!-- MODAL: TẠO / SỬA MẪU ĐỊNH DẠNG TÙY CHỈNH (CUSTOM PRESET MODAL) -->
+    <div id="custom-preset-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col">
+            <!-- Modal Header -->
+            <div class="px-5 py-3.5 border-b border-slate-800 bg-slate-950/60 flex items-center justify-between">
+                <h3 id="preset-modal-title" class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i>
+                    <span>Tạo Mẫu Định Dạng Mới</span>
+                </h3>
+                <button onclick="closePresetModal()" class="text-slate-400 hover:text-slate-200 text-sm transition-colors cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-5 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
+                <div id="preset-modal-source-notice" class="hidden text-[10px] text-indigo-300 bg-indigo-950/50 border border-indigo-500/30 p-2 rounded-lg font-medium">
+                    ✨ Đang lấy kiểu dáng hiện tại từ ô thoại đang chọn
+                </div>
+
+                <!-- Tên mẫu định dạng -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-slate-300 flex items-center gap-1">
+                        <span>Tên mẫu định dạng</span> <span class="text-red-400">*</span>
+                    </label>
+                    <input type="text" id="preset-modal-name" placeholder="Ví dụ: Hội thoại chính, SFX Chém gió, Nghĩ thầm..."
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
+                </div>
+
+                <!-- Biểu tượng Emoji -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-slate-300">Biểu tượng (Icon / Emoji)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="preset-modal-icon" value="💬" maxlength="4"
+                            class="w-12 text-center bg-slate-950 border border-slate-800 rounded-lg py-1.5 text-base text-slate-200 focus:outline-none focus:border-indigo-500 font-bold">
+                        <!-- Quick emoji picker pills -->
+                        <div class="flex flex-wrap items-center gap-1 flex-1">
+                            <button type="button" onclick="selectPresetIconEmoji('💬')" class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 flex items-center justify-center text-xs transition-colors cursor-pointer">💬</button>
+                            <button type="button" onclick="selectPresetIconEmoji('💭')" class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 flex items-center justify-center text-xs transition-colors cursor-pointer">💭</button>
+                            <button type="button" onclick="selectPresetIconEmoji('📜')" class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 flex items-center justify-center text-xs transition-colors cursor-pointer">📜</button>
+                            <button type="button" onclick="selectPresetIconEmoji('💥')" class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 flex items-center justify-center text-xs transition-colors cursor-pointer">💥</button>
+                            <button type="button" onclick="selectPresetIconEmoji('⚡')" class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 flex items-center justify-center text-xs transition-colors cursor-pointer">⚡</button>
+                            <button type="button" onclick="selectPresetIconEmoji('✨')" class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 flex items-center justify-center text-xs transition-colors cursor-pointer">✨</button>
+                            <button type="button" onclick="selectPresetIconEmoji('🌸')" class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 flex items-center justify-center text-xs transition-colors cursor-pointer">🌸</button>
+                            <button type="button" onclick="selectPresetIconEmoji('👻')" class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 flex items-center justify-center text-xs transition-colors cursor-pointer">👻</button>
+                            <button type="button" onclick="selectPresetIconEmoji('🤖')" class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 flex items-center justify-center text-xs transition-colors cursor-pointer">🤖</button>
+                            <button type="button" onclick="selectPresetIconEmoji('🏷️')" class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 flex items-center justify-center text-xs transition-colors cursor-pointer">🏷️</button>
+                            <button type="button" onclick="selectPresetIconEmoji('🩸')" class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 flex items-center justify-center text-xs transition-colors cursor-pointer">🩸</button>
+                            <button type="button" onclick="selectPresetIconEmoji('💓')" class="w-7 h-7 rounded bg-slate-950 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 flex items-center justify-center text-xs transition-colors cursor-pointer">💓</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mô tả ngắn (Tùy chọn) -->
+                <div class="space-y-1.5">
+                    <label class="text-xs font-bold text-slate-300">Mô tả tóm tắt</label>
+                    <input type="text" id="preset-modal-desc" placeholder="Tự động tạo hoặc nhập mô tả ngắn..."
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                </div>
+
+                <!-- Live Preview Card -->
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Xem trước hiển thị</label>
+                    <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center min-h-[64px]">
+                        <div id="preset-modal-preview-box" class="px-4 py-2 rounded border border-slate-700/50 shadow text-center">
+                            <span id="preset-modal-preview-text" class="text-sm font-bold">Manga Translator Studio</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="px-5 py-3 border-t border-slate-800 bg-slate-950/60 flex items-center justify-end gap-2">
+                <button type="button" onclick="closePresetModal()"
+                    class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer">
+                    Hủy bỏ
+                </button>
+                <button type="button" onclick="submitPresetModal()"
+                    class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors shadow flex items-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-check"></i> Lưu mẫu
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Hidden input for quick background image replacement -->
     <input type="file" id="replace-bg-file-input" accept="image/*" class="hidden"
