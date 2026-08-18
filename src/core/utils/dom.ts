@@ -20,14 +20,17 @@ export function setMultilineText(target: HTMLElement | null, value: string): voi
             lineDiv.style.height = '100%';
             lineDiv.style.width = 'auto';
             lineDiv.style.minWidth = '1.1em';
+            lineDiv.style.whiteSpace = 'pre';
         } else {
             lineDiv.style.width = '100%';
             lineDiv.style.height = 'auto';
             lineDiv.style.minHeight = '1em';
+            lineDiv.style.whiteSpace = 'pre';
         }
         lineDiv.style.margin = '0';
         lineDiv.style.padding = '0';
         lineDiv.style.wordBreak = 'keep-all';
+        lineDiv.style.overflowWrap = 'normal';
         lineDiv.appendChild(document.createTextNode(line || ' '));
         target.appendChild(lineDiv);
     });

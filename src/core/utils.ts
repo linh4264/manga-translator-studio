@@ -225,9 +225,9 @@ export function setMultilineText(target: HTMLElement | null, value: string, warp
             lineDiv.style.textOrientation = 'upright';
             lineDiv.style.textAlign = target.style.textAlign || 'center';
             lineDiv.style.verticalAlign = 'top';
-            lineDiv.style.whiteSpace = 'pre-wrap';
+            lineDiv.style.whiteSpace = 'pre';
             lineDiv.style.wordBreak = 'keep-all';
-            lineDiv.style.overflowWrap = 'break-word';
+            lineDiv.style.overflowWrap = 'normal';
             lineDiv.style.height = 'auto';
             lineDiv.style.width = 'auto';
             lineDiv.style.minWidth = 'auto';
@@ -239,7 +239,7 @@ export function setMultilineText(target: HTMLElement | null, value: string, warp
             lineDiv.style.minWidth = 'auto';
             lineDiv.style.display = 'block';
             lineDiv.style.textAlign = target.style.textAlign || 'center';
-            lineDiv.style.whiteSpace = 'pre-wrap';
+            lineDiv.style.whiteSpace = 'pre';
             lineDiv.style.wordBreak = 'keep-all';
             lineDiv.style.overflowWrap = 'normal';
         }
