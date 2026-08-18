@@ -28,10 +28,13 @@ function getFontFamilyName(fontClass?: string): string {
 }
 
 export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTMLImageElement | null = null): Promise<HTMLCanvasElement> {
-    let imgElement = bgImageOverride || elements.mangaBgImage;
+    const isCurrentActivePage = (globalState.activePageIndex >= 0 && page === globalState.pages[globalState.activePageIndex]);
+    let imgElement = bgImageOverride || (isCurrentActivePage ? elements.mangaBgImage : null);
+    let createdBlobUrl: string | null = null;
+
     if (!imgElement || !imgElement.naturalWidth || !imgElement.naturalHeight) {
         const pageFile = page.originalFile || page.file;
-        const srcToLoad = pageFile ? URL.createObjectURL(pageFile as Blob) : page.src;
+        const srcToLoad = pageFile ? (createdBlobUrl = URL.createObjectURL(pageFile as Blob)) : page.src;
         if (srcToLoad) {
             const offImg = new Image();
             offImg.crossOrigin = 'anonymous';
@@ -47,6 +50,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
     }
 
     if (!imgElement || !imgElement.naturalWidth || !imgElement.naturalHeight) {
+        if (createdBlobUrl) URL.revokeObjectURL(createdBlobUrl);
         throw new Error("Dữ liệu ảnh gốc chưa sẵn sàng.");
     }
 
@@ -60,6 +64,9 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
     if (!ctx) throw new Error("Không thể tạo 2D context cho canvas");
 
     ctx.drawImage(imgElement, 0, 0, W, H);
+    if (createdBlobUrl) {
+        URL.revokeObjectURL(createdBlobUrl);
+    }
 
     if (page === globalState.pages[globalState.activePageIndex] && elements.eraserCanvas && elements.eraserCanvas.width > 0) {
         ctx.drawImage(elements.eraserCanvas, 0, 0, W, H);

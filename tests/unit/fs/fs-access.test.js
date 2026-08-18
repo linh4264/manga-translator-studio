@@ -55,3 +55,42 @@ test('Native File System: Simulated Writable Stream', async () => {
     assert.ok(writtenData, 'Data should be written to file stream');
     assert.strictEqual(isClosed, true, 'Stream should be closed after writing');
 });
+
+test('Native File System: Multi-file translated folder writing flow', async () => {
+    const writtenFiles = new Map();
+    const mockDirHandle = {
+        name: 'Manga_Chapter_1',
+        queryPermission: async () => 'granted',
+        requestPermission: async () => 'granted',
+        getDirectoryHandle: async (dirName, opts) => {
+            assert.strictEqual(dirName, 'translated');
+            return {
+                getFileHandle: async (fileName, fileOpts) => {
+                    return {
+                        name: fileName,
+                        createWritable: async () => ({
+                            write: async (blob) => { writtenFiles.set(fileName, blob); },
+                            close: async () => {}
+                        })
+                    };
+                }
+            };
+        }
+    };
+
+    const outDir = await mockDirHandle.getDirectoryHandle('translated', { create: true });
+    const pages = ['translated_01.png', 'translated_02.png', 'translated_03.png'];
+
+    for (const pageName of pages) {
+        const fileHandle = await outDir.getFileHandle(pageName, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(new Blob([`DATA_${pageName}`]));
+        await writable.close();
+    }
+
+    assert.strictEqual(writtenFiles.size, 3);
+    assert.ok(writtenFiles.has('translated_01.png'));
+    assert.ok(writtenFiles.has('translated_02.png'));
+    assert.ok(writtenFiles.has('translated_03.png'));
+});
+

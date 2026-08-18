@@ -4,6 +4,7 @@
  */
 
 import { globalState, saveMetaToDB, loadMetaFromDB, deleteMetaFromDB } from '../core/state';
+import { elements } from '../core/elements';
 import { showToast, getCleanFileBaseName } from '../core/utils';
 import { uiUpdateProcessingOverlay } from '../core/state';
 import { getPageExportMimeType } from './io';
@@ -212,24 +213,98 @@ export async function exportPagesDirectlyToDisk(): Promise<void> {
         }
     }
 
+    if (!targetDirHandle) return;
+
+    try {
+        let perm = await targetDirHandle.queryPermission({ mode: 'readwrite' });
+        if (perm !== 'granted') {
+            perm = await targetDirHandle.requestPermission({ mode: 'readwrite' });
+            if (perm !== 'granted') {
+                showToast("Chưa được cấp quyền ghi vào thư mục ổ cứng.", "warn");
+                return;
+            }
+        }
+    } catch (permErr) {
+        console.warn("Lỗi kiểm tra quyền thư mục:", permErr);
+    }
+
     try {
         commitActiveEditingState();
         await saveEraserDrawingToPage();
 
         const outDirHandle = await targetDirHandle.getDirectoryHandle('translated', { create: true });
 
-        const total = globalState.pages.length;
-        uiUpdateProcessingOverlay(true, "Đang ghi trực tiếp vào ổ cứng...", `Khởi tạo thư mục /translated (${total} trang)...`, 0);
+        const chk = document.getElementById('chk-export-range') as HTMLInputElement | null;
+        const numStart = document.getElementById('num-export-start') as HTMLInputElement | null;
+        const numEnd = document.getElementById('num-export-end') as HTMLInputElement | null;
+        let startIndex = 0;
+        let endIndex = globalState.pages.length - 1;
+        if (chk && chk.checked && numStart && numEnd) {
+            const startVal = parseInt(numStart.value, 10);
+            const endVal = parseInt(numEnd.value, 10);
+            if (!isNaN(startVal) && !isNaN(endVal) && startVal >= 1 && endVal <= globalState.pages.length && startVal <= endVal) {
+                startIndex = startVal - 1;
+                endIndex = endVal - 1;
+            }
+        }
+
+        const totalToExport = endIndex - startIndex + 1;
+        uiUpdateProcessingOverlay(true, "Đang ghi trực tiếp vào ổ cứng...", `Khởi tạo thư mục /translated (${totalToExport} trang)...`, 0);
+
+        await document.fonts.ready;
+        const { autoFitAllBlocksOnPage } = globalState.autoFitEnabled
+            ? await import('./canvas/canvas-styling')
+            : { autoFitAllBlocksOnPage: null };
+
+        const zoomScale = (globalState.zoom || 100) / 100;
+        const containerW = elements.mangaCanvasContainer && elements.mangaCanvasContainer.clientWidth > 0
+            ? elements.mangaCanvasContainer.clientWidth
+            : (elements.workspaceViewport?.clientWidth ? Math.min(elements.workspaceViewport.clientWidth - 32, 1000) : 800);
+        const displayWidth = Math.max(200, Math.round(containerW / zoomScale));
 
         let successCount = 0;
 
-        for (let i = 0; i < total; i++) {
+        for (let i = startIndex; i <= endIndex; i++) {
             const page = globalState.pages[i];
-            const pct = Math.round(((i + 1) / total) * 100);
-            uiUpdateProcessingOverlay(true, `Đang lưu trang ${i + 1}/${total}...`, `${page.name} → /translated/`, pct);
+            const currentCount = i - startIndex + 1;
+            const pct = Math.round((currentCount / totalToExport) * 100);
+            uiUpdateProcessingOverlay(true, `Đang lưu trang ${currentCount}/${totalToExport}...`, `${page.name} → /translated/`, pct);
+
+            if (!(page as any).lastDisplayWidth) {
+                (page as any).lastDisplayWidth = displayWidth;
+            }
+
+            const pageFile = page.originalFile || page.file;
+            let offImg: HTMLImageElement | null = null;
+            let blobUrl: string | null = null;
+
+            if (pageFile) {
+                offImg = new Image();
+                blobUrl = URL.createObjectURL(pageFile as Blob);
+                await new Promise<void>((resolve, reject) => {
+                    offImg!.onload = () => resolve();
+                    offImg!.onerror = () => reject(new Error(`Không thể tải ảnh cho trang ${page.name}`));
+                    offImg!.src = blobUrl!;
+                });
+            } else if (page.src) {
+                offImg = new Image();
+                await new Promise<void>((resolve, reject) => {
+                    offImg!.onload = () => resolve();
+                    offImg!.onerror = () => reject(new Error(`Không thể tải ảnh cho trang ${page.name}`));
+                    offImg!.src = page.src!;
+                });
+            }
+
+            if (globalState.autoFitEnabled && autoFitAllBlocksOnPage && offImg) {
+                autoFitAllBlocksOnPage(page, offImg);
+            }
+
+            const canvas = await renderPageToCanvas2D(page, offImg);
+            if (blobUrl) {
+                URL.revokeObjectURL(blobUrl);
+            }
 
             const { mimeType, quality, ext } = getPageExportMimeType(page);
-            const canvas = await renderPageToCanvas2D(page);
 
             const blob = await new Promise<Blob>((resolve, reject) => {
                 canvas.toBlob((b) => {
@@ -245,11 +320,13 @@ export async function exportPagesDirectlyToDisk(): Promise<void> {
             await writable.write(blob);
             await writable.close();
 
+            canvas.width = 0;
+            canvas.height = 0;
             successCount++;
         }
 
         uiUpdateProcessingOverlay(false);
-        showToast(`⚡ Đã ghi thành công ${successCount}/${total} trang thẳng vào thư mục "${targetDirHandle.name}/translated/"!`, "success");
+        showToast(`⚡ Đã ghi thành công ${successCount}/${totalToExport} trang thẳng vào thư mục "${targetDirHandle.name}/translated/"!`, "success");
 
     } catch (err: any) {
         uiUpdateProcessingOverlay(false);
@@ -268,6 +345,19 @@ export async function saveProjectDirectlyToDisk(): Promise<void> {
     if (!targetHandle || !isFileSystemAccessSupported()) {
         showToast("Vui lòng mở thư mục ổ cứng trước khi lưu dự án trực tiếp.", "warn");
         return;
+    }
+
+    try {
+        let perm = await targetHandle.queryPermission({ mode: 'readwrite' });
+        if (perm !== 'granted') {
+            perm = await targetHandle.requestPermission({ mode: 'readwrite' });
+            if (perm !== 'granted') {
+                showToast("Chưa được cấp quyền ghi vào thư mục ổ cứng.", "warn");
+                return;
+            }
+        }
+    } catch (permErr) {
+        console.warn("Lỗi kiểm tra quyền thư mục:", permErr);
     }
 
     try {
