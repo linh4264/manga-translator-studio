@@ -54,6 +54,138 @@ export function segmentString(str) {
     return Array.from(str);
 }
 
+/**
+ * Check if text contains Rich Text formatting (Markdown or BBCode)
+ */
+export function hasRichTextTags(text) {
+    if (!text || typeof text !== 'string') return false;
+    return /(\*\*.*?\*\*|\*[^*]+?\*|__.*?__|_.*?_|~~.*?~~|\[\/?(?:b|i|u|s|color|size|font)(?:=[^\]]+)?\])/i.test(text);
+}
+
+/**
+ * Strip all Rich Text formatting tags, returning plain text
+ */
+export function stripRichTextTags(text) {
+    if (!text || typeof text !== 'string') return '';
+    let clean = text;
+    // Replace markdown
+    clean = clean.replace(/\*\*(.*?)\*\*/g, '$1');
+    clean = clean.replace(/__([^_]+?)__/g, '$1');
+    clean = clean.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '$1');
+    clean = clean.replace(/(?<!_)_([^_]+?)_(?!_)/g, '$1');
+    clean = clean.replace(/~~(.*?)~~/g, '$1');
+    // Replace BBCode
+    clean = clean.replace(/\[\/?(?:b|i|u|s|color|size|font)(?:=[^\]]+)?\]/gi, '');
+    return clean;
+}
+
+/**
+ * Convert Markdown and BBCode into an array of lines, where each line is an array of styled segments.
+ * Guarantees cross-line style continuity (color, bold, italic, underline, strikethrough, size, font).
+ */
+export function parseRichTextLines(text, baseStyle = {}) {
+    if (!text || typeof text !== 'string') return [[]];
+
+    let normalized = text;
+    // Normalize markdown into BBCode
+    normalized = normalized.replace(/\*\*(.*?)\*\*/gs, '[b]$1[/b]');
+    normalized = normalized.replace(/__([^_]+?)__/gs, '[b]$1[/b]');
+    normalized = normalized.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/gs, '[i]$1[/i]');
+    normalized = normalized.replace(/(?<!_)_([^_]+?)_(?!_)/gs, '[i]$1[/i]');
+    normalized = normalized.replace(/~~(.*?)~~/gs, '[s]$1[/s]');
+
+    const tagRegex = /(\[\/?(?:b|i|u|s|color|size|font)(?:=[^\]]+)?\])/gi;
+    const parts = normalized.split(tagRegex);
+
+    let boldCount = baseStyle.bold ? 1 : 0;
+    let italicCount = baseStyle.italic ? 1 : 0;
+    let underlineCount = baseStyle.underline ? 1 : 0;
+    let strikethroughCount = baseStyle.strikethrough ? 1 : 0;
+    const colorStack = baseStyle.color ? [baseStyle.color] : [];
+    const sizeStack = baseStyle.sizeRatio ? [baseStyle.sizeRatio] : [];
+    const fontStack = baseStyle.font ? [baseStyle.font] : [];
+
+    const lines = [[]];
+
+    for (const part of parts) {
+        if (!part) continue;
+
+        const lower = part.toLowerCase();
+        if (lower.startsWith('[') && lower.endsWith(']')) {
+            if (lower === '[b]') {
+                boldCount++;
+            } else if (lower === '[/b]') {
+                boldCount = Math.max(0, boldCount - 1);
+            } else if (lower === '[i]') {
+                italicCount++;
+            } else if (lower === '[/i]') {
+                italicCount = Math.max(0, italicCount - 1);
+            } else if (lower === '[u]') {
+                underlineCount++;
+            } else if (lower === '[/u]') {
+                underlineCount = Math.max(0, underlineCount - 1);
+            } else if (lower === '[s]') {
+                strikethroughCount++;
+            } else if (lower === '[/s]') {
+                strikethroughCount = Math.max(0, strikethroughCount - 1);
+            } else if (lower.startsWith('[color=')) {
+                const colorVal = part.slice(7, -1).trim();
+                colorStack.push(colorVal);
+            } else if (lower === '[/color]') {
+                colorStack.pop();
+            } else if (lower.startsWith('[size=')) {
+                const sizeVal = part.slice(6, -1).trim();
+                let ratio = 1.0;
+                if (sizeVal.endsWith('%')) {
+                    ratio = (parseFloat(sizeVal) || 100) / 100;
+                } else if (parseFloat(sizeVal) > 0) {
+                    const num = parseFloat(sizeVal);
+                    ratio = num > 5 ? (num / 16) : num;
+                }
+                sizeStack.push(ratio);
+            } else if (lower === '[/size]') {
+                sizeStack.pop();
+            } else if (lower.startsWith('[font=')) {
+                const fontVal = part.slice(6, -1).trim();
+                fontStack.push(fontVal);
+            } else if (lower === '[/font]') {
+                fontStack.pop();
+            }
+        } else {
+            const subLines = part.split('\n');
+            for (let s = 0; s < subLines.length; s++) {
+                if (s > 0) {
+                    lines.push([]);
+                }
+                const subText = subLines[s];
+                if (subText) {
+                    lines[lines.length - 1].push({
+                        text: subText,
+                        bold: boldCount > 0,
+                        italic: italicCount > 0,
+                        underline: underlineCount > 0,
+                        strikethrough: strikethroughCount > 0,
+                        color: colorStack.length > 0 ? colorStack[colorStack.length - 1] : null,
+                        sizeRatio: sizeStack.length > 0 ? sizeStack[sizeStack.length - 1] : 1.0,
+                        font: fontStack.length > 0 ? fontStack[fontStack.length - 1] : null
+                    });
+                }
+            }
+        }
+    }
+
+    return lines;
+}
+
+/**
+ * Convert Markdown and BBCode into a flat list of styled segments
+ */
+export function parseRichTextTokens(text, baseStyle = {}) {
+    if (!text || typeof text !== 'string') return [];
+    const lines = parseRichTextLines(text, baseStyle);
+    return lines.flat();
+}
+
 export function setMultilineText(target, value, warpOptions = {}) {
     if (!target) return;
     target.textContent = '';
@@ -72,9 +204,9 @@ export function setMultilineText(target, value, warpOptions = {}) {
     const isUnderline = !!opts.underline;
 
     const transformedText = transformCase(value, textCase);
-    const lines = String(transformedText ?? '').split('\n');
+    const tokenLines = parseRichTextLines(transformedText, { underline: isUnderline });
 
-    lines.forEach((line) => {
+    tokenLines.forEach((tokens) => {
         const lineDiv = document.createElement('div');
         if (isVertical) {
             lineDiv.style.display = 'inline-block';
@@ -116,12 +248,16 @@ export function setMultilineText(target, value, warpOptions = {}) {
             lineDiv.style.transform = `skew(${skewX}deg, ${skewY}deg)`;
         }
 
-        const normLine = String(line || '').normalize('NFC');
+        const normLine = tokens.map(t => t.text).join('').normalize('NFC');
         const hasCharWarp = (arcAngle !== 0) || (warpWave !== 0) || (warpBulge !== 0);
 
         if (isVertical) {
-            const chars = segmentString(normLine);
-            const count = chars.length;
+            const rawChars = [];
+            tokens.forEach(tok => {
+                const segs = segmentString(tok.text);
+                segs.forEach(s => rawChars.push({ char: s, token: tok }));
+            });
+            const count = rawChars.length;
             const arcDepth = (arcAngle / 45) * 8;
             const waveAmp = (warpWave / 50) * 10;
             const bulgeFactor = (warpBulge / 50) * 0.4;
@@ -129,12 +265,20 @@ export function setMultilineText(target, value, warpOptions = {}) {
             if (count === 0) {
                 lineDiv.appendChild(document.createTextNode('\u00A0'));
             } else {
-                chars.forEach((ch, idx) => {
+                rawChars.forEach(({ char: ch, token: tok }, idx) => {
                     const span = document.createElement('span');
                     span.style.display = 'inline-block';
                     span.style.lineHeight = 'inherit';
                     span.style.whiteSpace = 'pre';
                     span.textContent = ch;
+
+                    if (tok.bold) span.style.fontWeight = 'bold';
+                    if (tok.italic) span.style.fontStyle = 'italic';
+                    if (tok.underline) span.style.textDecoration = 'underline';
+                    if (tok.strikethrough) span.style.textDecoration = 'line-through';
+                    if (tok.color) span.style.color = tok.color;
+                    if (tok.sizeRatio && tok.sizeRatio !== 1) span.style.fontSize = `${tok.sizeRatio * 100}%`;
+                    if (tok.font) span.style.fontFamily = `'${tok.font}', sans-serif`;
 
                     if (hasCharWarp && count > 1) {
                         const t = (idx - (count - 1) / 2) / ((count - 1) / 2);
@@ -151,17 +295,29 @@ export function setMultilineText(target, value, warpOptions = {}) {
                 });
             }
         } else if (hasCharWarp && normLine.length > 1) {
-            const chars = segmentString(normLine);
-            const count = chars.length;
+            const rawChars = [];
+            tokens.forEach(tok => {
+                const segs = segmentString(tok.text);
+                segs.forEach(s => rawChars.push({ char: s, token: tok }));
+            });
+            const count = rawChars.length;
             const arcDepth = (arcAngle / 45) * 8;
             const waveAmp = (warpWave / 50) * 10;
             const bulgeFactor = (warpBulge / 50) * 0.4;
 
-            chars.forEach((ch, idx) => {
+            rawChars.forEach(({ char: ch, token: tok }, idx) => {
                 const span = document.createElement('span');
                 span.style.display = 'inline-block';
                 span.style.whiteSpace = 'pre';
                 span.textContent = ch;
+
+                if (tok.bold) span.style.fontWeight = 'bold';
+                if (tok.italic) span.style.fontStyle = 'italic';
+                if (tok.underline) span.style.textDecoration = 'underline';
+                if (tok.strikethrough) span.style.textDecoration = 'line-through';
+                if (tok.color) span.style.color = tok.color;
+                if (tok.sizeRatio && tok.sizeRatio !== 1) span.style.fontSize = `${tok.sizeRatio * 100}%`;
+                if (tok.font) span.style.fontFamily = `'${tok.font}', sans-serif`;
 
                 const t = count > 1 ? (idx - (count - 1) / 2) / ((count - 1) / 2) : 0;
                 const arcOffset = (1 - t * t) * -arcDepth;
@@ -174,7 +330,22 @@ export function setMultilineText(target, value, warpOptions = {}) {
                 lineDiv.appendChild(span);
             });
         } else {
-            lineDiv.textContent = normLine || '\u00A0';
+            if (tokens.length === 0 || (tokens.length === 1 && !tokens[0].text)) {
+                lineDiv.textContent = '\u00A0';
+            } else {
+                tokens.forEach(tok => {
+                    const span = document.createElement('span');
+                    span.textContent = tok.text;
+                    if (tok.bold) span.style.fontWeight = 'bold';
+                    if (tok.italic) span.style.fontStyle = 'italic';
+                    if (tok.underline) span.style.textDecoration = 'underline';
+                    if (tok.strikethrough) span.style.textDecoration = 'line-through';
+                    if (tok.color) span.style.color = tok.color;
+                    if (tok.sizeRatio && tok.sizeRatio !== 1) span.style.fontSize = `${tok.sizeRatio * 100}%`;
+                    if (tok.font) span.style.fontFamily = `'${tok.font}', sans-serif`;
+                    lineDiv.appendChild(span);
+                });
+            }
         }
 
         target.appendChild(lineDiv);

@@ -579,3 +579,48 @@ test('Phase 2 UI: Ergonomic Canvas Controls and Sidebar Streamlining', async () 
     }, 'toggleLeftSidebarMoreMenu must execute without errors');
 });
 
+// 22. Studio Pro Phase 1: Rich Text Tokenizer & Multiline Styling
+test('Studio Pro Phase 1: Rich Text Tokenizer and Styling', async () => {
+    const { hasRichTextTags, stripRichTextTags, parseRichTextTokens, setMultilineText } = await import('../public/src/core/utils.js');
+
+    // Tag detection
+    assert.strictEqual(hasRichTextTags('Văn bản thường'), false);
+    assert.strictEqual(hasRichTextTags('Chữ **đậm** và [color=#ff0000]đỏ[/color]'), true);
+    assert.strictEqual(hasRichTextTags('Chữ [u]gạch chân[/u] và [size=120%]lớn[/size]'), true);
+
+    // Tag stripping
+    assert.strictEqual(stripRichTextTags('**Monkey** [color=#123456]*Luffy*[/color]!'), 'Monkey Luffy!');
+    assert.strictEqual(stripRichTextTags('[b][u]Gạch chân đậm[/u][/b]'), 'Gạch chân đậm');
+
+    // Token parsing
+    const tokens = parseRichTextTokens('Chào **[color=#ef4444]thế giới[/color]**!');
+    assert.strictEqual(tokens.length, 3);
+    assert.strictEqual(tokens[1].text, 'thế giới');
+    assert.strictEqual(tokens[1].bold, true);
+    assert.strictEqual(tokens[1].color, '#ef4444');
+
+    // DOM rendering
+    const container = document.createElement('div');
+    setMultilineText(container, 'Hôm nay **trời đẹp** [color=#3b82f6][u]xanh ngát[/u][/color]!');
+    assert.strictEqual(container.children.length, 1);
+    assert.ok(container.children[0].children.length >= 3);
+});
+
+// 23. Studio Pro Phase 1: Diamond / Oval Word Wrapping & Canvas Exporter
+test('Studio Pro Phase 1: Diamond / Oval Word Wrapping', async () => {
+    const { wrapCanvasText, wrapCanvasDiamondText } = await import('../public/src/features/canvas/canvas-renderer.js');
+
+    const mockCtx = {
+        measureText: (str) => ({ width: str.length * 8 })
+    };
+
+    const text = 'Một hai ba bốn năm sáu bảy tám chín mười mười một mười hai';
+    const rectLines = wrapCanvasText(mockCtx, text, 150);
+    const diamondLines = wrapCanvasDiamondText(mockCtx, text, 200, 200, 20);
+
+    assert.ok(Array.isArray(rectLines), 'Rect wrap must return array of lines');
+    assert.ok(Array.isArray(diamondLines), 'Diamond wrap must return array of lines');
+    assert.ok(diamondLines.length >= 2, 'Diamond wrap should produce balanced lines');
+});
+
+

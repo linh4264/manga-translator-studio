@@ -1,6 +1,6 @@
 import { globalState, savePageToDB } from '../core/state.js';
 import { elements } from '../core/elements.js';
-import { showToast } from '../core/utils.js';
+import { showToast, stripRichTextTags } from '../core/utils.js';
 import { requestOverlayRender, syncActiveBlockStyle, isBlockAutoFit } from '../features/canvas/canvas-service.js';
 import { saveEraserDrawingToPage } from '../features/inpainting.js';
 import { displayToeicAnalysis, resetToeicAnalysisUI } from '../features/toeic.js';
@@ -490,4 +490,84 @@ export function setActiveBlockGender(gender) {
         updateActiveBlockEditor();
         showToast(`Đã gán giọng đọc ${gender === 'female' ? 'Nữ 👩' : (gender === 'male' ? 'Nam 👨' : 'Dẫn chuyện 🎙️')} cho ô thoại này!`, 'info');
     }
+}
+
+/**
+ * Rich Text Editing Toolbar Helpers
+ */
+export function insertRichTextTag(openTag, closeTag) {
+    const textarea = elements.editTranslatedText;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const val = textarea.value;
+    const selected = val.substring(start, end) || 'văn bản';
+
+    const replacement = `${openTag}${selected}${closeTag}`;
+    const newVal = val.substring(0, start) + replacement + val.substring(end);
+    textarea.value = newVal;
+
+    import('../features/canvas/canvas-styling.js').then(m => m.syncActiveBlockTranslation(newVal));
+
+    textarea.focus();
+    textarea.setSelectionRange(start + openTag.length, start + openTag.length + selected.length);
+}
+
+export function applyRichColorToSelection(color) {
+    if (!color) return;
+    insertRichTextTag(`[color=${color}]`, `[/color]`);
+}
+
+export function applyRichSizeToSelection(sizePercent) {
+    insertRichTextTag(`[size=${sizePercent}%]`, `[/size]`);
+}
+
+export function clearRichFormattingFromSelection() {
+    const textarea = elements.editTranslatedText;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const val = textarea.value;
+
+    if (start === end) {
+        const cleaned = stripRichTextTags(val);
+        textarea.value = cleaned;
+        import('../features/canvas/canvas-styling.js').then(m => m.syncActiveBlockTranslation(cleaned));
+        showToast("Đã xóa toàn bộ thẻ định dạng Rich Text", "info");
+    } else {
+        const selected = val.substring(start, end);
+        const cleanedPart = stripRichTextTags(selected);
+        const newVal = val.substring(0, start) + cleanedPart + val.substring(end);
+        textarea.value = newVal;
+        import('../features/canvas/canvas-styling.js').then(m => m.syncActiveBlockTranslation(newVal));
+        textarea.focus();
+        textarea.setSelectionRange(start, start + cleanedPart.length);
+        showToast("Đã xóa thẻ định dạng đoạn chọn", "info");
+    }
+}
+
+export function toggleDiamondWrapActiveBlock() {
+    const activeBlock = getActiveBlock();
+    if (!activeBlock) return;
+    if (!activeBlock.style) activeBlock.style = {};
+    activeBlock.style.diamondWrap = !activeBlock.style.diamondWrap;
+    activeBlock.autoFitCache = null;
+    activeBlock.maskCache = null;
+
+    if (activeBlock.style.diamondWrap) {
+        import('../features/canvas/canvas-renderer.js').then(m => m.applyDiamondFormat());
+    } else {
+        const flattened = activeBlock.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
+        activeBlock.translated = flattened;
+        if (elements.editTranslatedText) {
+            elements.editTranslatedText.value = flattened;
+        }
+        import('../features/canvas/canvas-styling.js').then(m => m.syncActiveBlockTranslation(flattened));
+        requestOverlayRender();
+        const page = globalState.pages[globalState.activePageIndex];
+        if (page) savePageToDB(page);
+    }
+    showToast(activeBlock.style.diamondWrap ? "Đã bật ngắt dòng Elip Manga 💎" : "Đã chuyển về ngắt dòng chữ nhật", "info");
 }

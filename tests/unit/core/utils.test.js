@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert';
 import '../../setup/browser-env.js';
 
-import { escapeHTML, setMultilineText } from '../../../public/src/core/utils.js';
+import { escapeHTML, setMultilineText, hasRichTextTags, stripRichTextTags, parseRichTextTokens } from '../../../public/src/core/utils.js';
 
 test('Core Utils - HTML Escaping', () => {
     assert.strictEqual(escapeHTML('<div>"Hello" & \'World\'</div>'), '&lt;div&gt;&quot;Hello&quot; &amp; &#039;World&#039;&lt;/div&gt;');
@@ -69,4 +69,49 @@ test('Core Utils - Arc, Warp Wave, Bulge and Skew Transformations', () => {
     // Middle character vs edge character should have computed transform
     const firstChar = line.children[0];
     assert.ok(firstChar.style.transform.includes('translateY') && firstChar.style.transform.includes('rotate'));
+});
+
+test('Core Utils - Rich Text Parser & Tokenizer (Markdown & BBCode)', () => {
+    // 1. Detection
+    assert.strictEqual(hasRichTextTags('Chữ bình thường không có tag'), false);
+    assert.strictEqual(hasRichTextTags('Chữ **đậm** và *nghiêng*'), true);
+    assert.strictEqual(hasRichTextTags('Chữ [b]đậm[/b] và [color=#ff0000]đỏ[/color]'), true);
+    assert.strictEqual(hasRichTextTags('Chữ [size=130%]lớn[/size]'), true);
+
+    // 2. Strip Tags
+    assert.strictEqual(stripRichTextTags('**Xin chào** [color=#123456]*thế giới*[/color]!'), 'Xin chào thế giới!');
+    assert.strictEqual(stripRichTextTags('[b][u]Gạch chân đậm[/u][/b]'), 'Gạch chân đậm');
+    assert.strictEqual(stripRichTextTags('Không có tag'), 'Không có tag');
+
+    // 3. Token Parsing (Markdown & BBCode)
+    const tokens = parseRichTextTokens('Tôi là **[color=#ef4444]Luffy[/color]** vua hải tặc');
+    assert.strictEqual(tokens.length, 3);
+    assert.strictEqual(tokens[0].text, 'Tôi là ');
+    assert.strictEqual(tokens[0].bold, false);
+
+    assert.strictEqual(tokens[1].text, 'Luffy');
+    assert.strictEqual(tokens[1].bold, true);
+    assert.strictEqual(tokens[1].color, '#ef4444');
+
+    assert.strictEqual(tokens[2].text, ' vua hải tặc');
+    assert.strictEqual(tokens[2].bold, false);
+});
+
+test('Core Utils - Rich Text DOM Elements Creation', () => {
+    const richContainer = document.createElement('div');
+    const richText = 'Hôm nay **trời rất đẹp** [color=#3b82f6][u]và trong xanh[/u][/color]!';
+    setMultilineText(richContainer, richText);
+
+    assert.strictEqual(richContainer.children.length, 1);
+    const lineDiv = richContainer.children[0];
+    assert.ok(lineDiv.children.length >= 3, 'Should contain styled span elements');
+
+    const boldSpan = lineDiv.children[1];
+    assert.strictEqual(boldSpan.textContent, 'trời rất đẹp');
+    assert.strictEqual(boldSpan.style.fontWeight, 'bold');
+
+    const colorSpan = lineDiv.children[3];
+    assert.strictEqual(colorSpan.textContent, 'và trong xanh');
+    assert.strictEqual(colorSpan.style.color, '#3b82f6');
+    assert.strictEqual(colorSpan.style.textDecoration, 'underline');
 });

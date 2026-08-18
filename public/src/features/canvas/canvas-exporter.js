@@ -1,8 +1,8 @@
 import { globalState } from '../../core/state.js';
 import { elements } from '../../core/elements.js';
-import { waitForNextPaint, transformCase } from '../../core/utils.js';
+import { waitForNextPaint, transformCase, stripRichTextTags, parseRichTextTokens, parseRichTextLines, hasRichTextTags } from '../../core/utils.js';
 import { computeBubbleMask } from '../ocr/ocr-service.js';
-import { renderOverlays, convertHexToRGBA, wrapCanvasText, wrapCanvasVerticalText } from './canvas-renderer.js';
+import { renderOverlays, convertHexToRGBA, wrapCanvasText, wrapCanvasDiamondText, wrapCanvasVerticalText, wrapRichTextTokens } from './canvas-renderer.js';
 
 // Helper mapper cho phông chữ canvas kết xuất
 function getFontFamilyName(fontClass) {
@@ -386,12 +386,34 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                 totalTextHeight = maxColLength * charStep;
             } else {
                 const maxTextWidth = Math.max(10, bw - (padXPx * 2));
-                textLines = wrapCanvasText(ctx, transformedText, maxTextWidth);
                 const lineHeight = fontSizePx * currentLineHeight;
-                totalTextHeight = textLines.length * lineHeight;
+                const isDiamond = block.style.diamondWrap || block.style.maskShape === 'ellipse' || block.style.maskShape === 'bubble-fit';
+
+                const tokenLines = parseRichTextLines(transformedText, {
+                    bold: !!block.style.bold,
+                    italic: !!block.style.italic,
+                    underline: !!block.style.underline,
+                    color: block.style.textColor || '#000000'
+                });
+
+                const getFontFn = (tok) => {
+                    const tokItalic = tok.italic ? 'italic ' : '';
+                    const tokWeight = tok.bold ? 'bold ' : '';
+                    const tokSize = fontSizePx * (tok.sizeRatio || 1.0);
+                    const tokFont = tok.font ? getFontFamilyName(tok.font) : fontName;
+                    return `${tokItalic}${tokWeight}${tokSize}px ${tokFont}`;
+                };
+
+                const wrappedTokenLines = wrapRichTextTokens(ctx, tokenLines, maxTextWidth, isDiamond, Math.max(10, bh - (padYPx * 2)), lineHeight, getFontFn);
+                totalTextHeight = wrappedTokenLines.length * lineHeight;
+
                 let maxLineWidth = 0;
-                textLines.forEach(line => {
-                    const w = ctx.measureText(line).width;
+                wrappedTokenLines.forEach(lineToks => {
+                    let w = 0;
+                    lineToks.forEach(t => {
+                        ctx.font = getFontFn(t);
+                        w += ctx.measureText(t.text).width;
+                    });
                     if (w > maxLineWidth) maxLineWidth = w;
                 });
                 totalTextWidth = maxLineWidth;
@@ -443,27 +465,22 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
 
                         if (hasCharWarp && colChars.length > 1) {
                             const count = colChars.length;
-                            const arcDepth = (arcAngle / 45) * 8 * scaleFactor;
-                            const waveAmp = (warpWave / 50) * 10 * scaleFactor;
-                            const bulgeFactor = (warpBulge / 50) * 0.4;
-
-                            const t = count > 1 ? (k - (count - 1) / 2) / ((count - 1) / 2) : 0;
-                            const arcOffset = (1 - t * t) * -arcDepth;
-                            const waveOffset = Math.sin(t * Math.PI) * waveAmp;
+                            const t = (k - (count - 1) / 2) / ((count - 1) / 2);
+                            const arcOffset = (1 - t * t) * -((arcAngle / 45) * 8 * scaleFactor);
+                            const waveOffset = Math.sin(t * Math.PI) * ((warpWave / 50) * 10 * scaleFactor);
                             const totalOffsetX = arcOffset + waveOffset;
-
                             rotRad = t * (arcAngle * 0.35) * (Math.PI / 180);
-                            bulgeScale = 1 + (1 - t * t) * bulgeFactor;
+                            bulgeScale = 1 + (1 - t * t) * ((warpBulge / 50) * 0.4);
                             charX += totalOffsetX;
                         }
 
                         ctx.save();
                         ctx.translate(charX, charY);
+                        if (rotRad !== 0) ctx.rotate(rotRad);
+                        if (bulgeScale !== 1) ctx.scale(bulgeScale, bulgeScale);
                         if (char === '…' || char === '―' || char === '—' || char === '~' || char === '～' || char === '-') {
                             ctx.rotate(Math.PI / 2);
                         }
-                        if (rotRad !== 0) ctx.rotate(rotRad);
-                        if (bulgeScale !== 1) ctx.scale(bulgeScale, bulgeScale);
 
                         // Viền 2 (Outer Stroke / Glow)
                         if (strokeWidth2 > 0) {
@@ -527,9 +544,28 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
 
                 ctx.textBaseline = 'middle';
 
-                for (let i = 0; i < textLines.length; i++) {
-                    const lineText = textLines[i];
-                    const normLineText = String(lineText || '').normalize('NFC');
+                const tokenLines = parseRichTextLines(transformedText, {
+                    bold: !!block.style.bold,
+                    italic: !!block.style.italic,
+                    underline: !!block.style.underline,
+                    color: block.style.textColor || '#000000'
+                });
+
+                const maxTextWidth = Math.max(10, bw - (padXPx * 2));
+                const isDiamond = block.style.diamondWrap || block.style.maskShape === 'ellipse' || block.style.maskShape === 'bubble-fit';
+
+                const getFontFn = (tok) => {
+                    const tokItalic = tok.italic ? 'italic ' : '';
+                    const tokWeight = tok.bold ? 'bold ' : '';
+                    const tokSize = fontSizePx * (tok.sizeRatio || 1.0);
+                    const tokFont = tok.font ? getFontFamilyName(tok.font) : fontName;
+                    return `${tokItalic}${tokWeight}${tokSize}px ${tokFont}`;
+                };
+
+                const wrappedTokenLines = wrapRichTextTokens(ctx, tokenLines, maxTextWidth, isDiamond, Math.max(10, bh - (padYPx * 2)), lineHeight, getFontFn);
+
+                for (let i = 0; i < wrappedTokenLines.length; i++) {
+                    const lineTokens = wrappedTokenLines[i];
                     const lineY = startY + (i * lineHeight);
 
                     ctx.save();
@@ -541,17 +577,25 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                         ctx.translate(-startX, -lineY);
                     }
 
-                    if (hasCharWarp && normLineText.length > 1) {
-                        const chars = (typeof Intl !== 'undefined' && Intl.Segmenter)
-                            ? Array.from(new Intl.Segmenter().segment(normLineText)).map(s => s.segment)
-                            : Array.from(normLineText);
-                        const count = chars.length;
+                    if (hasCharWarp) {
+                        const rawChars = [];
+                        lineTokens.forEach(tok => {
+                            const segs = (typeof Intl !== 'undefined' && Intl.Segmenter)
+                                ? Array.from(new Intl.Segmenter().segment(tok.text)).map(s => s.segment)
+                                : Array.from(tok.text);
+                            segs.forEach(s => rawChars.push({ char: s, token: tok }));
+                        });
+
+                        const count = rawChars.length;
                         const arcDepth = (arcAngle / 45) * 8 * scaleFactor;
                         const waveAmp = (warpWave / 50) * 10 * scaleFactor;
                         const bulgeFactor = (warpBulge / 50) * 0.4;
 
                         let lineW = 0;
-                        chars.forEach(c => lineW += ctx.measureText(c).width);
+                        rawChars.forEach(({ char: c, token: t }) => {
+                            ctx.font = getFontFn(t);
+                            lineW += ctx.measureText(c).width;
+                        });
 
                         let startCharX = startX - (lineW / 2);
                         if (block.style.align === 'left') startCharX = bx + paddingPx;
@@ -561,7 +605,8 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                         ctx.textAlign = 'center';
 
                         for (let k = 0; k < count; k++) {
-                            const char = chars[k];
+                            const { char, token: tok } = rawChars[k];
+                            ctx.font = getFontFn(tok);
                             const cw = ctx.measureText(char).width;
                             const charCenterX = curX + (cw / 2);
                             const t = count > 1 ? (k - (count - 1) / 2) / ((count - 1) / 2) : 0;
@@ -620,7 +665,7 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                                 ctx.shadowOffsetX = shadowOffsetX;
                                 ctx.shadowOffsetY = shadowOffsetY;
                             }
-                            ctx.fillStyle = block.style.textColor || '#000000';
+                            ctx.fillStyle = tok.color || block.style.textColor || '#000000';
                             ctx.fillText(char, 0, 0);
                             ctx.restore();
 
@@ -629,72 +674,102 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
                             curX += cw;
                         }
                     } else {
-                        ctx.textAlign = block.style.align || 'center';
+                        // Measure total line width with individual token fonts
+                        let measuredLineWidth = 0;
+                        const tokenMeasures = lineTokens.map(tok => {
+                            const tokFontSpec = getFontFn(tok);
+                            ctx.font = tokFontSpec;
+                            const w = ctx.measureText(tok.text).width;
+                            measuredLineWidth += w;
+                            const tokSize = fontSizePx * (tok.sizeRatio || 1.0);
+                            return { tok, w, fontSpec: tokFontSpec, tokSize };
+                        });
 
-                        // Viền 2 (Outer Stroke / Glow)
-                        if (strokeWidth2 > 0) {
+                        let curTokenX = startX;
+                        if (!block.style.align || block.style.align === 'center') {
+                            curTokenX = startX - (measuredLineWidth / 2);
+                        } else if (block.style.align === 'right') {
+                            curTokenX = startX - measuredLineWidth;
+                        }
+
+                        ctx.textAlign = 'left';
+
+                        tokenMeasures.forEach(({ tok, w: tokenW, fontSpec: tokFontSpec, tokSize }) => {
+                            ctx.font = tokFontSpec;
+
+                            // Viền 2 (Outer Stroke / Glow)
+                            if (strokeWidth2 > 0) {
+                                ctx.save();
+                                if (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0) {
+                                    ctx.shadowColor = shadowColor;
+                                    ctx.shadowBlur = shadowBlurPx;
+                                    ctx.shadowOffsetX = shadowOffsetX;
+                                    ctx.shadowOffsetY = shadowOffsetY;
+                                }
+                                ctx.lineWidth = strokeWidthPx + (strokeWidth2Px * 2);
+                                ctx.strokeStyle = strokeColor2;
+                                ctx.lineJoin = 'round';
+                                ctx.miterLimit = 2;
+                                ctx.strokeText(tok.text, curTokenX, lineY);
+                                ctx.restore();
+                            }
+
+                            // Viền 1 (Primary Stroke)
+                            if (strokeWidth > 0) {
+                                ctx.save();
+                                if (strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
+                                    ctx.shadowColor = shadowColor;
+                                    ctx.shadowBlur = shadowBlurPx;
+                                    ctx.shadowOffsetX = shadowOffsetX;
+                                    ctx.shadowOffsetY = shadowOffsetY;
+                                }
+                                ctx.lineWidth = strokeWidthPx;
+                                ctx.strokeStyle = strokeColor;
+                                ctx.lineJoin = 'round';
+                                ctx.miterLimit = 2;
+                                ctx.strokeText(tok.text, curTokenX, lineY);
+                                ctx.restore();
+                            }
+
+                            // Thân chữ (Fill Text)
                             ctx.save();
-                            if (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0) {
+                            if (strokeWidth === 0 && strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
                                 ctx.shadowColor = shadowColor;
                                 ctx.shadowBlur = shadowBlurPx;
                                 ctx.shadowOffsetX = shadowOffsetX;
                                 ctx.shadowOffsetY = shadowOffsetY;
                             }
-                            ctx.lineWidth = strokeWidthPx + (strokeWidth2Px * 2);
-                            ctx.strokeStyle = strokeColor2;
-                            ctx.lineJoin = 'round';
-                            ctx.miterLimit = 2;
-                            ctx.strokeText(lineText, startX, lineY);
+                            ctx.fillStyle = tok.color || block.style.textColor || '#000000';
+                            ctx.fillText(tok.text, curTokenX, lineY);
                             ctx.restore();
-                        }
 
-                        // Viền 1 (Primary Stroke)
-                        if (strokeWidth > 0) {
-                            ctx.save();
-                            if (strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
-                                ctx.shadowColor = shadowColor;
-                                ctx.shadowBlur = shadowBlurPx;
-                                ctx.shadowOffsetX = shadowOffsetX;
-                                ctx.shadowOffsetY = shadowOffsetY;
+                            // Gạch chân (Underline)
+                            if (tok.underline || block.style.underline) {
+                                ctx.save();
+                                ctx.strokeStyle = tok.color || block.style.textColor || '#000000';
+                                ctx.lineWidth = Math.max(1, tokSize * 0.08);
+                                ctx.beginPath();
+                                const underlineY = lineY + (tokSize * 0.55);
+                                ctx.moveTo(curTokenX, underlineY);
+                                ctx.lineTo(curTokenX + tokenW, underlineY);
+                                ctx.stroke();
+                                ctx.restore();
                             }
-                            ctx.lineWidth = strokeWidthPx;
-                            ctx.strokeStyle = strokeColor;
-                            ctx.lineJoin = 'round';
-                            ctx.miterLimit = 2;
-                            ctx.strokeText(lineText, startX, lineY);
-                            ctx.restore();
-                        }
 
-                        // Thân chữ (Fill Text)
-                        ctx.save();
-                        if (strokeWidth === 0 && strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
-                            ctx.shadowColor = shadowColor;
-                            ctx.shadowBlur = shadowBlurPx;
-                            ctx.shadowOffsetX = shadowOffsetX;
-                            ctx.shadowOffsetY = shadowOffsetY;
-                        }
-                        ctx.fillStyle = block.style.textColor || '#000000';
-                        ctx.fillText(lineText, startX, lineY);
-                        ctx.restore();
+                            // Gạch ngang (Strikethrough)
+                            if (tok.strikethrough) {
+                                ctx.save();
+                                ctx.strokeStyle = tok.color || block.style.textColor || '#000000';
+                                ctx.lineWidth = Math.max(1, tokSize * 0.08);
+                                ctx.beginPath();
+                                ctx.moveTo(curTokenX, lineY);
+                                ctx.lineTo(curTokenX + tokenW, lineY);
+                                ctx.stroke();
+                                ctx.restore();
+                            }
 
-                        // Gạch chân (Underline)
-                        if (block.style.underline) {
-                            const textMetrics = ctx.measureText(lineText);
-                            const textW = textMetrics.width;
-                            let lineStartX = startX - textW / 2;
-                            if (block.style.align === 'left') lineStartX = startX;
-                            else if (block.style.align === 'right') lineStartX = startX - textW;
-
-                            ctx.save();
-                            ctx.strokeStyle = block.style.textColor || '#000000';
-                            ctx.lineWidth = Math.max(1, fontSizePx * 0.08);
-                            ctx.beginPath();
-                            const underlineY = lineY + (fontSizePx * 0.55);
-                            ctx.moveTo(lineStartX, underlineY);
-                            ctx.lineTo(lineStartX + textW, underlineY);
-                            ctx.stroke();
-                            ctx.restore();
-                        }
+                            curTokenX += tokenW;
+                        });
                     }
                     ctx.restore();
                 }

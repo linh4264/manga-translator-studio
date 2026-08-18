@@ -1,6 +1,6 @@
 import { globalState, pushStateToHistory, savePageToDB, uiUpdateActiveBlockEditor, uiSetRightTab } from '../../core/state.js';
 import { elements } from '../../core/elements.js';
-import { showToast, setMultilineText } from '../../core/utils.js';
+import { showToast, setMultilineText, stripRichTextTags, parseRichTextTokens, parseRichTextLines, hasRichTextTags } from '../../core/utils.js';
 import { computeBubbleMask } from '../ocr/ocr-service.js';
 import { autoFitAllBlocksOnPage, autoFitBlock, isBlockAutoFit } from './canvas-styling.js';
 import { startBlockDrag, startBlockResize } from './canvas-interactions.js';
@@ -522,8 +522,9 @@ export function wrapCanvasText(ctx, text, maxWidth) {
             const word = words[i];
             const needsSpace = !currentLine.endsWith('-') && !currentLine.endsWith('–') && !currentLine.endsWith('—');
             const testLine = needsSpace ? currentLine + ' ' + word : currentLine + word;
+            const measureLine = stripRichTextTags(testLine);
 
-            if (ctx.measureText(testLine).width <= maxWidth) {
+            if (ctx.measureText(measureLine).width <= maxWidth) {
                 currentLine = testLine;
             } else {
                 resultLines.push(currentLine);
@@ -534,6 +535,75 @@ export function wrapCanvasText(ctx, text, maxWidth) {
             resultLines.push(currentLine);
         }
     }
+    return resultLines;
+}
+
+export function wrapCanvasDiamondText(ctx, text, maxW, maxH, lineHeight = 20) {
+    if (!text) return [];
+    const rawParagraphs = text.split('\n');
+    const resultLines = [];
+
+    for (const para of rawParagraphs) {
+        const trimmed = para.trim();
+        if (!trimmed) {
+            resultLines.push('');
+            continue;
+        }
+
+        const spaceTokens = trimmed.split(/\s+/);
+        const words = [];
+        for (const token of spaceTokens) {
+            if (!token) continue;
+            const parts = token.split(/([-–—])/);
+            let subWord = '';
+            for (let p = 0; p < parts.length; p++) {
+                const part = parts[p];
+                if (!part) continue;
+                subWord += part;
+                if (part === '-' || part === '–' || part === '—' || p === parts.length - 1) {
+                    words.push(subWord);
+                    subWord = '';
+                }
+            }
+        }
+
+        if (words.length <= 1) {
+            resultLines.push(trimmed);
+            continue;
+        }
+
+        // Ước tính số dòng mục tiêu cho hình elip
+        const totalCleanWidth = words.reduce((acc, w) => acc + ctx.measureText(stripRichTextTags(w) + ' ').width, 0);
+        const avgAvailableWidth = maxW * 0.76;
+        let targetLines = Math.max(2, Math.min(Math.floor(maxH / Math.max(1, lineHeight)), Math.ceil(totalCleanWidth / Math.max(10, avgAvailableWidth))));
+        targetLines = Math.max(2, Math.min(words.length, targetLines));
+
+        let currentLine = words[0];
+        let currentLineIdx = 0;
+
+        for (let i = 1; i < words.length; i++) {
+            const word = words[i];
+            const needsSpace = !currentLine.endsWith('-') && !currentLine.endsWith('–') && !currentLine.endsWith('—');
+            const testLine = needsSpace ? currentLine + ' ' + word : currentLine + word;
+
+            const normalizedY = targetLines > 1 ? -0.5 + (currentLineIdx + 0.5) / targetLines : 0;
+            const widthFactor = Math.sqrt(Math.max(0.18, 1 - 4 * normalizedY * normalizedY));
+            const lineMaxW = Math.max(20, maxW * widthFactor);
+
+            const testMeasure = stripRichTextTags(testLine);
+            if (ctx.measureText(testMeasure).width <= lineMaxW) {
+                currentLine = testLine;
+            } else {
+                resultLines.push(currentLine);
+                currentLine = word;
+                currentLineIdx++;
+            }
+        }
+        if (currentLine) {
+            resultLines.push(currentLine);
+        }
+    }
+
     return resultLines;
 }
 
@@ -571,38 +641,161 @@ export function wrapCanvasVerticalText(text, maxHeight, fontSizePx) {
     return columns;
 }
 
+export function wrapRichTextTokens(ctx, tokenLines, maxW, isDiamond = false, maxH = 200, lineHeight = 20, getFontFn = null) {
+    if (!tokenLines || tokenLines.length === 0) return [];
+    const wrappedLines = [];
+
+    for (const lineTokens of tokenLines) {
+        if (!lineTokens || lineTokens.length === 0) {
+            wrappedLines.push([]);
+            continue;
+        }
+
+        const wordTokens = [];
+        for (const tok of lineTokens) {
+            if (!tok.text) continue;
+            const words = tok.text.split(/(\s+)/);
+            for (const w of words) {
+                if (!w) continue;
+                wordTokens.push({
+                    text: w,
+                    isSpace: /^\s+$/.test(w),
+                    bold: !!tok.bold,
+                    italic: !!tok.italic,
+                    underline: !!tok.underline,
+                    strikethrough: !!tok.strikethrough,
+                    color: tok.color || null,
+                    sizeRatio: tok.sizeRatio || 1.0,
+                    font: tok.font || null
+                });
+            }
+        }
+
+        if (wordTokens.length === 0) {
+            wrappedLines.push([]);
+            continue;
+        }
+
+        const measureTokenWidth = (wt) => {
+            if (getFontFn) {
+                const prevFont = ctx.font;
+                ctx.font = getFontFn(wt);
+                const w = ctx.measureText(wt.text).width;
+                ctx.font = prevFont;
+                return w;
+            }
+            return ctx.measureText(wt.text).width;
+        };
+
+        const totalCleanWidth = wordTokens.reduce((acc, wt) => acc + measureTokenWidth(wt), 0);
+        const avgAvailableWidth = maxW * 0.76;
+        let targetLines = isDiamond
+            ? Math.max(2, Math.min(Math.floor(maxH / Math.max(1, lineHeight)), Math.ceil(totalCleanWidth / Math.max(10, avgAvailableWidth))))
+            : 1;
+
+        let currentLine = [];
+        let currentLineWidth = 0;
+        let currentLineIdx = 0;
+
+        const getLineMaxW = (idx) => {
+            if (!isDiamond) return maxW;
+            const normalizedY = targetLines > 1 ? -0.5 + (idx + 0.5) / targetLines : 0;
+            const widthFactor = Math.sqrt(Math.max(0.18, 1 - 4 * normalizedY * normalizedY));
+            return Math.max(20, maxW * widthFactor);
+        };
+
+        for (let i = 0; i < wordTokens.length; i++) {
+            const wt = wordTokens[i];
+            if (wt.isSpace && currentLine.length === 0) {
+                continue;
+            }
+
+            const tokW = measureTokenWidth(wt);
+            const lineMaxW = getLineMaxW(currentLineIdx);
+
+            if (currentLine.length === 0 || (currentLineWidth + tokW <= lineMaxW) || wt.isSpace) {
+                currentLine.push(wt);
+                currentLineWidth += tokW;
+            } else {
+                while (currentLine.length > 0 && currentLine[currentLine.length - 1].isSpace) {
+                    currentLine.pop();
+                }
+                wrappedLines.push(currentLine);
+                currentLineIdx++;
+                currentLine = wt.isSpace ? [] : [wt];
+                currentLineWidth = wt.isSpace ? 0 : tokW;
+            }
+        }
+
+        if (currentLine.length > 0) {
+            while (currentLine.length > 0 && currentLine[currentLine.length - 1].isSpace) {
+                currentLine.pop();
+            }
+            if (currentLine.length > 0) {
+                wrappedLines.push(currentLine);
+            }
+        }
+    }
+
+    return wrappedLines;
+}
+
 export function balanceTextToDiamond(text, boxW, boxH) {
     if (!text) return '';
-    const cleanText = text.replace(/\r\n/g, ' ').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
-    const words = cleanText.split(' ');
-    if (words.length <= 3) return words.join(' ');
+    const cleanText = text.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!cleanText) return '';
 
-    const wordCount = words.length;
+    const tokenLines = parseRichTextLines(cleanText);
+    const tokens = tokenLines.flat();
+    if (tokens.length === 0) return cleanText;
+
+    const wordsWithTags = [];
+    tokens.forEach(tok => {
+        const segs = tok.text.trim().split(/\s+/);
+        segs.forEach((seg) => {
+            if (!seg) return;
+            let tagPrefix = '';
+            let tagSuffix = '';
+            if (tok.bold) { tagPrefix += '[b]'; tagSuffix = '[/b]' + tagSuffix; }
+            if (tok.italic) { tagPrefix += '[i]'; tagSuffix = '[/i]' + tagSuffix; }
+            if (tok.underline) { tagPrefix += '[u]'; tagSuffix = '[/u]' + tagSuffix; }
+            if (tok.strikethrough) { tagPrefix += '[s]'; tagSuffix = '[/s]' + tagSuffix; }
+            if (tok.color) { tagPrefix += `[color=${tok.color}]`; tagSuffix = '[/color]' + tagSuffix; }
+            if (tok.sizeRatio && tok.sizeRatio !== 1) {
+                tagPrefix += `[size=${Math.round(tok.sizeRatio * 100)}%]`;
+                tagSuffix = '[/size]' + tagSuffix;
+            }
+            if (tok.font) { tagPrefix += `[font=${tok.font}]`; tagSuffix = '[/font]' + tagSuffix; }
+            wordsWithTags.push({
+                raw: `${tagPrefix}${seg}${tagSuffix}`,
+                clean: seg
+            });
+        });
+    });
+
+    const wordCount = wordsWithTags.length;
+    if (wordCount <= 3) return wordsWithTags.map(w => w.raw).join(' ');
+
     let numLines = 3;
+    if (wordCount <= 5) numLines = 2;
+    else if (wordCount <= 10) numLines = 3;
+    else if (wordCount <= 18) numLines = 4;
+    else numLines = Math.min(5, Math.ceil(wordCount / 4));
 
     if (boxW && boxH && boxH > 0) {
         const aspect = boxW / boxH;
-        if (aspect < 0.6) {
-            numLines = Math.min(wordCount, Math.max(3, Math.ceil(wordCount / 2.2)));
-        } else if (aspect < 0.9) {
-            numLines = Math.min(wordCount, Math.max(3, Math.ceil(wordCount / 3)));
-        } else if (aspect > 1.6) {
-            numLines = Math.max(2, Math.min(4, Math.floor(wordCount / 4.5)));
-        } else {
-            numLines = wordCount <= 5 ? 2 : wordCount <= 9 ? 3 : wordCount <= 16 ? 4 : 5;
+        if (aspect < 0.65 && wordCount >= 6) {
+            numLines = Math.min(wordCount, Math.max(3, Math.min(5, Math.ceil(wordCount / 3))));
+        } else if (aspect > 1.5 && wordCount >= 4) {
+            numLines = Math.max(2, Math.min(3, Math.floor(wordCount / 4)));
         }
-    } else {
-        if (wordCount <= 5) numLines = 2;
-        else if (wordCount <= 9) numLines = 3;
-        else if (wordCount <= 16) numLines = 4;
-        else numLines = 5;
     }
     numLines = Math.max(2, Math.min(wordCount, numLines));
 
     let weights = [];
     for (let i = 0; i < numLines; i++) {
         const y = -0.5 + (i + 0.5) / numLines;
-        const widthFactor = Math.sqrt(Math.max(0.12, 1 - 4 * y * y));
+        const widthFactor = Math.sqrt(Math.max(0.25, 1 - 4 * y * y));
         weights.push(widthFactor);
     }
     const totalWeight = weights.reduce((a, b) => a + b, 0);
@@ -625,8 +818,7 @@ export function balanceTextToDiamond(text, boxW, boxH) {
         }
     }
 
-    // 🛡️ CHỐNG RỚT TỪ ĐƠN (Orphan Word Prevention): Không để dòng cuối chỉ có 1 từ nếu tổng số từ >= 4
-    if (lineCounts.length >= 2 && lineCounts[lineCounts.length - 1] === 1 && wordCount >= 4) {
+    if (lineCounts.length >= 2 && lineCounts[lineCounts.length - 1] === 1 && wordCount >= 5) {
         const prevIdx = lineCounts.length - 2;
         if (lineCounts[prevIdx] > 2) {
             lineCounts[prevIdx]--;
@@ -637,12 +829,13 @@ export function balanceTextToDiamond(text, boxW, boxH) {
     let resultLines = [];
     let wordIdx = 0;
     lineCounts.forEach(count => {
-        const lineWords = words.slice(wordIdx, wordIdx + count);
+        const lineWords = wordsWithTags.slice(wordIdx, wordIdx + count);
         if (lineWords.length > 0) {
-            resultLines.push(lineWords.join(' '));
+            resultLines.push(lineWords.map(w => w.raw).join(' '));
         }
         wordIdx += count;
     });
+
     return resultLines.join('\n');
 }
 
@@ -653,10 +846,15 @@ export function applyDiamondFormat() {
     if (block) {
         const formatted = balanceTextToDiamond(block.translated, block.box ? block.box.w : null, block.box ? block.box.h : null);
         block.translated = formatted;
-        elements.editTranslatedText.value = formatted;
+        if (elements.editTranslatedText) {
+            elements.editTranslatedText.value = formatted;
+        }
+        block.autoFitCache = null;
+        block.maskCache = null;
 
         import('./canvas-styling.js').then(m => m.syncActiveBlockTranslation(formatted));
         requestOverlayRender();
+        savePageToDB(page);
     }
 }
 

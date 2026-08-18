@@ -180,7 +180,9 @@ export function changeZoom(amount, mouseEvent = null) {
     }
 
     if (elements.workspaceSplitWrapper) {
-        elements.workspaceSplitWrapper.style.transform = `scale(${globalState.zoom / 100})`;
+        elements.workspaceSplitWrapper.style.height = `${globalState.zoom}%`;
+        elements.workspaceSplitWrapper.style.maxHeight = 'none';
+        elements.workspaceSplitWrapper.style.transform = 'none';
     }
 
     requestOverlayRender();
@@ -216,7 +218,9 @@ export function resetZoom() {
     }
 
     if (elements.workspaceSplitWrapper) {
-        elements.workspaceSplitWrapper.style.transform = 'scale(1)';
+        elements.workspaceSplitWrapper.style.height = '100%';
+        elements.workspaceSplitWrapper.style.maxHeight = '100%';
+        elements.workspaceSplitWrapper.style.transform = 'none';
     }
 
     requestOverlayRender();

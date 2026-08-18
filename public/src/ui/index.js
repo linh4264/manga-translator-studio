@@ -12,7 +12,8 @@ import { selectPage, removePage, updatePageListUI, filterPagesList, toggleExport
 import {
     updateActiveBlockEditor, restoreBackgroundForBlock, restoreOriginalBackground,
     syncTextColorHex, syncBgColorHex, syncStrokeColorHex, syncShadowColorHex,
-    setBilingualMode, setActiveBlockGender, setBlockType
+    setBilingualMode, setActiveBlockGender, setBlockType,
+    insertRichTextTag, applyRichColorToSelection, applyRichSizeToSelection, clearRichFormattingFromSelection, toggleDiamondWrapActiveBlock
 } from './block-editor-ui.js';
 
 import {
@@ -105,7 +106,14 @@ export function initEventListeners() {
             e.preventDefault();
             dropzone.classList.remove('border-indigo-500', 'bg-indigo-600/5');
             if (e.dataTransfer.files?.length) {
-                import('../features/io.js').then(io => io.handleUploadedFiles(e.dataTransfer.files));
+                const fontFiles = Array.from(e.dataTransfer.files).filter(f => /\.(ttf|otf|woff|woff2)$/i.test(f.name));
+                if (fontFiles.length > 0) {
+                    import('./font-ui.js').then(f => f.uploadCustomFonts(fontFiles));
+                }
+                const nonFontFiles = Array.from(e.dataTransfer.files).filter(f => !/\.(ttf|otf|woff|woff2)$/i.test(f.name));
+                if (nonFontFiles.length > 0) {
+                    import('../features/io.js').then(io => io.handleUploadedFiles(nonFontFiles));
+                }
             }
         });
     }
@@ -113,7 +121,14 @@ export function initEventListeners() {
     if (fileInput) {
         fileInput.addEventListener('change', (e) => {
             if (e.target.files?.length) {
-                import('../features/io.js').then(io => io.handleUploadedFiles(e.target.files));
+                const fontFiles = Array.from(e.target.files).filter(f => /\.(ttf|otf|woff|woff2)$/i.test(f.name));
+                if (fontFiles.length > 0) {
+                    import('./font-ui.js').then(f => f.uploadCustomFonts(fontFiles));
+                }
+                const nonFontFiles = Array.from(e.target.files).filter(f => !/\.(ttf|otf|woff|woff2)$/i.test(f.name));
+                if (nonFontFiles.length > 0) {
+                    import('../features/io.js').then(io => io.handleUploadedFiles(nonFontFiles));
+                }
             }
         });
     }
@@ -121,16 +136,22 @@ export function initEventListeners() {
     const viewport = document.getElementById('workspace-viewport');
     if (viewport) {
         viewport.addEventListener('dragover', (e) => {
-            if (globalState.activePageIndex !== -1) {
-                e.preventDefault();
-            }
+            e.preventDefault();
         });
         viewport.addEventListener('drop', (e) => {
-            if (globalState.activePageIndex !== -1 && e.dataTransfer.files?.length) {
-                const file = e.dataTransfer.files[0];
-                if (file && file.type.startsWith('image/')) {
+            if (e.dataTransfer.files?.length) {
+                const fontFiles = Array.from(e.dataTransfer.files).filter(f => /\.(ttf|otf|woff|woff2)$/i.test(f.name));
+                if (fontFiles.length > 0) {
                     e.preventDefault();
-                    import('./pages-ui.js').then(p => p.replacePageBackgroundImage(globalState.activePageIndex, file));
+                    import('./font-ui.js').then(f => f.uploadCustomFonts(fontFiles));
+                    return;
+                }
+                if (globalState.activePageIndex !== -1) {
+                    const file = e.dataTransfer.files[0];
+                    if (file && file.type.startsWith('image/')) {
+                        e.preventDefault();
+                        import('./pages-ui.js').then(p => p.replacePageBackgroundImage(globalState.activePageIndex, file));
+                    }
                 }
             }
         });
@@ -422,7 +443,26 @@ export function initEventListeners() {
             }
         }
 
-        if (isTextInputActive(e.target)) return;
+        if (isTextInputActive(e.target)) {
+            if ((e.ctrlKey || e.metaKey) && e.target.id === 'edit-translated-text') {
+                if (e.key.toLowerCase() === 'b') {
+                    e.preventDefault();
+                    insertRichTextTag('[b]', '[/b]');
+                    return;
+                }
+                if (e.key.toLowerCase() === 'i') {
+                    e.preventDefault();
+                    insertRichTextTag('[i]', '[/i]');
+                    return;
+                }
+                if (e.key.toLowerCase() === 'u') {
+                    e.preventDefault();
+                    insertRichTextTag('[u]', '[/u]');
+                    return;
+                }
+            }
+            return;
+        }
 
         // Ctrl + A: Select all blocks on active page
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
@@ -445,10 +485,42 @@ export function initEventListeners() {
             return;
         }
 
-        // E key: Toggle Eraser / Inpainting Mode
+        // E key: Toggle Eraser Mode
         if ((e.key === 'e' || e.key === 'E') && !e.ctrlKey && !e.metaKey) {
             e.preventDefault();
             import('../features/inpainting.js').then(inpainting => inpainting.toggleEraserMode());
+            return;
+        }
+
+        // B key (without Ctrl): Brush / Inpainting Mode
+        if ((e.key === 'b' || e.key === 'B') && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            import('../features/inpainting.js').then(inpainting => inpainting.toggleEraserMode());
+            return;
+        }
+
+        // T key (without Ctrl): Text Tool - Add or edit text
+        if ((e.key === 't' || e.key === 'T') && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            if (globalState.selectedBlockId !== null) {
+                import('../features/canvas/canvas-renderer.js').then(canvas => canvas.triggerInlineEditActiveBlock());
+            } else {
+                import('../features/canvas/canvas-service.js').then(canvas => canvas.addNewBlock());
+            }
+            return;
+        }
+
+        // H key (without Ctrl): Hand Pan Tool info
+        if ((e.key === 'h' || e.key === 'H') && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            import('../core/utils.js').then(u => u.showToast("Công cụ Hand (Pan): Giữ phím Space hoặc bấm chuột giữa để kéo trang truyện.", "info"));
+            return;
+        }
+
+        // Z key (without Ctrl): Zoom tool (+15% or -15% with Alt/Shift)
+        if ((e.key === 'z' || e.key === 'Z') && !e.ctrlKey && !e.metaKey) {
+            e.preventDefault();
+            changeZoom(e.altKey || e.shiftKey ? -15 : 15);
             return;
         }
 
@@ -459,12 +531,20 @@ export function initEventListeners() {
             return;
         }
 
-        // V key: Cycle View Mode (overlay -> split -> original)
+        // V key: Select / Move tool (if selected, clear selection; else cycle view mode)
         if ((e.key === 'v' || e.key === 'V') && !e.ctrlKey && !e.metaKey) {
             e.preventDefault();
-            const nextMode = globalState.viewMode === 'overlay' ? 'split' : (globalState.viewMode === 'split' ? 'original' : 'overlay');
-            setViewMode(nextMode);
-            import('../core/utils.js').then(u => u.showToast(`Chế độ xem: ${nextMode.toUpperCase()}`, 'info'));
+            if (globalState.selectedBlockId !== null) {
+                globalState.selectedBlockId = null;
+                globalState.selectedBlockIds = [];
+                updateActiveBlockEditor();
+                import('../features/canvas/canvas-service.js').then(cs => cs.requestOverlayRender());
+                import('../core/utils.js').then(u => u.showToast("Công cụ Select (V): Đã bỏ chọn ô thoại.", "info"));
+            } else {
+                const nextMode = globalState.viewMode === 'overlay' ? 'split' : (globalState.viewMode === 'split' ? 'original' : 'overlay');
+                setViewMode(nextMode);
+                import('../core/utils.js').then(u => u.showToast(`Chế độ xem: ${nextMode.toUpperCase()}`, 'info'));
+            }
             return;
         }
 
@@ -783,5 +863,10 @@ Object.assign(window, {
     filterPagesList,
     setBilingualMode,
     setActiveBlockGender,
-    runLocalOcrDetectionOnPage
+    runLocalOcrDetectionOnPage,
+    insertRichTextTag,
+    applyRichColorToSelection,
+    applyRichSizeToSelection,
+    clearRichFormattingFromSelection,
+    toggleDiamondWrapActiveBlock
 });
