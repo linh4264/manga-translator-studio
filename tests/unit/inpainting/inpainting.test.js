@@ -8,7 +8,7 @@ import {
     isEraserModeActive,
     setIsEraserModeActive,
     autoCleanBubbleBackground
-} from '../../../public/src/features/inpainting.js';
+} from '../../../src/features/inpainting.ts';
 import { patchCanvasElement } from '../../setup/canvas-mock.js';
 
 test('Inpainting - Mode Activation and State', () => {

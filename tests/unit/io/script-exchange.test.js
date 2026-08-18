@@ -6,8 +6,8 @@ import {
     parseTxtScript,
     parseTxtBlocksSection,
     applyScriptPagesToProject
-} from '../../../public/src/features/io.js';
-import { globalState } from '../../../public/src/core/state.js';
+} from '../../../src/features/io.ts';
+import { globalState } from '../../../src/core/state.ts';
 
 // Script Exchange helpers
 function exportScriptToJson(pages) {

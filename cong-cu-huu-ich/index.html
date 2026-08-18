@@ -1,0 +1,1904 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bộ Công cụ Hữu ích Toàn năng | Manga Translator Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        slate: {
+                            850: '#1e293b',
+                            950: '#0b0f19',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Third-party Client-Side Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- TOP NAVIGATION HEADER -->
+    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur-md sticky top-0 z-40 px-4 py-3 flex items-center justify-between shadow-2xl">
+        <div class="flex items-center gap-3">
+            <a href="/" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all shadow-sm group">
+                <i class="fa-solid fa-arrow-left text-slate-400 group-hover:-translate-x-0.5 transition-transform"></i>
+                <span>Về Manga Studio</span>
+            </a>
+            <div class="h-4 w-px bg-slate-800 hidden sm:block"></div>
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                    <i class="fa-solid fa-toolbox text-sm"></i>
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold text-slate-100 leading-none">Bộ Công Cụ Hữu Ích Toàn Năng</h1>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Xử lý PDF, Gộp/Cắt Webtoon, Nén ảnh, Chuyển định dạng & OCR 100% Offline</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="hidden lg:flex items-center gap-2">
+            <span class="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Offline 100% (Bảo mật tuyệt đối)
+            </span>
+        </div>
+    </header>
+
+    <!-- SUB-HEADER TOOL NAVIGATION TABS -->
+    <div class="bg-slate-900/60 border-b border-slate-800 px-4 py-2 overflow-x-auto custom-scrollbar sticky top-[57px] z-30 shadow-md">
+        <div class="max-w-7xl mx-auto flex items-center gap-2 min-w-max">
+            <button id="btn-tab-pdf" onclick="switchTab('pdf')" class="tab-btn active px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 bg-indigo-600 text-white shadow-sm">
+                <i class="fa-solid fa-file-pdf"></i> PDF sang PNG
+            </button>
+            <button id="btn-tab-slice" onclick="switchTab('slice')" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-scissors"></i> Cắt Ảnh Dọc
+            </button>
+            <button id="btn-tab-merge" onclick="switchTab('merge')" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-link"></i> Gộp Nối Ảnh Dài
+            </button>
+            <button id="btn-tab-compress" onclick="switchTab('compress')" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-compress"></i> Nén & Tối Ưu
+            </button>
+            <button id="btn-tab-convert" onclick="switchTab('convert')" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-repeat"></i> Đổi Đuôi Định Dạng
+            </button>
+            <button id="btn-tab-enhance" onclick="switchTab('enhance')" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Tăng Độ Nét
+            </button>
+            <button id="btn-tab-ocr" onclick="switchTab('ocr')" class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200">
+                <i class="fa-solid fa-quote-left"></i> Trích Xuất Chữ AI
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col gap-6">
+
+        <!-- ================================================================= -->
+        <!-- 1. PDF TO PNG -->
+        <!-- ================================================================= -->
+        <!-- ================================================================= -->
+        <!-- 1. PDF TO PNG / IMAGE CONVERTER -->
+        <!-- ================================================================= -->
+        <section id="sec-pdf" class="tool-sec flex flex-col gap-6">
+            <div id="pdf-upload" onclick="document.getElementById('pdf-file').click()" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all text-center flex flex-col items-center justify-center gap-3 cursor-pointer group shadow-xl relative">
+                <input type="file" id="pdf-file" accept="application/pdf,.pdf" class="hidden">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform"><i class="fa-solid fa-file-pdf text-3xl"></i></div>
+                <h2 class="text-base font-bold text-slate-200">Kéo thả tệp PDF vào đây hoặc <span class="text-indigo-400 underline">Chọn tệp</span></h2>
+                <p class="text-xs text-slate-400">Trích xuất mọi trang PDF thành ảnh PNG / JPG / WEBP sắc nét từng trang một hoặc đóng gói tải trọn bộ file ZIP</p>
+            </div>
+
+            <div id="pdf-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <!-- Top Toolbar -->
+                <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400">
+                            <i class="fa-solid fa-file-pdf text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 id="pdf-name" class="text-sm font-bold text-slate-200 truncate max-w-xs md:max-w-md">file.pdf</h3>
+                            <p id="pdf-info" class="text-xs font-mono text-slate-400">0 trang • 0 MB</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button onclick="resetPdfConverter()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 shadow transition-colors flex items-center gap-1.5">
+                            <i class="fa-solid fa-rotate-left"></i> Chọn PDF khác
+                        </button>
+                        <button id="btn-pdf-zip" onclick="downloadPdfZip()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg transition-colors flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-zipper"></i> Tải Tất Cả (ZIP)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Settings Controls -->
+                <div class="flex flex-col gap-3 bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 items-center">
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[11px] font-bold text-slate-400">Độ phân giải (DPI)</label>
+                            <select id="pdf-scale" onchange="renderPdfPagesDebounced()" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                                <option value="1.0">72 DPI (Tiêu chuẩn 1x)</option>
+                                <option value="1.5">110 DPI (HD 1.5x)</option>
+                                <option value="2.0" selected>150 DPI (Full HD 2x - Khuyên dùng)</option>
+                                <option value="3.0">225 DPI (2K 3x - Siêu nét)</option>
+                                <option value="4.0">300 DPI (4K 4x - Bản in)</option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[11px] font-bold text-slate-400">Định dạng ảnh xuất</label>
+                            <select id="pdf-format" onchange="onPdfFormatChange()" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                                <option value="image/png" selected>PNG (Gốc nét 100%)</option>
+                                <option value="image/webp">WEBP (Tối ưu - Nhẹ & Nét)</option>
+                                <option value="image/jpeg">JPG (Tiêu chuẩn)</option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[11px] font-bold text-slate-400">Dải trang xuất (VD: 1-5, 8)</label>
+                            <input type="text" id="pdf-range" placeholder="Tất cả trang (VD: 1-5, 8)" onchange="renderPdfPagesDebounced()" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500">
+                        </div>
+
+                        <div class="flex flex-col gap-1">
+                            <label class="text-[11px] font-bold text-slate-400">Trạng thái xử lý</label>
+                            <div id="pdf-status" class="text-xs text-slate-300 bg-slate-900 px-3 py-2 rounded-xl border border-slate-800 font-mono truncate flex items-center gap-1.5">
+                                <i class="fa-solid fa-circle-check text-emerald-400"></i> Sẵn sàng
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress bar -->
+                    <div id="pdf-progress-container" class="hidden w-full bg-slate-900 rounded-full h-2 overflow-hidden border border-slate-800 mt-1">
+                        <div id="pdf-progress-bar" class="bg-indigo-600 h-full w-0 transition-all duration-200"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="pdf-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+        </section>
+
+
+        <!-- ================================================================= -->
+        <!-- ================================================================= -->
+        <!-- 2. VERTICAL IMAGE SLICER -->
+        <!-- ================================================================= -->
+        <section id="sec-slice" class="tool-sec hidden flex-col gap-6">
+            <div id="slice-upload" onclick="document.getElementById('slice-file').click()" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all text-center flex flex-col items-center justify-center gap-3 cursor-pointer group shadow-xl relative">
+                <input type="file" id="slice-file" accept="image/*" class="hidden">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform"><i class="fa-solid fa-scissors text-3xl"></i></div>
+                <h2 class="text-base font-bold text-slate-200">Kéo thả ảnh Webtoon/Manga vào đây hoặc <span class="text-indigo-400 underline">Chọn ảnh</span></h2>
+                <p class="text-xs text-slate-400">Cắt dải ảnh dọc thành các phần nhỏ chuẩn Webtoon, hỗ trợ tự động tìm khe phân khung thông minh tránh cắt trúng chữ</p>
+            </div>
+
+            <div id="slice-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <!-- Header Controls -->
+                <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                            <i class="fa-solid fa-scissors text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 id="slice-filename" class="text-sm font-bold text-slate-200 truncate max-w-xs md:max-w-md">image.png</h3>
+                            <p id="slice-dim" class="text-xs font-mono text-slate-400">0 x 0 px • 0 MB</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button onclick="resetSlice()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 shadow transition-colors flex items-center gap-1.5">
+                            <i class="fa-solid fa-rotate-left"></i> Chọn ảnh khác
+                        </button>
+                        <button id="btn-slice-zip" onclick="downloadSlicedZip()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg transition-colors flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-zipper"></i> Tải Tất Cả (ZIP)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Settings Controls -->
+                <div class="flex flex-col gap-3 bg-slate-950 p-3.5 rounded-xl border border-slate-800">
+                    <!-- Top Row: Mode Switcher & Format -->
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                        <!-- Segmented Mode Tabs -->
+                        <div class="flex flex-col gap-1.5 md:col-span-8">
+                            <label class="text-[11px] font-bold text-slate-400">Phương thức cắt ảnh</label>
+                            <div class="flex items-center p-1 bg-slate-900 border border-slate-800 rounded-xl gap-1">
+                                <button type="button" id="btn-mode-count" onclick="setSliceMode('count')" class="flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white shadow flex items-center justify-center gap-1.5">
+                                    <i class="fa-solid fa-table-cells-large"></i> Cắt Chia Đều Nhau (Số mảnh)
+                                </button>
+                                <button type="button" id="btn-mode-height" onclick="setSliceMode('height')" class="flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5">
+                                    <i class="fa-solid fa-ruler-vertical"></i> Cắt Theo Chiều Cao (px)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Format Selection -->
+                        <div class="flex flex-col gap-1.5 md:col-span-4">
+                            <label class="text-[11px] font-bold text-slate-400">Định dạng ảnh xuất</label>
+                            <select id="slice-format" onchange="onSliceFormatChange()" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                                <option value="image/webp" selected>WEBP (Tối ưu - Nhẹ & Nét)</option>
+                                <option value="image/png">PNG (Gốc nét 100%)</option>
+                                <option value="image/jpeg">JPG (Tiêu chuẩn)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Middle Row 1: Parameter for Equal Slices Mode (Default) -->
+                    <div id="box-slice-count" class="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-850">
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-bold text-indigo-300 whitespace-nowrap"><i class="fa-solid fa-divide mr-1"></i> Chia đều thành:</label>
+                            <input type="number" id="slice-count" min="2" max="100" value="4" oninput="processSlicingDebounced()" class="w-20 bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 font-mono font-bold text-center focus:outline-none focus:border-indigo-500">
+                            <span id="slice-count-calc-info" class="text-xs text-slate-400 font-mono">mảnh bằng nhau</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="text-[11px] text-slate-400 mr-1 font-semibold">Chọn nhanh:</span>
+                            <button type="button" onclick="setSliceCountPreset(2)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">2 mảnh</button>
+                            <button type="button" onclick="setSliceCountPreset(3)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">3 mảnh</button>
+                            <button type="button" onclick="setSliceCountPreset(4)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">4 mảnh</button>
+                            <button type="button" onclick="setSliceCountPreset(5)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">5 mảnh</button>
+                            <button type="button" onclick="setSliceCountPreset(6)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">6 mảnh</button>
+                            <button type="button" onclick="setSliceCountPreset(8)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">8 mảnh</button>
+                            <button type="button" onclick="setSliceCountPreset(10)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">10 mảnh</button>
+                        </div>
+                    </div>
+
+                    <!-- Middle Row 2: Parameter for Max Height Mode -->
+                    <div id="box-slice-height" class="hidden flex-col md:flex-row md:items-center justify-between gap-3 p-3 rounded-xl bg-slate-900/60 border border-slate-850">
+                        <div class="flex items-center gap-3">
+                            <label class="text-xs font-bold text-indigo-300 whitespace-nowrap"><i class="fa-solid fa-arrows-up-down mr-1"></i> Chiều cao mỗi mảnh:</label>
+                            <input type="number" id="slice-max-height" min="300" max="50000" step="100" value="2000" oninput="processSlicingDebounced()" class="w-28 bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-100 font-mono font-bold text-center focus:outline-none focus:border-indigo-500">
+                            <span id="slice-height-calc-info" class="text-xs text-slate-400 font-mono">px/mảnh</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="text-[11px] text-slate-400 mr-1 font-semibold">Mốc chuẩn:</span>
+                            <button type="button" onclick="setSliceHeightPreset(1500)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">1500px</button>
+                            <button type="button" onclick="setSliceHeightPreset(2048)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">2048px</button>
+                            <button type="button" onclick="setSliceHeightPreset(3000)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">3000px</button>
+                            <button type="button" onclick="setSliceHeightPreset(4096)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-indigo-600 text-xs text-slate-200 font-bold border border-slate-700 transition-colors">4096px</button>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Options Row: Smart Gap & Quality -->
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 pt-2 border-t border-slate-850 items-center">
+                        <div class="md:col-span-7 flex items-center gap-3">
+                            <label class="flex items-center gap-2 cursor-pointer select-none text-xs text-slate-300">
+                                <input type="checkbox" id="slice-smart-gap" onchange="processSlicingDebounced()" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0 focus:ring-offset-0">
+                                <span class="font-semibold text-indigo-300"><i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Cắt Thông Minh (Smart Gap):</span>
+                                <span class="text-slate-400 text-[11px]">Tự động dời đường cắt vào khe trắng giữa các khung tranh</span>
+                            </label>
+                        </div>
+
+                        <div id="box-slice-quality" class="md:col-span-5 flex items-center gap-2 justify-end">
+                            <label class="text-[11px] font-bold text-slate-400 whitespace-nowrap">Chất lượng: <span id="lbl-slice-quality" class="text-indigo-400 font-mono">92%</span></label>
+                            <input type="range" id="slice-quality" min="50" max="100" value="92" oninput="document.getElementById('lbl-slice-quality').innerText = this.value + '%'; processSlicingDebounced();" class="w-36 accent-indigo-500">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info and Status Badge Bar -->
+                <div class="flex flex-wrap items-center justify-between gap-2 px-1">
+                    <div id="slice-status-bar" class="text-xs font-mono text-slate-400 flex items-center gap-2">
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
+                            <i class="fa-solid fa-circle-check"></i> <span id="slice-summary-text">Đã tạo 0 mảnh cắt</span>
+                        </span>
+                        <span id="slice-size-calc" class="text-slate-400 text-[11px]">Mỗi mảnh ~0px</span>
+                    </div>
+                    <div id="slice-process-indicator" class="hidden text-xs text-indigo-400 font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý cắt ảnh...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slice Output Grid -->
+            <div id="slice-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+        </section>
+
+
+        <!-- ================================================================= -->
+        <!-- 3. WEBTOON / LONG STRIP MERGER -->
+        <!-- ================================================================= -->
+        <section id="sec-merge" class="tool-sec hidden flex-col gap-6">
+            <div id="merge-upload" onclick="document.getElementById('merge-files').click()" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all text-center flex flex-col items-center justify-center gap-3 cursor-pointer group shadow-xl relative">
+                <input type="file" id="merge-files" accept="image/*" multiple class="hidden">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform"><i class="fa-solid fa-link text-3xl"></i></div>
+                <h2 class="text-base font-bold text-slate-200">Kéo thả nhiều tệp ảnh vào đây hoặc <span class="text-indigo-400 underline">Chọn nhiều ảnh</span></h2>
+                <p class="text-xs text-slate-400">Gộp nối hàng loạt ảnh đơn lẻ thành 1 ảnh dọc duy nhất (Dạng dải dài Webtoon)</p>
+            </div>
+            <div id="merge-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-800">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-200">Danh sách ảnh ghép nối</h3>
+                        <p id="merge-count" class="text-xs font-mono text-slate-400">Đã chọn 0 ảnh</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="document.getElementById('merge-files').click()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300">+ Thêm ảnh</button>
+                        <button onclick="executeMergeImages()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg"><i class="fa-solid fa-file-image"></i> Gộp & Tải Ảnh</button>
+                    </div>
+                </div>
+
+                <!-- Merge Settings Options -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center bg-slate-950 p-3 rounded-xl border border-slate-800">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400">Hướng ghép nối</label>
+                        <select id="merge-direction" onchange="toggleMergeDirectionUI()" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-indigo-400 font-bold">
+                            <option value="vertical" selected>↕️ Ghép Dọc (Webtoon Strip)</option>
+                            <option value="horizontal">↔️ Ghép Ngang (Trang Đôi Manga / Side-by-Side)</option>
+                        </select>
+                    </div>
+
+                    <div id="box-merge-order" class="hidden flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400">Thứ tự trang đôi Manga</label>
+                        <select id="merge-order" onchange="renderMergeList()" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200">
+                            <option value="ltr" selected>Trái ➔ Phải (Ảnh 1 Trái, Ảnh 2 Phải)</option>
+                            <option value="rtl">Phải ➔ Trái (Ảnh 1 Phải, Ảnh 2 Trái - Manga Nhật)</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-2 justify-end">
+                        <button onclick="swapMergeImages()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-right-left text-amber-400"></i> Đổi vị trí 2 ảnh
+                        </button>
+                    </div>
+                </div>
+
+                <div id="merge-list" class="flex flex-col gap-2 max-h-80 overflow-y-auto custom-scrollbar p-1"></div>
+            </div>
+        </section>
+
+
+        <!-- ================================================================= -->
+        <!-- 4. BATCH IMAGE COMPRESSOR -->
+        <!-- ================================================================= -->
+        <section id="sec-compress" class="tool-sec hidden flex-col gap-6">
+            <div id="compress-upload" onclick="document.getElementById('compress-files').click()" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all text-center flex flex-col items-center justify-center gap-3 cursor-pointer group shadow-xl relative">
+                <input type="file" id="compress-files" accept="image/*" multiple class="hidden">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform"><i class="fa-solid fa-compress text-3xl"></i></div>
+                <h2 class="text-base font-bold text-slate-200">Kéo thả ảnh cần nén vào đây hoặc <span class="text-indigo-400 underline">Chọn ảnh hàng loạt</span></h2>
+                <p class="text-xs text-slate-400">Tối ưu dung lượng giảm từ 50% - 80% mà giữ nét nét vẽ tranh Manga & thoại lời dịch</p>
+            </div>
+            <div id="compress-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-800">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <h3 class="text-sm font-bold text-slate-200">Thiết lập nén hàng loạt</h3>
+                        <p id="compress-total-saved" class="text-xs font-mono text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">Tiết kiệm: 0 KB</p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button onclick="addMoreCompressFiles()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 shadow transition-colors"><i class="fa-solid fa-plus"></i> Thêm ảnh</button>
+                        <button onclick="resetCompressBatch()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-400 hover:text-red-400 shadow transition-colors"><i class="fa-solid fa-rotate-left"></i> Chọn lại</button>
+                        <button onclick="downloadCompressedZip()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg transition-colors"><i class="fa-solid fa-file-zipper"></i> Tải Tất Cả ZIP</button>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400 flex justify-between"><span>Mức chất lượng ảnh</span><span id="lbl-compress-q" class="text-indigo-400 font-mono font-bold">75%</span></label>
+                        <input type="range" id="compress-quality" min="10" max="95" value="75" oninput="document.getElementById('lbl-compress-q').innerText=this.value+'%'; processCompressBatch();" class="w-full accent-indigo-500">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400">Định dạng nén</label>
+                        <select id="compress-format" onchange="processCompressBatch()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200">
+                            <option value="image/webp" selected>WEBP (Siêu nhẹ - Khuyên dùng)</option>
+                            <option value="image/jpeg">JPG (Tiêu chuẩn)</option>
+                            <option value="image/png">PNG (Giữ nguyên gốc)</option>
+                        </select>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400 flex items-center justify-between cursor-pointer">
+                            <span class="flex items-center gap-1.5"><input type="checkbox" id="compress-enable-sharp" onchange="processCompressBatch()" class="rounded border-slate-800 text-indigo-600 focus:ring-0"> Tăng độ nét nét vẽ Manga</span>
+                            <span id="lbl-compress-sharp-val" class="text-indigo-400 font-mono font-bold">1.0</span>
+                        </label>
+                        <input type="range" id="compress-sharp-val" min="0" max="3" step="0.5" value="1.0" oninput="document.getElementById('lbl-compress-sharp-val').innerText=this.value; if(document.getElementById('compress-enable-sharp').checked) processCompressBatch();" class="w-full accent-indigo-500">
+                    </div>
+                </div>
+            </div>
+            <div id="compress-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
+        </section>
+
+
+        <!-- ================================================================= -->
+        <!-- 5. FORMAT CONVERTER -->
+        <!-- ================================================================= -->
+        <section id="sec-convert" class="tool-sec hidden flex-col gap-6">
+            <div id="convert-upload" onclick="document.getElementById('convert-files').click()" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all text-center flex flex-col items-center justify-center gap-3 cursor-pointer group shadow-xl relative">
+                <input type="file" id="convert-files" accept="image/*" multiple class="hidden">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform"><i class="fa-solid fa-repeat text-3xl"></i></div>
+                <h2 class="text-base font-bold text-slate-200">Kéo thả ảnh vào đây hoặc <span class="text-indigo-400 underline">Chọn ảnh cần đổi đuôi</span></h2>
+                <p class="text-xs text-slate-400">Chuyển đổi qua lại linh hoạt giữa WEBP ↔ PNG ↔ JPG hoàn toàn miễn phí</p>
+            </div>
+            <div id="convert-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <div class="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-slate-800">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <span class="text-xs font-bold text-slate-300">Đích đến:</span>
+                        <select id="convert-target" onchange="processConvertBatch()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-indigo-400 font-bold">
+                            <option value="image/png">Chuyển sang PNG</option>
+                            <option value="image/jpeg">Chuyển sang JPG</option>
+                            <option value="image/webp">Chuyển sang WEBP</option>
+                        </select>
+                        <span id="convert-status-badge" class="px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold">Đã tải 0 ảnh</span>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button onclick="addMoreConvertFiles()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 shadow transition-colors"><i class="fa-solid fa-plus"></i> Thêm ảnh</button>
+                        <button onclick="resetConvertBatch()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-400 hover:text-red-400 shadow transition-colors"><i class="fa-solid fa-rotate-left"></i> Chọn lại</button>
+                        <button onclick="downloadConvertedZip()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg transition-colors"><i class="fa-solid fa-file-zipper"></i> Tải Đổi Đuôi ZIP</button>
+                    </div>
+                </div>
+            </div>
+            <div id="convert-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"></div>
+        </section>
+
+
+        <!-- ================================================================= -->
+        <!-- 6. IMAGE SHARPEN & ENHANCE -->
+        <!-- ================================================================= -->
+        <section id="sec-enhance" class="tool-sec hidden flex-col gap-6">
+            <div id="enhance-upload" onclick="document.getElementById('enhance-file').click()" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all text-center flex flex-col items-center justify-center gap-3 cursor-pointer group shadow-xl relative">
+                <input type="file" id="enhance-file" accept="image/*" class="hidden">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform"><i class="fa-solid fa-wand-magic-sparkles text-3xl"></i></div>
+                <h2 class="text-base font-bold text-slate-200">Kéo thả ảnh bị mờ nét vào đây hoặc <span class="text-indigo-400 underline">Chọn ảnh</span></h2>
+                <p class="text-xs text-slate-400">Tăng độ nét nét vẽ Manga & độ tương phản cho chữ thoại dễ đọc hơn</p>
+            </div>
+            <div id="enhance-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-center pb-3 border-b border-slate-800">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400 flex justify-between"><span>Độ sắc nét (Sharpen)</span><span id="lbl-sharp-val" class="text-indigo-400 font-mono">1.5</span></label>
+                        <input type="range" id="enhance-sharp" min="0" max="4" step="0.5" value="1.5" oninput="document.getElementById('lbl-sharp-val').innerText=this.value; processEnhance();" class="accent-indigo-500">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400 flex justify-between"><span>Độ tương phản (Contrast)</span><span id="lbl-contrast-val" class="text-indigo-400 font-mono">120%</span></label>
+                        <input type="range" id="enhance-contrast" min="80" max="200" step="5" value="120" oninput="document.getElementById('lbl-contrast-val').innerText=this.value+'%'; processEnhance();" class="accent-indigo-500">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[11px] font-bold text-slate-400 flex justify-between"><span>Độ sáng (Brightness)</span><span id="lbl-bright-val" class="text-indigo-400 font-mono">100%</span></label>
+                        <input type="range" id="enhance-brightness" min="80" max="150" step="5" value="100" oninput="document.getElementById('lbl-bright-val').innerText=this.value+'%'; processEnhance();" class="accent-indigo-500">
+                    </div>
+                    <div class="flex items-center gap-2 self-end">
+                        <button onclick="resetEnhance()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 shadow transition-colors"><i class="fa-solid fa-rotate-left"></i> Đổi ảnh</button>
+                        <button onclick="downloadEnhancedImage()" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white shadow-lg transition-colors flex-1 text-center"><i class="fa-solid fa-download"></i> Tải Ảnh Nét</button>
+                    </div>
+                </div>
+                <div class="flex justify-center p-2 bg-slate-950 rounded-xl border border-slate-800"><canvas id="enhance-canvas" class="max-h-[60vh] object-contain rounded shadow"></canvas></div>
+            </div>
+        </section>
+
+
+        <!-- ================================================================= -->
+        <!-- 7. OCR TEXT EXTRACTOR -->
+        <!-- ================================================================= -->
+        <section id="sec-ocr" class="tool-sec hidden flex-col gap-6">
+            <div id="ocr-upload" onclick="document.getElementById('ocr-file').click()" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-900/80 rounded-2xl p-8 md:p-12 transition-all text-center flex flex-col items-center justify-center gap-3 cursor-pointer group shadow-xl relative">
+                <input type="file" id="ocr-file" accept="image/*" class="hidden">
+                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform"><i class="fa-solid fa-quote-left text-3xl"></i></div>
+                <h2 class="text-base font-bold text-slate-200">Kéo thả ảnh cần bóc chữ vào đây hoặc <span class="text-indigo-400 underline">Chọn ảnh</span></h2>
+                <p class="text-xs text-slate-400">Trích xuất toàn bộ văn bản tiếng Nhật / Trung / Hàn / Anh có trong ảnh tức thì</p>
+            </div>
+            <div id="ocr-panel" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-slate-300">Ngôn ngữ ảnh:</span>
+                        <select id="ocr-lang" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-indigo-400 font-bold">
+                            <option value="jpn">Tiếng Nhật (Japanese)</option>
+                            <option value="chi_sim">Tiếng Trung Giản Thể (Chinese)</option>
+                            <option value="kor">Tiếng Hàn (Korean)</option>
+                            <option value="eng" selected>Tiếng Anh (English)</option>
+                        </select>
+                        <button onclick="runOcrExtraction()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white"><i class="fa-solid fa-magnifying-glass"></i> Bắt đầu nhận diện</button>
+                    </div>
+                    <button onclick="copyOcrText()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200"><i class="fa-solid fa-copy"></i> Sao chép tất cả</button>
+                </div>
+                <div id="ocr-status-bar" class="hidden text-xs text-indigo-400 bg-slate-950 p-2.5 rounded-xl font-mono"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải mô hình AI OCR...</div>
+                <textarea id="ocr-result-text" rows="10" placeholder="Kết quả văn bản trích xuất sẽ hiển thị ở đây..." class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 font-mono focus:outline-none focus:border-indigo-500 custom-scrollbar"></textarea>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-slate-900 bg-slate-950 py-4 px-6 text-center text-xs text-slate-500 mt-auto">
+        <span>Powered by <strong class="text-slate-400">Manga Translator Studio Engine</strong> • Complete Client-Side HTML5 Tools</span>
+    </footer>
+
+    <!-- LIGHTBOX MODAL -->
+    <div id="preview-modal" class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4" onclick="closePreviewModal()">
+        <div class="relative max-w-5xl max-h-[90vh] flex flex-col items-center" onclick="event.stopPropagation()">
+            <button onclick="closePreviewModal()" class="absolute -top-10 right-0 text-slate-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
+            <img id="modal-img" src="" class="max-h-[85vh] max-w-full object-contain rounded-xl border border-slate-800 shadow-2xl" alt="Preview">
+        </div>
+    </div>
+
+    <!-- SCRIPT LOGIC -->
+    <script>
+        function formatFileSize(bytes) {
+            if (!bytes || bytes <= 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function getTargetFormatExt(format) {
+            if (format === 'image/webp') return 'webp';
+            if (format === 'image/jpeg') return 'jpg';
+            return 'png';
+        }
+
+        function initPdfWorker() {
+            try {
+                if (typeof pdfjsLib !== 'undefined') {
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                }
+            } catch (err) {
+                console.warn("Lỗi cấu hình PDF Worker:", err);
+            }
+        }
+        initPdfWorker();
+
+        // --- TAB SWITCHER LOGIC ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = "tab-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200";
+            });
+            const activeBtn = document.getElementById(`btn-tab-${tabId}`);
+            if (activeBtn) activeBtn.className = "tab-btn active px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 bg-indigo-600 text-white shadow-sm";
+
+            document.querySelectorAll('.tool-sec').forEach(sec => sec.classList.add('hidden'));
+            const activeSec = document.getElementById(`sec-${tabId}`);
+            if (activeSec) activeSec.classList.remove('hidden');
+        }
+
+
+        // =========================================================================
+        // 1. PDF TO PNG / IMAGE CONVERTER (ROBUST & MEMORY-OPTIMIZED)
+        // =========================================================================
+        let pdfDoc = null, pdfName = '', pdfBlobsMap = new Map();
+        let pdfRenderToken = 0;
+        let pdfRenderDebounce = null;
+        let isPdfRendering = false;
+
+        function clearPdfBlobs() {
+            pdfBlobsMap.forEach(item => {
+                if (item.url) URL.revokeObjectURL(item.url);
+            });
+            pdfBlobsMap.clear();
+        }
+
+        function resetPdfConverter() {
+            pdfRenderToken++;
+            clearPdfBlobs();
+            pdfDoc = null;
+            pdfName = '';
+            document.getElementById('pdf-grid').innerHTML = '';
+            document.getElementById('pdf-panel').classList.add('hidden');
+            document.getElementById('pdf-upload').classList.remove('hidden');
+            const fileInput = document.getElementById('pdf-file');
+            if (fileInput) fileInput.value = '';
+            const status = document.getElementById('pdf-status');
+            if (status) status.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Sẵn sàng`;
+            const prog = document.getElementById('pdf-progress-container');
+            if (prog) prog.classList.add('hidden');
+        }
+
+        function parsePageRange(rangeStr, totalPages) {
+            if (!rangeStr || !rangeStr.trim()) {
+                return Array.from({ length: totalPages }, (_, i) => i + 1);
+            }
+            const pages = new Set();
+            const parts = rangeStr.split(/[,;\s]+/);
+            for (const part of parts) {
+                if (!part.trim()) continue;
+                if (part.includes('-')) {
+                    const [startStr, endStr] = part.split('-');
+                    const start = parseInt(startStr, 10);
+                    const end = parseInt(endStr, 10);
+                    if (!isNaN(start) && !isNaN(end)) {
+                        const min = Math.max(1, Math.min(start, end));
+                        const max = Math.min(totalPages, Math.max(start, end));
+                        for (let p = min; p <= max; p++) pages.add(p);
+                    }
+                } else {
+                    const p = parseInt(part, 10);
+                    if (!isNaN(p) && p >= 1 && p <= totalPages) {
+                        pages.add(p);
+                    }
+                }
+            }
+            const result = Array.from(pages).sort((a, b) => a - b);
+            return result.length > 0 ? result : Array.from({ length: totalPages }, (_, i) => i + 1);
+        }
+
+        document.getElementById('pdf-file').addEventListener('change', async (e) => {
+            if (!e.target.files || !e.target.files[0]) return;
+            handlePdfFileSelect(e.target.files[0]);
+        });
+
+        async function handlePdfFileSelect(file) {
+            if (!file) return;
+            if (!file.name.toLowerCase().endsWith('.pdf') && file.type !== 'application/pdf') {
+                alert("Vui lòng chọn tệp định dạng PDF (.pdf)");
+                return;
+            }
+
+            initPdfWorker();
+            resetPdfConverter();
+            pdfName = file.name;
+            document.getElementById('pdf-name').innerText = file.name;
+            document.getElementById('pdf-name').title = file.name;
+            const status = document.getElementById('pdf-status');
+            if (status) status.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i> Đang đọc tệp PDF...`;
+
+            try {
+                const buffer = await file.arrayBuffer();
+                const loadingTask = pdfjsLib.getDocument({
+                    data: new Uint8Array(buffer),
+                    cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+                    cMapPacked: true,
+                    standardFontDataUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/'
+                });
+                pdfDoc = await loadingTask.promise;
+
+                document.getElementById('pdf-info').innerText = `${pdfDoc.numPages} trang • ${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+                document.getElementById('pdf-upload').classList.add('hidden');
+                document.getElementById('pdf-panel').classList.remove('hidden');
+
+                renderPdfPages();
+            } catch (err) {
+                console.error("Lỗi nạp PDF:", err);
+                alert("Không thể đọc tệp PDF này. Tệp có thể bị hỏng hoặc có mật khẩu bảo vệ.\nChi tiết: " + (err.message || err));
+                resetPdfConverter();
+            }
+        }
+
+        function onPdfFormatChange() {
+            renderPdfPagesDebounced();
+        }
+
+        function renderPdfPagesDebounced() {
+            if (pdfRenderDebounce) clearTimeout(pdfRenderDebounce);
+            pdfRenderDebounce = setTimeout(() => {
+                renderPdfPages();
+            }, 250);
+        }
+
+        async function renderPdfPages() {
+            if (!pdfDoc) return;
+            const currentToken = ++pdfRenderToken;
+            isPdfRendering = true;
+
+            const scale = parseFloat(document.getElementById('pdf-scale').value) || 2.0;
+            const format = document.getElementById('pdf-format') ? document.getElementById('pdf-format').value : 'image/png';
+            const rangeStr = document.getElementById('pdf-range') ? document.getElementById('pdf-range').value : '';
+            const ext = getTargetFormatExt(format);
+            const quality = (format === 'image/jpeg' || format === 'image/webp') ? 0.92 : 1.0;
+
+            const pagesToRender = parsePageRange(rangeStr, pdfDoc.numPages);
+            const grid = document.getElementById('pdf-grid');
+            grid.innerHTML = '';
+            clearPdfBlobs();
+
+            const status = document.getElementById('pdf-status');
+            const progCont = document.getElementById('pdf-progress-container');
+            const progBar = document.getElementById('pdf-progress-bar');
+            if (progCont) progCont.classList.remove('hidden');
+
+            const baseName = pdfName.replace(/\.[^/.]+$/, '') || 'pdf_page';
+            const total = pagesToRender.length;
+
+            for (let i = 0; i < total; i++) {
+                if (pdfRenderToken !== currentToken) return;
+
+                const pageNum = pagesToRender[i];
+                const percent = Math.round(((i + 1) / total) * 100);
+                if (status) status.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i> Trang ${pageNum} (${i + 1}/${total} • ${percent}%)`;
+                if (progBar) progBar.style.width = `${percent}%`;
+
+                try {
+                    const page = await pdfDoc.getPage(pageNum);
+                    const vp = page.getViewport({ scale });
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.round(vp.width);
+                    canvas.height = Math.round(vp.height);
+                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+                    // Clean white background for all pages
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    await page.render({
+                        canvasContext: ctx,
+                        viewport: vp,
+                        background: 'rgb(255, 255, 255)'
+                    }).promise;
+
+                    if (pdfRenderToken !== currentToken) return;
+
+                    const blob = await new Promise(resolve => canvas.toBlob(resolve, format, quality));
+                    const blobUrl = URL.createObjectURL(blob);
+                    const targetFilename = `${baseName}_trang_${String(pageNum).padStart(3, '0')}.${ext}`;
+                    const sizeStr = formatFileSize(blob ? blob.size : 0);
+
+                    pdfBlobsMap.set(pageNum, {
+                        blob,
+                        url: blobUrl,
+                        filename: targetFilename,
+                        width: Math.round(vp.width),
+                        height: Math.round(vp.height),
+                        sizeStr
+                    });
+
+                    const card = document.createElement('div');
+                    card.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-md flex flex-col p-3 hover:border-slate-700 transition-all";
+                    card.innerHTML = `
+                        <div class="relative group cursor-pointer overflow-hidden rounded-xl bg-slate-950/60 border border-slate-850 flex items-center justify-center min-h-[160px]" onclick="openPreviewModal('${blobUrl}')">
+                            <img src="${blobUrl}" class="max-h-60 object-contain rounded transition-transform group-hover:scale-105" alt="Trang ${pageNum}">
+                            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-sans text-xs gap-1.5 font-bold">
+                                <i class="fa-solid fa-magnifying-glass-plus"></i> Phóng to xem
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-2 mt-3 pt-2.5 border-t border-slate-800">
+                            <div class="flex items-center justify-between text-xs font-bold text-slate-200">
+                                <span class="text-indigo-400 font-mono">Trang ${pageNum}</span>
+                                <span class="text-[11px] text-slate-400 font-normal font-mono">${Math.round(vp.width)}x${Math.round(vp.height)}px</span>
+                            </div>
+                            <div class="flex items-center justify-between text-[10px] text-slate-400">
+                                <span class="text-slate-300 font-mono font-semibold">${sizeStr}</span>
+                                <a href="${blobUrl}" download="${targetFilename}" class="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white font-bold transition-all flex items-center gap-1.5 shadow-sm">
+                                    <i class="fa-solid fa-download"></i> Tải .${ext.toUpperCase()}
+                                </a>
+                            </div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                } catch (pageErr) {
+                    console.error(`Lỗi render trang ${pageNum}:`, pageErr);
+                }
+            }
+
+            if (pdfRenderToken === currentToken) {
+                if (status) status.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Đã xuất ${pdfBlobsMap.size} trang (.${ext.toUpperCase()})`;
+                if (progCont) progCont.classList.add('hidden');
+                isPdfRendering = false;
+            }
+        }
+
+        async function downloadPdfZip() {
+            if (pdfBlobsMap.size === 0) {
+                alert("Chưa có trang ảnh nào được tạo để tải ZIP.");
+                return;
+            }
+
+            const btn = document.getElementById('btn-pdf-zip');
+            const origHtml = btn ? btn.innerHTML : '';
+            if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang nén ZIP...`;
+
+            try {
+                const zip = new JSZip();
+                pdfBlobsMap.forEach((item) => {
+                    zip.file(item.filename, item.blob);
+                });
+
+                const content = await zip.generateAsync({ type: 'blob' }, (metadata) => {
+                    if (btn && metadata.percent) {
+                        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Nén ZIP ${Math.round(metadata.percent)}%...`;
+                    }
+                });
+
+                const zipUrl = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                const baseName = pdfName.replace(/\.[^/.]+$/, '') || 'pdf_pages';
+                a.href = zipUrl;
+                a.download = `${baseName}_Images.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(zipUrl), 10000);
+            } catch (err) {
+                console.error("Lỗi tạo ZIP:", err);
+                alert("Lỗi khi tạo file ZIP: " + err.message);
+            } finally {
+                if (btn) btn.innerHTML = origHtml;
+            }
+        }
+
+
+        // =========================================================================
+        // 2. VERTICAL IMAGE SLICER (SMART GAP & WEBTOON OPTIMIZED)
+        // =========================================================================
+        let sliceImg = null, sliceFile = null, sliceName = '', sliceList = [];
+        let sliceDebounceTimer = null;
+        let isSlicing = false;
+        let currentSliceMode = 'count'; // Default: 'count' (Cắt chia đều nhau)
+
+        function clearSliceList() {
+            sliceList.forEach(item => {
+                if (item.objectUrl) URL.revokeObjectURL(item.objectUrl);
+            });
+            sliceList = [];
+        }
+
+        function resetSlice() {
+            clearSliceList();
+            sliceImg = null;
+            sliceFile = null;
+            sliceName = '';
+            document.getElementById('slice-grid').innerHTML = '';
+            document.getElementById('slice-panel').classList.add('hidden');
+            document.getElementById('slice-upload').classList.remove('hidden');
+            const input = document.getElementById('slice-file');
+            if (input) input.value = '';
+        }
+
+        function setSliceMode(mode) {
+            currentSliceMode = mode;
+            const btnCount = document.getElementById('btn-mode-count');
+            const btnHeight = document.getElementById('btn-mode-height');
+            const boxCount = document.getElementById('box-slice-count');
+            const boxHeight = document.getElementById('box-slice-height');
+
+            if (mode === 'count') {
+                if (btnCount) btnCount.className = "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white shadow flex items-center justify-center gap-1.5";
+                if (btnHeight) btnHeight.className = "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5";
+                if (boxCount) { boxCount.classList.remove('hidden'); boxCount.classList.add('flex'); }
+                if (boxHeight) { boxHeight.classList.add('hidden'); boxHeight.classList.remove('flex'); }
+            } else {
+                if (btnHeight) btnHeight.className = "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white shadow flex items-center justify-center gap-1.5";
+                if (btnCount) btnCount.className = "flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5";
+                if (boxHeight) { boxHeight.classList.remove('hidden'); boxHeight.classList.add('flex'); }
+                if (boxCount) { boxCount.classList.add('hidden'); boxCount.classList.remove('flex'); }
+            }
+            processSlicingDebounced();
+        }
+
+        function setSliceCountPreset(countVal) {
+            const input = document.getElementById('slice-count');
+            if (input) input.value = countVal;
+            processSlicingDebounced();
+        }
+
+        function setSliceHeightPreset(heightVal) {
+            const input = document.getElementById('slice-max-height');
+            if (input) input.value = heightVal;
+            processSlicingDebounced();
+        }
+
+        function onSliceFormatChange() {
+            const format = document.getElementById('slice-format').value;
+            const boxQ = document.getElementById('box-slice-quality');
+            if (boxQ) {
+                if (format === 'image/png') {
+                    boxQ.classList.add('opacity-40', 'pointer-events-none');
+                } else {
+                    boxQ.classList.remove('opacity-40', 'pointer-events-none');
+                }
+            }
+            processSlicingDebounced();
+        }
+
+        function processSlicingDebounced() {
+            if (sliceDebounceTimer) clearTimeout(sliceDebounceTimer);
+            sliceDebounceTimer = setTimeout(() => {
+                processSlicing();
+            }, 100);
+        }
+
+        document.getElementById('slice-file').addEventListener('change', (e) => {
+            if (!e.target.files || !e.target.files[0]) return;
+            handleSliceFileSelect(e.target.files[0]);
+        });
+
+        function handleSliceFileSelect(file) {
+            if (!file || !file.type.startsWith('image/')) {
+                alert("Vui lòng chọn một tệp hình ảnh hợp lệ (PNG, JPG, WEBP, v.v.)");
+                return;
+            }
+            sliceFile = file;
+            sliceName = file.name;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const img = new Image();
+                img.onload = () => {
+                    sliceImg = img;
+                    document.getElementById('slice-filename').innerText = file.name;
+                    document.getElementById('slice-filename').title = file.name;
+                    const sizeStr = formatFileSize(file.size);
+                    document.getElementById('slice-dim').innerText = `${img.naturalWidth} x ${img.naturalHeight} px • ${sizeStr}`;
+                    document.getElementById('slice-upload').classList.add('hidden');
+                    document.getElementById('slice-panel').classList.remove('hidden');
+                    processSlicing();
+                };
+                img.onerror = () => {
+                    alert("Không thể đọc định dạng ảnh này. Vui lòng thử lại với ảnh khác.");
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        /**
+         * Fast Smart Gap Detector: Finds horizontal blank bands (white, black, uniform color)
+         * within [targetY - searchRange, targetY + searchRange] around cut point
+         */
+        function findOptimalCutLine(ctxSample, targetY, searchRange, width, totalHeight) {
+            const minY = Math.max(10, Math.floor(targetY - searchRange));
+            const maxY = Math.min(totalHeight - 10, Math.floor(targetY + searchRange));
+            if (minY >= maxY) return targetY;
+
+            const sampleHeight = maxY - minY + 1;
+            const imgData = ctxSample.getImageData(0, minY, width, sampleHeight);
+            const data = imgData.data;
+
+            let bestY = targetY;
+            let bestScore = Infinity;
+
+            for (let r = 0; r < sampleHeight; r++) {
+                const currentY = minY + r;
+                let rSum = 0, gSum = 0, bSum = 0;
+                const sampleStep = Math.max(1, Math.floor(width / 80));
+                let sampleCount = 0;
+
+                for (let x = 0; x < width; x += sampleStep) {
+                    const idx = (r * width + x) * 4;
+                    rSum += data[idx];
+                    gSum += data[idx + 1];
+                    bSum += data[idx + 2];
+                    sampleCount++;
+                }
+
+                const rAvg = rSum / sampleCount;
+                const gAvg = gSum / sampleCount;
+                const bAvg = bSum / sampleCount;
+
+                let variance = 0;
+                for (let x = 0; x < width; x += sampleStep) {
+                    const idx = (r * width + x) * 4;
+                    const dr = data[idx] - rAvg;
+                    const dg = data[idx + 1] - gAvg;
+                    const db = data[idx + 2] - bAvg;
+                    variance += Math.abs(dr) + Math.abs(dg) + Math.abs(db);
+                }
+                variance = variance / sampleCount;
+
+                const isWhiteOrBlack = (rAvg > 242 && gAvg > 242 && bAvg > 242) || (rAvg < 15 && gAvg < 15 && bAvg < 15);
+                const solidBonus = isWhiteOrBlack ? 0.3 : 1.0;
+
+                const dist = Math.abs(currentY - targetY);
+                const distPenalty = (dist / searchRange) * 15;
+
+                const score = (variance * solidBonus) + distPenalty;
+
+                if (score < bestScore) {
+                    bestScore = score;
+                    bestY = currentY;
+                }
+            }
+
+            return bestY;
+        }
+
+        async function processSlicing() {
+            if (!sliceImg || isSlicing) return;
+            isSlicing = true;
+
+            const indicator = document.getElementById('slice-process-indicator');
+            if (indicator) indicator.classList.remove('hidden');
+
+            const format = document.getElementById('slice-format').value;
+            const quality = parseFloat(document.getElementById('slice-quality').value) / 100;
+            const enableSmartGap = document.getElementById('slice-smart-gap').checked;
+            const ext = getTargetFormatExt(format);
+
+            const W = sliceImg.naturalWidth;
+            const H = sliceImg.naturalHeight;
+
+            // Determine target cut lines
+            let cutPoints = [0];
+
+            if (currentSliceMode === 'count') {
+                const count = Math.max(2, Math.min(100, parseInt(document.getElementById('slice-count').value) || 4));
+                const h = Math.floor(H / count);
+                for (let i = 1; i < count; i++) {
+                    cutPoints.push(i * h);
+                }
+                const countCalc = document.getElementById('slice-count-calc-info');
+                if (countCalc) countCalc.innerText = `(= ${count} mảnh ~${h}px chia đều)`;
+            } else {
+                const targetH = Math.max(200, parseInt(document.getElementById('slice-max-height').value) || 2000);
+                let currentY = targetH;
+                while (currentY < H) {
+                    cutPoints.push(currentY);
+                    currentY += targetH;
+                }
+                const heightCalc = document.getElementById('slice-height-calc-info');
+                if (heightCalc) heightCalc.innerText = `(~${Math.ceil(H / targetH)} mảnh)`;
+            }
+
+            // If Smart Gap is enabled, adjust cut points to blank comic gutters
+            if (enableSmartGap && cutPoints.length > 1) {
+                const sampleCanvas = document.createElement('canvas');
+                sampleCanvas.width = W;
+                sampleCanvas.height = H;
+                const sampleCtx = sampleCanvas.getContext('2d');
+                sampleCtx.drawImage(sliceImg, 0, 0);
+
+                for (let i = 1; i < cutPoints.length; i++) {
+                    const prevCut = cutPoints[i - 1];
+                    const rawTarget = cutPoints[i];
+                    const nextTarget = (i + 1 < cutPoints.length) ? cutPoints[i + 1] : H;
+                    const maxSearch = Math.min(300, Math.floor((rawTarget - prevCut) * 0.3), Math.floor((nextTarget - rawTarget) * 0.3));
+                    if (maxSearch > 20) {
+                        const optimalY = findOptimalCutLine(sampleCtx, rawTarget, maxSearch, W, H);
+                        cutPoints[i] = optimalY;
+                    }
+                }
+            }
+
+            cutPoints.push(H);
+            cutPoints = Array.from(new Set(cutPoints)).sort((a, b) => a - b);
+
+            const numSlices = cutPoints.length - 1;
+            const avgH = Math.round(H / numSlices);
+            document.getElementById('slice-summary-text').innerText = `Đã tạo ${numSlices} mảnh cắt`;
+            document.getElementById('slice-size-calc').innerText = `Trung bình ~${avgH}px/mảnh • .${ext.toUpperCase()}`;
+
+            const grid = document.getElementById('slice-grid');
+            clearSliceList();
+            grid.innerHTML = '';
+
+            const baseName = sliceName.replace(/\.[^/.]+$/, '') || 'slice';
+
+            for (let i = 0; i < numSlices; i++) {
+                const sy = cutPoints[i];
+                const sh = cutPoints[i + 1] - sy;
+                if (sh <= 0) continue;
+
+                const canvas = document.createElement('canvas');
+                canvas.width = W;
+                canvas.height = sh;
+                const ctx = canvas.getContext('2d');
+
+                // Fix black background for JPG
+                if (format === 'image/jpeg') {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, W, sh);
+                }
+
+                ctx.drawImage(sliceImg, 0, sy, W, sh, 0, 0, W, sh);
+
+                const blob = await new Promise(res => canvas.toBlob(res, format, quality));
+                const objectUrl = blob ? URL.createObjectURL(blob) : '';
+                const partIdx = String(i + 1).padStart(2, '0');
+                const targetFilename = `${baseName}_part_${partIdx}.${ext}`;
+                const sizeFormatted = formatFileSize(blob ? blob.size : 0);
+
+                sliceList.push({
+                    idx: i + 1,
+                    blob,
+                    objectUrl,
+                    width: W,
+                    height: sh,
+                    size: blob ? blob.size : 0,
+                    ext,
+                    filename: targetFilename
+                });
+
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col justify-between text-xs font-mono shadow-md hover:border-slate-700 transition-all";
+                card.innerHTML = `
+                    <div class="relative group cursor-pointer overflow-hidden rounded-xl bg-slate-950/60 border border-slate-850 flex items-center justify-center min-h-[140px]" onclick="openPreviewModal('${objectUrl}')">
+                        <img src="${objectUrl}" class="max-h-48 object-contain rounded transition-transform group-hover:scale-105" alt="Slice ${i+1}">
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-sans text-xs gap-1.5 font-bold">
+                            <i class="fa-solid fa-magnifying-glass-plus"></i> Phóng to xem
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-2 mt-3 pt-2.5 border-t border-slate-800">
+                        <div class="flex items-center justify-between text-xs font-bold text-slate-200">
+                            <span class="text-indigo-400">Mảnh #${partIdx} / ${String(numSlices).padStart(2,'0')}</span>
+                            <span class="text-[11px] text-slate-400 font-normal font-mono">${W}x${sh}px</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] text-slate-400">
+                            <span class="text-slate-300 font-bold">${sizeFormatted}</span>
+                            <a href="${objectUrl}" download="${targetFilename}" class="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white font-bold transition-all flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-download"></i> Tải .${ext.toUpperCase()}
+                            </a>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            }
+
+            if (indicator) indicator.classList.add('hidden');
+            isSlicing = false;
+        }
+
+        async function downloadSlicedZip() {
+            if (sliceList.length === 0) return;
+            const validItems = sliceList.filter(item => item.blob);
+            if (validItems.length === 0) {
+                alert("Chưa có ảnh mảnh cắt nào sẵn sàng để tải ZIP.");
+                return;
+            }
+
+            const btn = document.getElementById('btn-slice-zip');
+            const origHtml = btn ? btn.innerHTML : '';
+            if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang nén ZIP...`;
+
+            const zip = new JSZip();
+            validItems.forEach(item => {
+                zip.file(item.filename, item.blob);
+            });
+
+            const content = await zip.generateAsync({ type: 'blob' });
+            const zipUrl = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            const baseName = sliceName.replace(/\.[^/.]+$/, '') || 'sliced_webtoon';
+            a.href = zipUrl;
+            a.download = `${baseName}_sliced.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(zipUrl), 10000);
+
+            if (btn) btn.innerHTML = origHtml;
+        }
+
+
+        // =========================================================================
+        // 3. WEBTOON / LONG STRIP MERGER
+        // =========================================================================
+        let mergeImgs = [];
+        document.getElementById('merge-files').addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            document.getElementById('merge-upload').classList.add('hidden');
+            document.getElementById('merge-panel').classList.remove('hidden');
+            
+            files.forEach(f => {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        mergeImgs.push({ name: f.name, img });
+                        renderMergeList();
+                    };
+                    img.src = evt.target.result;
+                };
+                reader.readAsDataURL(f);
+            });
+        });
+
+        function toggleMergeDirectionUI() {
+            const dir = document.getElementById('merge-direction').value;
+            const boxOrder = document.getElementById('box-merge-order');
+            if (boxOrder) {
+                if (dir === 'horizontal') {
+                    boxOrder.classList.remove('hidden');
+                    boxOrder.classList.add('flex');
+                } else {
+                    boxOrder.classList.add('hidden');
+                    boxOrder.classList.remove('flex');
+                }
+            }
+        }
+
+        function swapMergeImages() {
+            if (mergeImgs.length >= 2) {
+                const temp = mergeImgs[0];
+                mergeImgs[0] = mergeImgs[1];
+                mergeImgs[1] = temp;
+                renderMergeList();
+            }
+        }
+
+        function moveMergeImage(fromIdx, toIdx) {
+            if (toIdx < 0 || toIdx >= mergeImgs.length) return;
+            const item = mergeImgs.splice(fromIdx, 1)[0];
+            mergeImgs.splice(toIdx, 0, item);
+            renderMergeList();
+        }
+
+        function renderMergeList() {
+            const list = document.getElementById('merge-list');
+            document.getElementById('merge-count').innerText = `Đã chọn ${mergeImgs.length} ảnh`;
+            list.innerHTML = '';
+
+            const dir = document.getElementById('merge-direction').value;
+            const order = document.getElementById('merge-order') ? document.getElementById('merge-order').value : 'ltr';
+
+            let itemsToRender = [...mergeImgs];
+            if (dir === 'horizontal' && order === 'rtl' && itemsToRender.length === 2) {
+                itemsToRender = [mergeImgs[1], mergeImgs[0]];
+            }
+
+            itemsToRender.forEach((item, idx) => {
+                const origIndex = mergeImgs.indexOf(item);
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-xs font-mono";
+                row.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-indigo-400 font-bold">#${idx+1}</span>
+                        <img src="${item.img.src}" class="w-10 h-10 object-contain rounded bg-slate-900 border border-slate-800">
+                        <span class="text-slate-200 font-bold truncate max-w-xs">${item.name}</span>
+                        <span class="text-slate-400">(${item.img.naturalWidth}x${item.img.naturalHeight}px)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="moveMergeImage(${origIndex}, ${origIndex - 1})" ${origIndex === 0 ? 'disabled class="opacity-30"' : ''} class="px-2 py-1 rounded bg-slate-850 hover:bg-slate-800 text-slate-300" title="Di chuyển lên"><i class="fa-solid fa-arrow-up"></i></button>
+                        <button onclick="moveMergeImage(${origIndex}, ${origIndex + 1})" ${origIndex === mergeImgs.length - 1 ? 'disabled class="opacity-30"' : ''} class="px-2 py-1 rounded bg-slate-850 hover:bg-slate-800 text-slate-300" title="Di chuyển xuống"><i class="fa-solid fa-arrow-down"></i></button>
+                        <button onclick="mergeImgs.splice(${origIndex},1); renderMergeList();" class="px-2 py-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20" title="Xóa"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                list.appendChild(row);
+            });
+        }
+
+        async function executeMergeImages() {
+            if (mergeImgs.length === 0) return;
+
+            const dir = document.getElementById('merge-direction').value;
+            const order = document.getElementById('merge-order') ? document.getElementById('merge-order').value : 'ltr';
+
+            let itemsToMerge = [...mergeImgs];
+            if (dir === 'horizontal' && order === 'rtl' && itemsToMerge.length === 2) {
+                itemsToMerge = [mergeImgs[1], mergeImgs[0]];
+            }
+
+            if (dir === 'vertical') {
+                const maxW = Math.max(...itemsToMerge.map(i => i.img.naturalWidth));
+                let totalH = 0;
+                itemsToMerge.forEach(i => {
+                    const scaledH = Math.round(i.img.naturalHeight * (maxW / i.img.naturalWidth));
+                    totalH += scaledH;
+                });
+
+                const canvas = document.createElement('canvas');
+                canvas.width = maxW; canvas.height = totalH;
+                const ctx = canvas.getContext('2d');
+
+                let currentY = 0;
+                itemsToMerge.forEach(i => {
+                    const scaledH = Math.round(i.img.naturalHeight * (maxW / i.img.naturalWidth));
+                    ctx.drawImage(i.img, 0, currentY, maxW, scaledH);
+                    currentY += scaledH;
+                });
+
+                const dataUrl = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                a.href = dataUrl; a.download = `Merged_Vertical_Webtoon.png`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            } else {
+                // Horizontal Side-by-Side Merge (Spread Page)
+                const maxH = Math.max(...itemsToMerge.map(i => i.img.naturalHeight));
+                let totalW = 0;
+                itemsToMerge.forEach(i => {
+                    const scaledW = Math.round(i.img.naturalWidth * (maxH / i.img.naturalHeight));
+                    totalW += scaledW;
+                });
+
+                const canvas = document.createElement('canvas');
+                canvas.width = totalW; canvas.height = maxH;
+                const ctx = canvas.getContext('2d');
+
+                let currentX = 0;
+                itemsToMerge.forEach(i => {
+                    const scaledW = Math.round(i.img.naturalWidth * (maxH / i.img.naturalHeight));
+                    ctx.drawImage(i.img, 0, 0, i.img.naturalWidth, i.img.naturalHeight, currentX, 0, scaledW, maxH);
+                    currentX += scaledW;
+                });
+
+                const dataUrl = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                a.href = dataUrl; a.download = `Merged_Horizontal_Spread.png`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            }
+        }
+
+
+        // =========================================================================
+        // 4. BATCH IMAGE COMPRESSOR
+        // =========================================================================
+        let compressList = [];
+        let isCompressing = false;
+
+        function applySharpenFilterToCtx(ctx, width, height, sharpAmount) {
+            if (!sharpAmount || sharpAmount <= 0) return;
+            const imgData = ctx.getImageData(0, 0, width, height);
+            const data = imgData.data;
+            const copy = new Uint8ClampedArray(data);
+            const k = sharpAmount;
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    const idx = (y * width + x) * 4;
+                    for (let c = 0; c < 3; c++) {
+                        const val = (1 + 4 * k) * copy[idx + c]
+                            - k * copy[((y - 1) * width + x) * 4 + c]
+                            - k * copy[((y + 1) * width + x) * 4 + c]
+                            - k * copy[(y * width + x - 1) * 4 + c]
+                            - k * copy[(y * width + x + 1) * 4 + c];
+                        data[idx + c] = Math.min(255, Math.max(0, val));
+                    }
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+        }
+
+        async function handleCompressFilesSelect(files) {
+            if (!files || files.length === 0) return;
+
+            document.getElementById('compress-upload').classList.add('hidden');
+            document.getElementById('compress-panel').classList.remove('hidden');
+
+            const validFiles = files.filter(f => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp)$/i.test(f.name));
+            if (validFiles.length === 0) {
+                alert("Vui lòng chọn file hình ảnh hợp lệ (PNG, JPG, WEBP).");
+                return;
+            }
+
+            const newItems = await Promise.all(validFiles.map(f => new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const img = new Image();
+                    img.onload = () => resolve({ file: f, img, originalSize: f.size, compressedBlob: null, objectUrl: null, compressedSize: 0 });
+                    img.onerror = () => resolve(null);
+                    img.src = evt.target.result;
+                };
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(f);
+            })));
+
+            const filteredNewItems = newItems.filter(Boolean);
+            if (filteredNewItems.length === 0) {
+                alert("Không thể mở được dữ liệu ảnh.");
+                return;
+            }
+
+            compressList = compressList.concat(filteredNewItems);
+            await processCompressBatch();
+        }
+
+        function addMoreCompressFiles() {
+            const input = document.getElementById('compress-files');
+            if (!input) return;
+            input.value = '';
+            input.click();
+        }
+
+        function resetCompressBatch() {
+            compressList.forEach(item => {
+                if (item.objectUrl) URL.revokeObjectURL(item.objectUrl);
+            });
+            compressList = [];
+            document.getElementById('compress-grid').innerHTML = '';
+            document.getElementById('compress-panel').classList.add('hidden');
+            document.getElementById('compress-upload').classList.remove('hidden');
+            document.getElementById('compress-total-saved').innerText = 'Tiết kiệm: 0 KB';
+            const input = document.getElementById('compress-files');
+            if (input) input.value = '';
+        }
+
+        document.getElementById('compress-files').addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            handleCompressFilesSelect(files);
+        });
+
+        async function processCompressBatch() {
+            if (compressList.length === 0) return;
+            if (isCompressing) return;
+            isCompressing = true;
+
+            const q = parseFloat(document.getElementById('compress-quality').value) / 100;
+            const format = document.getElementById('compress-format').value;
+            const enableSharp = document.getElementById('compress-enable-sharp').checked;
+            const sharpVal = enableSharp ? parseFloat(document.getElementById('compress-sharp-val').value) : 0;
+            const ext = format === 'image/webp' ? 'webp' : format === 'image/png' ? 'png' : 'jpg';
+
+            const grid = document.getElementById('compress-grid');
+            let totalSavedBytes = 0;
+
+            // Revoke old object URLs
+            compressList.forEach(item => {
+                if (item.objectUrl) {
+                    URL.revokeObjectURL(item.objectUrl);
+                    item.objectUrl = null;
+                }
+            });
+
+            grid.innerHTML = '';
+
+            for (let i = 0; i < compressList.length; i++) {
+                const item = compressList[i];
+                const canvas = document.createElement('canvas');
+                canvas.width = item.img.naturalWidth;
+                canvas.height = item.img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+
+                if (format === 'image/jpeg') {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+                ctx.drawImage(item.img, 0, 0);
+
+                if (enableSharp && sharpVal > 0) {
+                    applySharpenFilterToCtx(ctx, canvas.width, canvas.height, sharpVal);
+                }
+
+                const blob = await new Promise(res => canvas.toBlob(res, format, q));
+                item.compressedBlob = blob;
+                item.compressedSize = blob ? blob.size : item.originalSize;
+                item.objectUrl = blob ? URL.createObjectURL(blob) : '';
+
+                const savedBytes = Math.max(0, item.originalSize - item.compressedSize);
+                totalSavedBytes += savedBytes;
+                const savedPercent = item.originalSize > 0 ? Math.round((savedBytes / item.originalSize) * 100) : 0;
+
+                const baseName = item.file.name.replace(/\.[^/.]+$/, '');
+                const targetFilename = `${baseName}_compressed.${ext}`;
+
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col justify-between text-xs font-mono shadow-md hover:border-slate-700 transition-all";
+                card.innerHTML = `
+                    <div class="relative group cursor-pointer overflow-hidden rounded-xl bg-slate-950/50 border border-slate-850 flex items-center justify-center min-h-[130px]" onclick="openPreviewModal('${item.objectUrl}')">
+                        <img src="${item.objectUrl}" class="max-h-36 object-contain rounded transition-transform group-hover:scale-105">
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-sans text-xs gap-1.5 font-bold">
+                            <i class="fa-solid fa-magnifying-glass-plus"></i> So sánh ảnh
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1.5 mt-2.5 pt-2 border-t border-slate-800">
+                        <div class="flex items-center justify-between text-xs font-bold text-slate-200">
+                            <span class="truncate max-w-[140px]" title="${item.file.name}">${item.file.name}</span>
+                            <span class="text-emerald-400 font-mono font-bold">-${savedPercent}%</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] text-slate-400">
+                            <span>${(item.originalSize / 1024).toFixed(1)} KB ➔ <strong class="text-indigo-300">${(item.compressedSize / 1024).toFixed(1)} KB</strong></span>
+                            <a href="${item.objectUrl}" download="${targetFilename}" class="px-2 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white font-bold transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-download"></i> .${ext.toUpperCase()}
+                            </a>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            }
+
+            document.getElementById('compress-total-saved').innerText = `Tiết kiệm: ${(totalSavedBytes / 1024).toFixed(1)} KB (${compressList.length} ảnh)`;
+            isCompressing = false;
+        }
+
+        async function downloadCompressedZip() {
+            if (compressList.length === 0) return;
+            const validItems = compressList.filter(item => item.compressedBlob);
+            if (validItems.length === 0) {
+                alert("Chưa có dữ liệu nén để tải ZIP.");
+                return;
+            }
+
+            const zip = new JSZip();
+            const format = document.getElementById('compress-format').value;
+            const ext = format === 'image/webp' ? 'webp' : format === 'image/png' ? 'png' : 'jpg';
+
+            validItems.forEach(item => {
+                const base = item.file.name.replace(/\.[^/.]+$/, '');
+                zip.file(`${base}_compressed.${ext}`, item.compressedBlob);
+            });
+
+            const content = await zip.generateAsync({type: 'blob'});
+            const zipUrl = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = zipUrl;
+            a.download = `Compressed_Manga_Images.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(zipUrl), 10000);
+        }
+
+
+        // =========================================================================
+        // 5. FORMAT CONVERTER
+        // =========================================================================
+        let convertList = [];
+        let isConverting = false;
+
+        function getTargetFormatExt(mimeType) {
+            if (mimeType === 'image/png') return 'png';
+            if (mimeType === 'image/jpeg') return 'jpg';
+            if (mimeType === 'image/webp') return 'webp';
+            return 'png';
+        }
+
+        function formatFileSize(bytes) {
+            if (!bytes || bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        async function handleConvertFilesSelect(files) {
+            if (!files || files.length === 0) return;
+
+            document.getElementById('convert-upload').classList.add('hidden');
+            document.getElementById('convert-panel').classList.remove('hidden');
+
+            const statusBadge = document.getElementById('convert-status-badge');
+            if (statusBadge) statusBadge.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang đọc ${files.length} ảnh...`;
+
+            const validFiles = files.filter(f => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp|svg|tiff)$/i.test(f.name));
+            if (validFiles.length === 0) {
+                alert("Vui lòng chọn các file định dạng hình ảnh hợp lệ (PNG, JPG, WEBP, ...)");
+                return;
+            }
+
+            const newItems = await Promise.all(validFiles.map(f => new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    const img = new Image();
+                    img.onload = () => resolve({ file: f, img, originalSize: f.size, convertedBlob: null, objectUrl: null, convertedExt: '' });
+                    img.onerror = () => resolve(null);
+                    img.src = evt.target.result;
+                };
+                reader.onerror = () => resolve(null);
+                reader.readAsDataURL(f);
+            })));
+
+            const filteredNewItems = newItems.filter(Boolean);
+            if (filteredNewItems.length === 0) {
+                alert("Không thể đọc được file ảnh đã chọn.");
+                return;
+            }
+
+            convertList = convertList.concat(filteredNewItems);
+            await processConvertBatch();
+        }
+
+        function addMoreConvertFiles() {
+            const input = document.getElementById('convert-files');
+            if (!input) return;
+            input.value = '';
+            input.click();
+        }
+
+        function resetConvertBatch() {
+            convertList.forEach(item => {
+                if (item.objectUrl) URL.revokeObjectURL(item.objectUrl);
+            });
+            convertList = [];
+            document.getElementById('convert-grid').innerHTML = '';
+            document.getElementById('convert-panel').classList.add('hidden');
+            document.getElementById('convert-upload').classList.remove('hidden');
+            const input = document.getElementById('convert-files');
+            if (input) input.value = '';
+            const statusBadge = document.getElementById('convert-status-badge');
+            if (statusBadge) statusBadge.innerText = 'Đã tải 0 ảnh';
+        }
+
+        document.getElementById('convert-files').addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            handleConvertFilesSelect(files);
+        });
+
+        async function processConvertBatch() {
+            if (convertList.length === 0) return;
+            if (isConverting) return;
+            isConverting = true;
+
+            const targetFormat = document.getElementById('convert-target').value;
+            const ext = getTargetFormatExt(targetFormat);
+            const grid = document.getElementById('convert-grid');
+            const statusBadge = document.getElementById('convert-status-badge');
+
+            if (statusBadge) {
+                statusBadge.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang chuyển sang .${ext.toUpperCase()}...`;
+            }
+
+            convertList.forEach(item => {
+                if (item.objectUrl) {
+                    URL.revokeObjectURL(item.objectUrl);
+                    item.objectUrl = null;
+                }
+            });
+
+            grid.innerHTML = '';
+
+            for (let i = 0; i < convertList.length; i++) {
+                const item = convertList[i];
+                const canvas = document.createElement('canvas');
+                canvas.width = item.img.naturalWidth;
+                canvas.height = item.img.naturalHeight;
+                const ctx = canvas.getContext('2d');
+
+                if (targetFormat === 'image/jpeg') {
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                }
+                ctx.drawImage(item.img, 0, 0);
+
+                const blob = await new Promise(res => canvas.toBlob(res, targetFormat, 0.92));
+                item.convertedBlob = blob;
+                item.convertedExt = ext;
+                item.objectUrl = URL.createObjectURL(blob);
+
+                const origName = item.file.name;
+                const baseName = origName.replace(/\.[^/.]+$/, '');
+                const targetFilename = `${baseName}.${ext}`;
+                const sizeDiff = blob ? (blob.size - item.originalSize) : 0;
+                const sizeDiffPercent = item.originalSize > 0 ? Math.round((sizeDiff / item.originalSize) * 100) : 0;
+                const sizeBadgeClass = sizeDiff <= 0 ? 'text-emerald-400' : 'text-amber-400';
+                const sizeDiffStr = sizeDiff <= 0 ? `${sizeDiffPercent}%` : `+${sizeDiffPercent}%`;
+
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col justify-between text-xs font-mono shadow-md hover:border-slate-700 transition-all";
+                card.innerHTML = `
+                    <div class="relative group cursor-pointer overflow-hidden rounded-xl bg-slate-950/50 border border-slate-850 flex items-center justify-center min-h-[140px]" onclick="openPreviewModal('${item.objectUrl}')">
+                        <img src="${item.objectUrl}" class="max-h-40 object-contain rounded transition-transform group-hover:scale-105">
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-sans text-xs gap-1.5 font-bold">
+                            <i class="fa-solid fa-magnifying-glass-plus"></i> Xem ảnh
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1.5 mt-2.5 pt-2 border-t border-slate-800">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="truncate font-bold text-slate-200 text-[11px]" title="${origName}">${origName}</span>
+                            <span class="${sizeBadgeClass} text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800">${sizeDiffStr}</span>
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] text-slate-400">
+                            <span>${formatFileSize(item.originalSize)} ➔ <strong class="text-indigo-300">${formatFileSize(blob ? blob.size : 0)}</strong></span>
+                            <a href="${item.objectUrl}" download="${targetFilename}" class="px-2 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 hover:border-transparent text-indigo-300 hover:text-white font-bold transition-colors flex items-center gap-1">
+                                <i class="fa-solid fa-download"></i> .${ext.toUpperCase()}
+                            </a>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            }
+
+            if (statusBadge) {
+                statusBadge.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Đã đổi ${convertList.length} ảnh sang .${ext.toUpperCase()}`;
+            }
+            isConverting = false;
+        }
+
+        async function downloadConvertedZip() {
+            if (convertList.length === 0) return;
+            const validItems = convertList.filter(item => item.convertedBlob);
+            if (validItems.length === 0) {
+                alert("Chưa có ảnh nào chuyển đổi hoàn tất để tải ZIP.");
+                return;
+            }
+
+            const zip = new JSZip();
+            validItems.forEach(item => {
+                const base = item.file.name.replace(/\.[^/.]+$/, '');
+                zip.file(`${base}.${item.convertedExt}`, item.convertedBlob);
+            });
+            const content = await zip.generateAsync({type: 'blob'});
+            const zipUrl = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = zipUrl;
+            a.download = `Converted_${convertList[0].convertedExt.toUpperCase()}_Images.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(zipUrl), 10000);
+        }
+
+
+        // =========================================================================
+        // 6. IMAGE SHARPEN & ENHANCE
+        // =========================================================================
+        let enhanceImg = null;
+        let enhanceFileName = 'Enhanced_Image.png';
+
+        document.getElementById('enhance-file').addEventListener('change', (e) => {
+            if (!e.target.files[0]) return;
+            const file = e.target.files[0];
+            enhanceFileName = file.name;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                const img = new Image();
+                img.onload = () => {
+                    enhanceImg = img;
+                    document.getElementById('enhance-upload').classList.add('hidden');
+                    document.getElementById('enhance-panel').classList.remove('hidden');
+                    processEnhance();
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function resetEnhance() {
+            enhanceImg = null;
+            document.getElementById('enhance-panel').classList.add('hidden');
+            document.getElementById('enhance-upload').classList.remove('hidden');
+            const input = document.getElementById('enhance-file');
+            if (input) input.value = '';
+        }
+
+        function processEnhance() {
+            if (!enhanceImg) return;
+            const canvas = document.getElementById('enhance-canvas');
+            canvas.width = enhanceImg.naturalWidth;
+            canvas.height = enhanceImg.naturalHeight;
+            const ctx = canvas.getContext('2d');
+
+            const contrast = parseFloat(document.getElementById('enhance-contrast').value) / 100;
+            const brightness = parseFloat(document.getElementById('enhance-brightness').value) / 100;
+            ctx.filter = `contrast(${contrast}) brightness(${brightness})`;
+            ctx.drawImage(enhanceImg, 0, 0);
+
+            // Sharpen Filter convolution matrix
+            const sharpAmount = parseFloat(document.getElementById('enhance-sharp').value);
+            if (sharpAmount > 0) {
+                applySharpenFilterToCtx(ctx, canvas.width, canvas.height, sharpAmount);
+            }
+        }
+
+        function downloadEnhancedImage() {
+            const canvas = document.getElementById('enhance-canvas');
+            if (!canvas) return;
+            canvas.toBlob((blob) => {
+                if (!blob) return;
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const baseName = enhanceFileName.replace(/\.[^/.]+$/, '');
+                a.href = url;
+                a.download = `${baseName}_enhanced.png`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 5000);
+            }, 'image/png', 0.95);
+        }
+
+
+        // =========================================================================
+        // 7. OCR TEXT EXTRACTOR
+        // =========================================================================
+        let ocrFileBlob = null;
+        document.getElementById('ocr-file').addEventListener('change', (e) => {
+            if (!e.target.files[0]) return;
+            ocrFileBlob = e.target.files[0];
+            document.getElementById('ocr-upload').classList.add('hidden');
+            document.getElementById('ocr-panel').classList.remove('hidden');
+            runOcrExtraction();
+        });
+
+        async function runOcrExtraction() {
+            if (!ocrFileBlob) return;
+            const lang = document.getElementById('ocr-lang').value;
+            const statusBar = document.getElementById('ocr-status-bar');
+            const resultText = document.getElementById('ocr-result-text');
+
+            statusBar.classList.remove('hidden');
+            statusBar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang khởi tạo trí tuệ nhân tạo OCR (${lang})...`;
+
+            try {
+                const worker = await Tesseract.createWorker(lang);
+                statusBar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang quét và bóc tách chữ từ ảnh...`;
+                const ret = await worker.recognize(ocrFileBlob);
+                resultText.value = ret.data.text;
+                statusBar.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Đã trích xuất thành công ${ret.data.words.length} từ!`;
+                await worker.terminate();
+            } catch (err) {
+                console.error("OCR Error:", err);
+                statusBar.innerHTML = `<i class="fa-solid fa-circle-exclamation text-red-400"></i> Lỗi nhận diện OCR: ${err.message}`;
+            }
+        }
+
+        function copyOcrText() {
+            const text = document.getElementById('ocr-result-text').value;
+            if (!text) return;
+            navigator.clipboard.writeText(text);
+            alert("Đã sao chép toàn bộ văn bản bóc tách vào khay nhớ tạm!");
+        }
+
+
+        // Lightbox Modal
+        function openPreviewModal(imgUrl) {
+            document.getElementById('modal-img').src = imgUrl;
+            document.getElementById('preview-modal').classList.remove('hidden');
+        }
+        function closePreviewModal() {
+            document.getElementById('preview-modal').classList.add('hidden');
+        }
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePreviewModal(); });
+
+        // Drag & Drop Helper for All Tool Dropzones
+        function setupDragAndDrop(dropzoneId, inputId, onFilesDropped) {
+            const zone = document.getElementById(dropzoneId);
+            const input = document.getElementById(inputId);
+            if (!zone || !input) return;
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                zone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    zone.classList.add('border-indigo-500', 'bg-indigo-500/10');
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                zone.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    zone.classList.remove('border-indigo-500', 'bg-indigo-500/10');
+                }, false);
+            });
+
+            zone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt ? dt.files : null;
+                if (files && files.length > 0) {
+                    onFilesDropped(Array.from(files));
+                }
+            }, false);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            setupDragAndDrop('convert-upload', 'convert-files', handleConvertFilesSelect);
+            setupDragAndDrop('pdf-upload', 'pdf-file', (files) => {
+                if (files && files[0]) {
+                    handlePdfFileSelect(files[0]);
+                }
+            });
+            setupDragAndDrop('slice-upload', 'slice-file', (files) => {
+                if (files && files[0]) {
+                    handleSliceFileSelect(files[0]);
+                }
+            });
+            setupDragAndDrop('merge-upload', 'merge-files', (files) => {
+                if (files.length > 0) {
+                    const input = document.getElementById('merge-files');
+                    const dt = new DataTransfer();
+                    files.forEach(f => dt.items.add(f));
+                    input.files = dt.files;
+                    input.dispatchEvent(new Event('change'));
+                }
+            });
+            setupDragAndDrop('compress-upload', 'compress-files', (files) => {
+                if (files.length > 0) {
+                    const input = document.getElementById('compress-files');
+                    const dt = new DataTransfer();
+                    files.forEach(f => dt.items.add(f));
+                    input.files = dt.files;
+                    input.dispatchEvent(new Event('change'));
+                }
+            });
+            setupDragAndDrop('enhance-upload', 'enhance-file', (files) => {
+                if (files[0]) {
+                    const input = document.getElementById('enhance-file');
+                    const dt = new DataTransfer();
+                    dt.items.add(files[0]);
+                    input.files = dt.files;
+                    input.dispatchEvent(new Event('change'));
+                }
+            });
+            setupDragAndDrop('ocr-upload', 'ocr-file', (files) => {
+                if (files[0]) {
+                    const input = document.getElementById('ocr-file');
+                    const dt = new DataTransfer();
+                    dt.items.add(files[0]);
+                    input.files = dt.files;
+                    input.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

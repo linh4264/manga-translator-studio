@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 
 // 1. OCR Box Normalization Test
 test('OCR Box Normalization (scale 0-1000 to 0-100)', async () => {
-    const { normalizeAiBlockBox } = await import('../public/src/features/ocr/ocr-service.js');
+    const { normalizeAiBlockBox } = await import('../src/features/ocr/ocr-service.ts');
     
     // Scale 0-1000
     const rawBox1000 = { x: 200, y: 150, w: 300, h: 400 };
@@ -25,7 +25,7 @@ test('OCR Box Normalization (scale 0-1000 to 0-100)', async () => {
 
 // 2. Local Text Contour Detection Engine Test
 test('Offline Local Text Detection Engine', async () => {
-    const { detectLocalTextRegions } = await import('../public/src/features/ocr/local-ocr.js');
+    const { detectLocalTextRegions } = await import('../src/features/ocr/local-ocr.ts');
 
     // Create 100x100 synthetic image data with a dark rectangle block
     const W = 100, H = 100;
@@ -84,7 +84,7 @@ test('PWA Web App Manifest and Service Worker Assets', async () => {
 
 // 5. Module Import Integrity & State Functions Test
 test('All Core JS Modules Import Successfully and State Functions Work', async () => {
-    const state = await import('../public/src/core/state.js');
+    const state = await import('../src/core/state.ts');
     assert.strictEqual(typeof state.deleteFontFromDB, 'function');
     assert.strictEqual(typeof state.initDB, 'function');
     assert.strictEqual(typeof state.globalState, 'object');
@@ -92,8 +92,8 @@ test('All Core JS Modules Import Successfully and State Functions Work', async (
 
 // 6. Chinese to Vietnamese Translation Prompt Guidance Test
 test('Chinese to Vietnamese Translation Prompt Master Specification', async () => {
-    const { globalState } = await import('../public/src/core/state.js');
-    const { getTranslationGuidancePrompt } = await import('../public/src/features/ai/ai-service.js');
+    const { globalState } = await import('../src/core/state.ts');
+    const { getTranslationGuidancePrompt } = await import('../src/features/ai/ai-service.ts');
     
     globalState.sourceLanguage = 'zh';
     globalState.targetLanguage = 'vi';
@@ -109,8 +109,8 @@ test('Chinese to Vietnamese Translation Prompt Master Specification', async () =
 
 // 7. Image Block Overlay Module Functions & Structure Test
 test('Image Block Overlay Structure and Service Functions', async () => {
-    const canvasInteractions = await import('../public/src/features/canvas/canvas-interactions.js');
-    const blockEditorUi = await import('../public/src/ui/block-editor-ui.js');
+    const canvasInteractions = await import('../src/features/canvas/canvas-interactions.ts');
+    const blockEditorUi = await import('../src/ui/block-editor-ui.ts');
 
     assert.strictEqual(typeof canvasInteractions.triggerAddImageBlock, 'function');
     assert.strictEqual(typeof canvasInteractions.handleImageBlockSelect, 'function');
@@ -144,20 +144,20 @@ test('Image Block Overlay Structure and Service Functions', async () => {
     assert.strictEqual(mockImageBlock.style.borderRadius, 8);
 
     // Test history & DB preservation
-    const { pushStateToHistory, globalState } = await import('../public/src/core/state.js');
+    const { pushStateToHistory, globalState } = await import('../src/core/state.ts');
     globalState.pages = [{ id: 'p1', status: 'draft', blocks: [mockImageBlock] }];
     globalState.activePageIndex = 0;
     pushStateToHistory();
 
-    const { undoStack } = await import('../public/src/core/state.js');
+    const { undoStack } = await import('../src/core/state.ts');
     const snapshotBlock = undoStack[undoStack.length - 1].pagesState[0].blocks[0];
     assert.strictEqual(snapshotBlock.imageUrl, mockImageBlock.imageUrl, 'History snapshot must preserve block imageUrl');
 });
 
 // 8. Full Chapter Translation Script Export & Import Test
 test('Full Chapter Translation Script Export and Import Functions', async () => {
-    const io = await import('../public/src/features/io.js');
-    const canvasRenderer = await import('../public/src/features/canvas/canvas-renderer.js');
+    const io = await import('../src/features/io.ts');
+    const canvasRenderer = await import('../src/features/canvas/canvas-renderer.ts');
     assert.strictEqual(typeof io.exportTranslationScript, 'function');
     assert.strictEqual(typeof io.promptExportScript, 'function');
     assert.strictEqual(typeof io.importTranslationScript, 'function');
@@ -167,7 +167,7 @@ test('Full Chapter Translation Script Export and Import Functions', async () => 
 
 // 9. Per-Block Auto-Fit Toggle Test
 test('Per-Block Auto-Fit Toggle Functions', async () => {
-    const canvasStyling = await import('../public/src/features/canvas/canvas-styling.js');
+    const canvasStyling = await import('../src/features/canvas/canvas-styling.ts');
     assert.strictEqual(typeof canvasStyling.isBlockAutoFit, 'function');
     assert.strictEqual(typeof canvasStyling.toggleBlockAutoFit, 'function');
 
@@ -180,8 +180,8 @@ test('Per-Block Auto-Fit Toggle Functions', async () => {
 
 // 10. Arc & Full Warp Suite Rendering Test
 test('Arc and Full Warp Suite Rendering in setMultilineText', async () => {
-    const { setMultilineText } = await import('../public/src/core/utils.js');
-    const canvasStyling = await import('../public/src/features/canvas/canvas-styling.js');
+    const { setMultilineText } = await import('../src/core/utils.ts');
+    const canvasStyling = await import('../src/features/canvas/canvas-styling.ts');
     assert.strictEqual(typeof setMultilineText, 'function');
     assert.strictEqual(typeof canvasStyling.updateSfxSkewX, 'function');
     assert.strictEqual(typeof canvasStyling.updateSfxSkewY, 'function');
@@ -257,8 +257,8 @@ test('Sharpen Kernel Matrix Math and Compression Savings Calculation', () => {
 
 // 13. 2-Step Dedicated AI Pipeline Configuration & State Test
 test('2-Step Dedicated AI Pipeline Configuration and State', async () => {
-    const { DEFAULT_PIPELINE_MODE, DEFAULT_OCR_MODEL, DEFAULT_TRANSLATION_MODEL, VALID_OCR_MODEL_IDS, VALID_TRANSLATION_MODEL_IDS } = await import('../public/src/config/constants.js');
-    const { globalState } = await import('../public/src/core/state.js');
+    const { DEFAULT_PIPELINE_MODE, DEFAULT_OCR_MODEL, DEFAULT_TRANSLATION_MODEL, VALID_OCR_MODEL_IDS, VALID_TRANSLATION_MODEL_IDS } = await import('../src/config/constants.ts');
+    const { globalState } = await import('../src/core/state.ts');
 
     assert.strictEqual(DEFAULT_PIPELINE_MODE, 'two-step', 'Default pipeline mode must be two-step');
     assert.strictEqual(DEFAULT_OCR_MODEL, 'gemini-2.5-flash', 'Default OCR model must be gemini-2.5-flash');
@@ -274,7 +274,7 @@ test('2-Step Dedicated AI Pipeline Configuration and State', async () => {
 
 // 14. Chapter-Level Batch Translation Function and Aggregation Logic Test
 test('Chapter-Level Batch Translation Function and Aggregation Logic', async () => {
-    const aiService = await import('../public/src/features/ai/ai-service.js');
+    const aiService = await import('../src/features/ai/ai-service.ts');
     assert.strictEqual(typeof aiService.executeChapterTranslationStep, 'function', 'executeChapterTranslationStep must be exported');
     assert.strictEqual(typeof aiService.runBatchTranslation, 'function', 'runBatchTranslation must be exported');
 
@@ -299,7 +299,7 @@ test('Chapter-Level Batch Translation Function and Aggregation Logic', async () 
 
 // 15. 5-Layer Bulletproof Translation Matching Engine Test
 test('5-Layer Translation Matching Engine with Fallbacks', async () => {
-    const { matchTranslationsToBlocks } = await import('../public/src/features/ai/ai-service.js');
+    const { matchTranslationsToBlocks } = await import('../src/features/ai/ai-service.ts');
     assert.strictEqual(typeof matchTranslationsToBlocks, 'function', 'matchTranslationsToBlocks must be exported');
 
     const inputBlocks = [
@@ -328,8 +328,8 @@ test('5-Layer Translation Matching Engine with Fallbacks', async () => {
 
 // 16. Default Font Synchronization and AI Translation Block Application Test
 test('Default Font Synchronization and Application for AI Translation', async () => {
-    const { globalState } = await import('../public/src/core/state.js');
-    const { updateDefaultFont } = await import('../public/src/ui/settings-ui.js');
+    const { globalState } = await import('../src/core/state.ts');
+    const { updateDefaultFont } = await import('../src/ui/settings-ui.ts');
 
     updateDefaultFont('font-vietnamese');
     assert.strictEqual(globalState.defaultFont, 'font-vietnamese', 'globalState.defaultFont must be updated');
@@ -343,8 +343,8 @@ test('Default Font Synchronization and Application for AI Translation', async ()
 
 // 17. Immediate Auto-Fit Execution Test (No Manual Resizing Required)
 test('Immediate Auto-Fit Execution on Newly Translated Blocks', async () => {
-    const { autoFitAllBlocksOnPage, autoFitBlock, isBlockAutoFit } = await import('../public/src/features/canvas/canvas-styling.js');
-    const { globalState } = await import('../public/src/core/state.js');
+    const { autoFitAllBlocksOnPage, autoFitBlock, isBlockAutoFit } = await import('../src/features/canvas/canvas-styling.ts');
+    const { globalState } = await import('../src/core/state.ts');
 
     globalState.autoFitEnabled = true;
 
@@ -385,9 +385,9 @@ test('Immediate Auto-Fit Execution on Newly Translated Blocks', async () => {
 
 // 18. 3-Tier Comic Universe, Genre & Tone Matrix Prompt Generation Test
 test('3-Tier Comic Universe, World Setting & Narrative Tone Matrix Prompt Generation', async () => {
-    const { globalState } = await import('../public/src/core/state.js');
-    const { getTranslationGuidancePrompt } = await import('../public/src/features/ai/ai-service.js');
-    const { COMIC_UNIVERSE_PRESETS, COMIC_GENRE_PRESETS, COMIC_TONE_PRESETS } = await import('../public/src/config/constants.js');
+    const { globalState } = await import('../src/core/state.ts');
+    const { getTranslationGuidancePrompt } = await import('../src/features/ai/ai-service.ts');
+    const { COMIC_UNIVERSE_PRESETS, COMIC_GENRE_PRESETS, COMIC_TONE_PRESETS } = await import('../src/config/constants.ts');
 
     // Test Manga + Multi-Genre (Isekai + Fantasy + Action + Comedy + Wuxia + Girls' Love) + Classic Scanlation
     globalState.comicUniverse = 'manga';
@@ -431,8 +431,8 @@ test('3-Tier Comic Universe, World Setting & Narrative Tone Matrix Prompt Genera
 
 // 19. Model 2 AI Truncated JSON Stream Repair & Extraction Engine Test
 test('Model 2 Truncated JSON Response Recovery and Parsing Engine', async () => {
-    const { parseGeminiJsonText, repairJsonString, balanceJsonBrackets } = await import('../public/src/core/utils/json.js');
-    const { matchTranslationsToBlocks } = await import('../public/src/features/ai/ai-service.js');
+    const { parseGeminiJsonText, repairJsonString, balanceJsonBrackets } = await import('../src/core/utils/json.ts');
+    const { matchTranslationsToBlocks } = await import('../src/features/ai/ai-service.ts');
 
     // Case 1: Truncated inside a dialogue string (tail cutoff due to MAX_TOKENS)
     const cutInsideString = '{"blocks": [{"id": "p1_b1", "translated": "Xin chào bạn!"}, {"id": "p1_b2", "translated": "Hôm nay thời tiết đẹp quá chúng ta cùng đi';
@@ -492,10 +492,10 @@ test('Model 2 Truncated JSON Response Recovery and Parsing Engine', async () => 
 
 // 20. Phase 1 UI: Stepper State, Demo Manga Loader & 1-Click Style Presets Test
 test('Phase 1 UI: Stepper State Synchronization, Demo Manga Loader and Manga Style Presets', async () => {
-    const { globalState } = await import('../public/src/core/state.js');
-    const { applyStylePreset } = await import('../public/src/features/canvas/canvas-styling.js');
-    const { updateStepperUI } = await import('../public/src/ui/layout-ui.js');
-    const { loadDemoManga } = await import('../public/src/ui/pages-ui.js');
+    const { globalState } = await import('../src/core/state.ts');
+    const { applyStylePreset } = await import('../src/features/canvas/canvas-styling.ts');
+    const { updateStepperUI } = await import('../src/ui/layout-ui.ts');
+    const { loadDemoManga } = await import('../src/ui/pages-ui.ts');
 
     // 1. Check exports
     assert.strictEqual(typeof updateStepperUI, 'function', 'updateStepperUI must be an exported function');
@@ -551,8 +551,8 @@ test('Phase 1 UI: Stepper State Synchronization, Demo Manga Loader and Manga Sty
 
 // 21. Phase 2 UI: Ergonomic Canvas Controls (Fit Canvas, Zoom Synchronization, Left Sidebar Streamlining)
 test('Phase 2 UI: Ergonomic Canvas Controls and Sidebar Streamlining', async () => {
-    const { globalState } = await import('../public/src/core/state.js');
-    const { fitCanvasToScreen, resetZoom, changeZoom, toggleLeftSidebarMoreMenu } = await import('../public/src/ui/layout-ui.js');
+    const { globalState } = await import('../src/core/state.ts');
+    const { fitCanvasToScreen, resetZoom, changeZoom, toggleLeftSidebarMoreMenu } = await import('../src/ui/layout-ui.ts');
 
     assert.strictEqual(typeof fitCanvasToScreen, 'function', 'fitCanvasToScreen must be exported');
     assert.strictEqual(typeof toggleLeftSidebarMoreMenu, 'function', 'toggleLeftSidebarMoreMenu must be exported');
@@ -581,7 +581,7 @@ test('Phase 2 UI: Ergonomic Canvas Controls and Sidebar Streamlining', async () 
 
 // 22. Studio Pro Phase 1: Rich Text Tokenizer & Multiline Styling
 test('Studio Pro Phase 1: Rich Text Tokenizer and Styling', async () => {
-    const { hasRichTextTags, stripRichTextTags, parseRichTextTokens, setMultilineText } = await import('../public/src/core/utils.js');
+    const { hasRichTextTags, stripRichTextTags, parseRichTextTokens, setMultilineText } = await import('../src/core/utils.ts');
 
     // Tag detection
     assert.strictEqual(hasRichTextTags('Văn bản thường'), false);
@@ -608,7 +608,7 @@ test('Studio Pro Phase 1: Rich Text Tokenizer and Styling', async () => {
 
 // 23. Studio Pro Phase 1: Diamond / Oval Word Wrapping & Canvas Exporter
 test('Studio Pro Phase 1: Diamond / Oval Word Wrapping', async () => {
-    const { wrapCanvasText, wrapCanvasDiamondText } = await import('../public/src/features/canvas/canvas-renderer.js');
+    const { wrapCanvasText, wrapCanvasDiamondText } = await import('../src/features/canvas/canvas-renderer.ts');
 
     const mockCtx = {
         measureText: (str) => ({ width: str.length * 8 })

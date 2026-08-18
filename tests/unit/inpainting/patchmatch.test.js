@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { dilateMask, computeMaskROI, extractROI, generateValidSourceMap } from '../../../public/src/features/patchmatch/maskUtils.js';
-import { rgbToGrayscale, analyzeMangaTexture } from '../../../public/src/features/patchmatch/textureAnalysis.js';
-import { computePatchDistance } from '../../../public/src/features/patchmatch/patchDistance.js';
-import { reconstructFromNNF } from '../../../public/src/features/patchmatch/reconstruction.js';
-import { computeDistanceToBoundary, applySeamlessBoundaryBlending } from '../../../public/src/features/patchmatch/blending.js';
-import { runPatchMatchPipeline } from '../../../public/src/features/patchmatch/patchmatch.worker.js';
+import { dilateMask, computeMaskROI, extractROI, generateValidSourceMap } from '../../../src/features/patchmatch/maskUtils.ts';
+import { rgbToGrayscale, analyzeMangaTexture } from '../../../src/features/patchmatch/textureAnalysis.ts';
+import { computePatchDistance } from '../../../src/features/patchmatch/patchDistance.ts';
+import { reconstructFromNNF } from '../../../src/features/patchmatch/reconstruction.ts';
+import { computeDistanceToBoundary, applySeamlessBoundaryBlending } from '../../../src/features/patchmatch/blending.ts';
+import { runPatchMatchPipeline } from '../../../src/features/patchmatch/patchmatch.worker.ts';
 
 test('PatchMatch - Mask Dilation and ROI Bounding Box Calculation', () => {
     const W = 50, H = 50;

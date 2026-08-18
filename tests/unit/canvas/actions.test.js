@@ -3,8 +3,8 @@ import assert from 'node:assert';
 import '../../setup/browser-env.js';
 import '../../setup/indexeddb-mock.js';
 
-import { duplicateActiveBlock } from '../../../public/src/features/canvas/canvas-actions.js';
-import { globalState } from '../../../public/src/core/state.js';
+import { duplicateActiveBlock } from '../../../src/features/canvas/canvas-actions.ts';
+import { globalState } from '../../../src/core/state.ts';
 
 test('Canvas Actions - Duplicate Dialogue Block', () => {
     const originalBlock = {

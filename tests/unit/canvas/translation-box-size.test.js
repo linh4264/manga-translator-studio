@@ -3,11 +3,11 @@ import assert from 'node:assert';
 import '../../setup/browser-env.js';
 import '../../setup/indexeddb-mock.js';
 
-import { DEFAULT_BLOCK_SIZE_PX } from '../../../public/src/config/constants.js';
-import { refineAiBlockBox } from '../../../public/src/features/ocr/ocr-service.js';
-import { addNewBlock, startBlockResize } from '../../../public/src/features/canvas/canvas-interactions.js';
-import { snapBlockToMagicWandBubble } from '../../../public/src/features/canvas/magic-wand.js';
-import { globalState } from '../../../public/src/core/state.js';
+import { DEFAULT_BLOCK_SIZE_PX } from '../../../src/config/constants.ts';
+import { refineAiBlockBox } from '../../../src/features/ocr/ocr-service.ts';
+import { addNewBlock, startBlockResize } from '../../../src/features/canvas/canvas-interactions.ts';
+import { snapBlockToMagicWandBubble } from '../../../src/features/canvas/magic-wand.ts';
+import { globalState } from '../../../src/core/state.ts';
 
 test('Translation Box Size - Initial Box is Exactly 400px x 400px Equivalent', () => {
     assert.strictEqual(DEFAULT_BLOCK_SIZE_PX, 400, 'DEFAULT_BLOCK_SIZE_PX must be 400');

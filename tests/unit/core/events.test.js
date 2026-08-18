@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert';
 import '../../setup/browser-env.js';
 
-import { globalBus } from '../../../public/src/core/events.js';
+import { globalBus } from '../../../src/core/events.ts';
 
 test('Core Events - Event Bus Publish and Subscribe', () => {
     let receivedPayload = null;

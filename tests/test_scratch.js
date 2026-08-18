@@ -1,4 +1,4 @@
-import { parseGeminiJsonText, repairJsonString, balanceJsonBrackets } from '../public/src/core/utils/json.js';
+import { parseGeminiJsonText, repairJsonString, balanceJsonBrackets } from '../src/core/utils/json.ts';
 
 console.log("Testing current json.js...");
 

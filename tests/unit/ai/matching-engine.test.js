@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert';
 import '../../setup/browser-env.js';
 
-import { matchTranslationsToBlocks } from '../../../public/src/features/ai/ai-service.js';
+import { matchTranslationsToBlocks } from '../../../src/features/ai/ai-service.ts';
 
 test('AI Matching Engine - 5-Layer Bulletproof Matching', () => {
     const inputBlocks = [

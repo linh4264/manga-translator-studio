@@ -12,8 +12,8 @@ import {
     clearHistory,
     applyStateFromSnapshot,
     markPageAutoFitDirty
-} from '../../../public/src/core/state.js';
-import { DEFAULT_MODEL, DEFAULT_PIPELINE_MODE, DEFAULT_OCR_MODEL, DEFAULT_TRANSLATION_MODEL } from '../../../public/src/config/constants.js';
+} from '../../../src/core/state.ts';
+import { DEFAULT_MODEL, DEFAULT_PIPELINE_MODE, DEFAULT_OCR_MODEL, DEFAULT_TRANSLATION_MODEL } from '../../../src/config/constants.ts';
 
 test('Core State - Initialization and Defaults', () => {
     assert.strictEqual(globalState.selectedModel, DEFAULT_MODEL, 'Default model should match constant');

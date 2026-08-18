@@ -8,7 +8,7 @@ import {
     extractJsonFromText,
     repairJsonString,
     parseGeminiJsonText
-} from '../../../public/src/core/utils/json.js';
+} from '../../../src/core/utils/json.ts';
 
 test('AI JSON Repair - Sanitize Unescaped Newlines', () => {
     const raw = '{"text": "Line 1\nLine 2\rLine 3\tTab"}';

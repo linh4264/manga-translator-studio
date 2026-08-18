@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert';
 import '../../setup/browser-env.js';
 
-import { naturalSortFiles, isFileSystemAccessSupported } from '../../../public/src/features/fs-access.js';
+import { naturalSortFiles, isFileSystemAccessSupported } from '../../../src/features/fs-access.ts';
 
 test('Native File System: Natural Alphanumeric Sorting', () => {
     const rawFiles = [

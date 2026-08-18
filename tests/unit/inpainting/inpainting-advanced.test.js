@@ -6,7 +6,7 @@ import '../../setup/indexeddb-mock.js';
 
 import {
     cleanMangaBackgroundArtWithMask
-} from '../../../public/src/features/inpainting.js';
+} from '../../../src/features/inpainting.ts';
 import { patchCanvasElement } from '../../setup/canvas-mock.js';
 
 test('Inpainting Advanced - Phase-Locked Horizontal Line Screentone Synthesis', async () => {

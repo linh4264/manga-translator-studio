@@ -9,8 +9,8 @@ import {
     getConfiguredApiKey,
     getGeminiGenerateContentUrl,
     getGeminiModelsUrl
-} from '../../../public/src/features/ai/ai-config.js';
-import { globalState } from '../../../public/src/core/state.js';
+} from '../../../src/features/ai/ai-config.ts';
+import { globalState } from '../../../src/core/state.ts';
 
 test('AI Providers - Gemini URL and Endpoint Configuration', () => {
     globalState.aiProvider = 'gemini';

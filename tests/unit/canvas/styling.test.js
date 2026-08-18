@@ -14,8 +14,8 @@ import {
     setCopiedStyle,
     copiedStyle,
     alignActiveBlockPosition
-} from '../../../public/src/features/canvas/canvas-styling.js';
-import { globalState } from '../../../public/src/core/state.js';
+} from '../../../src/features/canvas/canvas-styling.ts';
+import { globalState } from '../../../src/core/state.ts';
 
 test('Canvas Styling - 1-Click Style Presets Application', () => {
     const mockBlock = {

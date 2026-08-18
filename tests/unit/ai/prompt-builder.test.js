@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert';
 import '../../setup/browser-env.js';
 
-import { globalState } from '../../../public/src/core/state.js';
-import { getTranslationGuidancePrompt } from '../../../public/src/features/ai/ai-service.js';
+import { globalState } from '../../../src/core/state.ts';
+import { getTranslationGuidancePrompt } from '../../../src/features/ai/ai-service.ts';
 
 test('AI Prompt Builder - Japanese to Vietnamese Scanlation Master Spec', () => {
     globalState.sourceLanguage = 'ja';

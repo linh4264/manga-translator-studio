@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert';
 import '../../setup/browser-env.js';
 
-import { PRO_STYLE_PRESETS } from '../../../public/src/config/constants.js';
-import { createMangaPSD } from '../../../public/src/features/psd-exporter.js';
+import { PRO_STYLE_PRESETS } from '../../../src/config/constants.ts';
+import { createMangaPSD } from '../../../src/features/psd-exporter.ts';
 
 test('Studio Pro Phase 2: Manga SFX Action Presets', () => {
     const sfxKeys = ['sfx_boom', 'sfx_slash', 'sfx_clash', 'sfx_whoosh', 'sfx_crack', 'sfx_heartbeat'];

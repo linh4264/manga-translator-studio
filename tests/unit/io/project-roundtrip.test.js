@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import '../../setup/browser-env.js';
 import '../../setup/indexeddb-mock.js';
 
-import { globalState } from '../../../public/src/core/state.js';
+import { globalState } from '../../../src/core/state.ts';
 
 // Project serialization & deserialization helpers (matching MTS Project Schema)
 function serializeMtsProject(state = globalState) {

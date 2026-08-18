@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert';
 import '../../setup/browser-env.js';
 
-import { i18nDict, t, changeUILanguage } from '../../../public/src/core/i18n.js';
-import { globalState } from '../../../public/src/core/state.js';
+import { i18nDict, t, changeUILanguage } from '../../../src/core/i18n.ts';
+import { globalState } from '../../../src/core/state.ts';
 
 test('Core i18n - Dictionary Completeness and Symmetry (vi <-> en)', () => {
     assert.ok(i18nDict.vi, 'Vietnamese dictionary must exist');

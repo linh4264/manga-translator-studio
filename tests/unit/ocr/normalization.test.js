@@ -6,7 +6,7 @@ import {
     normalizeAiBlockBox,
     isSuspiciousAiBlockBox,
     expandAiBox
-} from '../../../public/src/features/ocr/ocr-service.js';
+} from '../../../src/features/ocr/ocr-service.ts';
 
 test('OCR Normalization - Coordinate Scale Conversions (0-1000, 0-1, 0-100)', () => {
     // 1. Scale 0-1000 (Gemini Vision Object Detection standard)
@@ -70,7 +70,7 @@ test('OCR Normalization - Suspicious Box Detection and Expansion', () => {
 });
 
 test('OCR Normalization - Merge Overlapping Stacked AI Blocks (Eliminates Piles)', async () => {
-    const { calculateBoxIntersectionRatio, mergeOverlappingAiBlocks } = await import('../../../public/src/features/ocr/ocr-service.js');
+    const { calculateBoxIntersectionRatio, mergeOverlappingAiBlocks } = await import('../../../src/features/ocr/ocr-service.ts');
 
     // 2 overlapping boxes covering almost identical bubble area
     const boxA = { x: 50, y: 50, w: 30, h: 40 };
@@ -107,7 +107,7 @@ test('OCR Normalization - Merge Overlapping Stacked AI Blocks (Eliminates Piles)
 });
 
 test('OCR Normalization - TEXT MASK -> DILATE -> INPAINT REGION Pipeline', async () => {
-    const { computeTextMaskDilatedRoi, refineAiBlockBox } = await import('../../../public/src/features/ocr/ocr-service.js');
+    const { computeTextMaskDilatedRoi, refineAiBlockBox } = await import('../../../src/features/ocr/ocr-service.ts');
 
     // Create a mock 200x200 ImageData with dark text in center [80, 80] to [120, 120]
     const W = 200;
@@ -145,7 +145,7 @@ test('OCR Normalization - TEXT MASK -> DILATE -> INPAINT REGION Pipeline', async
 });
 
 test('OCR Normalization - Japanese Multi-Column Vertical Text & Furigana Grouping', async () => {
-    const { computeTextMaskDilatedRoi } = await import('../../../public/src/features/ocr/ocr-service.js');
+    const { computeTextMaskDilatedRoi } = await import('../../../src/features/ocr/ocr-service.ts');
 
     // Create a 300x300 mock canvas with 3 parallel vertical columns and furigana
     const W = 300;

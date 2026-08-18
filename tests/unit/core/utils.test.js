@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert';
 import '../../setup/browser-env.js';
 
-import { escapeHTML, setMultilineText, hasRichTextTags, stripRichTextTags, parseRichTextTokens } from '../../../public/src/core/utils.js';
+import { escapeHTML, setMultilineText, hasRichTextTags, stripRichTextTags, parseRichTextTokens } from '../../../src/core/utils.ts';
 
 test('Core Utils - HTML Escaping', () => {
     assert.strictEqual(escapeHTML('<div>"Hello" & \'World\'</div>'), '&lt;div&gt;&quot;Hello&quot; &amp; &#039;World&#039;&lt;/div&gt;');

@@ -9,10 +9,10 @@ import {
     applyStateFromSnapshot,
     clearHistory,
     undoStack
-} from '../../public/src/core/state.js';
-import { isBlockAutoFit, autoFitAllBlocksOnPage } from '../../public/src/features/canvas/canvas-styling.js';
-import { parseGeminiJsonText } from '../../public/src/core/utils/json.js';
-import { matchTranslationsToBlocks } from '../../public/src/features/ai/ai-service.js';
+} from '../../src/core/state.ts';
+import { isBlockAutoFit, autoFitAllBlocksOnPage } from '../../src/features/canvas/canvas-styling.ts';
+import { parseGeminiJsonText } from '../../src/core/utils/json.ts';
+import { matchTranslationsToBlocks } from '../../src/features/ai/ai-service.ts';
 
 test('Regression Reg-01: Undo/Redo Must Never Wipe Custom SFX Warp or Image Block Attributes', () => {
     clearHistory();

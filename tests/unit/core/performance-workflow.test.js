@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert';
 import '../../setup/browser-env.js';
 
-import { segmentString, setMultilineText } from '../../../public/src/core/utils.js';
-import { autoFitBlock, isBlockAutoFit } from '../../../public/src/features/canvas/canvas-styling.js';
-import { updateEraserBrushSize, eraserBrushSize } from '../../../public/src/features/inpainting.js';
-import { globalState } from '../../../public/src/core/state.js';
+import { segmentString, setMultilineText } from '../../../src/core/utils.ts';
+import { autoFitBlock, isBlockAutoFit } from '../../../src/features/canvas/canvas-styling.ts';
+import { updateEraserBrushSize, eraserBrushSize } from '../../../src/features/inpainting.ts';
+import { globalState } from '../../../src/core/state.ts';
 
 test('Performance - Intl.Segmenter Singleton and segmentString', () => {
     const text = 'Xin chào thế giới! 🌸 日本語テスト';

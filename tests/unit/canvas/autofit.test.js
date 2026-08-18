@@ -6,8 +6,8 @@ import {
     isBlockAutoFit,
     autoFitBlock,
     autoFitAllBlocksOnPage
-} from '../../../public/src/features/canvas/canvas-styling.js';
-import { globalState } from '../../../public/src/core/state.js';
+} from '../../../src/features/canvas/canvas-styling.ts';
+import { globalState } from '../../../src/core/state.ts';
 
 test('Canvas AutoFit - Toggle and Override Precedence', () => {
     globalState.autoFitEnabled = true;

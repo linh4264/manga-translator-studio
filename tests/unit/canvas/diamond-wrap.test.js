@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert';
 import '../../setup/browser-env.js';
 
-import { wrapCanvasText, wrapCanvasDiamondText, wrapRichTextTokens, balanceTextToDiamond } from '../../../public/src/features/canvas/canvas-renderer.js';
-import { parseRichTextLines } from '../../../public/src/core/utils.js';
+import { wrapCanvasText, wrapCanvasDiamondText, wrapRichTextTokens, balanceTextToDiamond } from '../../../src/features/canvas/canvas-renderer.ts';
+import { parseRichTextLines } from '../../../src/core/utils.ts';
 
 test('Canvas Text - wrapCanvasText with Rich Text Tags', () => {
     const mockCtx = {
