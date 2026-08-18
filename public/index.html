@@ -727,23 +727,27 @@
                     </div>
                 </div>
 
-                <!-- Mode Select Segmented Control (Pills 3x1 Grid) -->
-                <div class="grid grid-cols-3 gap-1 bg-slate-900/40 p-1 rounded-lg border border-slate-800/50">
+                <!-- Mode Select Segmented Control (Pills 4x1 Grid) -->
+                <div class="grid grid-cols-4 gap-1 bg-slate-900/40 p-1 rounded-lg border border-slate-800/50">
                     <button id="btn-brush-mode-eraser" onclick="setEraserBrushMode('eraser')"
-                        class="px-2 py-1.5 text-[10px] font-bold rounded-md bg-indigo-600 text-white shadow-sm transition-all flex items-center justify-center gap-1">
+                        class="px-1.5 py-1.5 text-[10px] font-bold rounded-md bg-indigo-600 text-white shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer">
                         <i class="fa-solid fa-paintbrush text-[9px]"></i> Cọ màu
                     </button>
                     <button id="btn-brush-mode-lasso" onclick="setEraserBrushMode('lasso')"
                         data-i18n-title="title-lasso-btn"
-                        class="px-2 py-1.5 text-[10px] font-bold rounded-md text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center gap-1"
+                        class="px-1.5 py-1.5 text-[10px] font-bold rounded-md text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center gap-1 cursor-pointer"
                         title="Vẽ vòng Lasso khoanh vùng tự do và chạy Content-Aware Fill">
-                        <i class="fa-solid fa-draw-polygon text-[9px]"></i> <span data-i18n="lasso-ai-btn">Lasso
-                            AI</span>
+                        <i class="fa-solid fa-draw-polygon text-[9px]"></i> <span data-i18n="lasso-ai-btn">Lasso</span>
                     </button>
                     <button id="btn-brush-mode-stamp" onclick="setEraserBrushMode('stamp')"
-                        class="px-2 py-1.5 text-[10px] font-bold rounded-md text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center gap-1"
-                        title="Đóng dấu sao chép kết cấu">
-                        <i class="fa-solid fa-stamp text-[9px]"></i> Đóng dấu
+                        class="px-1.5 py-1.5 text-[10px] font-bold rounded-md text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        title="Đóng dấu mảng kết cấu (Patch)">
+                        <i class="fa-solid fa-stamp text-[9px]"></i> Mảng vá
+                    </button>
+                    <button id="btn-brush-mode-clone-stamp" onclick="setEraserBrushMode('clone_stamp')"
+                        class="px-1.5 py-1.5 text-[10px] font-bold rounded-md text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                        title="Clone Stamp: Giữ phím Alt + Click để lấy mẫu vân tranh và quét lấp chữ">
+                        <i class="fa-solid fa-clone text-[9px]"></i> Clone
                     </button>
                 </div>
 
@@ -1394,6 +1398,45 @@
                             </div>
                         </button>
                     </div>
+
+                    <!-- Kho SFX Manga Hành động 1-Chạm (Photoshop SFX Styles) -->
+                    <div class="pt-2 border-t border-slate-800/80">
+                        <label class="text-[10px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
+                            <i class="fa-solid fa-bolt"></i> <span>Kho Hiệu ứng Âm thanh SFX (1-Chạm)</span>
+                        </label>
+                        <div class="grid grid-cols-3 gap-1">
+                            <button onclick="applyStylePreset('sfx_boom')" data-action="applyStylePreset" data-preset="sfx_boom"
+                                class="p-1.5 rounded-lg bg-slate-900 hover:bg-orange-950/70 border border-slate-800 hover:border-orange-500/50 text-center transition-all group flex flex-col items-center justify-center gap-0.5 cursor-pointer shadow-sm">
+                                <span class="text-sm">💥</span>
+                                <span class="text-[10px] font-black text-orange-400 group-hover:text-white">BÙM!</span>
+                            </button>
+                            <button onclick="applyStylePreset('sfx_slash')" data-action="applyStylePreset" data-preset="sfx_slash"
+                                class="p-1.5 rounded-lg bg-slate-900 hover:bg-cyan-950/70 border border-slate-800 hover:border-cyan-500/50 text-center transition-all group flex flex-col items-center justify-center gap-0.5 cursor-pointer shadow-sm">
+                                <span class="text-sm">⚡</span>
+                                <span class="text-[10px] font-black text-cyan-400 group-hover:text-white">XOẸT!</span>
+                            </button>
+                            <button onclick="applyStylePreset('sfx_clash')" data-action="applyStylePreset" data-preset="sfx_clash"
+                                class="p-1.5 rounded-lg bg-slate-900 hover:bg-amber-950/70 border border-slate-800 hover:border-amber-500/50 text-center transition-all group flex flex-col items-center justify-center gap-0.5 cursor-pointer shadow-sm">
+                                <span class="text-sm">🔔</span>
+                                <span class="text-[10px] font-black text-amber-300 group-hover:text-white">KENG!</span>
+                            </button>
+                            <button onclick="applyStylePreset('sfx_whoosh')" data-action="applyStylePreset" data-preset="sfx_whoosh"
+                                class="p-1.5 rounded-lg bg-slate-900 hover:bg-emerald-950/70 border border-slate-800 hover:border-emerald-500/50 text-center transition-all group flex flex-col items-center justify-center gap-0.5 cursor-pointer shadow-sm">
+                                <span class="text-sm">💨</span>
+                                <span class="text-[10px] font-black text-emerald-400 group-hover:text-white">VÚT...</span>
+                            </button>
+                            <button onclick="applyStylePreset('sfx_crack')" data-action="applyStylePreset" data-preset="sfx_crack"
+                                class="p-1.5 rounded-lg bg-slate-900 hover:bg-red-950/70 border border-slate-800 hover:border-red-500/50 text-center transition-all group flex flex-col items-center justify-center gap-0.5 cursor-pointer shadow-sm">
+                                <span class="text-sm">🩸</span>
+                                <span class="text-[10px] font-black text-red-400 group-hover:text-white">RẮC!</span>
+                            </button>
+                            <button onclick="applyStylePreset('sfx_heartbeat')" data-action="applyStylePreset" data-preset="sfx_heartbeat"
+                                class="p-1.5 rounded-lg bg-slate-900 hover:bg-rose-950/70 border border-slate-800 hover:border-rose-500/50 text-center transition-all group flex flex-col items-center justify-center gap-0.5 cursor-pointer shadow-sm">
+                                <span class="text-sm">💓</span>
+                                <span class="text-[10px] font-black text-rose-400 group-hover:text-white">THỊNH THỊCH</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 1. QUẢN LÝ PHÔNG CHỮ & TYPOGRAPHY PRO -->
@@ -1642,6 +1685,58 @@
                         title="Tự động phân tích màu sắc và loại chữ trên tranh để chọn Font, màu chữ & viền phù hợp">
                         <i class="fa-solid fa-wand-magic-sparkles text-emerald-400"></i> Auto Match Font & Màu
                     </button>
+
+                    <!-- Gradient Text & Blend Mode Controls (Photoshop Layer Effects) -->
+                    <div class="space-y-2 pt-2 border-t border-slate-900">
+                        <div class="flex items-center justify-between">
+                            <label class="flex items-center gap-1.5 text-[10px] text-amber-400 font-bold uppercase tracking-wider cursor-pointer">
+                                <input type="checkbox" id="style-gradient-enabled" onchange="toggleGradientEnabled(this.checked)"
+                                    class="rounded border-slate-800 text-amber-500 focus:ring-0 w-3.5 h-3.5">
+                                <span><i class="fa-solid fa-wand-magic-sparkles"></i> Chữ Gradient (Đổ màu chuyển tiếp)</span>
+                            </label>
+                        </div>
+                        <div id="gradient-settings-row" class="hidden grid grid-cols-2 gap-2">
+                            <div class="space-y-1">
+                                <span class="text-[10px] text-slate-400">Màu bắt đầu</span>
+                                <div class="flex items-center space-x-1.5">
+                                    <input type="color" id="style-gradient-start" value="#ff7e5f" oninput="syncGradientStartHex(this.value)"
+                                        class="w-7 h-7 rounded border border-slate-800 bg-transparent cursor-pointer">
+                                    <input type="text" id="style-gradient-start-hex" value="#ff7e5f" oninput="syncGradientStartHex(this.value)"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-300 font-mono focus:outline-none">
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <span class="text-[10px] text-slate-400">Màu kết thúc</span>
+                                <div class="flex items-center space-x-1.5">
+                                    <input type="color" id="style-gradient-end" value="#feb47b" oninput="syncGradientEndHex(this.value)"
+                                        class="w-7 h-7 rounded border border-slate-800 bg-transparent cursor-pointer">
+                                    <input type="text" id="style-gradient-end-hex" value="#feb47b" oninput="syncGradientEndHex(this.value)"
+                                        class="w-full bg-slate-900 border border-slate-800 rounded px-2 py-1 text-xs text-slate-300 font-mono focus:outline-none">
+                                </div>
+                            </div>
+                            <div class="col-span-2 space-y-1">
+                                <div class="flex justify-between items-center text-[10px] text-slate-400">
+                                    <span>Góc xoay Gradient (Angle)</span>
+                                    <span id="lbl-gradient-angle" class="font-mono text-amber-400 font-bold">90°</span>
+                                </div>
+                                <input type="range" id="slider-gradient-angle" min="0" max="360" value="90" oninput="updateGradientAngle(this.value)"
+                                    class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500">
+                            </div>
+                        </div>
+
+                        <!-- Blend Mode Select -->
+                        <div class="space-y-1 pt-1">
+                            <span class="text-[10px] text-slate-400">Hòa trộn Layer (Blend Mode)</span>
+                            <select id="style-blend-mode" onchange="syncActiveBlockStyle('blendMode', this.value)"
+                                class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
+                                <option value="normal">Bình thường (Normal)</option>
+                                <option value="multiply">Nhân màu / Tối (Multiply)</option>
+                                <option value="screen">Lọc sáng (Screen)</option>
+                                <option value="overlay">Phủ màu tương phản (Overlay)</option>
+                                <option value="difference">Đảo màu viền (Difference)</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- 3. VIỀN KÉP & BÓNG ĐỔ ĐA CHIỀU (Double Stroke & 3D Drop Shadow) -->
@@ -3482,13 +3577,18 @@
                         <span>Nếu tính năng tự động tải về bị chặn, hãy **nhấn giữ hoặc click chuột phải vào ảnh trên**
                             và chọn **Lưu hình ảnh**.</span>
                     </div>
-                    <div class="flex space-x-2">
+                    <div class="flex flex-wrap gap-2">
                         <button onclick="closeExportModal()"
-                            class="px-4 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors">Đóng
+                            class="px-3.5 py-2 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer">Đóng
                             lại</button>
+                        <button onclick="exportCurrentPagePSD()"
+                            class="px-3.5 py-2 text-xs font-bold rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20 flex items-center gap-1.5 cursor-pointer"
+                            title="Xuất file Photoshop (.PSD) phân lớp đầy đủ: Background, Inpaint Mask, Text Layers">
+                            <i class="fa-solid fa-layer-group"></i> Xuất file PSD
+                        </button>
                         <a id="lnk-export-direct-download" href="" download="translated-page.png"
-                            class="px-4 py-2 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 flex items-center gap-1.5"><i
-                                class="fa-solid fa-download"></i> Tải về trực tiếp</a>
+                            class="px-4 py-2 text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/20 flex items-center gap-1.5 cursor-pointer"><i
+                                class="fa-solid fa-download"></i> Tải về ảnh (PNG)</a>
                     </div>
                 </div>
             </div>

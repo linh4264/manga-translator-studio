@@ -13,7 +13,8 @@ import {
     updateActiveBlockEditor, restoreBackgroundForBlock, restoreOriginalBackground,
     syncTextColorHex, syncBgColorHex, syncStrokeColorHex, syncShadowColorHex,
     setBilingualMode, setActiveBlockGender, setBlockType,
-    insertRichTextTag, applyRichColorToSelection, applyRichSizeToSelection, clearRichFormattingFromSelection, toggleDiamondWrapActiveBlock
+    insertRichTextTag, applyRichColorToSelection, applyRichSizeToSelection, clearRichFormattingFromSelection, toggleDiamondWrapActiveBlock,
+    toggleGradientEnabled, syncGradientStartHex, syncGradientEndHex, updateGradientAngle
 } from './block-editor-ui.js';
 
 import {
@@ -868,5 +869,13 @@ Object.assign(window, {
     applyRichColorToSelection,
     applyRichSizeToSelection,
     clearRichFormattingFromSelection,
-    toggleDiamondWrapActiveBlock
+    toggleDiamondWrapActiveBlock,
+    toggleGradientEnabled,
+    syncGradientStartHex,
+    syncGradientEndHex,
+    updateGradientAngle,
+    exportCurrentPagePSD: async () => {
+        const io = await import('../features/io.js');
+        return io.exportCurrentPagePSD();
+    }
 });

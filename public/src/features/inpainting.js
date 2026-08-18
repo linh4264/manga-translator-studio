@@ -190,6 +190,7 @@ export function setEraserBrushMode(mode) {
 
     const btnEraser = document.getElementById('btn-brush-mode-eraser');
     const btnStamp = document.getElementById('btn-brush-mode-stamp');
+    const btnCloneStamp = document.getElementById('btn-brush-mode-clone-stamp');
     const btnSpotInpaint = document.getElementById('btn-brush-mode-spot-inpaint');
     const btnLasso = document.getElementById('btn-brush-mode-lasso');
     const stampControls = document.getElementById('stamp-controls');
@@ -198,7 +199,7 @@ export function setEraserBrushMode(mode) {
     const brushSizeContainer = document.getElementById('brush-size-container');
 
     // Reset button states
-    [btnEraser, btnStamp, btnSpotInpaint, btnLasso].forEach(btn => {
+    [btnEraser, btnStamp, btnCloneStamp, btnSpotInpaint, btnLasso].forEach(btn => {
         if (btn) {
             btn.classList.remove('bg-indigo-600', 'text-white');
             btn.classList.add('text-slate-400', 'hover:text-slate-200');
@@ -216,6 +217,19 @@ export function setEraserBrushMode(mode) {
         if (brushSizeContainer) brushSizeContainer.classList.add('hidden');
 
         isPatchStampActive = patchCanvas !== null;
+    } else if (mode === 'clone_stamp') {
+        if (btnCloneStamp) {
+            btnCloneStamp.classList.add('bg-indigo-600', 'text-white');
+            btnCloneStamp.classList.remove('text-slate-400', 'hover:text-slate-200');
+        }
+        if (stampControls) stampControls.classList.add('hidden');
+        if (lassoControls) lassoControls.classList.add('hidden');
+        if (brushColorContainer) brushColorContainer.classList.add('hidden');
+        if (brushSizeContainer) brushSizeContainer.classList.remove('hidden');
+
+        isPatchStampActive = false;
+        isSelectingPatch = false;
+        showToast("🎯 Clone Stamp: Giữ phím Alt + Click để lấy mẫu vân, sau đó quét cọ để lấp chữ!", "info");
     } else if (mode === 'spot-inpaint') {
         if (btnSpotInpaint) {
             btnSpotInpaint.classList.add('bg-indigo-600', 'text-white');
@@ -760,6 +774,93 @@ export function initEraserDrawingEvents() {
         canvas.ontouchstart = startSpot;
         canvas.ontouchmove = drawSpot;
         canvas.ontouchend = applySpotInpaint;
+        return;
+    }
+
+    // --- CASE 2.8: Pure-Canvas Clone Stamp Mode (Photoshop Alt+Click) ---
+    if (brushMode === 'clone_stamp') {
+        let isDrawingClone = false;
+        let strokeStartPos = null;
+        let sourceAnchor = null;
+
+        const drawCloneAt = (curX, curY) => {
+            if (!sourceAnchor || !strokeStartPos) return;
+            const offsetX = curX - strokeStartPos.x;
+            const offsetY = curY - strokeStartPos.y;
+            const sampleX = sourceAnchor.x + offsetX;
+            const sampleY = sourceAnchor.y + offsetY;
+
+            const img = elements.mangaBgImage;
+            if (!img || !img.naturalWidth) return;
+
+            const r = Math.max(3, eraserBrushSize || 15);
+            const diameter = r * 2;
+
+            const tempC = document.createElement('canvas');
+            tempC.width = diameter;
+            tempC.height = diameter;
+            const tCtx = tempC.getContext('2d');
+
+            // Soft radial feathering to seamlessly blend screentones
+            const grad = tCtx.createRadialGradient(r, r, r * 0.4, r, r, r);
+            grad.addColorStop(0, 'rgba(0,0,0,1)');
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+            tCtx.save();
+            tCtx.drawImage(img, sampleX - r, sampleY - r, diameter, diameter, 0, 0, diameter, diameter);
+            tCtx.globalCompositeOperation = 'destination-in';
+            tCtx.fillStyle = grad;
+            tCtx.beginPath();
+            tCtx.arc(r, r, r, 0, Math.PI * 2);
+            tCtx.fill();
+            tCtx.restore();
+
+            ctx.drawImage(tempC, curX - r, curY - r);
+        };
+
+        const startClone = (e) => {
+            e.preventDefault();
+            const pos = getMousePos(e);
+            if (e.altKey) {
+                window.cloneSourcePoint = { x: pos.x, y: pos.y };
+                showToast(`🎯 Đã ghim điểm mẫu tại (${Math.round(pos.x)}, ${Math.round(pos.y)})`, "success");
+                return;
+            }
+
+            if (!window.cloneSourcePoint) {
+                showToast("⚠️ Vui lòng giữ phím Alt và Click chuột lên vùng ảnh mẫu trước!", "warn");
+                return;
+            }
+
+            isDrawingClone = true;
+            strokeStartPos = { x: pos.x, y: pos.y };
+            sourceAnchor = { x: window.cloneSourcePoint.x, y: window.cloneSourcePoint.y };
+            pushStateToHistory();
+            drawCloneAt(pos.x, pos.y);
+        };
+
+        const moveClone = (e) => {
+            if (!isDrawingClone) return;
+            e.preventDefault();
+            const pos = getMousePos(e);
+            drawCloneAt(pos.x, pos.y);
+        };
+
+        const stopClone = () => {
+            if (isDrawingClone) {
+                isDrawingClone = false;
+                saveEraserDrawingToPage();
+            }
+        };
+
+        canvas.onmousedown = startClone;
+        canvas.onmousemove = moveClone;
+        canvas.onmouseup = stopClone;
+        canvas.onmouseleave = stopClone;
+
+        canvas.ontouchstart = startClone;
+        canvas.ontouchmove = moveClone;
+        canvas.ontouchend = stopClone;
         return;
     }
 

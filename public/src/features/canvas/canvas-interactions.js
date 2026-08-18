@@ -87,8 +87,40 @@ export function startBlockDrag(e, block) {
                 }
             });
         } else {
-            block.box.x = Math.max(0, Math.min(100 - block.box.w, startPercentX + deltaPercentX));
-            block.box.y = Math.max(0, Math.min(100 - block.box.h, startPercentY + deltaPercentY));
+            let targetX = Math.max(0, Math.min(100 - block.box.w, startPercentX + deltaPercentX));
+            let targetY = Math.max(0, Math.min(100 - block.box.h, startPercentY + deltaPercentY));
+
+            // Smart Magnet Snapping (when not holding Alt/Shift)
+            if (!moveEvent.altKey && activePage && activePage.blocks) {
+                const snapThreshold = 1.2; // 1.2% threshold
+                const curCenterX = targetX + block.box.w / 2;
+                const curCenterY = targetY + block.box.h / 2;
+
+                // 1. Page Center Alignment
+                if (Math.abs(curCenterX - 50) < snapThreshold) {
+                    targetX = 50 - block.box.w / 2;
+                }
+                if (Math.abs(curCenterY - 50) < snapThreshold) {
+                    targetY = 50 - block.box.h / 2;
+                }
+
+                // 2. Alignment with sibling blocks
+                for (const other of activePage.blocks) {
+                    if (other.id === block.id || !other.box) continue;
+                    const otherCenterX = other.box.x + other.box.w / 2;
+                    const otherCenterY = other.box.y + other.box.h / 2;
+
+                    if (Math.abs(curCenterX - otherCenterX) < snapThreshold) {
+                        targetX = otherCenterX - block.box.w / 2;
+                    }
+                    if (Math.abs(curCenterY - otherCenterY) < snapThreshold) {
+                        targetY = otherCenterY - block.box.h / 2;
+                    }
+                }
+            }
+
+            block.box.x = targetX;
+            block.box.y = targetY;
 
             const blockElem = document.getElementById(block.id);
             if (blockElem) {

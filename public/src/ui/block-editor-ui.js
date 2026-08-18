@@ -389,6 +389,87 @@ function syncColorAndOpacityInputs(block) {
         const lblPadding = document.getElementById('lbl-padding') || elements.lblPadding;
         if (lblPadding) lblPadding.innerText = `${padding}px`;
     }
+
+    // Gradient & Blend Mode Controls Sync
+    const gradEnabled = !!block.style.gradientEnabled;
+    const chkGrad = document.getElementById('style-gradient-enabled');
+    const rowGrad = document.getElementById('gradient-settings-row');
+    if (chkGrad) chkGrad.checked = gradEnabled;
+    if (rowGrad) rowGrad.classList.toggle('hidden', !gradEnabled);
+
+    const gradStart = block.style.gradientColorStart || '#ff7e5f';
+    const gradEnd = block.style.gradientColorEnd || '#feb47b';
+    const gradAngle = block.style.gradientAngle !== undefined ? block.style.gradientAngle : 90;
+
+    const inpGradStart = document.getElementById('style-gradient-start');
+    const inpGradStartHex = document.getElementById('style-gradient-start-hex');
+    const inpGradEnd = document.getElementById('style-gradient-end');
+    const inpGradEndHex = document.getElementById('style-gradient-end-hex');
+    const sliderGradAngle = document.getElementById('slider-gradient-angle');
+    const lblGradAngle = document.getElementById('lbl-gradient-angle');
+
+    if (inpGradStart) inpGradStart.value = gradStart;
+    if (inpGradStartHex) inpGradStartHex.value = gradStart;
+    if (inpGradEnd) inpGradEnd.value = gradEnd;
+    if (inpGradEndHex) inpGradEndHex.value = gradEnd;
+    if (sliderGradAngle) sliderGradAngle.value = gradAngle;
+    if (lblGradAngle) lblGradAngle.textContent = `${gradAngle}°`;
+
+    const selectBlend = document.getElementById('style-blend-mode');
+    if (selectBlend) selectBlend.value = block.style.blendMode || 'normal';
+}
+
+export function toggleGradientEnabled(val) {
+    const activeBlock = getActiveBlock();
+    if (!activeBlock) return;
+    if (!activeBlock.style) activeBlock.style = {};
+    activeBlock.style.gradientEnabled = val;
+    const row = document.getElementById('gradient-settings-row');
+    if (row) row.classList.toggle('hidden', !val);
+    requestOverlayRender();
+    const page = globalState.pages[globalState.activePageIndex];
+    if (page) savePageToDB(page);
+}
+
+export function syncGradientStartHex(hex) {
+    const activeBlock = getActiveBlock();
+    if (!activeBlock) return;
+    if (!activeBlock.style) activeBlock.style = {};
+    activeBlock.style.gradientColorStart = hex;
+    const colInp = document.getElementById('style-gradient-start');
+    const hexInp = document.getElementById('style-gradient-start-hex');
+    if (colInp) colInp.value = hex;
+    if (hexInp) hexInp.value = hex;
+    requestOverlayRender();
+    const page = globalState.pages[globalState.activePageIndex];
+    if (page) savePageToDB(page);
+}
+
+export function syncGradientEndHex(hex) {
+    const activeBlock = getActiveBlock();
+    if (!activeBlock) return;
+    if (!activeBlock.style) activeBlock.style = {};
+    activeBlock.style.gradientColorEnd = hex;
+    const colInp = document.getElementById('style-gradient-end');
+    const hexInp = document.getElementById('style-gradient-end-hex');
+    if (colInp) colInp.value = hex;
+    if (hexInp) hexInp.value = hex;
+    requestOverlayRender();
+    const page = globalState.pages[globalState.activePageIndex];
+    if (page) savePageToDB(page);
+}
+
+export function updateGradientAngle(val) {
+    const num = parseInt(val, 10);
+    const activeBlock = getActiveBlock();
+    if (!activeBlock) return;
+    if (!activeBlock.style) activeBlock.style = {};
+    activeBlock.style.gradientAngle = num;
+    const lbl = document.getElementById('lbl-gradient-angle');
+    if (lbl) lbl.textContent = `${num}°`;
+    requestOverlayRender();
+    const page = globalState.pages[globalState.activePageIndex];
+    if (page) savePageToDB(page);
 }
 
 export async function restoreBackgroundForBlock(blockId) {

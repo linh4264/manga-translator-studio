@@ -348,6 +348,42 @@ export function closeExportModal() {
     elements.lnkExportDirectDownload.removeAttribute('href');
 }
 
+// Xuất file Photoshop (.PSD) phân lớp chuyên nghiệp
+export async function exportCurrentPagePSD() {
+    if (globalState.activePageIndex === -1) {
+        showToast("Vui lòng chọn hoặc tải lên ít nhất một trang truyện trước khi xuất PSD.", "warn");
+        return;
+    }
+
+    const page = globalState.pages[globalState.activePageIndex];
+    if (!page) return;
+
+    try {
+        updateProcessingOverlay(true, "Đang tạo file Photoshop PSD...", "Đang phân tầng Background, Inpaint Mask và Text...", 50);
+        await waitForImageReady(elements.mangaBgImage, page.src);
+
+        const { createMangaPSD } = await import('./psd-exporter.js');
+        const psdBlob = await createMangaPSD(page, elements.mangaBgImage, elements.eraserCanvas);
+
+        const url = URL.createObjectURL(psdBlob);
+        const fileName = `${getCleanFileBaseName(page.name)}_layers.psd`;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        updateProcessingOverlay(false);
+        showToast(`🎉 Đã xuất file Photoshop (${fileName}) phân lớp thành công!`, "success");
+    } catch (e) {
+        console.error("Lỗi xuất file PSD:", e);
+        updateProcessingOverlay(false);
+        showToast(`Không thể tạo file PSD: ${e.message}`, "error");
+    }
+}
+
 function getExportRange() {
     const chk = document.getElementById('chk-export-range');
     const numStart = document.getElementById('num-export-start');

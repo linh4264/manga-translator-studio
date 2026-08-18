@@ -733,13 +733,41 @@ export async function renderPageToCanvas2D(page, bgImageOverride = null) {
 
                             // Thân chữ (Fill Text)
                             ctx.save();
+                            if (block.style.blendMode && block.style.blendMode !== 'normal') {
+                                ctx.globalCompositeOperation = block.style.blendMode;
+                            }
                             if (strokeWidth === 0 && strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
                                 ctx.shadowColor = shadowColor;
                                 ctx.shadowBlur = shadowBlurPx;
                                 ctx.shadowOffsetX = shadowOffsetX;
                                 ctx.shadowOffsetY = shadowOffsetY;
                             }
-                            ctx.fillStyle = tok.color || block.style.textColor || '#000000';
+
+                            let fillToApply = tok.color || block.style.textColor || '#000000';
+                            if (block.style.gradientEnabled && !tok.color) {
+                                const startCol = block.style.gradientColorStart || '#ff7e5f';
+                                const endCol = block.style.gradientColorEnd || '#feb47b';
+                                if (block.style.gradientType === 'radial') {
+                                    const radGrad = ctx.createRadialGradient(startX, lineY, 2, startX, lineY, Math.max(measuredLineWidth, fontSizePx));
+                                    radGrad.addColorStop(0, startCol);
+                                    radGrad.addColorStop(1, endCol);
+                                    fillToApply = radGrad;
+                                } else {
+                                    const angleRad = ((block.style.gradientAngle || 90) * Math.PI) / 180;
+                                    const halfW = measuredLineWidth / 2;
+                                    const halfH = fontSizePx / 2;
+                                    const gx1 = startX - halfW * Math.cos(angleRad);
+                                    const gy1 = lineY - halfH * Math.sin(angleRad);
+                                    const gx2 = startX + halfW * Math.cos(angleRad);
+                                    const gy2 = lineY + halfH * Math.sin(angleRad);
+                                    const linGrad = ctx.createLinearGradient(gx1, gy1, gx2, gy2);
+                                    linGrad.addColorStop(0, startCol);
+                                    linGrad.addColorStop(1, endCol);
+                                    fillToApply = linGrad;
+                                }
+                            }
+
+                            ctx.fillStyle = fillToApply;
                             ctx.fillText(tok.text, curTokenX, lineY);
                             ctx.restore();
 

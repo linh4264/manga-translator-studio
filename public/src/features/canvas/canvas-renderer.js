@@ -359,6 +359,31 @@ export function renderOverlays(targetContainer = null, customPage = null, custom
                 maskContent.style.textShadow = 'none';
             }
 
+            // Gradient Text Rendering
+            if (block.style.gradientEnabled) {
+                const angle = block.style.gradientAngle || 90;
+                const startCol = block.style.gradientColorStart || '#ff7e5f';
+                const endCol = block.style.gradientColorEnd || '#feb47b';
+                if (block.style.gradientType === 'radial') {
+                    maskContent.style.backgroundImage = `radial-gradient(circle, ${startCol}, ${endCol})`;
+                } else {
+                    maskContent.style.backgroundImage = `linear-gradient(${angle}deg, ${startCol}, ${endCol})`;
+                }
+                maskContent.style.webkitBackgroundClip = 'text';
+                maskContent.style.webkitTextFillColor = 'transparent';
+            } else {
+                maskContent.style.backgroundImage = 'none';
+                maskContent.style.webkitBackgroundClip = 'initial';
+                maskContent.style.webkitTextFillColor = 'initial';
+            }
+
+            // Mix Blend Mode
+            if (block.style.blendMode && block.style.blendMode !== 'normal') {
+                maskContent.style.mixBlendMode = block.style.blendMode;
+            } else {
+                maskContent.style.mixBlendMode = 'normal';
+            }
+
             const innerTextDiv = document.createElement('div');
             const isCenterAlign = !block.style.align || block.style.align === 'center';
             if (block.style.vertical) {
