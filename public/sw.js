@@ -1,5 +1,5 @@
 // Service Worker for Manga Translator Studio PWA Offline Operation
-const CACHE_NAME = 'manga-translator-v1';
+const CACHE_NAME = 'manga-translator-v2.5.1';
 
 const STATIC_ASSETS = [
     '/',
