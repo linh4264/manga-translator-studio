@@ -655,6 +655,391 @@ export function promptExportScript() {
     }
 }
 
+// Tạo chuỗi kịch bản TXT chuẩn hóa cho toàn bộ chương
+export function generateTxtScript(pages) {
+    let fileContent = "";
+    fileContent += `==================================================\n`;
+    fileContent += `  KỊCH BẢN DỊCH THUẬT MANGA - TOÀN BỘ CHƯƠNG (${pages.length} TRANG)\n`;
+    fileContent += `  Thời gian xuất: ${new Date().toLocaleString()}\n`;
+    fileContent += `==================================================\n\n`;
+
+    pages.forEach((page, index) => {
+        fileContent += `[TRANG ${index + 1}: ${page.name || `Trang ${index + 1}`}]\n`;
+        fileContent += `--------------------------------------------------\n`;
+
+        const blocks = page.blocks || [];
+        if (blocks.length === 0) {
+            fileContent += `  (Trang này chưa có ô văn bản nào)\n\n`;
+        } else {
+            blocks.forEach((block, bIdx) => {
+                const blockId = block.id ? ` [id: ${block.id}]` : '';
+                const typeLabel = block.type === 'narration' ? 'Dẫn truyện' : 
+                                 (block.type === 'sfx' ? 'SFX' : 
+                                 (block.type === 'image' ? 'Ảnh chèn' : 'Thoại'));
+                const speakerInfo = block.speaker ? ` [Nhân vật: ${block.speaker}]` : '';
+
+                fileContent += `#${bIdx + 1}${blockId} [${typeLabel}]${speakerInfo}\n`;
+                if (block.type === 'image') {
+                    fileContent += `[Ảnh]: ${block.imageUrl ? 'Có dữ liệu ảnh' : 'Chưa chọn ảnh'}\n\n`;
+                } else {
+                    fileContent += `[Gốc]:\n${block.original || '(Rỗng)'}\n`;
+                    fileContent += `[Dịch]:\n${block.translated || ''}\n\n`;
+                }
+            });
+        }
+        fileContent += `\n`;
+    });
+    return fileContent;
+}
+
+// Phân tích các khối văn bản trong một phân đoạn trang TXT
+export function parseTxtBlocksSection(sectionText) {
+    const blocks = [];
+    if (!sectionText) return blocks;
+
+    const lines = sectionText.split('\n');
+    let currentBlock = null;
+    let currentField = null; // 'original' | 'translated' | null
+    let originalLines = [];
+    let translatedLines = [];
+
+    function commitCurrentBlock() {
+        if (!currentBlock && originalLines.length === 0 && translatedLines.length === 0) return;
+        
+        let origText = originalLines.join('\n').trim();
+        let transText = translatedLines.join('\n').trim();
+
+        // Xóa dấu ngoặc kép bọc ngoài nếu tồn tại từ định dạng cũ
+        if (origText.startsWith('"') && origText.endsWith('"') && origText.length >= 2) {
+            origText = origText.substring(1, origText.length - 1);
+        }
+        if (transText.startsWith('"') && transText.endsWith('"') && transText.length >= 2) {
+            transText = transText.substring(1, transText.length - 1);
+        }
+
+        if (origText === '(Rỗng)') origText = '';
+
+        const blockObj = {
+            id: currentBlock?.id || null,
+            blockIndex: currentBlock?.blockIndex !== undefined ? currentBlock.blockIndex : null,
+            type: currentBlock?.type || 'dialogue',
+            speaker: currentBlock?.speaker || null,
+            original: origText,
+            translated: transText
+        };
+
+        blocks.push(blockObj);
+
+        currentBlock = null;
+        currentField = null;
+        originalLines = [];
+        translatedLines = [];
+    }
+
+    for (let line of lines) {
+        const trimmed = line.trim();
+
+        // Bỏ qua các dòng phân cách
+        if (/^[-=]{3,}$/.test(trimmed)) {
+            continue;
+        }
+
+        // Bỏ qua tiêu đề phân loại dạng cũ (ví dụ: * LỜI THOẠI, * DẪN CHUYỆN)
+        if (/^\*\s+[A-ZÀ-Ỹ\s,()&]+:?$/i.test(trimmed)) {
+            continue;
+        }
+
+        // Bỏ qua các thông báo rỗng
+        if (/^\(.*\)$/.test(trimmed) && trimmed.toLowerCase().includes('không có')) {
+            continue;
+        }
+
+        // Header khối chuẩn: #1 [id: blk_123] [Thoại] [Nhân vật: Naruto]
+        const blockHeaderMatch = trimmed.match(/^#(\d+)(?:\s+\[id:\s*([^\]]+)\])?(?:\s+\[([^\]]+)\])?(?:\s+\[(?:Nhân vật|Speaker):\s*([^\]]+)\])?/i);
+
+        // Header khối định dạng cũ: "1. [Nhân vật: Naruto] [Gốc]: ..." hoặc "1. [SFX] [Gốc]: ..."
+        const legacyLineMatch = trimmed.match(/^(\d+)\.(?:\s+\[([^\]]+)\])?(?:\s+\[(?:Gốc|Original)\]\s*:\s*(.*))?$/i);
+
+        if (blockHeaderMatch) {
+            commitCurrentBlock();
+            const bIdx = parseInt(blockHeaderMatch[1], 10) - 1;
+            const bId = blockHeaderMatch[2]?.trim() || null;
+            const rawType = (blockHeaderMatch[3] || '').trim().toLowerCase();
+            const speaker = blockHeaderMatch[4]?.trim() || null;
+
+            let type = 'dialogue';
+            if (rawType.includes('dẫn') || rawType.includes('narration')) type = 'narration';
+            else if (rawType.includes('sfx')) type = 'sfx';
+            else if (rawType.includes('ảnh') || rawType.includes('image')) type = 'image';
+
+            currentBlock = {
+                blockIndex: bIdx,
+                id: bId,
+                type: type,
+                speaker: speaker
+            };
+            currentField = null;
+            continue;
+        }
+
+        // Thẻ [Gốc]: hoặc [Original]:
+        const origTagMatch = trimmed.match(/^\[(?:Gốc|Original)\]\s*:\s*(.*)$/i);
+        if (origTagMatch) {
+            if (currentField === 'translated' || (currentField === 'original' && originalLines.length > 0)) {
+                commitCurrentBlock();
+            }
+            currentField = 'original';
+            const inlineContent = origTagMatch[1].trim();
+            if (inlineContent) {
+                originalLines.push(inlineContent);
+            }
+            continue;
+        }
+
+        // Thẻ [Dịch]: hoặc [Translated]: hoặc [Translation]:
+        const transTagMatch = trimmed.match(/^\[(?:Dịch|Translated|Translation)\]\s*:\s*(.*)$/i);
+        if (transTagMatch) {
+            currentField = 'translated';
+            const inlineContent = transTagMatch[1].trim();
+            if (inlineContent) {
+                translatedLines.push(inlineContent);
+            }
+            continue;
+        }
+
+        // Khớp dòng định dạng cũ
+        if (legacyLineMatch && !blockHeaderMatch) {
+            commitCurrentBlock();
+            const bIdx = parseInt(legacyLineMatch[1], 10) - 1;
+            const tag = legacyLineMatch[2] || '';
+            let speaker = null;
+            let type = 'dialogue';
+            if (tag.toLowerCase().startsWith('nhân vật:') || tag.toLowerCase().startsWith('speaker:')) {
+                speaker = tag.replace(/^(?:nhân vật|speaker):\s*/i, '').trim();
+            } else if (tag.toLowerCase().includes('dẫn') || tag.toLowerCase().includes('narration')) {
+                type = 'narration';
+            } else if (tag.toLowerCase().includes('sfx')) {
+                type = 'sfx';
+            }
+
+            currentBlock = {
+                blockIndex: bIdx,
+                id: null,
+                type: type,
+                speaker: speaker
+            };
+
+            if (legacyLineMatch[3] !== undefined) {
+                currentField = 'original';
+                originalLines.push(legacyLineMatch[3].trim());
+            } else {
+                currentField = null;
+            }
+            continue;
+        }
+
+        // Thêm nội dung nhiều dòng
+        if (currentField === 'original') {
+            originalLines.push(line);
+        } else if (currentField === 'translated') {
+            translatedLines.push(line);
+        }
+    }
+
+    commitCurrentBlock();
+    return blocks;
+}
+
+// Phân tích kịch bản TXT thành mảng các trang
+export function parseTxtScript(text) {
+    if (!text || typeof text !== 'string') return [];
+
+    const normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    const pageHeaderRegex = /\[(?:TRANG|PAGE)\s+(\d+)(?:\s*:\s*([^\]]+))?\]/gi;
+    let match;
+    const pageMatches = [];
+    while ((match = pageHeaderRegex.exec(normalizedText)) !== null) {
+        pageMatches.push({
+            index: match.index,
+            pageIndex: parseInt(match[1], 10) - 1,
+            pageName: (match[2] || '').trim(),
+            headerLength: match[0].length
+        });
+    }
+
+    if (pageMatches.length === 0) {
+        const blocks = parseTxtBlocksSection(normalizedText);
+        if (blocks.length > 0) {
+            return [{ pageIndex: 0, pageName: '', blocks }];
+        }
+        return [];
+    }
+
+    const pages = [];
+    for (let i = 0; i < pageMatches.length; i++) {
+        const cur = pageMatches[i];
+        const startPos = cur.index + cur.headerLength;
+        const endPos = (i < pageMatches.length - 1) ? pageMatches[i + 1].index : normalizedText.length;
+        const sectionText = normalizedText.substring(startPos, endPos);
+
+        const blocks = parseTxtBlocksSection(sectionText);
+        pages.push({
+            pageIndex: cur.pageIndex,
+            pageName: cur.pageName,
+            blocks: blocks
+        });
+    }
+
+    return pages;
+}
+
+// Áp dụng mảng trang kịch bản đã phân tích vào dự án
+export function applyScriptPagesToProject(pagesArray) {
+    let matchedPages = 0;
+    let matchedBlocks = 0;
+
+    if (!Array.isArray(pagesArray)) return { matchedPages, matchedBlocks };
+
+    pagesArray.forEach((scriptPage, pIdx) => {
+        if (!scriptPage.blocks || !Array.isArray(scriptPage.blocks)) return;
+
+        let targetPage = null;
+
+        if (scriptPage.pageName) {
+            targetPage = globalState.pages.find(p => p.name === scriptPage.pageName);
+        }
+        if (!targetPage && scriptPage.page) {
+            targetPage = globalState.pages.find(p => p.name === scriptPage.page);
+        }
+        if (!targetPage && scriptPage.pageIndex !== undefined && scriptPage.pageIndex !== null) {
+            const idx = typeof scriptPage.pageIndex === 'number' ? scriptPage.pageIndex : parseInt(scriptPage.pageIndex, 10);
+            if (!isNaN(idx) && idx >= 0 && idx < globalState.pages.length) {
+                targetPage = globalState.pages[idx];
+            }
+        }
+        if (!targetPage && pIdx < globalState.pages.length) {
+            targetPage = globalState.pages[pIdx];
+        }
+
+        if (!targetPage) return;
+        matchedPages++;
+
+        const matchedInTarget = new Set();
+
+        scriptPage.blocks.forEach((scriptBlock, blockIdx) => {
+            let targetBlock = null;
+            const blockId = scriptBlock.id || scriptBlock.blockId;
+
+            // 1. Khớp theo ID chính xác
+            if (blockId) {
+                targetBlock = targetPage.blocks.find(b => b.id === blockId && !matchedInTarget.has(b));
+            }
+            // 2. Khớp theo nội dung văn bản gốc
+            if (!targetBlock && scriptBlock.original) {
+                const origClean = String(scriptBlock.original).trim();
+                if (origClean) {
+                    targetBlock = targetPage.blocks.find(b => b.original && b.original.trim() === origClean && !matchedInTarget.has(b));
+                }
+            }
+            // 3. Khớp theo blockIndex được đánh dấu (#1 -> index 0)
+            if (!targetBlock && scriptBlock.blockIndex !== null && scriptBlock.blockIndex !== undefined) {
+                const idx = typeof scriptBlock.blockIndex === 'number' ? scriptBlock.blockIndex : parseInt(scriptBlock.blockIndex, 10);
+                if (!isNaN(idx) && idx >= 0 && idx < targetPage.blocks.length && !matchedInTarget.has(targetPage.blocks[idx])) {
+                    targetBlock = targetPage.blocks[idx];
+                }
+            }
+            // 4. Khớp theo thứ tự tuần tự trong danh sách blocks
+            if (!targetBlock && blockIdx < targetPage.blocks.length && !matchedInTarget.has(targetPage.blocks[blockIdx])) {
+                targetBlock = targetPage.blocks[blockIdx];
+            }
+
+            if (!targetBlock) return;
+            matchedInTarget.add(targetBlock);
+
+            if (scriptBlock.translated !== undefined && scriptBlock.translated !== null) {
+                targetBlock.translated = scriptBlock.translated;
+                matchedBlocks++;
+            }
+            if (scriptBlock.box || scriptBlock.positionPercent) {
+                targetBlock.box = normalizeAiBlockBox(scriptBlock.box || scriptBlock.positionPercent);
+            }
+            if (scriptBlock.speaker) {
+                targetBlock.speaker = scriptBlock.speaker;
+            }
+            if (scriptBlock.vertical !== undefined) {
+                targetBlock.vertical = scriptBlock.vertical;
+                if (targetBlock.style) targetBlock.style.vertical = scriptBlock.vertical;
+            }
+        });
+
+        savePageToDB(targetPage);
+    });
+
+    return { matchedPages, matchedBlocks };
+}
+
+// Áp dụng mảng phẳng các blocks (flat blocks) vào dự án
+export function applyFlatScriptBlocksToProject(flatBlocksArray) {
+    let matchedBlocks = 0;
+    const touchedPages = new Set();
+    const matchedInTarget = new Set();
+
+    if (!Array.isArray(flatBlocksArray)) return { matchedPages: 0, matchedBlocks: 0 };
+
+    flatBlocksArray.forEach((scriptBlock) => {
+        const blockId = scriptBlock.id || scriptBlock.blockId;
+        let targetBlock = null;
+        let targetPage = null;
+
+        for (const p of globalState.pages) {
+            if (blockId) {
+                const found = (p.blocks || []).find(b => b.id === blockId && !matchedInTarget.has(b));
+                if (found) {
+                    targetBlock = found;
+                    targetPage = p;
+                    break;
+                }
+            }
+        }
+
+        if (!targetBlock && scriptBlock.original) {
+            const origClean = String(scriptBlock.original).trim();
+            if (origClean) {
+                for (const p of globalState.pages) {
+                    const found = (p.blocks || []).find(b => b.original && b.original.trim() === origClean && !matchedInTarget.has(b));
+                    if (found) {
+                        targetBlock = found;
+                        targetPage = p;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (targetBlock && targetPage) {
+            matchedInTarget.add(targetBlock);
+            if (scriptBlock.translated !== undefined && scriptBlock.translated !== null) {
+                targetBlock.translated = scriptBlock.translated;
+                matchedBlocks++;
+            }
+            if (scriptBlock.box || scriptBlock.positionPercent) {
+                targetBlock.box = normalizeAiBlockBox(scriptBlock.box || scriptBlock.positionPercent);
+            }
+            if (scriptBlock.speaker) {
+                targetBlock.speaker = scriptBlock.speaker;
+            }
+            if (scriptBlock.vertical !== undefined) {
+                targetBlock.vertical = scriptBlock.vertical;
+                if (targetBlock.style) targetBlock.style.vertical = scriptBlock.vertical;
+            }
+            touchedPages.add(targetPage);
+        }
+    });
+
+    touchedPages.forEach(p => savePageToDB(p));
+    return { matchedPages: touchedPages.size, matchedBlocks };
+}
+
 // Xuất kịch bản ra tập tin TXT / JSON cho toàn bộ chương
 export function exportTranslationScript(format) {
     if (globalState.pages.length === 0) {
@@ -668,43 +1053,7 @@ export function exportTranslationScript(format) {
 
     if (format === 'txt') {
         fileName += ".txt";
-        fileContent += `==================================================\n`;
-        fileContent += `  KỊCH BẢN DỊCH THUẬT MANGA - TOÀN BỘ CHƯƠNG (${globalState.pages.length} TRANG)\n`;
-        fileContent += `  Thời gian xuất: ${new Date().toLocaleString()}\n`;
-        fileContent += `==================================================\n\n`;
-
-        globalState.pages.forEach((page, index) => {
-            fileContent += `[TRANG ${index + 1}: ${page.name || 'Không rõ tên'}]\n`;
-            fileContent += `--------------------------------------------------\n`;
-
-            const dialogueBlocks = (page.blocks || []).filter(b => b.type === 'dialogue' || !b.type);
-            const otherBlocks = (page.blocks || []).filter(b => b.type && b.type !== 'dialogue');
-
-            fileContent += `* LỜI THOẠI (Dialogues):\n`;
-            if (dialogueBlocks.length === 0) {
-                fileContent += `  (Không có ô thoại nào)\n`;
-            } else {
-                dialogueBlocks.forEach((block, bIdx) => {
-                    const speakerInfo = block.speaker ? ` [Nhân vật: ${block.speaker}]` : '';
-                    fileContent += `  ${bIdx + 1}.${speakerInfo} [Gốc]: "${block.original || '(Rỗng)'}"\n`;
-                    fileContent += `     [Dịch]: "${block.translated || ''}"\n\n`;
-                });
-            }
-
-            if (otherBlocks.length > 0) {
-                fileContent += `* DẪN CHUYỆN, SFX & KHÁC:\n`;
-                otherBlocks.forEach((block, bIdx) => {
-                    const typeLabel = block.type === 'narration' ? 'Dẫn truyện' : (block.type === 'sfx' ? 'SFX' : (block.type === 'image' ? 'Ảnh chèn' : 'Khác'));
-                    fileContent += `  ${bIdx + 1}. [${typeLabel}] [Gốc]: "${block.original || '(Rỗng)'}"\n`;
-                    if (block.type === 'image') {
-                        fileContent += `     [Ảnh]: "${block.imageUrl ? 'Có dữ liệu ảnh' : 'Chưa chọn ảnh'}"\n\n`;
-                    } else {
-                        fileContent += `     [Dịch]: "${block.translated || ''}"\n\n`;
-                    }
-                });
-            }
-            fileContent += `\n`;
-        });
+        fileContent = generateTxtScript(globalState.pages);
     } else if (format === 'json') {
         fileName += ".json";
         mimeType = "application/json";
@@ -796,168 +1145,27 @@ export async function importTranslationScript(fileList) {
             }
 
             if (pagesArray) {
-                pagesArray.forEach((scriptPage, pIdx) => {
-                    if (!scriptPage.blocks || !Array.isArray(scriptPage.blocks)) return;
-
-                    let targetPage = null;
-
-                    if (scriptPage.pageName) {
-                        targetPage = globalState.pages.find(p => p.name === scriptPage.pageName);
-                    }
-                    if (!targetPage && scriptPage.page) {
-                        targetPage = globalState.pages.find(p => p.name === scriptPage.page);
-                    }
-                    if (!targetPage && scriptPage.pageIndex !== undefined) {
-                        const idx = typeof scriptPage.pageIndex === 'number' ? scriptPage.pageIndex : parseInt(scriptPage.pageIndex, 10);
-                        if (!isNaN(idx) && idx >= 0 && idx < globalState.pages.length) {
-                            targetPage = globalState.pages[idx];
-                        }
-                    }
-                    if (!targetPage && pIdx < globalState.pages.length) {
-                        targetPage = globalState.pages[pIdx];
-                    }
-
-                    if (!targetPage) return;
-                    matchedPages++;
-
-                    scriptPage.blocks.forEach((scriptBlock, blockIdx) => {
-                        let targetBlock = null;
-                        const blockId = scriptBlock.id || scriptBlock.blockId;
-
-                        if (blockId) {
-                            targetBlock = targetPage.blocks.find(b => b.id === blockId);
-                        }
-                        if (!targetBlock && scriptBlock.original) {
-                            const origClean = String(scriptBlock.original).trim();
-                            targetBlock = targetPage.blocks.find(b => b.original && b.original.trim() === origClean);
-                        }
-                        if (!targetBlock && blockIdx < targetPage.blocks.length) {
-                            targetBlock = targetPage.blocks[blockIdx];
-                        }
-
-                        if (!targetBlock) return;
-
-                        if (scriptBlock.translated !== undefined && scriptBlock.translated !== null) {
-                            targetBlock.translated = scriptBlock.translated;
-                            matchedBlocks++;
-                        }
-                        if (scriptBlock.box || scriptBlock.positionPercent) {
-                            targetBlock.box = normalizeAiBlockBox(scriptBlock.box || scriptBlock.positionPercent);
-                        }
-                        if (scriptBlock.speaker) {
-                            targetBlock.speaker = scriptBlock.speaker;
-                        }
-                        if (scriptBlock.vertical !== undefined) {
-                            targetBlock.vertical = scriptBlock.vertical;
-                            if (targetBlock.style) targetBlock.style.vertical = scriptBlock.vertical;
-                        }
-                    });
-
-                    savePageToDB(targetPage);
-                });
+                const res = applyScriptPagesToProject(pagesArray);
+                matchedPages = res.matchedPages;
+                matchedBlocks = res.matchedBlocks;
             } else if (flatBlocksArray) {
-                const touchedPages = new Set();
-
-                flatBlocksArray.forEach((scriptBlock) => {
-                    const blockId = scriptBlock.id || scriptBlock.blockId;
-                    let targetBlock = null;
-                    let targetPage = null;
-
-                    for (const p of globalState.pages) {
-                        if (blockId) {
-                            const found = (p.blocks || []).find(b => b.id === blockId);
-                            if (found) {
-                                targetBlock = found;
-                                targetPage = p;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!targetBlock && scriptBlock.original) {
-                        const origClean = String(scriptBlock.original).trim();
-                        for (const p of globalState.pages) {
-                            const found = (p.blocks || []).find(b => b.original && b.original.trim() === origClean);
-                            if (found) {
-                                targetBlock = found;
-                                targetPage = p;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (targetBlock && targetPage) {
-                        if (scriptBlock.translated !== undefined && scriptBlock.translated !== null) {
-                            targetBlock.translated = scriptBlock.translated;
-                            matchedBlocks++;
-                        }
-                        if (scriptBlock.box || scriptBlock.positionPercent) {
-                            targetBlock.box = normalizeAiBlockBox(scriptBlock.box || scriptBlock.positionPercent);
-                        }
-                        if (scriptBlock.speaker) {
-                            targetBlock.speaker = scriptBlock.speaker;
-                        }
-                        if (scriptBlock.vertical !== undefined) {
-                            targetBlock.vertical = scriptBlock.vertical;
-                            if (targetBlock.style) targetBlock.style.vertical = scriptBlock.vertical;
-                        }
-                        touchedPages.add(targetPage);
-                    }
-                });
-
-                matchedPages = touchedPages.size;
-                touchedPages.forEach(p => savePageToDB(p));
+                const res = applyFlatScriptBlocksToProject(flatBlocksArray);
+                matchedPages = res.matchedPages;
+                matchedBlocks = res.matchedBlocks;
             } else {
                 showToast("Dữ liệu kịch bản JSON không hợp lệ!", "error");
                 return;
             }
         } else if (fileName.endsWith('.txt')) {
-            const pageHeaderRegex = /\[TRANG\s+(\d+)(?:\s*:\s*([^\]]+))?\]/gi;
-            let match;
-            let matches = [];
-            while ((match = pageHeaderRegex.exec(text)) !== null) {
-                matches.push({
-                    index: match.index,
-                    pageIndex: parseInt(match[1], 10) - 1,
-                    pageName: (match[2] || '').trim(),
-                    headerLength: match[0].length
-                });
-            }
-
-            if (matches.length === 0) {
+            const parsedPages = parseTxtScript(text);
+            if (parsedPages.length === 0) {
                 showToast("Không tìm thấy cấu trúc [TRANG ...] trong file kịch bản TXT!", "error");
                 return;
             }
 
-            matches.forEach((m, idx) => {
-                const startPos = m.index + m.headerLength;
-                const endPos = (idx < matches.length - 1) ? matches[idx + 1].index : text.length;
-                const sectionText = text.substring(startPos, endPos);
-
-                let targetPage = null;
-                if (m.pageName) {
-                    targetPage = globalState.pages.find(p => p.name === m.pageName);
-                }
-                if (!targetPage && m.pageIndex >= 0 && m.pageIndex < globalState.pages.length) {
-                    targetPage = globalState.pages[m.pageIndex];
-                }
-
-                if (!targetPage) return;
-                matchedPages++;
-
-                const blockRegex = /\[Gốc\]:\s*"([^"]*)"\s*\n\s*\[Dịch\]:\s*"([^"]*)"/gi;
-                let bMatch;
-                let bIdx = 0;
-                while ((bMatch = blockRegex.exec(sectionText)) !== null) {
-                    const translatedVal = bMatch[2];
-                    if (bIdx < targetPage.blocks.length) {
-                        targetPage.blocks[bIdx].translated = translatedVal;
-                        matchedBlocks++;
-                    }
-                    bIdx++;
-                }
-                savePageToDB(targetPage);
-            });
+            const res = applyScriptPagesToProject(parsedPages);
+            matchedPages = res.matchedPages;
+            matchedBlocks = res.matchedBlocks;
         }
 
         renderOverlays();
