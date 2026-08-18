@@ -10,5 +10,5 @@ models/
 .env
 .env.local
 .agents
-.vscode
 dist/
+.vscode
