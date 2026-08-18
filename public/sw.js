@@ -4,25 +4,10 @@ const CACHE_NAME = 'manga-translator-v1';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
+    '/cong-cu-huu-ich/',
     '/style.css',
-    '/src/main.js',
-    '/src/config/constants.js',
-    '/src/core/bootstrap.js',
-    '/src/core/component-loader.js',
-    '/src/core/elements.js',
-    '/src/core/events.js',
-    '/src/core/i18n.js',
-    '/src/core/state.js',
-    '/src/core/utils.js',
-    '/src/core/utils/dom.js',
-    '/src/core/utils/json.js',
-    '/src/core/utils/storage.js',
-    '/src/features/ocr/ocr-service.js',
-    '/src/features/ocr/local-ocr.js',
-    '/src/features/canvas/canvas-service.js',
-    '/src/features/canvas/canvas-renderer.js',
-    '/src/features/canvas/canvas-exporter.js',
-    '/src/features/io.js'
+    '/manifest.json',
+    '/demo.jpg'
 ];
 
 self.addEventListener('install', (event) => {
