@@ -25,7 +25,7 @@ test('Regression Security - Path Traversal Prevention on Static Server', () => {
         assert.strictEqual(isSafe, false, `Malicious path ${rawUrl} must be blocked`);
     }
 
-    const safePaths = ['/', '/index.html', '/style.css', '/src/main.js', '/src/core/state.js'];
+    const safePaths = ['/', '/style.css', '/demo.jpg', '/manifest.json', '/sw.js'];
     for (const urlPath of safePaths) {
         const rawFilePath = path.join(rootPath, urlPath === '/' ? 'index.html' : urlPath);
         const relative = path.relative(rootPath, rawFilePath);
