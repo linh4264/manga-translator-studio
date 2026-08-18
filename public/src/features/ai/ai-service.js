@@ -59,6 +59,14 @@ export function normalizeModelId(modelId) {
     return VALID_MODEL_IDS.includes(modelId) ? modelId : DEFAULT_MODEL;
 }
 
+export function getDefaultFontForBlockType(type) {
+    const cleanType = String(type || '').trim().toLowerCase();
+    if (cleanType === 'narration') return globalState.defaultNarrationFont || 'font-vietnamese';
+    if (cleanType === 'thought') return globalState.defaultThoughtFont || 'font-comicneue';
+    if (cleanType === 'sfx') return globalState.defaultSfxFont || 'font-impact';
+    return globalState.defaultDialogueFont || globalState.defaultFont || 'font-manga';
+}
+
 export function getModelTranslationProfile(modelId) {
     const normalized = normalizeModelId(modelId);
     const targetLang = globalState.targetLanguage || 'vi';
@@ -598,14 +606,20 @@ async function executeOcrVisionStep({
     requestHeaders
 }) {
     const ocrSystemInstruction = [
-        "You are an expert manga Vision OCR system specialized in pixel-accurate speech bubble and Japanese vertical text detection.",
+        "You are an expert manga Vision OCR system specialized in pixel-accurate speech bubble, narration box, thought bubble, and sound effect (SFX) detection.",
         "EXHAUSTIVE OCR COMPLETENESS MANDATE (BẢO TOÀN 100% NỘI DUNG CHỮ, TUYỆT ĐỐI KHÔNG BỎ SÓT):",
-        "- Detect and transcribe 100% of text on this manga page without skipping:",
-        "  1. Main dialogue speech bubbles (all bubble styles: round, oval, scream/burst, cloud, polygon, thought bubbles).",
+        "- Detect, classify, and transcribe 100% of text on this manga page without skipping:",
+        "  1. Main dialogue speech bubbles (all bubble styles: round, oval, scream/burst, polygon).",
         "  2. Narration boxes (rectangular captions, exposition boxes, inner monologue text).",
-        "  3. Floating / Handwritten / Whisper text outside bubbles (chữ viết tay nhỏ, lời lầm bầm, ghi chú nhỏ bên cạnh nhân vật hoặc ngoài viền khung thoại).",
-        "  4. Multi-column vertical Japanese text (縦書き): Read EVERY column from Right to Left without omitting the leftmost column, trailing words, or tiny characters.",
-        "  5. Hand-drawn Sound Effects (SFX) and background text signs.",
+        "  3. Thought bubbles (cloud shapes, dashed/dotted bubbles, bubbles with small circular tail nodes).",
+        "  4. Floating / Handwritten / Whisper text outside bubbles (chữ viết tay nhỏ, lời lầm bầm, ghi chú nhỏ bên cạnh nhân vật hoặc ngoài viền khung thoại).",
+        "  5. Multi-column vertical Japanese text (縦書き): Read EVERY column from Right to Left without omitting the leftmost column, trailing words, or tiny characters.",
+        "  6. Hand-drawn Sound Effects (SFX) and background text signs.",
+        "BLOCK TYPE CLASSIFICATION RULE (BẮT BUỘC PHÂN LOẠI CHÍNH XÁC MỖI KHUNG VÀO 'type'):",
+        "- 'dialogue': Spoken aloud by characters in round, oval, spiky or standard bubbles.",
+        "- 'narration': Exposition/captions in rectangular/square boxes, narration headers, or location/time tags.",
+        "- 'thought': Internal thoughts/monologues in cloud bubbles, dashed/dotted bubbles, or bubbles with small tail circles.",
+        "- 'sfx': Hand-drawn sound effects, onomatopoeia, or stylized sound text drawn on artwork.",
         "STRICT SEPARATION RULE - NEVER MERGE SEPARATE SPEECH BUBBLES (TUYỆT ĐỐI KHÔNG GỘP BÓNG THOẠI KHÁC NHAU):",
         "- Every individual speech bubble, narration box, or floating text cluster MUST be output as its own separate block with its own distinct center anchor [x, y].",
         "- DO NOT combine or merge two separate speech bubbles into one block, EVEN IF they are close to each other, in the same panel, spoken by the same character, or part of the same sentence.",
@@ -616,7 +630,7 @@ async function executeOcrVisionStep({
         "2. COLUMN READING ORDER: Read and transcribe vertical columns strictly from RIGHT to LEFT (Column 1 is rightmost, Column 2 is next to its left, Column 3 is further left, etc.). Top-to-bottom within each column. Combine columns into a single continuous sentence with natural spacing or line breaks.",
         "3. NO FURIGANA DUPLICATION: In Japanese manga, kanji characters often have tiny ruby text / furigana annotations to their right. Transcribe ONLY the primary kanji word itself. NEVER duplicate the furigana phonetic reading into the transcript (e.g. transcribe 繋がっている, NEVER 繋がつながっている; transcribe 私, NEVER 私わたし; transcribe 糸出る, NEVER 糸いと出るでる).",
         "4. TRUE GEOMETRIC CENTER ANCHOR FOR JAPANESE BUBBLES: For vertical Japanese text (縦書き), you MUST calculate the true geometric center of the ENTIRE bubble or text group bounding box. Do NOT output the top-right start of the first column. Specifically: centerX = horizontal midpoint between the leftmost and rightmost column edges, centerY = vertical midpoint between the topmost and bottommost character edges. Example: If a vertical bubble spans x: 450 to 550 and y: 200 to 400, the center anchor is [500, 300].",
-        "5. SFX & SOUND EFFECTS: Transcribe hand-drawn Japanese onomatopoeia/SFX (e.g. ドン, バキ, ざわざわ, ドキドキ) with their center coordinates and vertical=true if vertical.",
+        "5. SFX & SOUND EFFECTS: Transcribe hand-drawn Japanese onomatopoeia/SFX (e.g. ドン, バキ, ざわざわ, ドキドキ) with their center coordinates, type='sfx', and vertical=true if vertical.",
         "CLEAN RAW TRANSCRIPTION: Read and transcribe the exact raw original text inside each bubble/region. Preserve original Japanese punctuation (?, !, ..., ♪, ♡, 「, 」, ー, っ) faithfully. Do not add commentary, explanations, or translations in this step.",
         "POSITION FORMULA (Scale 0 to 1000, where top-left is [0, 0] and bottom-right is [1000, 1000]): For each block, output 2 integers [x, y] representing the exact CENTER (tâm) anchor point of the text bubble/box: x = centerX (center horizontal), y = centerY (center vertical). Example: [500, 300]. Note: The app centers a 400px x 400px translation box at this anchor point (x: anchorX - 200, y: anchorY - 200), so you do NOT need to calculate w or h.",
         "Detect vertical text with vertical=true (omit vertical for horizontal text).",
@@ -635,7 +649,7 @@ async function executeOcrVisionStep({
                 {
                     role: "user",
                     content: [
-                        { type: "text", text: "Detect each speech bubble, narration box, and SFX with its 0-1000 center anchor [x, y] coordinates (x = centerX, y = centerY) and raw original text. Return JSON matching schema {\"blocks\": [{\"id\": \"b1\", \"original\": \"...\", \"box\": [500, 300], \"vertical\": true}]}" },
+                        { type: "text", text: "Detect each speech bubble, narration box, thought bubble, and SFX with its 0-1000 center anchor [x, y] coordinates (x = centerX, y = centerY), type ('dialogue'|'narration'|'thought'|'sfx'), and raw original text. Return JSON matching schema {\"blocks\": [{\"id\": \"b1\", \"type\": \"dialogue\", \"original\": \"...\", \"box\": [500, 300], \"vertical\": true}]}" },
                         { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
                     ]
                 }
@@ -649,7 +663,7 @@ async function executeOcrVisionStep({
         requestBody = JSON.stringify({
             contents: [{
                 parts: [
-                    { text: "Detect each speech bubble, narration box, SFX label with its 0-1000 integer center [x, y] coordinates (x = centerX, y = centerY) and raw original text. Return JSON." },
+                    { text: "Detect each speech bubble, narration box, thought bubble, SFX with its 0-1000 integer center [x, y] coordinates (x = centerX, y = centerY), classified type ('dialogue'|'narration'|'thought'|'sfx'), and raw original text. Return JSON." },
                     { inlineData: { mimeType, data: rawBase64 } }
                 ]
             }],
@@ -665,6 +679,11 @@ async function executeOcrVisionStep({
                                 type: "OBJECT",
                                 properties: {
                                     id: { type: "STRING" },
+                                    type: {
+                                        type: "STRING",
+                                        enum: ["dialogue", "narration", "thought", "sfx"],
+                                        description: "Classification: 'dialogue' for speech bubbles, 'narration' for caption boxes, 'thought' for internal monologue, 'sfx' for sound effects"
+                                    },
                                     original: { type: "STRING" },
                                     box: {
                                         type: "ARRAY",
@@ -673,7 +692,7 @@ async function executeOcrVisionStep({
                                     },
                                     vertical: { type: "BOOLEAN" }
                                 },
-                                required: ["id", "original", "box"]
+                                required: ["id", "type", "original", "box"]
                             }
                         }
                     },
@@ -1432,9 +1451,14 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
 
                 const systemInstruction = [
-                    "Detect every manga speech bubble, narration box, and SFX label, then return JSON only.",
+                    "Detect every manga speech bubble, narration box, thought bubble, and SFX label, classify its block type ('dialogue'|'narration'|'thought'|'sfx'), then return JSON only.",
                     "EXHAUSTIVE OCR COMPLETENESS MANDATE (BẢO TOÀN 100% NỘI DUNG CHỮ, TUYỆT ĐỐI KHÔNG BỎ SÓT):",
-                    "- Detect and transcribe 100% of text on this manga page without skipping: main dialogue bubbles (all styles), rectangular narration boxes, floating/handwritten/whisper text outside bubbles, all multi-column vertical Japanese text from Right to Left, and SFX.",
+                    "- Detect and transcribe 100% of text on this manga page without skipping: main dialogue bubbles (all styles), rectangular narration boxes, cloud thought bubbles, floating/handwritten/whisper text outside bubbles, all multi-column vertical Japanese text from Right to Left, and SFX.",
+                    "BLOCK TYPE CLASSIFICATION RULE:",
+                    "- 'dialogue': Spoken aloud by characters in round, oval, spiky or standard bubbles.",
+                    "- 'narration': Exposition/captions in rectangular/square boxes, narration headers, or location/time tags.",
+                    "- 'thought': Internal thoughts/monologues in cloud bubbles, dashed/dotted bubbles, or bubbles with small tail circles.",
+                    "- 'sfx': Hand-drawn sound effects, onomatopoeia, or stylized sound text drawn on artwork.",
                     "STRICT SEPARATION RULE - NEVER MERGE SEPARATE SPEECH BUBBLES (TUYỆT ĐỐI KHÔNG GỘP BÓNG THOẠI KHÁC NHAU):",
                     "- Every individual speech bubble, narration box, or floating text cluster MUST be output as its own separate block with its own distinct center anchor [x, y].",
                     "- DO NOT combine or merge two separate speech bubbles into one block, EVEN IF they are close to each other, in the same panel, spoken by the same character, or part of the same sentence.",
@@ -1460,7 +1484,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 if (isOpenAiFormat) {
                     apiUrl = `${endpoint.replace(/\/$/, '')}/chat/completions`;
                     let openAiUserContent = [
-                        { type: "text", text: `Detect each speech bubble, narration box, and SFX with [x, y] center anchor coordinates (x = centerX, y = centerY). Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` },
+                        { type: "text", text: `Detect each speech bubble, narration box, thought bubble, and SFX with [x, y] center anchor coordinates (x = centerX, y = centerY) and type ('dialogue'|'narration'|'thought'|'sfx'). Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` },
                         { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
                     ];
                     if (prevPageContext) {
@@ -1480,7 +1504,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                 } else {
                     apiUrl = getGeminiGenerateContentUrl(selectedModel, keyToUse);
                     const contentsParts = [
-                        { text: `Detect each speech bubble, narration box, and SFX with [x, y] center anchor coordinates (x = centerX, y = centerY). Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` }
+                        { text: `Detect each speech bubble, narration box, thought bubble, and SFX with [x, y] center anchor coordinates (x = centerX, y = centerY) and type ('dialogue'|'narration'|'thought'|'sfx'). Translate their contents into ${targetLangName} using the strict schema. Return only valid JSON that matches the schema.` }
                     ];
                     if (prevPageContext) {
                         contentsParts.push({ text: prevPageContext });
@@ -1501,6 +1525,11 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                                             type: "OBJECT",
                                             properties: {
                                                 id: { type: "STRING" },
+                                                type: {
+                                                    type: "STRING",
+                                                    enum: ["dialogue", "narration", "thought", "sfx"],
+                                                    description: "Classification: 'dialogue', 'narration', 'thought', or 'sfx'"
+                                                },
                                                 original: { type: "STRING" },
                                                 translated: { type: "STRING" },
                                                 box: {
@@ -1510,7 +1539,7 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                                                 },
                                                 vertical: { type: "BOOLEAN" }
                                             },
-                                            required: ["id", "original", "translated", "box"]
+                                            required: ["id", "type", "original", "translated", "box"]
                                         }
                                     }
                                 },
@@ -1591,14 +1620,30 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                     ? (typeof b.vertical === 'boolean' ? b.vertical : ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true))
                     : false;
 
+                const blockType = b.type || 'dialogue';
+                const chosenFont = getDefaultFontForBlockType(blockType);
+                let maskShape = globalState.globalStyle.maskShape;
+                let italic = false;
+                let bold = globalState.globalStyle.bold;
+
+                if (blockType === 'narration') {
+                    maskShape = 'rect';
+                    bold = true;
+                } else if (blockType === 'thought') {
+                    maskShape = 'ellipse';
+                    italic = true;
+                } else if (blockType === 'sfx') {
+                    bold = true;
+                }
+
                 return {
                     id: b.id || `block_${Date.now()}_${idx}`,
-                    type: 'dialogue',
+                    type: blockType,
                     original: b.original || '',
                     translated: b.translated || '',
                     box: normalisedBox,
                     style: {
-                        fontFamily: globalState.defaultFont || globalState.globalStyle?.fontFamily || 'font-manga',
+                        fontFamily: chosenFont,
                         fontSize: globalState.globalStyle.fontSize,
                         textColor: '#000000',
                         bgColor: '#ffffff',
@@ -1606,9 +1651,10 @@ export async function translatePage(pageIndex, isBackgroundMode = false) {
                         padding: globalState.globalStyle.padding,
                         rotate: 0,
                         vertical: blockVertical,
-                        bold: globalState.globalStyle.bold,
+                        bold: bold,
+                        italic: italic,
                         align: globalState.globalStyle.align,
-                        maskShape: globalState.globalStyle.maskShape,
+                        maskShape: maskShape,
                         maskSize: globalState.globalStyle.maskSize,
                         strokeColor: '#ffffff',
                         strokeWidth: 0,
@@ -1825,14 +1871,30 @@ export async function runBatchTranslation() {
                                 ? (typeof b.vertical === 'boolean' ? b.vertical : ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true))
                                 : false;
 
+                            const blockType = b.type || 'dialogue';
+                            const chosenFont = getDefaultFontForBlockType(blockType);
+                            let maskShape = globalState.globalStyle.maskShape;
+                            let italic = false;
+                            let bold = globalState.globalStyle.bold;
+
+                            if (blockType === 'narration') {
+                                maskShape = 'rect';
+                                bold = true;
+                            } else if (blockType === 'thought') {
+                                maskShape = 'ellipse';
+                                italic = true;
+                            } else if (blockType === 'sfx') {
+                                bold = true;
+                            }
+
                             return {
                                 id: `p${pageIndex + 1}_b${bIdx + 1}`,
-                                type: 'dialogue',
+                                type: blockType,
                                 original: b.original || '',
                                 translated: '',
                                 box: normalisedBox,
                                 style: {
-                                    fontFamily: globalState.defaultFont || globalState.globalStyle?.fontFamily || 'font-manga',
+                                    fontFamily: chosenFont,
                                     fontSize: globalState.globalStyle.fontSize,
                                     textColor: '#000000',
                                     bgColor: '#ffffff',
@@ -1840,9 +1902,10 @@ export async function runBatchTranslation() {
                                     padding: globalState.globalStyle.padding,
                                     rotate: 0,
                                     vertical: blockVertical,
-                                    bold: globalState.globalStyle.bold,
+                                    bold: bold,
+                                    italic: italic,
                                     align: globalState.globalStyle.align,
-                                    maskShape: globalState.globalStyle.maskShape,
+                                    maskShape: maskShape,
                                     maskSize: globalState.globalStyle.maskSize,
                                     strokeColor: '#ffffff',
                                     strokeWidth: 0,

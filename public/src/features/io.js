@@ -674,8 +674,9 @@ export function generateTxtScript(pages) {
             blocks.forEach((block, bIdx) => {
                 const blockId = block.id ? ` [id: ${block.id}]` : '';
                 const typeLabel = block.type === 'narration' ? 'Dẫn truyện' : 
+                                 (block.type === 'thought' ? 'Nghĩ thầm' :
                                  (block.type === 'sfx' ? 'SFX' : 
-                                 (block.type === 'image' ? 'Ảnh chèn' : 'Thoại'));
+                                 (block.type === 'image' ? 'Ảnh chèn' : 'Thoại')));
                 const speakerInfo = block.speaker ? ` [Nhân vật: ${block.speaker}]` : '';
 
                 fileContent += `#${bIdx + 1}${blockId} [${typeLabel}]${speakerInfo}\n`;
@@ -769,6 +770,7 @@ export function parseTxtBlocksSection(sectionText) {
 
             let type = 'dialogue';
             if (rawType.includes('dẫn') || rawType.includes('narration')) type = 'narration';
+            else if (rawType.includes('nghĩ') || rawType.includes('thought')) type = 'thought';
             else if (rawType.includes('sfx')) type = 'sfx';
             else if (rawType.includes('ảnh') || rawType.includes('image')) type = 'image';
 
@@ -818,6 +820,8 @@ export function parseTxtBlocksSection(sectionText) {
                 speaker = tag.replace(/^(?:nhân vật|speaker):\s*/i, '').trim();
             } else if (tag.toLowerCase().includes('dẫn') || tag.toLowerCase().includes('narration')) {
                 type = 'narration';
+            } else if (tag.toLowerCase().includes('nghĩ') || tag.toLowerCase().includes('thought')) {
+                type = 'thought';
             } else if (tag.toLowerCase().includes('sfx')) {
                 type = 'sfx';
             }

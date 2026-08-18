@@ -981,6 +981,36 @@
                 </div>
 
                 <div id="block-editor-container" class="hidden space-y-4">
+                    <!-- Block Type Selector -->
+                    <div class="space-y-1.5 pb-2 border-b border-slate-800/80">
+                        <div class="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                            <span data-i18n="block-type-label"><i class="fa-solid fa-tags text-indigo-400 mr-1"></i> Phân loại ô</span>
+                            <span id="lbl-block-id" class="text-[9px] text-slate-500 font-mono"></span>
+                        </div>
+                        <div class="grid grid-cols-4 gap-1">
+                            <button id="btn-block-type-dialogue" onclick="setBlockType('dialogue')"
+                                class="py-1 px-1 text-[10px] font-bold rounded bg-indigo-600 text-white flex items-center justify-center gap-1 transition-all cursor-pointer truncate shadow"
+                                title="Lời thoại thông thường (Dialogue)">
+                                💬 Thoại
+                            </button>
+                            <button id="btn-block-type-narration" onclick="setBlockType('narration')"
+                                class="py-1 px-1 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1 transition-all cursor-pointer truncate"
+                                title="Dẫn chuyện / Khung thuyết minh (Narration)">
+                                📜 Dẫn
+                            </button>
+                            <button id="btn-block-type-thought" onclick="setBlockType('thought')"
+                                class="py-1 px-1 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1 transition-all cursor-pointer truncate"
+                                title="Độc thoại nội tâm / Nghĩ thầm (Thought)">
+                                💭 Nghĩ
+                            </button>
+                            <button id="btn-block-type-sfx" onclick="setBlockType('sfx')"
+                                class="py-1 px-1 text-[10px] font-semibold rounded bg-slate-900 text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1 transition-all cursor-pointer truncate"
+                                title="Từ tượng thanh / SFX">
+                                💥 SFX
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Text Area Original JP -->
                     <div class="space-y-1">
                         <label data-i18n="original-text-label"
@@ -2729,25 +2759,104 @@
                                 </select>
                             </div>
 
-                            <!-- Default Font -->
-                            <div class="space-y-2 pt-2 border-t border-slate-800/80">
-                                <label
-                                    class="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                                    <i class="fa-solid fa-font text-indigo-400"></i> Phông chữ mặc định cho AI dịch
-                                </label>
-                                <select id="default-font" onchange="updateDefaultFont(this.value)"
-                                    class="w-full bg-slate-900 border border-slate-700/80 rounded-lg p-2.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-                                    <option value="font-manga" selected>Chuẩn Manga (Nunito Bold)</option>
-                                    <option value="font-comic">Vui nhộn (Patrick Hand)</option>
-                                    <option value="font-comicneue">Comic mượt (Comic Neue)</option>
-                                    <option value="font-vietnamese">Việt tối ưu (Be Vietnam Pro)</option>
-                                    <option value="font-impact">Kỳ vĩ / SFX (Bangers)</option>
-                                    <option value="font-marker">Cọ vẽ / SFX Đậm (Permanent Marker)</option>
-                                    <option value="font-bungee">SFX Khối vuông (Bungee)</option>
-                                    <option value="font-caveat">SFX Viết tay (Caveat)</option>
-                                    <option value="font-tech">Cơ khí / Robot (Chakra Petch)</option>
-                                    <option value="font-condensed">Gào thét / Ghi chú (Saira Condensed)</option>
-                                </select>
+                            <!-- Default Fonts per Type for AI Translation -->
+                            <div class="space-y-3 pt-2 border-t border-slate-800/80">
+                                <div class="flex items-center justify-between">
+                                    <label class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <i class="fa-solid fa-font"></i> Phông chữ mặc định theo loại (AI Dịch)
+                                    </label>
+                                    <!-- Hidden legacy select for backward compatibility & sync -->
+                                    <select id="default-font" onchange="updateDefaultFont(this.value)" class="hidden">
+                                        <option value="font-manga" selected>Chuẩn Manga (Nunito Bold)</option>
+                                        <option value="font-comic">Vui nhộn (Patrick Hand)</option>
+                                        <option value="font-comicneue">Comic mượt (Comic Neue)</option>
+                                        <option value="font-vietnamese">Việt tối ưu (Be Vietnam Pro)</option>
+                                        <option value="font-impact">Kỳ vĩ / SFX (Bangers)</option>
+                                        <option value="font-marker">Cọ vẽ / SFX Đậm (Permanent Marker)</option>
+                                        <option value="font-bungee">SFX Khối vuông (Bungee)</option>
+                                        <option value="font-caveat">SFX Viết tay (Caveat)</option>
+                                        <option value="font-tech">Cơ khí / Robot (Chakra Petch)</option>
+                                        <option value="font-condensed">Gào thét / Ghi chú (Saira Condensed)</option>
+                                    </select>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                                    <!-- 1. Dialogue Font -->
+                                    <div class="space-y-1 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/90">
+                                        <label class="text-[10px] font-bold text-indigo-300 flex items-center gap-1.5">
+                                            <span>💬</span> Lời thoại (Dialogue)
+                                        </label>
+                                        <select id="default-dialogue-font" onchange="updateDefaultTypeFont('dialogue', this.value)"
+                                            class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
+                                            <option value="font-manga" selected>Chuẩn Manga (Nunito Bold)</option>
+                                            <option value="font-comic">Vui nhộn (Patrick Hand)</option>
+                                            <option value="font-comicneue">Comic mượt (Comic Neue)</option>
+                                            <option value="font-vietnamese">Việt tối ưu (Be Vietnam Pro)</option>
+                                            <option value="font-impact">Kỳ vĩ / SFX (Bangers)</option>
+                                            <option value="font-marker">Cọ vẽ / SFX Đậm (Permanent Marker)</option>
+                                            <option value="font-bungee">SFX Khối vuông (Bungee)</option>
+                                            <option value="font-caveat">SFX Viết tay (Caveat)</option>
+                                            <option value="font-tech">Cơ khí / Robot (Chakra Petch)</option>
+                                            <option value="font-condensed">Gào thét / Ghi chú (Saira Condensed)</option>
+                                        </select>
+                                    </div>
+                                    <!-- 2. Narration Font -->
+                                    <div class="space-y-1 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/90">
+                                        <label class="text-[10px] font-bold text-emerald-300 flex items-center gap-1.5">
+                                            <span>📜</span> Dẫn chuyện (Narration)
+                                        </label>
+                                        <select id="default-narration-font" onchange="updateDefaultTypeFont('narration', this.value)"
+                                            class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 font-medium">
+                                            <option value="font-vietnamese" selected>Việt tối ưu (Be Vietnam Pro)</option>
+                                            <option value="font-manga">Chuẩn Manga (Nunito Bold)</option>
+                                            <option value="font-comic">Vui nhộn (Patrick Hand)</option>
+                                            <option value="font-comicneue">Comic mượt (Comic Neue)</option>
+                                            <option value="font-impact">Kỳ vĩ / SFX (Bangers)</option>
+                                            <option value="font-marker">Cọ vẽ / SFX Đậm (Permanent Marker)</option>
+                                            <option value="font-bungee">SFX Khối vuông (Bungee)</option>
+                                            <option value="font-caveat">SFX Viết tay (Caveat)</option>
+                                            <option value="font-tech">Cơ khí / Robot (Chakra Petch)</option>
+                                            <option value="font-condensed">Gào thét / Ghi chú (Saira Condensed)</option>
+                                        </select>
+                                    </div>
+                                    <!-- 3. Thought Font -->
+                                    <div class="space-y-1 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/90">
+                                        <label class="text-[10px] font-bold text-sky-300 flex items-center gap-1.5">
+                                            <span>💭</span> Nghĩ thầm (Thought)
+                                        </label>
+                                        <select id="default-thought-font" onchange="updateDefaultTypeFont('thought', this.value)"
+                                            class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500 font-medium">
+                                            <option value="font-comicneue" selected>Comic mượt (Comic Neue)</option>
+                                            <option value="font-comic">Vui nhộn (Patrick Hand)</option>
+                                            <option value="font-manga">Chuẩn Manga (Nunito Bold)</option>
+                                            <option value="font-vietnamese">Việt tối ưu (Be Vietnam Pro)</option>
+                                            <option value="font-caveat">SFX Viết tay (Caveat)</option>
+                                            <option value="font-impact">Kỳ vĩ / SFX (Bangers)</option>
+                                            <option value="font-marker">Cọ vẽ / SFX Đậm (Permanent Marker)</option>
+                                            <option value="font-bungee">SFX Khối vuông (Bungee)</option>
+                                            <option value="font-tech">Cơ khí / Robot (Chakra Petch)</option>
+                                            <option value="font-condensed">Gào thét / Ghi chú (Saira Condensed)</option>
+                                        </select>
+                                    </div>
+                                    <!-- 4. SFX Font -->
+                                    <div class="space-y-1 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800/90">
+                                        <label class="text-[10px] font-bold text-amber-300 flex items-center gap-1.5">
+                                            <span>💥</span> Hiệu ứng (SFX)
+                                        </label>
+                                        <select id="default-sfx-font" onchange="updateDefaultTypeFont('sfx', this.value)"
+                                            class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500 font-medium">
+                                            <option value="font-impact" selected>Kỳ vĩ / SFX (Bangers)</option>
+                                            <option value="font-marker">Cọ vẽ / SFX Đậm (Permanent Marker)</option>
+                                            <option value="font-bungee">SFX Khối vuông (Bungee)</option>
+                                            <option value="font-caveat">SFX Viết tay (Caveat)</option>
+                                            <option value="font-tech">Cơ khí / Robot (Chakra Petch)</option>
+                                            <option value="font-condensed">Gào thét / Ghi chú (Saira Condensed)</option>
+                                            <option value="font-manga">Chuẩn Manga (Nunito Bold)</option>
+                                            <option value="font-comic">Vui nhộn (Patrick Hand)</option>
+                                            <option value="font-comicneue">Comic mượt (Comic Neue)</option>
+                                            <option value="font-vietnamese">Việt tối ưu (Be Vietnam Pro)</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Custom Fonts Uploader -->

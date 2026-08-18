@@ -118,18 +118,74 @@ function syncBlockTextInputs(block) {
     if (targetInput) targetInput.value = block.target || '';
 }
 
+export function setBlockType(type) {
+    const activeBlock = getActiveBlock();
+    if (!activeBlock || activeBlock.type === 'image') return;
+    activeBlock.type = type;
+
+    // Apply default font for the chosen block type
+    const defaultFontForType = type === 'narration' ? (globalState.defaultNarrationFont || 'font-vietnamese')
+        : (type === 'thought' ? (globalState.defaultThoughtFont || 'font-comicneue')
+        : (type === 'sfx' ? (globalState.defaultSfxFont || 'font-impact')
+        : (globalState.defaultDialogueFont || globalState.defaultFont || 'font-manga')));
+
+    if (defaultFontForType) {
+        if (!activeBlock.style) activeBlock.style = {};
+        activeBlock.style.fontFamily = defaultFontForType;
+        if (elements.styleFont) elements.styleFont.value = defaultFontForType;
+    }
+
+    if (type === 'narration' && activeBlock.style) {
+        activeBlock.style.maskShape = 'rect';
+    } else if (type === 'thought' && activeBlock.style) {
+        activeBlock.style.maskShape = 'ellipse';
+    }
+
+    activeBlock.autoFitCache = null;
+    activeBlock.maskCache = null;
+
+    syncBlockTypeUI(activeBlock);
+    requestOverlayRender();
+    const page = globalState.pages[globalState.activePageIndex];
+    if (page) savePageToDB(page);
+
+    const typeNames = {
+        dialogue: 'Lời thoại 💬',
+        narration: 'Dẫn chuyện 📜',
+        thought: 'Nghĩ thầm 💭',
+        sfx: 'Hiệu ứng SFX 💥'
+    };
+    showToast(`Đã chuyển ô sang dạng ${typeNames[type] || type}!`, 'info');
+}
+
+window.setBlockType = setBlockType;
+
 function syncBlockTypeUI(block) {
     const blockType = block.type || 'dialogue';
     const btnDialogue = document.getElementById('btn-block-type-dialogue');
+    const btnNarration = document.getElementById('btn-block-type-narration');
+    const btnThought = document.getElementById('btn-block-type-thought');
     const btnSfx = document.getElementById('btn-block-type-sfx');
-    if (btnDialogue && btnSfx) {
-        if (blockType === 'sfx') {
-            btnSfx.className = 'py-1.5 px-2 text-[11px] font-semibold rounded bg-amber-600 text-white flex items-center justify-center gap-1.5 transition-all';
-            btnDialogue.className = 'py-1.5 px-2 text-[11px] font-semibold rounded text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5 transition-all';
-        } else {
-            btnDialogue.className = 'py-1.5 px-2 text-[11px] font-semibold rounded bg-indigo-600 text-white flex items-center justify-center gap-1.5 transition-all';
-            btnSfx.className = 'py-1.5 px-2 text-[11px] font-semibold rounded text-slate-400 hover:text-slate-200 flex items-center justify-center gap-1.5 transition-all';
-        }
+
+    const activeClassMap = {
+        dialogue: 'bg-indigo-600 text-white shadow font-bold',
+        narration: 'bg-emerald-600 text-white shadow font-bold',
+        thought: 'bg-sky-600 text-white shadow font-bold',
+        sfx: 'bg-amber-600 text-white shadow font-bold'
+    };
+    const inactiveClass = 'bg-slate-900 text-slate-400 hover:text-slate-200 font-semibold';
+
+    if (btnDialogue) {
+        btnDialogue.className = `py-1 px-1 text-[10px] rounded flex items-center justify-center gap-1 transition-all cursor-pointer truncate ${blockType === 'dialogue' ? activeClassMap.dialogue : inactiveClass}`;
+    }
+    if (btnNarration) {
+        btnNarration.className = `py-1 px-1 text-[10px] rounded flex items-center justify-center gap-1 transition-all cursor-pointer truncate ${blockType === 'narration' ? activeClassMap.narration : inactiveClass}`;
+    }
+    if (btnThought) {
+        btnThought.className = `py-1 px-1 text-[10px] rounded flex items-center justify-center gap-1 transition-all cursor-pointer truncate ${blockType === 'thought' ? activeClassMap.thought : inactiveClass}`;
+    }
+    if (btnSfx) {
+        btnSfx.className = `py-1 px-1 text-[10px] rounded flex items-center justify-center gap-1 transition-all cursor-pointer truncate ${blockType === 'sfx' ? activeClassMap.sfx : inactiveClass}`;
     }
 }
 

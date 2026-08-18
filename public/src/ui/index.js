@@ -12,13 +12,13 @@ import { selectPage, removePage, updatePageListUI, filterPagesList, toggleExport
 import {
     updateActiveBlockEditor, restoreBackgroundForBlock, restoreOriginalBackground,
     syncTextColorHex, syncBgColorHex, syncStrokeColorHex, syncShadowColorHex,
-    setBilingualMode, setActiveBlockGender
+    setBilingualMode, setActiveBlockGender, setBlockType
 } from './block-editor-ui.js';
 
 import {
     toggleApiKeyVisibility, updateSelectedModel, updateModelDropdown, fetchGeminiModels,
     updateModelLockingUI, mountSettingsModal, openSettingsModal, closeSettingsModal, switchSettingsTab,
-    updateDefaultFont,
+    updateDefaultFont, updateDefaultTypeFont,
     updateSourceLanguage, updateTargetLanguage, updatePronounMatrix, updateGlossary,
     toggleStoryMemory, updateStoryMemoryBadge, togglePreserveNames, syncGenrePresetCheckboxes,
     saveTranslationGenrePresets, updateTranslationGenrePreset, updateTranslationContextPrompt,
@@ -58,10 +58,10 @@ export {
     selectPage, removePage, updatePageListUI, filterPagesList, toggleExportRangeInputs, validateExportRange,
     updateActiveBlockEditor, restoreBackgroundForBlock, restoreOriginalBackground,
     syncTextColorHex, syncBgColorHex, syncStrokeColorHex, syncShadowColorHex,
-    setBilingualMode, setActiveBlockGender,
+    setBilingualMode, setActiveBlockGender, setBlockType,
     toggleApiKeyVisibility, updateSelectedModel, updateModelDropdown, fetchGeminiModels,
     updateModelLockingUI, mountSettingsModal, openSettingsModal, closeSettingsModal,
-    updateDefaultFont,
+    updateDefaultFont, updateDefaultTypeFont,
     updateSourceLanguage, updateTargetLanguage, updatePronounMatrix, updateGlossary,
     toggleStoryMemory, updateStoryMemoryBadge, togglePreserveNames, syncGenrePresetCheckboxes,
     saveTranslationGenrePresets, updateTranslationGenrePreset, updateTranslationContextPrompt,
@@ -742,6 +742,8 @@ Object.assign(window, {
     updateMaxRetries,
     updateAiProvider,
     updateDefaultFont,
+    updateDefaultTypeFont,
+    setBlockType,
     updateApiEndpoint,
     updateExportFormat,
     updateExportPdfQuality,

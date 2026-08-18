@@ -14,7 +14,8 @@ import {
     TRANSLATION_GENRE_PRESETS,
     COMIC_UNIVERSE_PRESETS,
     COMIC_GENRE_PRESETS,
-    COMIC_TONE_PRESETS
+    COMIC_TONE_PRESETS,
+    DEFAULT_TYPE_FONTS
 } from '../config/constants.js';
 
 export {
@@ -103,7 +104,11 @@ export const globalState = {
     translationPipelineMode: DEFAULT_PIPELINE_MODE, // 'two-step' | 'single-step'
     ocrModel: DEFAULT_OCR_MODEL,                   // Vision + Bounding Box model
     translationModel: DEFAULT_TRANSLATION_MODEL,   // Text-only dialogue translation model
-    defaultFont: localStorage.getItem('manga_default_font') || 'font-manga',
+    defaultDialogueFont: localStorage.getItem('manga_default_dialogue_font') || localStorage.getItem('manga_default_font') || DEFAULT_TYPE_FONTS.dialogue,
+    defaultNarrationFont: localStorage.getItem('manga_default_narration_font') || DEFAULT_TYPE_FONTS.narration,
+    defaultThoughtFont: localStorage.getItem('manga_default_thought_font') || DEFAULT_TYPE_FONTS.thought,
+    defaultSfxFont: localStorage.getItem('manga_default_sfx_font') || DEFAULT_TYPE_FONTS.sfx,
+    defaultFont: localStorage.getItem('manga_default_dialogue_font') || localStorage.getItem('manga_default_font') || DEFAULT_TYPE_FONTS.dialogue,
     pages: [],
     activePageIndex: -1,
     selectedBlockId: null,
@@ -180,8 +185,9 @@ export function initializeStateFromStorage() {
         'manga_comic_universe': 'comicUniverse',
         'manga_comic_tone': 'comicTone',
         'manga_default_dialogue_font': 'defaultDialogueFont',
-        'manga_default_sfx_font': 'defaultSfxFont',
         'manga_default_narration_font': 'defaultNarrationFont',
+        'manga_default_thought_font': 'defaultThoughtFont',
+        'manga_default_sfx_font': 'defaultSfxFont',
         'manga_default_font': 'defaultFont',
         'manga_export_format': 'exportFormat',
         'manga_pdf_quality': 'pdfQuality'
@@ -198,7 +204,8 @@ export function initializeStateFromStorage() {
                 try { globalState[stateKey] = JSON.parse(val); } catch (e) { globalState[stateKey] = true; }
             } else if (stateKey === 'audioSettings') {
                 try { globalState[stateKey] = JSON.parse(val); } catch (e) { console.error("Lỗi parse audioSettings:", e); }
-            } else if (stateKey === 'defaultFont') {
+            } else if (stateKey === 'defaultDialogueFont' || stateKey === 'defaultFont') {
+                globalState.defaultDialogueFont = val;
                 globalState.defaultFont = val;
                 if (globalState.globalStyle) globalState.globalStyle.fontFamily = val;
             } else {

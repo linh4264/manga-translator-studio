@@ -55,7 +55,7 @@ export interface BlockStyle {
 
 export interface MangaBlock {
     id: string;
-    type: 'dialogue' | 'narration' | 'sfx' | 'other';
+    type: 'dialogue' | 'narration' | 'thought' | 'sfx' | 'image' | 'other';
     original: string;
     translated: string;
     box: BoundingBox;
@@ -135,6 +135,10 @@ export interface GlobalState {
     chapterStoryMemory: any[];
     enableStoryMemory: boolean;
     selectedModel: string;
+    defaultDialogueFont: string;
+    defaultNarrationFont: string;
+    defaultThoughtFont: string;
+    defaultSfxFont: string;
     defaultFont: string;
     pages: MangaPage[];
     activePageIndex: number;

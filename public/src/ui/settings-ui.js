@@ -408,7 +408,19 @@ export async function openSettingsModal() {
     updateModelLockingUI();
 
     const defaultFontSelect = document.getElementById('default-font');
-    if (defaultFontSelect) defaultFontSelect.value = globalState.defaultFont || 'font-manga';
+    if (defaultFontSelect) defaultFontSelect.value = globalState.defaultFont || globalState.defaultDialogueFont || 'font-manga';
+
+    const defaultDialogueSelect = document.getElementById('default-dialogue-font');
+    if (defaultDialogueSelect) defaultDialogueSelect.value = globalState.defaultDialogueFont || globalState.defaultFont || 'font-manga';
+
+    const defaultNarrationSelect = document.getElementById('default-narration-font');
+    if (defaultNarrationSelect) defaultNarrationSelect.value = globalState.defaultNarrationFont || 'font-vietnamese';
+
+    const defaultThoughtSelect = document.getElementById('default-thought-font');
+    if (defaultThoughtSelect) defaultThoughtSelect.value = globalState.defaultThoughtFont || 'font-comicneue';
+
+    const defaultSfxSelect = document.getElementById('default-sfx-font');
+    if (defaultSfxSelect) defaultSfxSelect.value = globalState.defaultSfxFont || 'font-impact';
 
     const apiDelay = document.getElementById('api-delay-input');
     if (apiDelay) apiDelay.value = globalState.apiDelay || 2;
@@ -461,12 +473,36 @@ export function closeSettingsModal() {
     if (modal) modal.classList.add('hidden');
 }
 
-export function updateDefaultFont(value) {
-    globalState.defaultFont = value;
-    globalState.globalStyle.fontFamily = value;
-    const el = document.getElementById('default-font');
-    if (el) el.value = value;
-    safeSetLocalStorage('manga_default_font', value);
+export function updateDefaultTypeFont(type, value) {
+    if (!type || !value) return;
+    const cleanType = String(type).trim().toLowerCase();
+
+    if (cleanType === 'dialogue') {
+        globalState.defaultDialogueFont = value;
+        globalState.defaultFont = value;
+        if (globalState.globalStyle) globalState.globalStyle.fontFamily = value;
+        safeSetLocalStorage('manga_default_dialogue_font', value);
+        safeSetLocalStorage('manga_default_font', value);
+        const legacyEl = document.getElementById('default-font');
+        if (legacyEl) legacyEl.value = value;
+        const dialogueEl = document.getElementById('default-dialogue-font');
+        if (dialogueEl) dialogueEl.value = value;
+    } else if (cleanType === 'narration') {
+        globalState.defaultNarrationFont = value;
+        safeSetLocalStorage('manga_default_narration_font', value);
+        const narrationEl = document.getElementById('default-narration-font');
+        if (narrationEl) narrationEl.value = value;
+    } else if (cleanType === 'thought') {
+        globalState.defaultThoughtFont = value;
+        safeSetLocalStorage('manga_default_thought_font', value);
+        const thoughtEl = document.getElementById('default-thought-font');
+        if (thoughtEl) thoughtEl.value = value;
+    } else if (cleanType === 'sfx') {
+        globalState.defaultSfxFont = value;
+        safeSetLocalStorage('manga_default_sfx_font', value);
+        const sfxEl = document.getElementById('default-sfx-font');
+        if (sfxEl) sfxEl.value = value;
+    }
 
     // Invalidate autoFitCache for all blocks across all pages and request re-render
     if (globalState.pages && Array.isArray(globalState.pages)) {
@@ -481,6 +517,12 @@ export function updateDefaultFont(value) {
         });
     }
     requestOverlayRender();
+}
+
+window.updateDefaultTypeFont = updateDefaultTypeFont;
+
+export function updateDefaultFont(value) {
+    updateDefaultTypeFont('dialogue', value);
 }
 
 window.updateDefaultFont = updateDefaultFont;

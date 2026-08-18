@@ -4,7 +4,11 @@ import { requestOverlayRender } from '../features/canvas/canvas-service.js';
 // Danh sách ID các dropdown phông chữ trong hệ thống
 const FONT_SELECT_IDS = [
     'style-font',   // Cột định dạng bên phải
-    'default-font'
+    'default-font', // Legacy
+    'default-dialogue-font',
+    'default-narration-font',
+    'default-thought-font',
+    'default-sfx-font'
 ];
 
 // Helper chèn font tùy chỉnh vào thẻ <select>

@@ -266,6 +266,13 @@ export const DEFAULT_BLOCK_SIZE_PX = 400;
 export const DEFAULT_AI_BLOCK_BOX = { x: 30, y: 30, w: 40, h: 40 };
 export const MAX_HISTORY_LIMIT = 30;
 
+export const DEFAULT_TYPE_FONTS = {
+    dialogue: 'font-manga',
+    narration: 'font-vietnamese',
+    thought: 'font-comicneue',
+    sfx: 'font-impact'
+};
+
 export const DEFAULT_BLOCK_STYLE = {
     fontFamily: 'font-manga',
     fontSize: 13,
