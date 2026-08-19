@@ -106,6 +106,8 @@ export function createMockCanvas2DContext(width = 1000, height = 1400) {
         stroke: () => {},
         fill: () => {},
         clip: () => {},
+        setLineDash: () => {},
+        getLineDash: () => [],
 
         fillRect: () => {},
         strokeRect: () => {},
@@ -171,7 +173,7 @@ export function createMockCanvas2DContext(width = 1000, height = 1400) {
         createRadialGradient: () => ({
             addColorStop: () => {}
         }),
-        createPattern: () => null,
+        createPattern: (img, repetition) => ({ img, repetition, setTransform: () => {} }),
         isPointInPath: () => false
     };
 

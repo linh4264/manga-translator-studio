@@ -17,6 +17,275 @@ export let isSelectingPatch = false;
 export let isPatchStampActive = false;
 export let patchCanvas: HTMLCanvasElement | null = null;
 
+// Lasso Pattern Fill Types & State
+export type LassoPatternType = 'halftone' | 'horizontal' | 'vertical' | 'diagonal' | 'crosshatch' | 'noise' | 'sample';
+export type LassoFillTechnique = 'patch_1to1' | 'grid_tile' | 'preset_tone' | 'seamless_tile';
+export let lassoActiveTab: 'ai' | 'pattern' = 'ai';
+export let lassoFillTechnique: LassoFillTechnique = 'grid_tile';
+export let lassoPatternType: LassoPatternType = 'sample';
+export let isSelectingLassoSample = false;
+export let lassoSampleCanvas: HTMLCanvasElement | null = null;
+export let lassoSampleSrc: { x: number; y: number; w: number; h: number } | null = null;
+export let lassoPatternOffsetX = 0;
+export let lassoPatternOffsetY = 0;
+export let lassoCrossfadeOverlap = 8;
+export let lassoPatternSize = 8;
+export let lassoPatternDensity = 40;
+export let lassoPatternFgColor = '#000000';
+export let lassoPatternBgColor = '#ffffff';
+export let lassoPatternTransparentBg = false;
+export let lassoPatternOpacity = 100;
+export let lassoPatternFeather = 2;
+
+export function updateLassoButtons(hasPoints: boolean): void {
+    const fillBtn = document.getElementById('btn-lasso-fill') as HTMLButtonElement | null;
+    if (fillBtn) fillBtn.disabled = !hasPoints;
+    const patternBtn = document.getElementById('btn-lasso-pattern-fill') as HTMLButtonElement | null;
+    if (patternBtn) patternBtn.disabled = !hasPoints;
+}
+
+export function setLassoFillTechnique(tech: LassoFillTechnique): void {
+    lassoFillTechnique = tech;
+    const techPatch = document.getElementById('btn-lasso-tech-patch');
+    const techTile = document.getElementById('btn-lasso-tech-tile');
+    const techPreset = document.getElementById('btn-lasso-tech-preset');
+
+    const secPatch = document.getElementById('lasso-sec-patch');
+    const secPresets = document.getElementById('lasso-sec-presets');
+
+    [techPatch, techTile, techPreset].forEach(b => {
+        b?.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-400');
+        b?.classList.add('bg-slate-900', 'text-slate-400', 'border-slate-800');
+    });
+
+    if (tech === 'patch_1to1') {
+        techPatch?.classList.add('bg-indigo-600', 'text-white', 'border-indigo-400');
+        techPatch?.classList.remove('bg-slate-900', 'text-slate-400', 'border-slate-800');
+        secPatch?.classList.remove('hidden');
+        secPresets?.classList.add('hidden');
+        setLassoPatternType('sample');
+    } else if (tech === 'grid_tile' || tech === 'seamless_tile') {
+        techTile?.classList.add('bg-indigo-600', 'text-white', 'border-indigo-400');
+        techTile?.classList.remove('bg-slate-900', 'text-slate-400', 'border-slate-800');
+        secPatch?.classList.remove('hidden');
+        secPresets?.classList.add('hidden');
+        setLassoPatternType('sample');
+    } else {
+        techPreset?.classList.add('bg-indigo-600', 'text-white', 'border-indigo-400');
+        techPreset?.classList.remove('bg-slate-900', 'text-slate-400', 'border-slate-800');
+        secPatch?.classList.add('hidden');
+        secPresets?.classList.remove('hidden');
+        setLassoPatternType('halftone');
+    }
+    renderActiveLassoPreview();
+}
+
+export function setLassoPatternOffsetX(val: number): void {
+    lassoPatternOffsetX = Math.max(-64, Math.min(64, Math.round(val)));
+    updateLassoNudgeUI();
+    renderActiveLassoPreview();
+}
+
+export function setLassoPatternOffsetY(val: number): void {
+    lassoPatternOffsetY = Math.max(-64, Math.min(64, Math.round(val)));
+    updateLassoNudgeUI();
+    renderActiveLassoPreview();
+}
+
+export function nudgeLassoPatternOffset(dx: number, dy: number): void {
+    lassoPatternOffsetX = Math.max(-64, Math.min(64, lassoPatternOffsetX + dx));
+    lassoPatternOffsetY = Math.max(-64, Math.min(64, lassoPatternOffsetY + dy));
+    updateLassoNudgeUI();
+    renderActiveLassoPreview();
+}
+
+export function resetLassoPatternOffset(): void {
+    lassoPatternOffsetX = 0;
+    lassoPatternOffsetY = 0;
+    updateLassoNudgeUI();
+    renderActiveLassoPreview();
+    showToast("Đã đặt lại độ lệch pha hoa văn.", "info");
+}
+
+export function updateLassoNudgeUI(): void {
+    const lbl = document.getElementById('lbl-lasso-offset');
+    if (lbl) {
+        lbl.innerText = `X: ${lassoPatternOffsetX >= 0 ? '+' : ''}${lassoPatternOffsetX}px, Y: ${lassoPatternOffsetY >= 0 ? '+' : ''}${lassoPatternOffsetY}px`;
+    }
+    const rangeX = document.getElementById('num-lasso-offset-x') as HTMLInputElement | null;
+    if (rangeX && parseInt(rangeX.value) !== lassoPatternOffsetX) {
+        rangeX.value = String(lassoPatternOffsetX);
+    }
+    const rangeY = document.getElementById('num-lasso-offset-y') as HTMLInputElement | null;
+    if (rangeY && parseInt(rangeY.value) !== lassoPatternOffsetY) {
+        rangeY.value = String(lassoPatternOffsetY);
+    }
+    const lblX = document.getElementById('lbl-lasso-offset-x-val');
+    if (lblX) lblX.innerText = `${lassoPatternOffsetX >= 0 ? '+' : ''}${lassoPatternOffsetX}px`;
+    const lblY = document.getElementById('lbl-lasso-offset-y-val');
+    if (lblY) lblY.innerText = `${lassoPatternOffsetY >= 0 ? '+' : ''}${lassoPatternOffsetY}px`;
+}
+
+export function makeSeamlessTile(sourceTile: HTMLCanvasElement, overlap: number = 8): HTMLCanvasElement {
+    const W = sourceTile.width;
+    const H = sourceTile.height;
+    if (W <= 4 || H <= 4) return sourceTile;
+
+    const ov = Math.max(1, Math.min(overlap, Math.floor(Math.min(W, H) / 4)));
+    const out = document.createElement('canvas');
+    out.width = W;
+    out.height = H;
+    const oCtx = out.getContext('2d');
+    if (!oCtx) return sourceTile;
+
+    oCtx.drawImage(sourceTile, 0, 0);
+
+    try {
+        const imgData = oCtx.getImageData(0, 0, W, H);
+        const data = imgData.data;
+
+        // Horizontal cross-fade blending on left/right borders
+        for (let y = 0; y < H; y++) {
+            for (let x = 0; x < ov; x++) {
+                const alpha = x / ov;
+                const leftIdx = (y * W + x) * 4;
+                const rightIdx = (y * W + (W - ov + x)) * 4;
+
+                for (let c = 0; c < 4; c++) {
+                    const blended = Math.round(data[leftIdx + c] * alpha + data[rightIdx + c] * (1 - alpha));
+                    data[leftIdx + c] = blended;
+                    data[rightIdx + c] = blended;
+                }
+            }
+        }
+
+        // Vertical cross-fade blending on top/bottom borders
+        for (let x = 0; x < W; x++) {
+            for (let y = 0; y < ov; y++) {
+                const alpha = y / ov;
+                const topIdx = (y * W + x) * 4;
+                const bottomIdx = ((H - ov + y) * W + x) * 4;
+
+                for (let c = 0; c < 4; c++) {
+                    const blended = Math.round(data[topIdx + c] * alpha + data[bottomIdx + c] * (1 - alpha));
+                    data[topIdx + c] = blended;
+                    data[bottomIdx + c] = blended;
+                }
+            }
+        }
+
+        oCtx.putImageData(imgData, 0, 0);
+    } catch {
+        // Canvas security fallback
+    }
+
+    return out;
+}
+
+export function findBestAdjacentPatch(
+    imgElement: HTMLImageElement | HTMLCanvasElement,
+    minX: number,
+    minY: number,
+    cropW: number,
+    cropH: number
+): { x: number; y: number; w: number; h: number } {
+    const imgW = (imgElement as any).naturalWidth || (imgElement as any).width || 1000;
+    const imgH = (imgElement as any).naturalHeight || (imgElement as any).height || 1400;
+
+    // Try top
+    if (minY - cropH - 4 >= 0) {
+        return { x: Math.max(0, Math.min(imgW - cropW, minX)), y: minY - cropH - 4, w: cropW, h: cropH };
+    }
+    // Try left
+    if (minX - cropW - 4 >= 0) {
+        return { x: minX - cropW - 4, y: Math.max(0, Math.min(imgH - cropH, minY)), w: cropW, h: cropH };
+    }
+    // Try right
+    if (minX + cropW + 4 + cropW <= imgW) {
+        return { x: minX + cropW + 4, y: Math.max(0, Math.min(imgH - cropH, minY)), w: cropW, h: cropH };
+    }
+    // Try bottom
+    if (minY + cropH + 4 + cropH <= imgH) {
+        return { x: Math.max(0, Math.min(imgW - cropW, minX)), y: minY + cropH + 4, w: cropW, h: cropH };
+    }
+
+    return { x: Math.max(0, Math.min(imgW - cropW, minX)), y: Math.max(0, Math.min(imgH - cropH, minY)), w: cropW, h: cropH };
+}
+
+export function updateLassoSampleUI(w: number, h: number, sampleCanvas: HTMLCanvasElement | null): void {
+    const lbl = document.getElementById('lbl-lasso-sample-status');
+    if (lbl) {
+        lbl.innerText = `Mẫu: ${w}x${h}px`;
+        lbl.classList.remove('text-slate-400', 'text-slate-500');
+        lbl.classList.add('text-teal-400');
+    }
+    const preview = document.getElementById('lasso-sample-thumb-preview') as HTMLCanvasElement | null;
+    if (preview && sampleCanvas) {
+        preview.width = 32;
+        preview.height = 32;
+        const pCtx = preview.getContext('2d');
+        if (pCtx) {
+            pCtx.clearRect(0, 0, 32, 32);
+            pCtx.drawImage(sampleCanvas, 0, 0, 32, 32);
+        }
+        preview.classList.remove('hidden');
+    }
+}
+
+export function pickLassoRectSample(): void {
+    isSelectingLassoSample = true;
+    showToast("⛶ Kéo chuột để quét chọn một hình chữ nhật mẫu vân trên tranh!", "info");
+    initEraserDrawingEvents();
+}
+
+export function autoSampleNearbyLassoRect(): boolean {
+    const points = (window as any).activeLassoPoints;
+    const imgElement = elements.mangaBgImage;
+    if (!imgElement || !imgElement.naturalWidth) {
+        showToast("Không tìm thấy ảnh gốc để lấy mẫu.", "warn");
+        return false;
+    }
+
+    let minX = 0, minY = 0, maxX = 100, maxY = 100;
+    if (points && points.length >= 3) {
+        minX = points[0].x; minY = points[0].y; maxX = points[0].x; maxY = points[0].y;
+        for (let i = 1; i < points.length; i++) {
+            minX = Math.min(minX, points[i].x);
+            minY = Math.min(minY, points[i].y);
+            maxX = Math.max(maxX, points[i].x);
+            maxY = Math.max(maxY, points[i].y);
+        }
+    }
+
+    const sampleSize = 32;
+    // Try above lasso box
+    let sampleX = Math.max(0, Math.floor(minX));
+    let sampleY = Math.max(0, Math.floor(minY - sampleSize - 4));
+    if (sampleY + sampleSize > minY && minX - sampleSize - 4 >= 0) {
+        sampleX = Math.max(0, Math.floor(minX - sampleSize - 4));
+        sampleY = Math.max(0, Math.floor(minY));
+    } else if (sampleY + sampleSize > minY && maxX + 4 + sampleSize <= imgElement.naturalWidth) {
+        sampleX = Math.floor(maxX + 4);
+        sampleY = Math.max(0, Math.floor(minY));
+    }
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = sampleSize;
+    tempCanvas.height = sampleSize;
+    const tCtx = tempCanvas.getContext('2d');
+    if (!tCtx) return false;
+    tCtx.drawImage(imgElement, sampleX, sampleY, sampleSize, sampleSize, 0, 0, sampleSize, sampleSize);
+
+    lassoSampleCanvas = tempCanvas;
+    lassoSampleSrc = { x: sampleX, y: sampleY, w: sampleSize, h: sampleSize };
+    patchCanvas = tempCanvas;
+
+    setLassoPatternType('sample');
+    updateLassoSampleUI(sampleSize, sampleSize, tempCanvas);
+    showToast(`⚡ Đã tự động lấy mẫu vân ${sampleSize}x${sampleSize}px từ vùng lân cận!`, "success");
+    return true;
+}
+
 export function setIsEraserModeActive(val: boolean): void {
     isEraserModeActive = val;
 }
@@ -260,8 +529,7 @@ export function setEraserBrushMode(mode: string): void {
         isSelectingPatch = false;
 
         (window as any).activeLassoPoints = null;
-        const fillBtn = document.getElementById('btn-lasso-fill') as HTMLButtonElement | null;
-        if (fillBtn) fillBtn.disabled = true;
+        updateLassoButtons(false);
     } else {
         if (btnEraser) {
             btnEraser.classList.add('bg-indigo-600', 'text-white');
@@ -318,6 +586,10 @@ export function initEraserDrawingEvents(): void {
     canvas.ontouchend = null;
 
     const selectionBox = document.getElementById('patch-selection-box');
+    const floatingHud = document.getElementById('lasso-sample-floating-hud');
+    const hudDims = document.getElementById('lasso-sample-hud-dims');
+    const hudPatch = document.getElementById('lasso-sample-hud-patch') as HTMLCanvasElement | null;
+    const hudTiled = document.getElementById('lasso-sample-hud-tiled') as HTMLCanvasElement | null;
     const previewCanvas = elements.patchPreviewCanvas;
     const container = elements.mangaCanvasContainer;
 
@@ -330,6 +602,196 @@ export function initEraserDrawingEvents(): void {
         const y = ((clientY - rect.top) / rect.height) * canvas.height;
         return { x, y, clientX, clientY };
     };
+
+    if (isSelectingLassoSample) {
+        let isDragging = false;
+        let startClientX = 0;
+        let startClientY = 0;
+
+        if (selectionBox) {
+            selectionBox.classList.remove('rounded-full');
+            selectionBox.classList.add('rounded-sm');
+        }
+
+        const startSelect = (e: any) => {
+            e.preventDefault();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            isDragging = true;
+            startClientX = clientX;
+            startClientY = clientY;
+
+            if (container && selectionBox) {
+                const rect = container.getBoundingClientRect();
+                selectionBox.style.left = `${clientX - rect.left}px`;
+                selectionBox.style.top = `${clientY - rect.top}px`;
+                selectionBox.style.width = '0px';
+                selectionBox.style.height = '0px';
+                selectionBox.classList.remove('hidden');
+            }
+        };
+
+        const dragSelect = (e: any) => {
+            if (!isDragging || !container || !selectionBox) return;
+            e.preventDefault();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            const rect = container.getBoundingClientRect();
+            const x1 = Math.min(startClientX, clientX);
+            const y1 = Math.min(startClientY, clientY);
+            const w = Math.abs(clientX - startClientX);
+            const h = Math.abs(clientY - startClientY);
+
+            selectionBox.style.left = `${x1 - rect.left}px`;
+            selectionBox.style.top = `${y1 - rect.top}px`;
+            selectionBox.style.width = `${w}px`;
+            selectionBox.style.height = `${h}px`;
+
+            // Live Real-Time Texture Preview while dragging sample
+            const canvasRect = canvas.getBoundingClientRect();
+            const startX = Math.round(((x1 - canvasRect.left) / canvasRect.width) * canvas.width);
+            const startY = Math.round(((y1 - canvasRect.top) / canvasRect.height) * canvas.height);
+            const endX = Math.round(((x1 + w - canvasRect.left) / canvasRect.width) * canvas.width);
+            const endY = Math.round(((y1 + h - canvasRect.top) / canvasRect.height) * canvas.height);
+
+            const cropW = endX - startX;
+            const cropH = endY - startY;
+
+            if (cropW >= 3 && cropH >= 3) {
+                const imgElement = elements.mangaBgImage;
+                if (imgElement && imgElement.naturalWidth) {
+                    try {
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = cropW;
+                        tempCanvas.height = cropH;
+                        const tCtx = tempCanvas.getContext('2d');
+                        if (tCtx) {
+                            tCtx.drawImage(imgElement, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
+                            lassoSampleCanvas = tempCanvas;
+                            lassoSampleSrc = { x: startX, y: startY, w: cropW, h: cropH };
+                            patchCanvas = tempCanvas;
+
+                            // 1. Update Floating Preview HUD
+                            if (floatingHud) {
+                                floatingHud.classList.remove('hidden');
+                                const hudLeft = Math.min(container.clientWidth - 150, Math.max(10, x1 - rect.left + w + 10));
+                                const hudTop = Math.min(container.clientHeight - 90, Math.max(10, y1 - rect.top));
+                                floatingHud.style.left = `${hudLeft}px`;
+                                floatingHud.style.top = `${hudTop}px`;
+
+                                if (hudDims) hudDims.innerText = `${cropW} × ${cropH} px`;
+
+                                if (hudPatch) {
+                                    const pCtx = hudPatch.getContext('2d');
+                                    if (pCtx) {
+                                        pCtx.clearRect(0, 0, hudPatch.width, hudPatch.height);
+                                        pCtx.drawImage(tempCanvas, 0, 0, hudPatch.width, hudPatch.height);
+                                    }
+                                }
+
+                                if (hudTiled) {
+                                    const tCtx2 = hudTiled.getContext('2d');
+                                    if (tCtx2) {
+                                        tCtx2.clearRect(0, 0, hudTiled.width, hudTiled.height);
+                                        const sW = hudTiled.width / 3;
+                                        const sH = hudTiled.height / 3;
+                                        for (let ty = 0; ty < 3; ty++) {
+                                            for (let tx = 0; tx < 3; tx++) {
+                                                tCtx2.drawImage(tempCanvas, tx * sW, ty * sH, sW, sH);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // 2. Update Sidebar thumbnail
+                            updateLassoSampleUI(cropW, cropH, tempCanvas);
+
+                            // 3. Update Live Preview in active Lasso Polygon
+                            if ((window as any).activeLassoPoints) {
+                                renderActiveLassoPreview();
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Live texture sampling error:", err);
+                    }
+                }
+            }
+        };
+
+        const stopSelect = (e: any) => {
+            if (!isDragging) return;
+            isDragging = false;
+
+            if (selectionBox) selectionBox.classList.add('hidden');
+            if (floatingHud) floatingHud.classList.add('hidden');
+
+            const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+            const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+
+            const rect = canvas.getBoundingClientRect();
+
+            const startX = Math.round(((Math.min(startClientX, clientX) - rect.left) / rect.width) * canvas.width);
+            const startY = Math.round(((Math.min(startClientY, clientY) - rect.top) / rect.height) * canvas.height);
+            const endX = Math.round(((Math.max(startClientX, clientX) - rect.left) / rect.width) * canvas.width);
+            const endY = Math.round(((Math.max(startClientY, clientY) - rect.top) / rect.height) * canvas.height);
+
+            const cropW = endX - startX;
+            const cropH = endY - startY;
+
+            if (cropW > 2 && cropH > 2) {
+                const imgElement = elements.mangaBgImage;
+                if (imgElement && imgElement.naturalWidth) {
+                    try {
+                        const tempCanvas = document.createElement('canvas');
+                        tempCanvas.width = cropW;
+                        tempCanvas.height = cropH;
+                        const patchCtx = tempCanvas.getContext('2d');
+                        if (patchCtx) {
+                            patchCtx.drawImage(imgElement, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
+                            lassoSampleCanvas = tempCanvas;
+                            lassoSampleSrc = { x: startX, y: startY, w: cropW, h: cropH };
+                            patchCanvas = tempCanvas;
+
+                            showToast(`🎯 Đã lấy mẫu vân chữ nhật ${cropW}x${cropH}px. Bấm 'Tô họa tiết' để lấp vào vùng Lasso!`, "success");
+                            setLassoPatternType('sample');
+                            updateLassoSampleUI(cropW, cropH, tempCanvas);
+                            renderActiveLassoPreview();
+                        }
+                    } catch (err) {
+                        console.error("Cropping lasso texture error:", err);
+                        showToast("Không thể sao chép mẫu từ ảnh.", "error");
+                    }
+                }
+            } else {
+                showToast("Vùng quét quá nhỏ, vui lòng thử lại.", "warn");
+            }
+
+            isSelectingLassoSample = false;
+            initEraserDrawingEvents();
+
+            const activePts = (window as any).activeLassoPoints;
+            if (activePts && activePts.length >= 3) {
+                updateLassoButtons(true);
+            }
+        };
+
+        canvas.onmousedown = startSelect;
+        canvas.onmousemove = dragSelect;
+        canvas.onmouseup = stopSelect;
+        canvas.onmouseleave = () => {
+            isDragging = false;
+            if (selectionBox) selectionBox.classList.add('hidden');
+            if (floatingHud) floatingHud.classList.add('hidden');
+        };
+
+        canvas.ontouchstart = startSelect;
+        canvas.ontouchmove = dragSelect;
+        canvas.ontouchend = stopSelect;
+        return;
+    }
 
     if (brushMode === 'lasso') {
         let isDrawing = false;
@@ -351,9 +813,7 @@ export function initEraserDrawingEvents(): void {
             preLassoImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             (window as any).lassoOriginalImageData = preLassoImageData;
             (window as any).activeLassoPoints = null;
-
-            const fillBtn = document.getElementById('btn-lasso-fill') as HTMLButtonElement | null;
-            if (fillBtn) fillBtn.disabled = true;
+            updateLassoButtons(false);
 
             ctx.beginPath();
             ctx.moveTo(pos.x, pos.y);
@@ -405,8 +865,7 @@ export function initEraserDrawingEvents(): void {
                 }
                 points = [];
                 (window as any).activeLassoPoints = null;
-                const fillBtn = document.getElementById('btn-lasso-fill') as HTMLButtonElement | null;
-                if (fillBtn) fillBtn.disabled = true;
+                updateLassoButtons(false);
                 return;
             }
 
@@ -430,9 +889,8 @@ export function initEraserDrawingEvents(): void {
             ctx.restore();
 
             (window as any).activeLassoPoints = points;
-
-            const fillBtn = document.getElementById('btn-lasso-fill') as HTMLButtonElement | null;
-            if (fillBtn) fillBtn.disabled = false;
+            updateLassoButtons(true);
+            renderActiveLassoPreview();
         };
 
         canvas.onmousedown = startLasso;
@@ -1393,8 +1851,7 @@ export async function activateEyedropper(): Promise<void> {
 
 export function clearLassoSelection(): void {
     (window as any).activeLassoPoints = null;
-    const fillBtn = document.getElementById('btn-lasso-fill') as HTMLButtonElement | null;
-    if (fillBtn) fillBtn.disabled = true;
+    updateLassoButtons(false);
 
     const canvas = elements.eraserCanvas;
     const ctx = canvas?.getContext('2d');
@@ -1685,8 +2142,7 @@ export async function runLassoContentAwareFill(): Promise<void> {
 
         (window as any).activeLassoPoints = null;
         (window as any).lassoOriginalImageData = null;
-        const fillBtn = document.getElementById('btn-lasso-fill') as HTMLButtonElement | null;
-        if (fillBtn) fillBtn.disabled = true;
+        updateLassoButtons(false);
 
         showToast("✨ Đã lấp đầy vùng chọn Lasso thành công!", "success");
     } catch (err: any) {
@@ -1701,6 +2157,637 @@ export async function runLassoContentAwareFill(): Promise<void> {
             updateOverlay(false);
         }
     }
+}
+
+export function setLassoFillTab(tab: 'ai' | 'pattern'): void {
+    lassoActiveTab = tab;
+    const tabAi = document.getElementById('tab-lasso-ai');
+    const tabPattern = document.getElementById('tab-lasso-pattern');
+    const panelAi = document.getElementById('lasso-ai-controls');
+    const panelPattern = document.getElementById('lasso-pattern-controls');
+
+    if (tab === 'ai') {
+        tabAi?.classList.add('bg-indigo-600', 'text-white');
+        tabAi?.classList.remove('text-slate-400', 'hover:text-slate-200');
+        tabPattern?.classList.remove('bg-indigo-600', 'text-white');
+        tabPattern?.classList.add('text-slate-400', 'hover:text-slate-200');
+        panelAi?.classList.remove('hidden');
+        panelPattern?.classList.add('hidden');
+    } else {
+        tabPattern?.classList.add('bg-indigo-600', 'text-white');
+        tabPattern?.classList.remove('text-slate-400', 'hover:text-slate-200');
+        tabAi?.classList.remove('bg-indigo-600', 'text-white');
+        tabAi?.classList.add('text-slate-400', 'hover:text-slate-200');
+        panelPattern?.classList.remove('hidden');
+        panelAi?.classList.add('hidden');
+    }
+    renderActiveLassoPreview();
+}
+
+export function setLassoPatternType(type: LassoPatternType): void {
+    lassoPatternType = type;
+    if (type !== 'sample' && lassoFillTechnique !== 'preset_tone') {
+        lassoFillTechnique = 'preset_tone';
+        const techPatch = document.getElementById('btn-lasso-tech-patch');
+        const techTile = document.getElementById('btn-lasso-tech-tile');
+        const techPreset = document.getElementById('btn-lasso-tech-preset');
+        const secPatch = document.getElementById('lasso-sec-patch');
+        const secPresets = document.getElementById('lasso-sec-presets');
+
+        [techPatch, techTile].forEach(b => {
+            b?.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-400');
+            b?.classList.add('bg-slate-900', 'text-slate-400', 'border-slate-800');
+        });
+        techPreset?.classList.add('bg-indigo-600', 'text-white', 'border-indigo-400');
+        techPreset?.classList.remove('bg-slate-900', 'text-slate-400', 'border-slate-800');
+        secPatch?.classList.add('hidden');
+        secPresets?.classList.remove('hidden');
+    }
+
+    const types: LassoPatternType[] = ['halftone', 'horizontal', 'vertical', 'diagonal', 'crosshatch', 'noise', 'sample'];
+    types.forEach(t => {
+        const btn = document.getElementById(`btn-lasso-pat-${t}`);
+        if (btn) {
+            if (t === type) {
+                btn.classList.add('bg-indigo-600', 'text-white', 'border-indigo-400');
+                btn.classList.remove('bg-slate-900', 'text-slate-400', 'border-slate-800');
+            } else {
+                btn.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-400');
+                btn.classList.add('bg-slate-900', 'text-slate-400', 'border-slate-800');
+            }
+        }
+    });
+
+    const sampleNotice = document.getElementById('lasso-pattern-sample-notice');
+    if (sampleNotice) {
+        if (type === 'sample') {
+            sampleNotice.classList.remove('hidden');
+        } else {
+            sampleNotice.classList.add('hidden');
+        }
+    }
+    renderActiveLassoPreview();
+}
+
+export function renderActiveLassoPreview(): void {
+    const points = (window as any).activeLassoPoints;
+    if (!points || points.length < 3) return;
+
+    const canvas = elements.eraserCanvas;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+
+    if ((window as any).lassoOriginalImageData) {
+        ctx.putImageData((window as any).lassoOriginalImageData, 0, 0);
+    }
+
+    if (lassoActiveTab === 'pattern') {
+        const featherInput = document.getElementById('num-lasso-pat-feather') as HTMLInputElement | null;
+        const feather = featherInput ? parseInt(featherInput.value) || 0 : Math.max(1, lassoPatternFeather);
+
+        const opacityInput = document.getElementById('num-lasso-pat-opacity') as HTMLInputElement | null;
+        const opacity = opacityInput ? (parseInt(opacityInput.value) || 100) / 100 : (lassoPatternOpacity / 100);
+
+        let minX = points[0].x, minY = points[0].y, maxX = points[0].x, maxY = points[0].y;
+        for (let i = 1; i < points.length; i++) {
+            minX = Math.min(minX, points[i].x);
+            minY = Math.min(minY, points[i].y);
+            maxX = Math.max(maxX, points[i].x);
+            maxY = Math.max(maxY, points[i].y);
+        }
+
+        const pad = Math.ceil(feather + 4);
+        const startX = Math.max(0, Math.floor(minX - pad));
+        const startY = Math.max(0, Math.floor(minY - pad));
+        const endX = Math.min(canvas.width, Math.ceil(maxX + pad));
+        const endY = Math.min(canvas.height, Math.ceil(maxY + pad));
+        const cropW = endX - startX;
+        const cropH = endY - startY;
+
+        if (cropW > 2 && cropH > 2) {
+            const patternCanvas = document.createElement('canvas');
+            patternCanvas.width = cropW;
+            patternCanvas.height = cropH;
+            const pCtx = patternCanvas.getContext('2d');
+
+            const imgElement = elements.mangaBgImage;
+
+            if (pCtx) {
+                if (lassoFillTechnique === 'patch_1to1' && imgElement && imgElement.naturalWidth) {
+                    let srcX = 0, srcY = 0;
+                    if (lassoSampleSrc) {
+                        srcX = lassoSampleSrc.x + lassoPatternOffsetX;
+                        srcY = lassoSampleSrc.y + lassoPatternOffsetY;
+                    } else {
+                        const autoPatch = findBestAdjacentPatch(imgElement, startX, startY, cropW, cropH);
+                        srcX = autoPatch.x + lassoPatternOffsetX;
+                        srcY = autoPatch.y + lassoPatternOffsetY;
+                    }
+                    srcX = Math.max(0, Math.min(imgElement.naturalWidth - cropW, srcX));
+                    srcY = Math.max(0, Math.min(imgElement.naturalHeight - cropH, srcY));
+                    pCtx.drawImage(imgElement, srcX, srcY, cropW, cropH, 0, 0, cropW, cropH);
+                } else {
+                    let rawTile: HTMLCanvasElement;
+                    if (lassoFillTechnique === 'grid_tile' || lassoPatternType === 'sample') {
+                        const rawSample = lassoSampleCanvas || patchCanvas;
+                        if (rawSample && rawSample.width > 0) {
+                            rawTile = rawSample;
+                        } else if (imgElement && imgElement.naturalWidth) {
+                            rawTile = lassoSampleCanvas || patchCanvas || createMangaPatternTile({ type: 'halftone', size: lassoPatternSize, density: lassoPatternDensity });
+                        } else {
+                            rawTile = createMangaPatternTile({ type: 'halftone', size: lassoPatternSize, density: lassoPatternDensity });
+                        }
+                    } else if (lassoFillTechnique === 'seamless_tile') {
+                        const rawSample = lassoSampleCanvas || patchCanvas;
+                        if (rawSample && rawSample.width > 0) {
+                            rawTile = makeSeamlessTile(rawSample, lassoCrossfadeOverlap);
+                        } else {
+                            rawTile = createMangaPatternTile({ type: 'halftone', size: lassoPatternSize, density: lassoPatternDensity });
+                        }
+                    } else {
+                        const sizeInput = document.getElementById('num-lasso-pat-size') as HTMLInputElement | null;
+                        const patternSize = sizeInput ? parseInt(sizeInput.value) || lassoPatternSize : lassoPatternSize;
+                        const densityInput = document.getElementById('num-lasso-pat-density') as HTMLInputElement | null;
+                        const patternDensity = densityInput ? parseInt(densityInput.value) || lassoPatternDensity : lassoPatternDensity;
+                        const fgColorInput = document.getElementById('color-lasso-pat-fg') as HTMLInputElement | null;
+                        const fgColor = fgColorInput ? fgColorInput.value : lassoPatternFgColor;
+                        const bgColorInput = document.getElementById('color-lasso-pat-bg') as HTMLInputElement | null;
+                        const bgColor = bgColorInput ? bgColorInput.value : lassoPatternBgColor;
+                        const transCheck = document.getElementById('chk-lasso-pat-trans') as HTMLInputElement | null;
+                        const isTransparent = transCheck ? transCheck.checked : lassoPatternTransparentBg;
+
+                        rawTile = createMangaPatternTile({
+                            type: lassoPatternType,
+                            size: patternSize,
+                            density: patternDensity,
+                            fgColor,
+                            bgColor,
+                            isTransparent
+                        });
+                    }
+
+                    const tileW = Math.max(1, rawTile.width);
+                    const tileH = Math.max(1, rawTile.height);
+                    const originX = (lassoFillTechnique === 'preset_tone' || lassoPatternType !== 'sample' ? 0 : (lassoSampleSrc ? lassoSampleSrc.x : 0)) + lassoPatternOffsetX;
+                    const originY = (lassoFillTechnique === 'preset_tone' || lassoPatternType !== 'sample' ? 0 : (lassoSampleSrc ? lassoSampleSrc.y : 0)) + lassoPatternOffsetY;
+
+                    let shiftX = (startX - originX) % tileW;
+                    if (shiftX < 0) shiftX += tileW;
+                    let shiftY = (startY - originY) % tileH;
+                    if (shiftY < 0) shiftY += tileH;
+
+                    for (let py = -shiftY; py < cropH; py += tileH) {
+                        for (let px = -shiftX; px < cropW; px += tileW) {
+                            pCtx.drawImage(rawTile, px, py);
+                        }
+                    }
+                }
+
+                // Mask with lasso polygon
+                const maskCanvas = document.createElement('canvas');
+                maskCanvas.width = cropW;
+                maskCanvas.height = cropH;
+                const mCtx = maskCanvas.getContext('2d');
+                if (mCtx) {
+                    if (feather > 0) mCtx.filter = `blur(${feather}px)`;
+                    mCtx.fillStyle = '#ffffff';
+                    mCtx.beginPath();
+                    mCtx.moveTo(points[0].x - startX, points[0].y - startY);
+                    for (let i = 1; i < points.length; i++) {
+                        mCtx.lineTo(points[i].x - startX, points[i].y - startY);
+                    }
+                    mCtx.closePath();
+                    mCtx.fill();
+
+                    const outputCanvas = document.createElement('canvas');
+                    outputCanvas.width = cropW;
+                    outputCanvas.height = cropH;
+                    const oCtx = outputCanvas.getContext('2d');
+                    if (oCtx) {
+                        oCtx.drawImage(patternCanvas, 0, 0);
+                        oCtx.globalCompositeOperation = 'destination-in';
+                        oCtx.drawImage(maskCanvas, 0, 0);
+
+                        ctx.save();
+                        ctx.globalAlpha = Math.max(0.05, Math.min(1.0, opacity));
+                        ctx.drawImage(outputCanvas, startX, startY);
+                        ctx.restore();
+                    }
+                }
+            }
+        }
+    } else {
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(points[i].x, points[i].y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(168, 85, 247, 0.12)';
+        ctx.fill();
+        ctx.restore();
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = '#a855f7';
+    ctx.lineWidth = 1.5;
+    if (typeof ctx.setLineDash === 'function') {
+        ctx.setLineDash([4, 4]);
+    }
+    ctx.stroke();
+    ctx.restore();
+}
+
+export interface PatternTileOptions {
+    type: LassoPatternType;
+    size?: number;
+    density?: number;
+    fgColor?: string;
+    bgColor?: string;
+    isTransparent?: boolean;
+    sampleCanvas?: HTMLCanvasElement | null;
+}
+
+export function createMangaPatternTile(options: PatternTileOptions): HTMLCanvasElement {
+    const type = options.type || 'halftone';
+    const size = Math.max(2, Math.min(64, options.size || 8));
+    const density = Math.max(5, Math.min(95, options.density ?? 40));
+    const fgColor = options.fgColor || '#000000';
+    const bgColor = options.bgColor || '#ffffff';
+    const isTransparent = options.isTransparent ?? false;
+
+    if (type === 'sample') {
+        const sample = options.sampleCanvas || lassoSampleCanvas || patchCanvas;
+        if (sample && sample.width > 0 && sample.height > 0) {
+            return sample;
+        }
+    }
+
+    const tile = document.createElement('canvas');
+    let S = size;
+
+    if (type === 'halftone') {
+        S = Math.max(4, size);
+        tile.width = S;
+        tile.height = S;
+        const ctx = tile.getContext('2d');
+        if (!ctx) return tile;
+
+        if (!isTransparent) {
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, S, S);
+        }
+
+        const radius = Math.max(0.75, (S / 2) * Math.sqrt(density / 100));
+
+        ctx.fillStyle = fgColor;
+
+        // Center dot
+        ctx.beginPath();
+        ctx.arc(S / 2, S / 2, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 4 corner dots for 45° offset screentone grid
+        const corners = [[0, 0], [S, 0], [0, S], [S, S]];
+        for (const [cx, cy] of corners) {
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    } else if (type === 'horizontal') {
+        S = Math.max(2, size);
+        const W = 16;
+        tile.width = W;
+        tile.height = S;
+        const ctx = tile.getContext('2d');
+        if (!ctx) return tile;
+
+        if (!isTransparent) {
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, W, S);
+        }
+
+        const lineH = Math.max(1, Math.round(S * (density / 100)));
+        ctx.fillStyle = fgColor;
+        ctx.fillRect(0, 0, W, lineH);
+    } else if (type === 'vertical') {
+        S = Math.max(2, size);
+        const H = 16;
+        tile.width = S;
+        tile.height = H;
+        const ctx = tile.getContext('2d');
+        if (!ctx) return tile;
+
+        if (!isTransparent) {
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, S, H);
+        }
+
+        const lineW = Math.max(1, Math.round(S * (density / 100)));
+        ctx.fillStyle = fgColor;
+        ctx.fillRect(0, 0, lineW, H);
+    } else if (type === 'diagonal') {
+        S = Math.max(4, size);
+        tile.width = S;
+        tile.height = S;
+        const ctx = tile.getContext('2d');
+        if (!ctx) return tile;
+
+        if (!isTransparent) {
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, S, S);
+        }
+
+        const lineW = Math.max(1, Math.round(S * (density / 100) * 0.75));
+        ctx.strokeStyle = fgColor;
+        ctx.lineWidth = lineW;
+        ctx.lineCap = 'square';
+
+        const drawDiag = (ox: number, oy: number) => {
+            ctx.beginPath();
+            ctx.moveTo(ox, oy);
+            ctx.lineTo(ox + S, oy + S);
+            ctx.stroke();
+        };
+
+        drawDiag(0, 0);
+        drawDiag(-S, 0);
+        drawDiag(0, -S);
+        drawDiag(S, -S);
+        drawDiag(-S, S);
+    } else if (type === 'crosshatch') {
+        S = Math.max(4, size);
+        tile.width = S;
+        tile.height = S;
+        const ctx = tile.getContext('2d');
+        if (!ctx) return tile;
+
+        if (!isTransparent) {
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, S, S);
+        }
+
+        const lineW = Math.max(1, Math.round(S * (density / 100) * 0.5));
+        ctx.fillStyle = fgColor;
+        ctx.fillRect(0, 0, S, lineW);
+        ctx.fillRect(0, 0, lineW, S);
+    } else if (type === 'noise') {
+        S = Math.max(16, size * 2);
+        tile.width = S;
+        tile.height = S;
+        const ctx = tile.getContext('2d');
+        if (!ctx) return tile;
+
+        if (!isTransparent) {
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, S, S);
+        }
+
+        const imgData = ctx.getImageData(0, 0, S, S);
+        const data = imgData.data;
+
+        let fr = 0, fg = 0, fb = 0;
+        if (fgColor.startsWith('#')) {
+            const hex = fgColor.replace('#', '');
+            if (hex.length === 3) {
+                fr = parseInt(hex[0] + hex[0], 16);
+                fg = parseInt(hex[1] + hex[1], 16);
+                fb = parseInt(hex[2] + hex[2], 16);
+            } else if (hex.length >= 6) {
+                fr = parseInt(hex.substring(0, 2), 16);
+                fg = parseInt(hex.substring(2, 4), 16);
+                fb = parseInt(hex.substring(4, 6), 16);
+            }
+        }
+
+        const threshold = density / 100;
+        for (let i = 0; i < S * S; i++) {
+            if (Math.random() < threshold) {
+                const p = i * 4;
+                data[p] = fr;
+                data[p + 1] = fg;
+                data[p + 2] = fb;
+                data[p + 3] = 255;
+            }
+        }
+        ctx.putImageData(imgData, 0, 0);
+    }
+
+    return tile;
+}
+
+export async function runLassoPatternFill(): Promise<void> {
+    const points = (window as any).activeLassoPoints;
+    if (!points || points.length < 3) {
+        showToast("Vui lòng vẽ khoanh vùng chọn Lasso trước.", "warn");
+        return;
+    }
+
+    const canvas = elements.eraserCanvas;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    if (!page) {
+        showToast("Không tìm thấy trang hiện tại để xử lý.", "error");
+        return;
+    }
+
+    const sizeInput = document.getElementById('num-lasso-pat-size') as HTMLInputElement | null;
+    const patternSize = sizeInput ? parseInt(sizeInput.value) || lassoPatternSize : lassoPatternSize;
+
+    const densityInput = document.getElementById('num-lasso-pat-density') as HTMLInputElement | null;
+    const patternDensity = densityInput ? parseInt(densityInput.value) || lassoPatternDensity : lassoPatternDensity;
+
+    const fgColorInput = document.getElementById('color-lasso-pat-fg') as HTMLInputElement | null;
+    const fgColor = fgColorInput ? fgColorInput.value : lassoPatternFgColor;
+
+    const bgColorInput = document.getElementById('color-lasso-pat-bg') as HTMLInputElement | null;
+    const bgColor = bgColorInput ? bgColorInput.value : lassoPatternBgColor;
+
+    const transCheck = document.getElementById('chk-lasso-pat-trans') as HTMLInputElement | null;
+    const isTransparent = transCheck ? transCheck.checked : lassoPatternTransparentBg;
+
+    const opacityInput = document.getElementById('num-lasso-pat-opacity') as HTMLInputElement | null;
+    const opacity = opacityInput ? (parseInt(opacityInput.value) || 100) / 100 : (lassoPatternOpacity / 100);
+
+    const featherInput = document.getElementById('num-lasso-pat-feather') as HTMLInputElement | null;
+    const feather = featherInput ? parseInt(featherInput.value) || 0 : Math.max(1, lassoPatternFeather);
+
+    let minX = points[0].x;
+    let minY = points[0].y;
+    let maxX = points[0].x;
+    let maxY = points[0].y;
+    for (let i = 1; i < points.length; i++) {
+        minX = Math.min(minX, points[i].x);
+        minY = Math.min(minY, points[i].y);
+        maxX = Math.max(maxX, points[i].x);
+        maxY = Math.max(maxY, points[i].y);
+    }
+
+    const pad = Math.ceil(feather + 4);
+    const startX = Math.max(0, Math.floor(minX - pad));
+    const startY = Math.max(0, Math.floor(minY - pad));
+    const endX = Math.min(canvas.width, Math.ceil(maxX + pad));
+    const endY = Math.min(canvas.height, Math.ceil(maxY + pad));
+    const cropW = endX - startX;
+    const cropH = endY - startY;
+
+    if (cropW <= 2 || cropH <= 2) {
+        showToast("Vùng chọn quá nhỏ, vui lòng vẽ lại.", "warn");
+        return;
+    }
+
+    try {
+        pushStateToHistory();
+
+        if ((window as any).lassoOriginalImageData) {
+            ctx.putImageData((window as any).lassoOriginalImageData, 0, 0);
+        } else {
+            await restorePageEraserDrawing(page);
+        }
+
+        const patternCanvas = document.createElement('canvas');
+        patternCanvas.width = cropW;
+        patternCanvas.height = cropH;
+        const pCtx = patternCanvas.getContext('2d');
+        if (!pCtx) return;
+
+        const imgElement = elements.mangaBgImage;
+
+        if (lassoFillTechnique === 'patch_1to1' && imgElement && imgElement.naturalWidth) {
+            // METHOD 1: Photoshop Patch Tool 1:1 direct texture shift
+            let srcX = 0, srcY = 0;
+            if (lassoSampleSrc) {
+                srcX = lassoSampleSrc.x + lassoPatternOffsetX;
+                srcY = lassoSampleSrc.y + lassoPatternOffsetY;
+            } else {
+                const autoPatch = findBestAdjacentPatch(imgElement, startX, startY, cropW, cropH);
+                srcX = autoPatch.x + lassoPatternOffsetX;
+                srcY = autoPatch.y + lassoPatternOffsetY;
+            }
+            srcX = Math.max(0, Math.min(imgElement.naturalWidth - cropW, srcX));
+            srcY = Math.max(0, Math.min(imgElement.naturalHeight - cropH, srcY));
+
+            pCtx.drawImage(imgElement, srcX, srcY, cropW, cropH, 0, 0, cropW, cropH);
+        } else {
+            // METHOD 2: Grid Tiling (Ghép ô) or Preset Screentone with Phase Shift Adjustment
+            let rawTile: HTMLCanvasElement;
+            if (lassoFillTechnique === 'grid_tile' || lassoPatternType === 'sample') {
+                const rawSample = lassoSampleCanvas || patchCanvas;
+                if (rawSample && rawSample.width > 0) {
+                    rawTile = rawSample;
+                } else if (imgElement && imgElement.naturalWidth) {
+                    autoSampleNearbyLassoRect();
+                    rawTile = lassoSampleCanvas || patchCanvas || createMangaPatternTile({ type: 'halftone', size: patternSize, density: patternDensity });
+                } else {
+                    rawTile = createMangaPatternTile({ type: 'halftone', size: patternSize, density: patternDensity });
+                }
+            } else if (lassoFillTechnique === 'seamless_tile') {
+                const rawSample = lassoSampleCanvas || patchCanvas;
+                if (rawSample && rawSample.width > 0) {
+                    rawTile = makeSeamlessTile(rawSample, lassoCrossfadeOverlap);
+                } else if (imgElement && imgElement.naturalWidth) {
+                    autoSampleNearbyLassoRect();
+                    rawTile = makeSeamlessTile(lassoSampleCanvas || patchCanvas || createMangaPatternTile({ type: 'halftone', size: patternSize, density: patternDensity }), lassoCrossfadeOverlap);
+                } else {
+                    rawTile = createMangaPatternTile({ type: 'halftone', size: patternSize, density: patternDensity });
+                }
+            } else {
+                rawTile = createMangaPatternTile({
+                    type: lassoPatternType,
+                    size: patternSize,
+                    density: patternDensity,
+                    fgColor,
+                    bgColor,
+                    isTransparent
+                });
+            }
+
+            const tileW = Math.max(1, rawTile.width);
+            const tileH = Math.max(1, rawTile.height);
+
+            const originX = (lassoFillTechnique === 'preset_tone' || lassoPatternType !== 'sample' ? 0 : (lassoSampleSrc ? lassoSampleSrc.x : 0)) + lassoPatternOffsetX;
+            const originY = (lassoFillTechnique === 'preset_tone' || lassoPatternType !== 'sample' ? 0 : (lassoSampleSrc ? lassoSampleSrc.y : 0)) + lassoPatternOffsetY;
+
+            let shiftX = (startX - originX) % tileW;
+            if (shiftX < 0) shiftX += tileW;
+            let shiftY = (startY - originY) % tileH;
+            if (shiftY < 0) shiftY += tileH;
+
+            // Direct Grid Tiling (Ghép ô) across the bounding box
+            for (let py = -shiftY; py < cropH; py += tileH) {
+                for (let px = -shiftX; px < cropW; px += tileW) {
+                    pCtx.drawImage(rawTile, px, py);
+                }
+            }
+        }
+
+        // 2. Render Polygon Mask with Feathering
+        const maskCanvas = document.createElement('canvas');
+        maskCanvas.width = cropW;
+        maskCanvas.height = cropH;
+        const mCtx = maskCanvas.getContext('2d');
+        if (!mCtx) return;
+
+        if (feather > 0) {
+            mCtx.filter = `blur(${feather}px)`;
+        }
+
+        mCtx.fillStyle = '#ffffff';
+        mCtx.beginPath();
+        mCtx.moveTo(points[0].x - startX, points[0].y - startY);
+        for (let i = 1; i < points.length; i++) {
+            mCtx.lineTo(points[i].x - startX, points[i].y - startY);
+        }
+        mCtx.closePath();
+        mCtx.fill();
+
+        // 3. Composite Pattern through Mask (chỉ hiển thị trong vùng lasso)
+        const outputCanvas = document.createElement('canvas');
+        outputCanvas.width = cropW;
+        outputCanvas.height = cropH;
+        const oCtx = outputCanvas.getContext('2d');
+        if (!oCtx) return;
+
+        oCtx.drawImage(patternCanvas, 0, 0);
+        oCtx.globalCompositeOperation = 'destination-in';
+        oCtx.drawImage(maskCanvas, 0, 0);
+
+        // 4. Draw to Main Eraser Canvas
+        ctx.save();
+        ctx.globalAlpha = Math.max(0.05, Math.min(1.0, opacity));
+        ctx.drawImage(outputCanvas, startX, startY);
+        ctx.restore();
+
+        await saveEraserDrawingToPage();
+        requestOverlayRender();
+
+        (window as any).activeLassoPoints = null;
+        (window as any).lassoOriginalImageData = null;
+        updateLassoButtons(false);
+
+        showToast("✨ Đã lấp đầy vùng chọn Lasso bằng mảng vân thành công!", "success");
+    } catch (err: any) {
+        console.error("Lasso pattern fill error:", err);
+        showToast(`Lỗi khi tô hoa văn: ${err.message}`, "error");
+        await restorePageEraserDrawing(page);
+        requestOverlayRender();
+    }
+}
+
+export function pickLassoSamplePatch(): void {
+    setEraserBrushMode('stamp');
+    startTexturePatchSelection();
+    showToast("🎯 Đã chuyển sang chế độ quét vân. Hãy quét một vùng trên tranh để lấy mẫu vân cho Lasso Pattern Fill!", "info");
 }
 
 export function minimizeEraserPanel(): void {
@@ -1731,6 +2818,18 @@ if (typeof window !== 'undefined') {
     (window as any).startTexturePatchSelection = startTexturePatchSelection;
     (window as any).clearLassoSelection = clearLassoSelection;
     (window as any).runLassoContentAwareFill = runLassoContentAwareFill;
+    (window as any).runLassoPatternFill = runLassoPatternFill;
+    (window as any).setLassoFillTab = setLassoFillTab;
+    (window as any).setLassoFillTechnique = setLassoFillTechnique;
+    (window as any).setLassoPatternType = setLassoPatternType;
+    (window as any).setLassoPatternOffsetX = setLassoPatternOffsetX;
+    (window as any).setLassoPatternOffsetY = setLassoPatternOffsetY;
+    (window as any).nudgeLassoPatternOffset = nudgeLassoPatternOffset;
+    (window as any).resetLassoPatternOffset = resetLassoPatternOffset;
+    (window as any).renderActiveLassoPreview = renderActiveLassoPreview;
+    (window as any).pickLassoSamplePatch = pickLassoSamplePatch;
+    (window as any).pickLassoRectSample = pickLassoRectSample;
+    (window as any).autoSampleNearbyLassoRect = autoSampleNearbyLassoRect;
     (window as any).minimizeEraserPanel = minimizeEraserPanel;
     (window as any).expandEraserPanel = expandEraserPanel;
 }

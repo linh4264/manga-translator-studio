@@ -88,6 +88,38 @@ export async function initApplication(): Promise<void> {
         import('../features/inpainting').then(m => m.setEraserBrushMode(mode as any));
     });
     registerAction('startTexturePatchSelection', () => import('../features/inpainting').then(m => m.startTexturePatchSelection()));
+    registerAction('runLassoContentAwareFill', () => import('../features/inpainting').then(m => m.runLassoContentAwareFill()));
+    registerAction('runLassoPatternFill', () => import('../features/inpainting').then(m => m.runLassoPatternFill()));
+    registerAction('clearLassoSelection', () => import('../features/inpainting').then(m => m.clearLassoSelection()));
+    registerAction('setLassoFillTab', (target) => {
+        const tab = (target.getAttribute('data-tab') || 'ai') as 'ai' | 'pattern';
+        import('../features/inpainting').then(m => m.setLassoFillTab(tab));
+    });
+    registerAction('setLassoPatternType', (target) => {
+        const type = (target.getAttribute('data-type') || 'halftone') as any;
+        import('../features/inpainting').then(m => m.setLassoPatternType(type));
+    });
+    registerAction('setLassoFillTechnique', (target) => {
+        const tech = (target.getAttribute('data-tech') || 'patch_1to1') as any;
+        import('../features/inpainting').then(m => m.setLassoFillTechnique(tech));
+    });
+    registerAction('nudgeLassoPatternOffset', (target) => {
+        const dx = parseInt(target.getAttribute('data-dx') || '0', 10);
+        const dy = parseInt(target.getAttribute('data-dy') || '0', 10);
+        import('../features/inpainting').then(m => m.nudgeLassoPatternOffset(dx, dy));
+    });
+    registerAction('setLassoPatternOffsetX', (target) => {
+        const val = parseInt((target as HTMLInputElement).value || '0', 10);
+        import('../features/inpainting').then(m => m.setLassoPatternOffsetX(val));
+    });
+    registerAction('setLassoPatternOffsetY', (target) => {
+        const val = parseInt((target as HTMLInputElement).value || '0', 10);
+        import('../features/inpainting').then(m => m.setLassoPatternOffsetY(val));
+    });
+    registerAction('resetLassoPatternOffset', () => import('../features/inpainting').then(m => m.resetLassoPatternOffset()));
+    registerAction('pickLassoSamplePatch', () => import('../features/inpainting').then(m => m.pickLassoSamplePatch()));
+    registerAction('pickLassoRectSample', () => import('../features/inpainting').then(m => m.pickLassoRectSample()));
+    registerAction('autoSampleNearbyLassoRect', () => import('../features/inpainting').then(m => m.autoSampleNearbyLassoRect()));
     registerAction('autoMatchActiveBlockStyle', () => import('../features/canvas/canvas-service').then(m => m.autoMatchActiveBlockStyle()));
     registerAction('copyBlockStyle', copyBlockStyle);
     registerAction('pasteBlockStyle', pasteBlockStyle);

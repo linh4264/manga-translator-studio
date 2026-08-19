@@ -680,6 +680,23 @@
                     <div id="patch-selection-box"
                         class="hidden absolute border border-dashed border-teal-400 bg-teal-500/10 pointer-events-none z-40 rounded-full">
                     </div>
+                    <div id="lasso-sample-floating-hud"
+                        class="hidden absolute pointer-events-none z-50 flex flex-col gap-1 p-2 rounded-lg bg-slate-950/95 border border-teal-400 shadow-2xl backdrop-blur-md">
+                        <div class="flex items-center justify-between gap-3 text-[9px] font-mono text-teal-300 font-bold">
+                            <span id="lasso-sample-hud-dims">0 × 0 px</span>
+                            <span class="text-[8px] text-slate-400">Xem trước mẫu & ghép</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="flex flex-col items-center gap-0.5">
+                                <canvas id="lasso-sample-hud-patch" width="48" height="48" class="w-12 h-12 rounded border border-slate-700 bg-slate-900 object-contain shadow-inner"></canvas>
+                                <span class="text-[7px] text-slate-400">Mẫu gốc</span>
+                            </div>
+                            <div class="flex flex-col items-center gap-0.5">
+                                <canvas id="lasso-sample-hud-tiled" width="48" height="48" class="w-12 h-12 rounded border border-slate-700 bg-slate-900 object-contain shadow-inner"></canvas>
+                                <span class="text-[7px] text-slate-400">Ghép lặp 3x3</span>
+                            </div>
+                        </div>
+                    </div>
                     <div id="magic-wand-highlight-box"
                         class="hidden absolute border-2 border-dashed border-purple-400 bg-purple-500/15 pointer-events-none z-30 rounded-xl transition-all shadow-lg shadow-purple-500/20">
                     </div>
@@ -789,36 +806,259 @@
                     </div>
 
                     <!-- Lasso Specific Controls (hidden by default) -->
-                    <div id="lasso-controls" class="hidden flex flex-col gap-3">
-                        <!-- Fuzziness (Độ nhạy) -->
-                        <div class="flex flex-col gap-1">
-                            <div
-                                class="flex justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
-                                <span data-i18n="lasso-fuzziness-label">Độ nhạy</span>
-                                <span id="lbl-lasso-fuzziness" class="text-indigo-400 font-mono">25</span>
-                            </div>
-                            <input type="range" id="num-lasso-fuzziness" min="5" max="60" value="25"
-                                oninput="document.getElementById('lbl-lasso-fuzziness').innerText = this.value"
-                                class="h-1 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-indigo-500 w-full">
+                    <div id="lasso-controls" class="hidden flex flex-col gap-2.5">
+                        <!-- Mode Tab Switcher: AI Fill vs Pattern Fill -->
+                        <div class="grid grid-cols-2 gap-1 bg-slate-900/60 p-0.5 rounded-lg border border-slate-800/80">
+                            <button id="tab-lasso-ai" onclick="setLassoFillTab('ai')" data-action="setLassoFillTab" data-tab="ai"
+                                class="px-2 py-1 text-[9px] font-bold rounded-md bg-indigo-600 text-white shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer">
+                                <i class="fa-solid fa-wand-magic-sparkles text-[8px]"></i> <span data-i18n="lasso-tab-ai">Bù nền AI</span>
+                            </button>
+                            <button id="tab-lasso-pattern" onclick="setLassoFillTab('pattern')" data-action="setLassoFillTab" data-tab="pattern"
+                                class="px-2 py-1 text-[9px] font-bold rounded-md text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center gap-1 cursor-pointer">
+                                <i class="fa-solid fa-shapes text-[8px]"></i> <span data-i18n="lasso-tab-pattern">Tô họa tiết</span>
+                            </button>
                         </div>
-                        <!-- Expand size -->
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none"
-                                data-i18n="lasso-expand-label">Mở rộng</span>
-                            <div class="flex items-center space-x-1">
-                                <input type="number" id="num-lasso-expand" min="0" max="15" value="3"
-                                    class="w-10 text-center bg-slate-900 border border-slate-800 focus:border-indigo-500/50 rounded py-0.5 px-0.5 text-[10px] text-slate-200 focus:outline-none font-mono">
-                                <span class="text-[10px] text-slate-500">px</span>
+
+                        <!-- 1. AI Fill Controls Panel -->
+                        <div id="lasso-ai-controls" class="flex flex-col gap-2.5">
+                            <!-- Fuzziness (Độ nhạy) -->
+                            <div class="flex flex-col gap-1">
+                                <div class="flex justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
+                                    <span data-i18n="lasso-fuzziness-label">Độ nhạy</span>
+                                    <span id="lbl-lasso-fuzziness" class="text-indigo-400 font-mono">25</span>
+                                </div>
+                                <input type="range" id="num-lasso-fuzziness" min="5" max="60" value="25"
+                                    oninput="document.getElementById('lbl-lasso-fuzziness').innerText = this.value"
+                                    class="h-1 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-indigo-500 w-full">
                             </div>
+                            <!-- Expand size -->
+                            <div class="flex items-center justify-between">
+                                <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none"
+                                    data-i18n="lasso-expand-label">Mở rộng</span>
+                                <div class="flex items-center space-x-1">
+                                    <input type="number" id="num-lasso-expand" min="0" max="15" value="3"
+                                        class="w-10 text-center bg-slate-900 border border-slate-800 focus:border-indigo-500/50 rounded py-0.5 px-0.5 text-[10px] text-slate-200 focus:outline-none font-mono">
+                                    <span class="text-[10px] text-slate-500">px</span>
+                                </div>
+                            </div>
+                            <!-- AI Fill button -->
+                            <button id="btn-lasso-fill" onclick="runLassoContentAwareFill()" data-action="runLassoContentAwareFill" disabled
+                                data-i18n="lasso-fill-btn"
+                                class="w-full px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30 hover:bg-indigo-600 text-indigo-300 hover:text-white text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:pointer-events-none shadow-md cursor-pointer">
+                                <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> Lấp đầy AI (AI Fill)
+                            </button>
                         </div>
-                        <!-- Action buttons -->
-                        <button id="btn-lasso-fill" onclick="runLassoContentAwareFill()" disabled
-                            data-i18n="lasso-fill-btn"
-                            class="w-full px-3 py-1.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30 hover:bg-indigo-600 text-indigo-300 hover:text-white text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:pointer-events-none shadow-md">
-                            <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> Lấp đầy (Fill)
-                        </button>
-                        <button id="btn-lasso-clear" onclick="clearLassoSelection()" data-i18n-clear-btn
-                            class="w-full px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-855 text-slate-450 hover:text-slate-200 text-[10px] font-semibold flex items-center justify-center gap-1 transition-all">
+
+                        <!-- 2. Pattern Fill Controls Panel (hidden by default) -->
+                        <div id="lasso-pattern-controls" class="hidden flex flex-col gap-2.5">
+                            <!-- Technique Switcher (PTS Patch vs Grid Tiling vs Presets) -->
+                            <div class="grid grid-cols-3 gap-1 bg-slate-900/90 p-1 rounded-lg border border-slate-800">
+                                <button id="btn-lasso-tech-patch" onclick="setLassoFillTechnique('patch_1to1')" data-action="setLassoFillTechnique" data-tech="patch_1to1"
+                                    title="Trượt vân 1:1 trực tiếp từ ảnh gốc (như Patch Tool của Photoshop)"
+                                    class="px-1 py-1 rounded text-[9px] font-bold transition-all cursor-pointer bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 text-center">
+                                    <span data-i18n="lasso-tech-patch">Trượt vân 1:1</span>
+                                </button>
+                                <button id="btn-lasso-tech-tile" onclick="setLassoFillTechnique('grid_tile')" data-action="setLassoFillTechnique" data-tech="grid_tile"
+                                    title="Lặp ghép ô hình chữ nhật bao quanh đường Lasso"
+                                    class="px-1 py-1 rounded text-[9px] font-bold transition-all cursor-pointer bg-indigo-600 text-white border border-indigo-400 shadow-sm text-center">
+                                    <span data-i18n="lasso-tech-tile">Ghép ô</span>
+                                </button>
+                                <button id="btn-lasso-tech-preset" onclick="setLassoFillTechnique('preset_tone')" data-action="setLassoFillTechnique" data-tech="preset_tone"
+                                    title="Họa tiết trame hạt / sọc tạo sẵn"
+                                    class="px-1 py-1 rounded text-[9px] font-bold transition-all cursor-pointer bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 text-center">
+                                    <span data-i18n="lasso-tech-preset">Trame tạo sẵn</span>
+                                </button>
+                            </div>
+
+                            <!-- Section A: Patch 1:1 & Grid Tile Sampling Box -->
+                            <div id="lasso-sec-patch" class="flex flex-col gap-1.5 bg-slate-900/80 p-2 rounded-lg border border-indigo-500/30 shadow-sm">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[9px] text-slate-300 font-bold uppercase tracking-wider select-none flex items-center gap-1">
+                                        <i class="fa-solid fa-clone text-indigo-400 text-[10px]"></i> Mẫu vân tranh gốc
+                                    </span>
+                                    <span id="lbl-lasso-sample-status" class="text-[9px] text-slate-400 font-mono">Chưa có mẫu</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-1.5">
+                                    <button id="btn-pick-lasso-sample" onclick="pickLassoRectSample()" data-action="pickLassoRectSample"
+                                        title="Kéo chuột quét chọn vùng vân nguồn trên tranh"
+                                        class="px-2 py-1.5 rounded-md bg-teal-600/20 hover:bg-teal-600 text-teal-300 hover:text-white border border-teal-500/30 text-[9px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm">
+                                        <i class="fa-solid fa-crop-simple text-[9px]"></i> <span data-i18n="lasso-sample-btn">Quét mẫu vân</span>
+                                    </button>
+                                    <button id="btn-auto-lasso-sample" onclick="autoSampleNearbyLassoRect()" data-action="autoSampleNearbyLassoRect"
+                                        title="Tự động lấy mảng vân sạch ở vùng lân cận quanh đường Lasso"
+                                        class="px-2 py-1.5 rounded-md bg-indigo-600/20 hover:bg-indigo-600 text-indigo-300 hover:text-white border border-indigo-500/30 text-[9px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer shadow-sm">
+                                        <i class="fa-solid fa-wand-magic text-[9px]"></i> <span data-i18n="lasso-auto-sample-btn">Tự lấy lân cận</span>
+                                    </button>
+                                </div>
+                                <div class="flex items-center gap-2 pt-0.5">
+                                    <canvas id="lasso-sample-thumb-preview" class="hidden w-7 h-7 rounded border border-slate-700 bg-slate-950 object-contain shadow-inner"></canvas>
+                                    <span class="text-[8px] text-slate-400 leading-tight">Xếp ghép ô mẫu chữ nhật phủ kín khối bao và chỉ hiển thị trong đường Lasso.</span>
+                                </div>
+                            </div>
+
+                            <!-- Phase Shift & Inter-tile Stagger Controls Panel -->
+                            <div class="flex flex-col gap-1.5 bg-slate-900/90 p-2 rounded-lg border border-slate-800 shadow-sm">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[9px] text-slate-300 font-bold uppercase tracking-wider select-none flex items-center gap-1">
+                                        <i class="fa-solid fa-arrows-up-down-left-right text-teal-400 text-[10px]"></i> Điều chỉnh Dịch pha
+                                    </span>
+                                    <div class="flex items-center gap-1">
+                                        <span id="lbl-lasso-offset" class="text-[9px] text-teal-400 font-mono">X: +0px, Y: +0px</span>
+                                        <button onclick="resetLassoPatternOffset()" data-action="resetLassoPatternOffset" title="Đặt lại pha về 0"
+                                            class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-rose-600 text-slate-300 text-[8px] flex items-center justify-center cursor-pointer transition-all ml-1" data-i18n="lasso-nudge-reset">↺ Đặt lại</button>
+                                    </div>
+                                </div>
+
+                                <!-- Sliders for Phase Shift X and Y -->
+                                <div class="grid grid-cols-2 gap-2 pt-0.5">
+                                    <div class="flex flex-col gap-0.5">
+                                        <div class="flex justify-between text-[9px] text-slate-400 font-semibold select-none">
+                                            <span data-i18n="lasso-phase-x-label">Dịch pha X</span>
+                                            <span id="lbl-lasso-offset-x-val" class="text-teal-400 font-mono">+0px</span>
+                                        </div>
+                                        <input type="range" id="num-lasso-offset-x" min="-32" max="32" value="0"
+                                            oninput="setLassoPatternOffsetX(this.value)" data-action="setLassoPatternOffsetX"
+                                            class="h-1 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-teal-500 w-full">
+                                    </div>
+                                    <div class="flex flex-col gap-0.5">
+                                        <div class="flex justify-between text-[9px] text-slate-400 font-semibold select-none">
+                                            <span data-i18n="lasso-phase-y-label">Dịch pha Y</span>
+                                            <span id="lbl-lasso-offset-y-val" class="text-teal-400 font-mono">+0px</span>
+                                        </div>
+                                        <input type="range" id="num-lasso-offset-y" min="-32" max="32" value="0"
+                                            oninput="setLassoPatternOffsetY(this.value)" data-action="setLassoPatternOffsetY"
+                                            class="h-1 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-teal-500 w-full">
+                                    </div>
+                                </div>
+
+                                <!-- Quick Step D-Pad Buttons -->
+                                <div class="flex items-center justify-between pt-0.5 border-t border-slate-800/80">
+                                    <span class="text-[8px] text-slate-400 italic">Dịch từng pixel:</span>
+                                    <div class="flex items-center gap-1">
+                                        <button onclick="nudgeLassoPatternOffset(-1, 0)" data-action="nudgeLassoPatternOffset" data-dx="-1" data-dy="0" title="Dịch trái 1px" class="w-5 h-5 rounded bg-slate-800 hover:bg-teal-600 text-slate-200 text-[9px] flex items-center justify-center cursor-pointer transition-all">◀</button>
+                                        <button onclick="nudgeLassoPatternOffset(0, -1)" data-action="nudgeLassoPatternOffset" data-dx="0" data-dy="-1" title="Dịch lên 1px" class="w-5 h-5 rounded bg-slate-800 hover:bg-teal-600 text-slate-200 text-[9px] flex items-center justify-center cursor-pointer transition-all">▲</button>
+                                        <button onclick="nudgeLassoPatternOffset(0, 1)" data-action="nudgeLassoPatternOffset" data-dx="0" data-dy="1" title="Dịch xuống 1px" class="w-5 h-5 rounded bg-slate-800 hover:bg-teal-600 text-slate-200 text-[9px] flex items-center justify-center cursor-pointer transition-all">▼</button>
+                                        <button onclick="nudgeLassoPatternOffset(1, 0)" data-action="nudgeLassoPatternOffset" data-dx="1" data-dy="0" title="Dịch phải 1px" class="w-5 h-5 rounded bg-slate-800 hover:bg-teal-600 text-slate-200 text-[9px] flex items-center justify-center cursor-pointer transition-all">▶</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Section B: Preset Screentones Grid (visible in preset mode) -->
+                            <div id="lasso-sec-presets" class="hidden flex flex-col gap-1.5">
+                                <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider select-none" data-i18n="lasso-pattern-type-label">Họa tiết thay thế</span>
+                                <div class="grid grid-cols-3 gap-1">
+                                    <button id="btn-lasso-pat-halftone" onclick="setLassoPatternType('halftone')" data-action="setLassoPatternType" data-type="halftone"
+                                        title="Trame hạt (Halftone)"
+                                        class="px-1 py-1 rounded border text-[9px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer bg-indigo-600 text-white border-indigo-400 shadow-sm">
+                                        <i class="fa-solid fa-circle-dot text-[10px]"></i>
+                                        <span class="text-[8px]">Hạt</span>
+                                    </button>
+                                    <button id="btn-lasso-pat-horizontal" onclick="setLassoPatternType('horizontal')" data-action="setLassoPatternType" data-type="horizontal"
+                                        title="Sọc ngang (Horizontal Lines)"
+                                        class="px-1 py-1 rounded border text-[9px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200">
+                                        <i class="fa-solid fa-grip-lines text-[10px]"></i>
+                                        <span class="text-[8px]">Ngang</span>
+                                    </button>
+                                    <button id="btn-lasso-pat-vertical" onclick="setLassoPatternType('vertical')" data-action="setLassoPatternType" data-type="vertical"
+                                        title="Sọc dọc (Vertical Lines)"
+                                        class="px-1 py-1 rounded border text-[9px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200">
+                                        <i class="fa-solid fa-grip-lines-vertical text-[10px]"></i>
+                                        <span class="text-[8px]">Dọc</span>
+                                    </button>
+                                    <button id="btn-lasso-pat-diagonal" onclick="setLassoPatternType('diagonal')" data-action="setLassoPatternType" data-type="diagonal"
+                                        title="Sọc chéo (Diagonal Lines)"
+                                        class="px-1 py-1 rounded border text-[9px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200">
+                                        <i class="fa-solid fa-slash text-[10px]"></i>
+                                        <span class="text-[8px]">Chéo</span>
+                                    </button>
+                                    <button id="btn-lasso-pat-crosshatch" onclick="setLassoPatternType('crosshatch')" data-action="setLassoPatternType" data-type="crosshatch"
+                                        title="Caro (Crosshatch)"
+                                        class="px-1 py-1 rounded border text-[9px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200">
+                                        <i class="fa-solid fa-table-cells text-[10px]"></i>
+                                        <span class="text-[8px]">Caro</span>
+                                    </button>
+                                    <button id="btn-lasso-pat-noise" onclick="setLassoPatternType('noise')" data-action="setLassoPatternType" data-type="noise"
+                                        title="Hạt cát (Manga Grain / Noise)"
+                                        class="px-1 py-1 rounded border text-[9px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200">
+                                        <i class="fa-solid fa-braille text-[10px]"></i>
+                                        <span class="text-[8px]">Noise</span>
+                                    </button>
+                                </div>
+
+                                <!-- Pattern Size & Density Sliders for Presets -->
+                                <div class="flex flex-col gap-1 pt-1">
+                                    <div class="flex justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
+                                        <span data-i18n="lasso-pattern-size-label">Kích thước chu kỳ</span>
+                                        <span id="lbl-lasso-pat-size" class="text-indigo-400 font-mono">8px</span>
+                                    </div>
+                                    <input type="range" id="num-lasso-pat-size" min="2" max="32" value="8"
+                                        oninput="document.getElementById('lbl-lasso-pat-size').innerText = this.value + 'px'; window.renderActiveLassoPreview && window.renderActiveLassoPreview()"
+                                        class="h-1 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-indigo-500 w-full">
+                                </div>
+                                <div class="flex flex-col gap-1">
+                                    <div class="flex justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
+                                        <span data-i18n="lasso-pattern-density-label">Độ đậm / Nét</span>
+                                        <span id="lbl-lasso-pat-density" class="text-indigo-400 font-mono">40%</span>
+                                    </div>
+                                    <input type="range" id="num-lasso-pat-density" min="10" max="90" value="40"
+                                        oninput="document.getElementById('lbl-lasso-pat-density').innerText = this.value + '%'; window.renderActiveLassoPreview && window.renderActiveLassoPreview()"
+                                        class="h-1 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-indigo-500 w-full">
+                                </div>
+                                <div class="flex items-center justify-between gap-1.5 bg-slate-900/60 p-1.5 rounded-lg border border-slate-800/80">
+                                    <div class="flex items-center gap-1">
+                                        <span class="text-[9px] text-slate-400 font-semibold" data-i18n="lasso-pattern-fg-color">Nét:</span>
+                                        <input type="color" id="color-lasso-pat-fg" value="#000000"
+                                            oninput="window.renderActiveLassoPreview && window.renderActiveLassoPreview()"
+                                            class="w-5 h-5 rounded border border-slate-700 bg-transparent cursor-pointer">
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <span class="text-[9px] text-slate-400 font-semibold" data-i18n="lasso-pattern-bg-color">Nền:</span>
+                                        <input type="color" id="color-lasso-pat-bg" value="#ffffff"
+                                            oninput="window.renderActiveLassoPreview && window.renderActiveLassoPreview()"
+                                            class="w-5 h-5 rounded border border-slate-700 bg-transparent cursor-pointer">
+                                    </div>
+                                    <label class="flex items-center gap-1 cursor-pointer select-none">
+                                        <input type="checkbox" id="chk-lasso-pat-trans"
+                                            onchange="window.renderActiveLassoPreview && window.renderActiveLassoPreview()"
+                                            class="rounded text-indigo-500 bg-slate-850 border-slate-700 w-3 h-3">
+                                        <span class="text-[9px] text-slate-400" data-i18n="lasso-pattern-transparent">Trong</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Feather & Opacity Row -->
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="flex flex-col gap-0.5">
+                                    <div class="flex justify-between text-[9px] text-slate-400 font-semibold select-none">
+                                        <span data-i18n="lasso-pattern-feather-label">Mịn viền</span>
+                                        <span id="lbl-lasso-pat-feather" class="text-indigo-400 font-mono">2px</span>
+                                    </div>
+                                    <input type="range" id="num-lasso-pat-feather" min="0" max="8" value="2"
+                                        oninput="document.getElementById('lbl-lasso-pat-feather').innerText = this.value + 'px'; window.renderActiveLassoPreview && window.renderActiveLassoPreview()"
+                                        class="h-1 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-indigo-500 w-full">
+                                </div>
+                                <div class="flex flex-col gap-0.5">
+                                    <div class="flex justify-between text-[9px] text-slate-400 font-semibold select-none">
+                                        <span data-i18n="lasso-pattern-opacity-label">Độ mờ</span>
+                                        <span id="lbl-lasso-pat-opacity" class="text-indigo-400 font-mono">100%</span>
+                                    </div>
+                                    <input type="range" id="num-lasso-pat-opacity" min="10" max="100" value="100"
+                                        oninput="document.getElementById('lbl-lasso-pat-opacity').innerText = this.value + '%'; window.renderActiveLassoPreview && window.renderActiveLassoPreview()"
+                                        class="h-1 bg-slate-850 rounded-lg appearance-none cursor-pointer accent-indigo-500 w-full">
+                                </div>
+                            </div>
+
+                            <!-- Pattern Fill Button -->
+                            <button id="btn-lasso-pattern-fill" onclick="runLassoPatternFill()" data-action="runLassoPatternFill" disabled
+                                data-i18n="lasso-pattern-fill-btn"
+                                class="w-full px-3 py-1.5 rounded-lg bg-emerald-600/20 border border-emerald-500/30 hover:bg-emerald-600 text-emerald-300 hover:text-white text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all disabled:opacity-40 disabled:pointer-events-none shadow-md cursor-pointer">
+                                <i class="fa-solid fa-shapes text-[10px]"></i> Tô họa tiết (Pattern Fill)
+                            </button>
+                        </div>
+
+                        <!-- Deselect / Clear selection button -->
+                        <button id="btn-lasso-clear" onclick="clearLassoSelection()" data-action="clearLassoSelection" data-i18n="lasso-clear-btn"
+                            class="w-full px-3 py-1 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-855 text-slate-450 hover:text-slate-200 text-[10px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer">
                             Hủy chọn
                         </button>
                     </div>
