@@ -397,6 +397,14 @@ export function setEraserMode(active: boolean): void {
         if (typeof window !== 'undefined' && (window as any).closeMobileMenus) {
             (window as any).closeMobileMenus();
         }
+        const rightPanel = document.getElementById('right-panel');
+        if (rightPanel && rightPanel.classList.contains('hidden')) {
+            rightPanel.classList.remove('hidden');
+            const toggleBtn = document.getElementById('right-sidebar-toggle-handle');
+            const icon = toggleBtn?.querySelector('i');
+            if (icon) icon.className = 'fa-solid fa-chevron-right text-[10px] group-hover:scale-110 transition-transform';
+        }
+
         if (elements.eraserSettingsPanel) elements.eraserSettingsPanel.classList.remove('hidden');
         const trigger = document.getElementById('btn-eraser-floating-trigger');
         if (trigger) trigger.classList.add('hidden');

@@ -746,9 +746,32 @@
 
             </div>
 
-            <!-- Popover Eraser Settings Panel (Independent of Sidebars) -->
+            <!-- Left Sidebar Toggle Handle (Desktop & Mobile) -->
+            <button id="left-sidebar-toggle-handle" onclick="toggleLeftSidebar()"
+                class="absolute left-0 top-1/2 -translate-y-1/2 z-50 w-5 h-16 bg-slate-900 border-y border-r border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white rounded-r-lg flex items-center justify-center shadow-md pointer-events-auto"
+                title="Ẩn/Hiện thanh bên trái">
+                <i class="fa-solid fa-chevron-left text-[10px]"></i>
+            </button>
+
+            <!-- Right Sidebar Toggle Handle (Desktop & Mobile) -->
+            <button id="right-sidebar-toggle-handle" onclick="toggleRightSidebar()"
+                class="absolute right-0 top-1/2 -translate-y-1/2 z-50 w-5 h-16 bg-slate-900 border-y border-l border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white rounded-l-lg flex items-center justify-center shadow-md pointer-events-auto"
+                title="Ẩn/Hiện thanh bên phải">
+                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+            </button>
+        </main>
+
+        <!-- RIGHT PANEL: Editor, Customization & Font styling -->
+        <aside id="right-panel" class="relative w-80 bg-slate-900 border-l border-slate-800 flex flex-col shrink-0">
+            <!-- Minimized Eraser Trigger Button -->
+            <button id="btn-eraser-floating-trigger" onclick="expandEraserPanel()"
+                class="hidden absolute right-2 top-2 z-40 px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold shadow-xl border border-indigo-400/30 flex items-center gap-1.5 cursor-pointer">
+                <i class="fa-solid fa-paintbrush text-amber-300"></i> Hộp cọ tẩy
+            </button>
+
+            <!-- Floating Eraser Settings Panel (Floats over Right Sidebar) -->
             <div id="eraser-settings-panel"
-                class="hidden absolute right-3 top-12 z-50 w-64 bg-slate-950/95 border border-slate-800 rounded-xl shadow-2xl backdrop-blur-md p-3.5 flex flex-col gap-3.5 transition-all duration-200 pointer-events-auto max-h-[85vh] overflow-y-auto">
+                class="hidden absolute inset-x-2 top-2 z-40 bg-slate-950/98 border border-slate-800 rounded-xl shadow-2xl backdrop-blur-md p-3.5 flex flex-col gap-3.5 transition-all duration-200 pointer-events-auto max-h-[calc(100vh-4.5rem)] overflow-y-auto">
                 <!-- Header -->
                 <div class="flex items-center justify-between pb-1.5 border-b border-slate-800/80">
                     <span
@@ -1125,23 +1148,6 @@
                 </div>
             </div>
 
-            <!-- Left Sidebar Toggle Handle (Desktop & Mobile) -->
-            <button id="left-sidebar-toggle-handle" onclick="toggleLeftSidebar()"
-                class="absolute left-0 top-1/2 -translate-y-1/2 z-50 w-5 h-16 bg-slate-900 border-y border-r border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white rounded-r-lg flex items-center justify-center shadow-md pointer-events-auto"
-                title="Ẩn/Hiện thanh bên trái">
-                <i class="fa-solid fa-chevron-left text-[10px]"></i>
-            </button>
-
-            <!-- Right Sidebar Toggle Handle (Desktop & Mobile) -->
-            <button id="right-sidebar-toggle-handle" onclick="toggleRightSidebar()"
-                class="absolute right-0 top-1/2 -translate-y-1/2 z-50 w-5 h-16 bg-slate-900 border-y border-l border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white rounded-l-lg flex items-center justify-center shadow-md pointer-events-auto"
-                title="Ẩn/Hiện thanh bên phải">
-                <i class="fa-solid fa-chevron-right text-[10px]"></i>
-            </button>
-        </main>
-
-        <!-- RIGHT PANEL: Editor, Customization & Font styling -->
-        <aside id="right-panel" class="relative w-80 bg-slate-900 border-l border-slate-800 flex flex-col shrink-0">
             <!-- Tab Headers -->
             <div class="flex items-center gap-2 border-b border-slate-800 shrink-0 px-2 pt-2">
                 <button onclick="closeMobileMenus()"
