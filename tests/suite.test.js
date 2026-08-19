@@ -168,6 +168,7 @@ test('Full Chapter Translation Script Export and Import Functions', async () => 
 // 9. Per-Block Auto-Fit Toggle Test
 test('Per-Block Auto-Fit Toggle Functions', async () => {
     const canvasStyling = await import('../src/features/canvas/canvas-styling.ts');
+    const { globalState } = await import('../src/core/state.ts');
     assert.strictEqual(typeof canvasStyling.isBlockAutoFit, 'function');
     assert.strictEqual(typeof canvasStyling.toggleBlockAutoFit, 'function');
 
@@ -175,7 +176,10 @@ test('Per-Block Auto-Fit Toggle Functions', async () => {
     assert.strictEqual(canvasStyling.isBlockAutoFit(testBlock), false, 'isBlockAutoFit must return block.style.autoFit override if present');
 
     const testBlockDefault = { id: 'b2', style: { fontSize: 18 } };
+    globalState.autoFitEnabled = false;
     assert.strictEqual(canvasStyling.isBlockAutoFit(testBlockDefault), false, 'isBlockAutoFit must fallback to global state (false) if undefined');
+    globalState.autoFitEnabled = true;
+    assert.strictEqual(canvasStyling.isBlockAutoFit(testBlockDefault), true, 'isBlockAutoFit must fallback to global state (true) if undefined');
 });
 
 // 10. Arc & Full Warp Suite Rendering Test

@@ -14,6 +14,7 @@ if (typeof self !== 'undefined' && typeof (self as any).postMessage === 'functio
     (self as any).onmessage = function (e: MessageEvent) {
         const data = e.data;
         if (!data) return;
+        const requestId = data.requestId;
 
         if (data.type === 'cancel') {
             isCancelled = true;
@@ -35,16 +36,17 @@ if (typeof self !== 'undefined' && typeof (self as any).postMessage === 'functio
                 const rawMask = new Uint8Array(maskBuffer);
 
                 const result = runPatchMatchPipeline(rgba, rawMask, width, height, options, (progress, msg) => {
-                    (self as any).postMessage({ type: 'progress', progress, message: msg });
+                    (self as any).postMessage({ requestId, type: 'progress', progress, message: msg });
                 });
 
                 if (isCancelled) {
-                    (self as any).postMessage({ type: 'cancelled' });
+                    (self as any).postMessage({ requestId, type: 'cancelled' });
                     return;
                 }
 
                 (self as any).postMessage(
                     {
+                        requestId,
                         type: 'complete',
                         outputBuffer: result.outputRgba.buffer,
                         roi: result.roi,
@@ -55,6 +57,7 @@ if (typeof self !== 'undefined' && typeof (self as any).postMessage === 'functio
                 );
             } catch (err: any) {
                 (self as any).postMessage({
+                    requestId,
                     type: 'error',
                     error: err.message || String(err)
                 });

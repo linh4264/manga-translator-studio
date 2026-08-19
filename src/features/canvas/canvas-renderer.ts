@@ -981,32 +981,36 @@ export function balanceTextToDiamond(text: string, boxW: number | null = null, b
     // ==========================================
     // TIER 3: Trung bình & Dài (>= 7 từ)
     // ==========================================
-    // - Áp dụng đầy đủ thuật toán Diamond Height >= Width, chống cột 1 chữ
+    // - Áp dụng cân đối Oval / Diamond tự nhiên, tránh băm nát 1-2 từ/dòng
     let minLines = 3;
-    if (wordCount >= 12) minLines = 4;
-    if (wordCount >= 20) minLines = 5;
+    let maxAllowedLines = 4;
+
+    if (wordCount >= 14 && wordCount < 22) {
+        minLines = 3;
+        maxAllowedLines = 5;
+    } else if (wordCount >= 22) {
+        minLines = 4;
+        maxAllowedLines = Math.min(wordCount, Math.max(5, Math.ceil(wordCount / 3)));
+    }
 
     let bestNumLines = minLines;
-    const maxAllowedLines = Math.min(wordCount, Math.ceil(wordCount / 1.8));
 
     for (let k = minLines; k <= maxAllowedLines; k++) {
         const counts = buildDiamondCounts(k);
         const { estWidth, estHeight } = calcPartitionDimensions(counts);
         bestNumLines = k;
-        if (estHeight >= estWidth) {
+        if (estHeight >= estWidth * 0.7) {
             break;
         }
     }
 
     if (boxW && boxH && boxH > 0) {
         const boxAspect = boxW / boxH;
-        if (boxAspect < 0.8) {
-            const candidateLines = Math.min(maxAllowedLines, Math.max(bestNumLines, Math.ceil(bestNumLines * (1 / boxAspect) * 0.7)));
-            const counts = buildDiamondCounts(candidateLines);
-            const { estWidth, estHeight } = calcPartitionDimensions(counts);
-            if (estHeight >= estWidth || candidateLines > bestNumLines) {
-                bestNumLines = candidateLines;
-            }
+        if (boxAspect < 0.55) {
+            const candidateLines = Math.min(Math.ceil(wordCount / 2), Math.max(bestNumLines, Math.ceil(bestNumLines * (0.8 / Math.max(0.2, boxAspect)))));
+            bestNumLines = candidateLines;
+        } else if (boxAspect > 1.5 && bestNumLines > 2) {
+            bestNumLines = Math.max(2, bestNumLines - 1);
         }
     }
 

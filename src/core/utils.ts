@@ -437,7 +437,7 @@ export {
 
 export async function waitForImageReady(imgElement: HTMLImageElement | null, targetSrc?: string): Promise<void> {
     if (!imgElement) return;
-    if (targetSrc && imgElement.dataset.loadedSrc === targetSrc && imgElement.complete && imgElement.naturalWidth > 0) {
+    if (imgElement.complete && imgElement.naturalWidth > 0 && (!targetSrc || imgElement.dataset.loadedSrc === targetSrc || imgElement.src.includes(targetSrc))) {
         try {
             if (typeof imgElement.decode === 'function') {
                 await imgElement.decode();
@@ -448,19 +448,22 @@ export async function waitForImageReady(imgElement: HTMLImageElement | null, tar
         return;
     }
 
-    await new Promise<void>((resolve) => {
-        const onLoad = () => {
-            imgElement.removeEventListener('load', onLoad);
-            imgElement.removeEventListener('error', onError);
-            resolve();
-        };
-        const onError = () => {
-            imgElement.removeEventListener('load', onLoad);
-            imgElement.removeEventListener('error', onError);
-            resolve();
-        };
-        imgElement.addEventListener('load', onLoad);
-        imgElement.addEventListener('error', onError);
-    });
+    await Promise.race([
+        new Promise<void>((resolve) => {
+            const onLoad = () => {
+                imgElement.removeEventListener('load', onLoad);
+                imgElement.removeEventListener('error', onError);
+                resolve();
+            };
+            const onError = () => {
+                imgElement.removeEventListener('load', onLoad);
+                imgElement.removeEventListener('error', onError);
+                resolve();
+            };
+            imgElement.addEventListener('load', onLoad);
+            imgElement.addEventListener('error', onError);
+        }),
+        new Promise<void>((resolve) => setTimeout(resolve, 8000))
+    ]);
 }
 

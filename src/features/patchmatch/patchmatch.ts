@@ -32,11 +32,64 @@ export const PATCHMATCH_PRESETS = {
 };
 
 let activeWorker: Worker | null = null;
+let currentRequestId = 0;
+const pendingRequests = new Map<number, {
+    resolve: (val: any) => void;
+    reject: (err: any) => void;
+    width: number;
+    height: number;
+    onProgress?: ((progress: number, msg: string) => void) | null;
+}>();
 
 function getOrCreateWorker(): Worker | null {
     if (!activeWorker && typeof Worker !== 'undefined') {
         try {
             activeWorker = new Worker(new URL('./patchmatch.worker.ts', import.meta.url), { type: 'module' });
+            activeWorker.onmessage = (e: MessageEvent) => {
+                const data = e.data;
+                if (!data) return;
+                const reqId = data.requestId;
+                const pending = reqId !== undefined ? pendingRequests.get(reqId) : null;
+
+                if (data.type === 'progress' && pending?.onProgress) {
+                    pending.onProgress(data.progress, data.message);
+                } else if (data.type === 'complete') {
+                    if (pending) {
+                        pendingRequests.delete(reqId);
+                        const outputRgba = new Uint8Array(data.outputBuffer);
+                        let outImgData: ImageData | null = null;
+                        if (typeof ImageData !== 'undefined') {
+                            const clamped = new Uint8ClampedArray(outputRgba);
+                            outImgData = new ImageData(clamped, pending.width, pending.height);
+                        }
+                        pending.resolve({
+                            outputImageData: outImgData,
+                            outputRgba,
+                            roi: data.roi,
+                            patternInfo: data.patternInfo,
+                            stats: data.stats
+                        });
+                    }
+                } else if (data.type === 'cancelled') {
+                    if (pending) {
+                        pendingRequests.delete(reqId);
+                        pending.reject(new DOMException("PatchMatch operation was cancelled.", "AbortError"));
+                    }
+                } else if (data.type === 'error') {
+                    if (pending) {
+                        pendingRequests.delete(reqId);
+                        pending.reject(new Error(data.error || "PatchMatch worker error"));
+                    }
+                }
+            };
+
+            activeWorker.onerror = (err) => {
+                console.warn("Worker error during PatchMatch:", err);
+                for (const [reqId, pending] of pendingRequests.entries()) {
+                    pending.reject(err);
+                }
+                pendingRequests.clear();
+            };
         } catch (e) {
             console.warn("Could not instantiate module WebWorker, falling back to direct execution:", e);
             activeWorker = null;
@@ -76,16 +129,17 @@ export async function patchMatchInpaintImageData({
 
     if (worker) {
         return new Promise((resolve, reject) => {
+            const reqId = ++currentRequestId;
+
             const onAbort = () => {
-                worker.postMessage({ type: 'cancel' });
+                worker.postMessage({ type: 'cancel', requestId: reqId });
+                pendingRequests.delete(reqId);
                 cleanup();
                 reject(new DOMException("PatchMatch operation was cancelled.", "AbortError"));
             };
 
             const cleanup = () => {
                 if (signal) signal.removeEventListener('abort', onAbort);
-                worker.onmessage = null;
-                worker.onerror = null;
             };
 
             if (signal) {
@@ -93,59 +147,17 @@ export async function patchMatchInpaintImageData({
                 signal.addEventListener('abort', onAbort);
             }
 
-            worker.onmessage = (e: MessageEvent) => {
-                const data = e.data;
-                if (!data) return;
-
-                if (data.type === 'progress' && onProgress) {
-                    onProgress(data.progress, data.message);
-                } else if (data.type === 'complete') {
-                    cleanup();
-                    const outputRgba = new Uint8Array(data.outputBuffer);
-                    let outImgData: ImageData | null = null;
-                    if (typeof ImageData !== 'undefined') {
-                        const clamped = new Uint8ClampedArray(outputRgba);
-                        outImgData = new ImageData(clamped, width, height);
-                    }
-                    resolve({
-                        outputImageData: outImgData,
-                        outputRgba,
-                        roi: data.roi,
-                        patternInfo: data.patternInfo,
-                        stats: data.stats
-                    });
-                } else if (data.type === 'cancelled') {
-                    cleanup();
-                    reject(new DOMException("PatchMatch operation was cancelled.", "AbortError"));
-                } else if (data.type === 'error') {
-                    cleanup();
-                    reject(new Error(data.error || "PatchMatch worker error"));
-                }
-            };
-
-            worker.onerror = (err) => {
-                cleanup();
-                console.warn("Worker error during PatchMatch, falling back to synchronous execution:", err);
-                try {
-                    const fallbackResult = runPatchMatchPipeline(rawRgba, rawMask, width, height, mergedOpts, onProgress);
-                    let outImgData: ImageData | null = null;
-                    if (typeof ImageData !== 'undefined') {
-                        outImgData = new ImageData(new Uint8ClampedArray(fallbackResult.outputRgba), width, height);
-                    }
-                    resolve({
-                        outputImageData: outImgData,
-                        outputRgba: fallbackResult.outputRgba,
-                        roi: fallbackResult.roi,
-                        patternInfo: fallbackResult.patternInfo,
-                        stats: fallbackResult.stats
-                    });
-                } catch (fallbackErr) {
-                    reject(fallbackErr);
-                }
-            };
+            pendingRequests.set(reqId, {
+                resolve: (val) => { cleanup(); resolve(val); },
+                reject: (err) => { cleanup(); reject(err); },
+                width,
+                height,
+                onProgress
+            });
 
             worker.postMessage(
                 {
+                    requestId: reqId,
                     type: 'inpaint',
                     rgbaBuffer: rawRgba.buffer,
                     maskBuffer: rawMask.buffer,
