@@ -373,7 +373,15 @@ export async function executeOcrVisionStep({
         "  6. Hand-drawn Sound Effects (SFX) and background text signs.",
         "BLOCK TYPE CLASSIFICATION RULE: 'dialogue', 'narration', 'thought', 'sfx'.",
         "STRICT SEPARATION RULE: Every individual speech bubble must be output as its own separate block with distinct center anchor [x, y].",
-        "POSITION FORMULA (Scale 0 to 1000): output 2 integers [x, y] representing the exact CENTER anchor point of the text bubble: x = centerX, y = centerY.",
+        "POSITION FORMULA:",
+        "Output exactly two integers [x, y] on a 0–1000 coordinate scale.",
+        "[x, y] is the center point of the VISIBLE TEXT GLYPHS, not the center of the speech bubble.",
+        "Estimate the center of the actual characters:",
+        "- For horizontal text, center the entire text line/block.",
+        "- For vertical Japanese/Korean/Chinese text, center the entire vertical text column/block.",
+        "- Do not use the bubble center when text is offset inside the bubble.",
+        "- Do not use the center of the empty bubble area.",
+        "- For SFX outside bubbles, use the center of the visible glyphs.",
         "Return valid JSON only matching schema {\"blocks\": [{\"id\": \"b1\", \"type\": \"dialogue\", \"original\": \"...\", \"box\": [500, 300], \"vertical\": true}]}."
     ].join(" ");
 
@@ -389,7 +397,7 @@ export async function executeOcrVisionStep({
                 {
                     role: "user",
                     content: [
-                        { type: "text", text: "Detect each speech bubble, narration box, thought bubble, and SFX with its 0-1000 center anchor [x, y] coordinates (x = centerX, y = centerY), type ('dialogue'|'narration'|'thought'|'sfx'), and raw original text. Return JSON." },
+                        { type: "text", text: "Detect each speech bubble, narration box, thought bubble, and SFX with the 0-1000 center coordinate [x, y] of its VISIBLE TEXT GLYPHS (not the bubble center), type ('dialogue'|'narration'|'thought'|'sfx'), and raw original text. Return JSON." },
                         { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
                     ]
                 }
@@ -403,7 +411,7 @@ export async function executeOcrVisionStep({
         requestBody = JSON.stringify({
             contents: [{
                 parts: [
-                    { text: "Detect each speech bubble, narration box, thought bubble, SFX with its 0-1000 integer center [x, y] coordinates (x = centerX, y = centerY), classified type ('dialogue'|'narration'|'thought'|'sfx'), and raw original text. Return JSON." },
+                    { text: "Detect each speech bubble, narration box, thought bubble, SFX with the 0-1000 integer center [x, y] coordinates of its VISIBLE TEXT GLYPHS (not the bubble center), classified type ('dialogue'|'narration'|'thought'|'sfx'), and raw original text. Return JSON." },
                     { inlineData: { mimeType, data: rawBase64 } }
                 ]
             }],

@@ -220,7 +220,15 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 "Detect every manga speech bubble, narration box, thought bubble, and SFX label, classify its block type ('dialogue'|'narration'|'thought'|'sfx'), then return JSON only.",
                 "EXHAUSTIVE OCR COMPLETENESS MANDATE (BẢO TOÀN 100% NỘI DUNG CHỮ, TUYỆT ĐỐI KHÔNG BỎ SÓT):",
                 "- Detect and transcribe 100% of text on this manga page without skipping.",
-                "POSITION CALCULATION FORMULA: Output 2 integers [x, y] on scale 0 to 1000. Set x = centerX, y = centerY.",
+                "POSITION FORMULA:",
+                "Output exactly two integers [x, y] on a 0–1000 coordinate scale.",
+                "[x, y] is the center point of the VISIBLE TEXT GLYPHS, not the center of the speech bubble.",
+                "Estimate the center of the actual characters:",
+                "- For horizontal text, center the entire text line/block.",
+                "- For vertical Japanese/Korean/Chinese text, center the entire vertical text column/block.",
+                "- Do not use the bubble center when text is offset inside the bubble.",
+                "- Do not use the center of the empty bubble area.",
+                "- For SFX outside bubbles, use the center of the visible glyphs.",
                 `Translate to short, natural ${targetLangName} that matches the scene and speaker relationship.`,
                 `Preserve the same ${targetLangName} ${pronounTerm} and terminology within the page.`,
                 ctx.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
@@ -235,7 +243,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
             if (isOpenAiFormat) {
                 apiUrl = `${endpoint.replace(/\/$/, '')}/chat/completions`;
                 const openAiUserContent: any[] = [
-                    { type: "text", text: `Detect each speech bubble, narration box, thought bubble, and SFX with [x, y] center anchor coordinates (x = centerX, y = centerY) and type ('dialogue'|'narration'|'thought'|'sfx'). Translate their contents into ${targetLangName}. Return valid JSON.` },
+                    { type: "text", text: `Detect each speech bubble, narration box, thought bubble, and SFX with the 0-1000 center coordinate [x, y] of its VISIBLE TEXT GLYPHS (not the bubble center) and type ('dialogue'|'narration'|'thought'|'sfx'). Translate their contents into ${targetLangName}. Return valid JSON.` },
                     { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
                 ];
                 if (prevPageContext) {
@@ -255,7 +263,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
             } else {
                 apiUrl = getGeminiGenerateContentUrl(selectedModel, keyToUse);
                 const contentsParts: any[] = [
-                    { text: `Detect each speech bubble, narration box, thought bubble, and SFX with [x, y] center anchor coordinates (x = centerX, y = centerY) and type ('dialogue'|'narration'|'thought'|'sfx'). Translate their contents into ${targetLangName}. Return valid JSON.` }
+                    { text: `Detect each speech bubble, narration box, thought bubble, and SFX with the 0-1000 center coordinate [x, y] of its VISIBLE TEXT GLYPHS (not the bubble center) and type ('dialogue'|'narration'|'thought'|'sfx'). Translate their contents into ${targetLangName}. Return valid JSON.` }
                 ];
                 if (prevPageContext) {
                     contentsParts.push({ text: prevPageContext });
