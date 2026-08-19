@@ -466,18 +466,35 @@ const STORE_FONTS = 'fonts';
 let dbInstance: IDBDatabase | null = null;
 let savePageDebounceTimer: any = null;
 
+const blobUrlCache = new WeakMap<Blob, string>();
+
 export function getSafeMediaUrl(item: any): string | null {
     if (!item) return null;
     if (typeof item === 'string') return item;
     if (item instanceof Blob) {
+        if (blobUrlCache.has(item)) {
+            return blobUrlCache.get(item)!;
+        }
         try {
-            return URL.createObjectURL(item);
+            const url = URL.createObjectURL(item);
+            blobUrlCache.set(item, url);
+            return url;
         } catch (e) {
             console.error("getSafeMediaUrl failed:", e);
             return null;
         }
     }
     return null;
+}
+
+export function revokeSafeMediaUrl(item: any): void {
+    if (item instanceof Blob && blobUrlCache.has(item)) {
+        const url = blobUrlCache.get(item)!;
+        try {
+            URL.revokeObjectURL(url);
+        } catch (e) { }
+        blobUrlCache.delete(item);
+    }
 }
 
 export function initDB(): Promise<IDBDatabase> {
@@ -803,13 +820,15 @@ export function saveToeicWordsToDB(words: any[]): Promise<void> {
 export async function createThumbnail(file: Blob, maxDim: number = 120): Promise<Blob | null> {
     return new Promise((resolve) => {
         const img = new Image();
-        const url = getSafeMediaUrl(file);
-        if (!url) {
+        let tempUrl: string | null = null;
+        try {
+            tempUrl = URL.createObjectURL(file);
+        } catch (e) {
             resolve(null);
             return;
         }
         img.onload = () => {
-            URL.revokeObjectURL(url);
+            if (tempUrl) URL.revokeObjectURL(tempUrl);
             const canvas = document.createElement('canvas');
             let width = img.width;
             let height = img.height;
@@ -833,10 +852,10 @@ export async function createThumbnail(file: Blob, maxDim: number = 120): Promise
             }, 'image/jpeg', 0.7);
         };
         img.onerror = () => {
-            URL.revokeObjectURL(url);
+            if (tempUrl) URL.revokeObjectURL(tempUrl);
             resolve(null);
         };
-        img.src = url;
+        img.src = tempUrl;
     });
 }
 
@@ -947,14 +966,16 @@ export async function getPageDataURL(page: any): Promise<string | null> {
 
 export function deactivatePage(page: any): void {
     if (!page) return;
+    if (page.originalFile) revokeSafeMediaUrl(page.originalFile);
+    if (page.file) revokeSafeMediaUrl(page.file);
     if (page.src && page.src.startsWith('blob:')) {
         URL.revokeObjectURL(page.src);
-        page.src = null;
     }
     if (page.apiSrc && page.apiSrc.startsWith('blob:')) {
         URL.revokeObjectURL(page.apiSrc);
-        page.apiSrc = null;
     }
+    page.src = null;
+    page.apiSrc = null;
     page.imageDataCache = null;
     if (page.blocks) {
         page.blocks.forEach((b: any) => {
@@ -983,9 +1004,10 @@ export async function generateAndSaveThumbnailForPage(page: any): Promise<void> 
         if (thumbBlob) {
             page.thumbnailBlob = thumbBlob;
             if (page.thumbnailSrc && page.thumbnailSrc.startsWith('blob:')) {
+                revokeSafeMediaUrl(page.thumbnailBlob);
                 URL.revokeObjectURL(page.thumbnailSrc);
             }
-            page.thumbnailSrc = URL.createObjectURL(thumbBlob);
+            page.thumbnailSrc = getSafeMediaUrl(thumbBlob);
             await savePageToDB(page);
             if (onPageListChange) onPageListChange(page);
         }

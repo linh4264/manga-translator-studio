@@ -28,7 +28,7 @@ export async function runLocalOcrDetectionOnPage(): Promise<void> {
         const canvas = document.createElement('canvas');
         canvas.width = imgElement.naturalWidth;
         canvas.height = imgElement.naturalHeight;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (!ctx) return;
         ctx.drawImage(imgElement, 0, 0);
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -665,7 +665,7 @@ export function refineAiBlockBox(box: any, imageData?: ImageData | null, _modelI
         }
         if (!effectiveImageData && typeof elements !== 'undefined' && (elements as any)?.mangaCanvas && (elements as any).mangaCanvas.width > 0) {
             try {
-                effectiveImageData = (elements as any).mangaCanvas.getContext('2d').getImageData(0, 0, (elements as any).mangaCanvas.width, (elements as any).mangaCanvas.height);
+                effectiveImageData = (elements as any).mangaCanvas.getContext('2d', { willReadFrequently: true })?.getImageData(0, 0, (elements as any).mangaCanvas.width, (elements as any).mangaCanvas.height) || null;
             } catch (e) { }
         }
     }
@@ -1321,7 +1321,7 @@ export function computeBubbleMask(page: MangaPage, block: MangaBlock, imageData:
     const maskCanvas = document.createElement('canvas');
     maskCanvas.width = bw;
     maskCanvas.height = bh;
-    const maskCtx = maskCanvas.getContext('2d');
+    const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
     if (!maskCtx) return null;
     const maskImgData = maskCtx.createImageData(bw, bh);
 

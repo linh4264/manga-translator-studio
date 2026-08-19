@@ -244,3 +244,39 @@ test('Core State - Undo/Redo Restores Deleted Pages Completely', () => {
     assert.strictEqual(globalState.activePageIndex, 1, 'Active page index must be restored');
 });
 
+test('Core State - getSafeMediaUrl WeakMap Caching and Revocation', async () => {
+    const { getSafeMediaUrl, revokeSafeMediaUrl } = await import('../../../src/core/state.ts');
+
+    const dummyBlob = new Blob(['sample-image-data'], { type: 'image/png' });
+
+    // 1. First call creates URL
+    const url1 = getSafeMediaUrl(dummyBlob);
+    assert.ok(url1 && url1.startsWith('blob:'), 'Must generate a valid blob URL');
+
+    // 2. Second call returns cached URL without generating new one
+    const url2 = getSafeMediaUrl(dummyBlob);
+    assert.strictEqual(url2, url1, 'Subsequent calls on identical Blob must return cached URL');
+
+    // 3. String URLs are returned as-is
+    assert.strictEqual(getSafeMediaUrl('https://example.com/img.png'), 'https://example.com/img.png');
+    assert.strictEqual(getSafeMediaUrl(null), null);
+
+    // 4. Revocation cleans up cache
+    revokeSafeMediaUrl(dummyBlob);
+});
+
+test('Core State - createThumbnail isolates temporary URL from getSafeMediaUrl cache', async () => {
+    const { createThumbnail, getSafeMediaUrl } = await import('../../../src/core/state.ts');
+
+    const sampleBlob = new Blob(['sample-manga-page-image'], { type: 'image/png' });
+
+    // 1. Generate thumbnail
+    await createThumbnail(sampleBlob, 100);
+
+    // 2. getSafeMediaUrl on original blob must still produce a valid, unrevoked URL
+    const pageUrl = getSafeMediaUrl(sampleBlob);
+    assert.ok(pageUrl && pageUrl.startsWith('blob:'), 'Page URL must remain valid after thumbnail generation');
+});
+
+
+

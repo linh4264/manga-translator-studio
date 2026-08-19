@@ -106,7 +106,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
             const bgCanvas = document.createElement('canvas');
             bgCanvas.width = W;
             bgCanvas.height = H;
-            const bgCtx = bgCanvas.getContext('2d');
+            const bgCtx = bgCanvas.getContext('2d', { willReadFrequently: true });
             if (bgCtx) {
                 bgCtx.drawImage(imgElement, 0, 0);
                 activeImageData = bgCtx.getImageData(0, 0, W, H);

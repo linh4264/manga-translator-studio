@@ -314,7 +314,7 @@ export function autoCleanBubbleBackground(page: MangaPage, block: MangaBlock): b
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = imgElement.naturalWidth;
             tempCanvas.height = imgElement.naturalHeight;
-            const tempCtx = tempCanvas.getContext('2d');
+            const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
             if (tempCtx) {
                 tempCtx.drawImage(imgElement, 0, 0);
                 activeImageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);

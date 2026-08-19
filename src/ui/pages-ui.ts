@@ -1,6 +1,7 @@
 import {
     globalState, saveProjectMeta, activatePage,
-    garbageCollectPageCaches, pushStateToHistory, deletePageFromDB
+    garbageCollectPageCaches, pushStateToHistory, deletePageFromDB,
+    revokeSafeMediaUrl
 } from '../core/state';
 import { elements } from '../core/elements';
 import { showToast, escapeHTML } from '../core/utils';
@@ -19,12 +20,15 @@ export async function selectPage(index: number): Promise<void> {
     saveProjectMeta(globalState.pages.map(p => p.id), globalState.activePageIndex);
 
     const page = globalState.pages[index];
-    await activatePage(page);
+    if (page) {
+        await activatePage(page);
+    }
     garbageCollectPageCaches();
 
-    updatePageListUI();
-
+    if (elements.mangaCanvasContainer) elements.mangaCanvasContainer.classList.remove('hidden');
+    if (elements.workspaceSplitWrapper) elements.workspaceSplitWrapper.classList.remove('hidden');
     if (elements.workspaceEmptyState) elements.workspaceEmptyState.classList.add('hidden');
+
     if (elements.btnActiveTranslate) elements.btnActiveTranslate.disabled = false;
     if (elements.btnAiErasePage) elements.btnAiErasePage.disabled = false;
     if (elements.btnExportPage) elements.btnExportPage.disabled = false;
@@ -40,27 +44,28 @@ export async function selectPage(index: number): Promise<void> {
 
         if (elements.mangaBgImage) {
             elements.mangaBgImage.dataset.loadedSrc = "";
-            if (page.src) elements.mangaBgImage.src = page.src;
+            if (page && page.src) elements.mangaBgImage.src = page.src;
 
             if (elements.mangaBgImage.complete && elements.mangaBgImage.naturalWidth > 0) {
-                elements.mangaBgImage.dataset.loadedSrc = page.src || '';
-                restorePageEraserDrawing(page);
+                elements.mangaBgImage.dataset.loadedSrc = page?.src || '';
+                if (page) restorePageEraserDrawing(page);
                 requestOverlayRender();
             } else {
                 elements.mangaBgImage.onload = () => {
                     const currentPage = globalState.pages[globalState.activePageIndex];
-                    if (!currentPage || currentPage.id !== page.id) return;
+                    if (!currentPage || (page && currentPage.id !== page.id)) return;
 
                     if (elements.mangaBgImage) {
-                        elements.mangaBgImage.dataset.loadedSrc = page.src || '';
+                        elements.mangaBgImage.dataset.loadedSrc = page?.src || '';
                     }
-                    restorePageEraserDrawing(page);
+                    if (page) restorePageEraserDrawing(page);
                     requestOverlayRender();
                 };
             }
         }
     }
 
+    updatePageListUI();
     updateActiveBlockEditor();
 }
 
@@ -68,11 +73,14 @@ export async function removePage(index: number): Promise<void> {
     pushStateToHistory();
     const removedPage = globalState.pages[index];
 
-    if (removedPage?.apiSrc?.startsWith('blob:')) URL.revokeObjectURL(removedPage.apiSrc);
-    if (removedPage?.src?.startsWith('blob:')) URL.revokeObjectURL(removedPage.src);
-    if (removedPage?.thumbnailSrc?.startsWith('blob:')) URL.revokeObjectURL(removedPage.thumbnailSrc);
-
     if (removedPage) {
+        if (removedPage.file) revokeSafeMediaUrl(removedPage.file);
+        if (removedPage.originalFile) revokeSafeMediaUrl(removedPage.originalFile);
+        if (removedPage.thumbnailBlob) revokeSafeMediaUrl(removedPage.thumbnailBlob);
+        if (removedPage.eraserLayerBlob) revokeSafeMediaUrl(removedPage.eraserLayerBlob);
+        if (removedPage.apiSrc?.startsWith('blob:')) URL.revokeObjectURL(removedPage.apiSrc);
+        if (removedPage.src?.startsWith('blob:')) URL.revokeObjectURL(removedPage.src);
+        if (removedPage.thumbnailSrc?.startsWith('blob:')) URL.revokeObjectURL(removedPage.thumbnailSrc);
         deletePageFromDB(removedPage.id);
     }
 
@@ -146,6 +154,9 @@ export async function replacePageBackgroundImage(pageIndex: number, file: File):
     const newWidth = tempImg.naturalWidth || 800;
     const newHeight = tempImg.naturalHeight || 1200;
 
+    if (page.originalFile) revokeSafeMediaUrl(page.originalFile);
+    if (page.file) revokeSafeMediaUrl(page.file);
+    if (page.thumbnailBlob) revokeSafeMediaUrl(page.thumbnailBlob);
     if (page.src?.startsWith('blob:')) URL.revokeObjectURL(page.src);
     if (page.apiSrc?.startsWith('blob:')) URL.revokeObjectURL(page.apiSrc);
     if (page.thumbnailSrc?.startsWith('blob:')) URL.revokeObjectURL(page.thumbnailSrc);

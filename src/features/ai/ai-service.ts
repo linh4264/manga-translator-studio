@@ -1402,45 +1402,14 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                     });
                 }
 
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => {
-                    try {
-                        controller.abort();
-                    } catch (e) { }
-                }, 120000);
+                const data = await executeAiJsonRequestWithRetry({
+                    apiUrl,
+                    headers: requestHeaders,
+                    body: requestBody,
+                    isOpenAiFormat,
+                    errorLabel: "Dịch trang"
+                });
 
-                let response: Response;
-                try {
-                    response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: requestHeaders,
-                        body: requestBody,
-                        signal: controller.signal
-                    });
-                } catch (fetchErr: any) {
-                    if (fetchErr.name === 'AbortError' || fetchErr.name === 'TimeoutError' || (fetchErr.message && fetchErr.message.includes('aborted'))) {
-                        throw new Error("Kết nối AI quá hạn (Timeout 120s). Đang tự động thử lại...");
-                    }
-                    throw fetchErr;
-                } finally {
-                    clearTimeout(timeoutId);
-                }
-
-                if (!response.ok) {
-                    let errorDetail = "";
-                    try {
-                        const errorJson = await response.json();
-                        errorDetail = errorJson.error?.message || errorJson.message || "";
-                    } catch (e) { }
-                    throw new Error(errorDetail ? `Lỗi API (${response.status}): ${errorDetail}` : `API Error: ${response.status}`);
-                }
-
-                const result = await response.json();
-                const jsonText = isOpenAiFormat
-                    ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
-                    : result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-                const data = parseGeminiJsonText(jsonText);
                 if (!data || !Array.isArray(data.blocks)) {
                     throw new Error("Phản hồi từ AI bị lỗi định dạng JSON hoặc bị ngắt câu.");
                 }
@@ -1840,11 +1809,11 @@ export async function runBatchTranslation(): Promise<void> {
                         showToast(`Đã dịch thành công toàn bộ Chapter (${allChapterBlocks.length} câu thoại) trong 1 lượt gọi duy nhất!`, "success");
                     } catch (transErr: any) {
                         console.error("Lỗi khi dịch gộp Chapter:", transErr);
-                        showToast(`Lỗi khi dịch Chapter: ${transErr.message || transErr}`, "error");
+                        showToast(`Đã hoàn thành OCR (${allChapterBlocks.length} ô thoại), nhưng bước dịch gặp lỗi: ${transErr.message || transErr}. Bạn có thể bấm Thử Dịch Lại mà không cần quét OCR lại.`, "warn");
                         queuedIndices.forEach(i => {
                             const p = globalState.pages[i];
                             if (p.status === 'queued') {
-                                p.status = 'error';
+                                p.status = (p.blocks && p.blocks.length > 0) ? 'draft' : 'error';
                                 savePageToDB(p);
                             }
                         });
@@ -2064,7 +2033,8 @@ export async function runAIEraseTextPage(): Promise<void> {
 
         uiUpdateProcessingOverlay(true, "AI Đang Xóa Chữ...", "Gemini AI đang xử lý vẽ bù nền & xóa chữ...", 50);
 
-        const apiUrl = getGeminiGenerateContentUrl('gemini-3.1-flash-image-preview', keyToUse);
+        const eraseModel = globalState.selectedModel || DEFAULT_MODEL;
+        const apiUrl = getGeminiGenerateContentUrl(eraseModel, keyToUse);
         const payload = {
             contents: [{
                 role: "user",
@@ -2085,11 +2055,22 @@ export async function runAIEraseTextPage(): Promise<void> {
             }
         };
 
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            try { controller.abort(); } catch (e) { }
+        }, 90000);
+
+        let response: Response;
+        try {
+            response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal: controller.signal
+            });
+        } finally {
+            clearTimeout(timeoutId);
+        }
 
         if (!response.ok) {
             const errText = await response.text();
