@@ -147,7 +147,7 @@ export function getTranslationGuidancePrompt(
                 `     - 후배 (Hubae) -> "Hậu bối", "Đàn em", "Em".`,
                 `     - 오빠 (Oppa) / 형 (Hyung) -> "Anh" (linh hoạt theo ngữ cảnh tình cảm, anh em ruột hoặc anh kết nghĩa).`,
                 `     - 언니 (Unnie) / 누나 (Noona) -> "Chị".`,
-                `     - 아저씨 (Ahjussi) / 아줌MA (Ahjumma) -> "Chú / Bác / Cô".`,
+                `     - 아저씨 (Ahjussi) / 아줌마 (Ahjumma) -> "Chú / Bác / Cô".`,
                 `     - 님 (-nim) -> "Ngài / Sếp / Trưởng phòng / Anh / Chị".`,
                 `  3. TỪ CẢM THÁN & KHẨU NGỮ WEBTOON (EXCLAMATIONS & SPOKEN SLANG):`,
                 `     - 헐 (Heol) -> "Sốc thật!", "Vãi!", "Trời đất!".`,

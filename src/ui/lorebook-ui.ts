@@ -1,6 +1,15 @@
-import { globalState, saveProjectMeta } from '../core/state';
 import { showToast, escapeHTML } from '../core/utils';
 import { ensureModalElement } from '../core/component-loader';
+import {
+    getCharacterDossier,
+    addCharacterDossierItem,
+    removeCharacterDossierItem,
+    setCharacterDossier,
+    getLorebook,
+    addLorebookItem,
+    removeLorebookItem,
+    setLorebook
+} from '../features/dossier-lorebook';
 
 export async function openLorebookModal(): Promise<void> {
     const modal = await ensureModalElement('lorebook-dossier-modal');
@@ -67,7 +76,7 @@ function initLorebookDelegationOnce(): void {
 export function renderCharacterDossierUI(): void {
     const container = document.getElementById('dossier-items-list');
     const badge = document.getElementById('dossier-count');
-    const items = globalState.characterDossier || [];
+    const items = getCharacterDossier();
     if (badge) badge.textContent = String(items.length);
 
     if (!container) return;
@@ -113,20 +122,15 @@ export function addCharacterDossierEntry(): void {
         return;
     }
 
-    const newItem = {
-        id: 'char_' + Date.now(),
+    addCharacterDossierItem({
         originalName,
         translatedName,
         gender: (genderInput?.value as 'male' | 'female' | 'other') || 'male',
         pronounSelf: selfInput?.value.trim() || 'tôi',
         pronounTarget: targetInput?.value.trim() || 'cậu',
         personality: personalityInput?.value.trim() || ''
-    };
+    });
 
-    if (!globalState.characterDossier) globalState.characterDossier = [];
-    globalState.characterDossier.push(newItem);
-
-    saveProjectMeta(globalState.pages.map(p => p.id), globalState.activePageIndex);
     renderCharacterDossierUI();
 
     if (origInput) origInput.value = '';
@@ -139,9 +143,7 @@ export function addCharacterDossierEntry(): void {
 }
 
 export function removeCharacterDossierEntry(id: string): void {
-    if (!globalState.characterDossier) return;
-    globalState.characterDossier = globalState.characterDossier.filter(c => c.id !== id);
-    saveProjectMeta(globalState.pages.map(p => p.id), globalState.activePageIndex);
+    removeCharacterDossierItem(id);
     renderCharacterDossierUI();
     showToast('Đã xóa nhân vật khỏi Hồ sơ.', 'info');
 }
@@ -149,7 +151,7 @@ export function removeCharacterDossierEntry(id: string): void {
 export function renderLorebookUI(): void {
     const container = document.getElementById('lorebook-items-list');
     const badge = document.getElementById('lorebook-count');
-    const items = globalState.lorebook || [];
+    const items = getLorebook();
     if (badge) badge.textContent = String(items.length);
 
     if (!container) return;
@@ -190,18 +192,13 @@ export function addLorebookTermEntry(): void {
         return;
     }
 
-    const newItem = {
-        id: 'lore_' + Date.now(),
+    addLorebookItem({
         originalTerm,
         translatedTerm,
         category: catInput?.value || 'Khác',
         note: noteInput?.value.trim() || ''
-    };
+    });
 
-    if (!globalState.lorebook) globalState.lorebook = [];
-    globalState.lorebook.push(newItem);
-
-    saveProjectMeta(globalState.pages.map(p => p.id), globalState.activePageIndex);
     renderLorebookUI();
 
     if (origInput) origInput.value = '';
@@ -212,17 +209,15 @@ export function addLorebookTermEntry(): void {
 }
 
 export function removeLorebookTermEntry(id: string): void {
-    if (!globalState.lorebook) return;
-    globalState.lorebook = globalState.lorebook.filter(l => l.id !== id);
-    saveProjectMeta(globalState.pages.map(p => p.id), globalState.activePageIndex);
+    removeLorebookItem(id);
     renderLorebookUI();
     showToast('Đã xóa thuật ngữ khỏi Lorebook.', 'info');
 }
 
 export function exportLorebookJSON(): void {
     const data = {
-        characterDossier: globalState.characterDossier || [],
-        lorebook: globalState.lorebook || []
+        characterDossier: getCharacterDossier(),
+        lorebook: getLorebook()
     };
     const jsonStr = JSON.stringify(data, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -244,10 +239,9 @@ export function importLorebookJSON(event: Event): void {
     reader.onload = (e) => {
         try {
             const data = JSON.parse(e.target?.result as string);
-            if (data.characterDossier) globalState.characterDossier = data.characterDossier;
-            if (data.lorebook) globalState.lorebook = data.lorebook;
+            if (data.characterDossier) setCharacterDossier(data.characterDossier);
+            if (data.lorebook) setLorebook(data.lorebook);
 
-            saveProjectMeta(globalState.pages.map(p => p.id), globalState.activePageIndex);
             renderCharacterDossierUI();
             renderLorebookUI();
             showToast('Đã nhập dữ liệu Lorebook & Nhân vật thành công!', 'success');
@@ -257,3 +251,4 @@ export function importLorebookJSON(event: Event): void {
     };
     reader.readAsText(file);
 }
+

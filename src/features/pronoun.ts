@@ -1,32 +1,17 @@
-import { globalState } from '../core/state';
 import { showToast } from '../core/utils';
-import { safeSetLocalStorage } from '../core/utils/storage';
+import {
+    PronounMatrixData,
+    getParsedPronounMatrix,
+    savePronounMatrixData
+} from './dossier-lorebook';
 
-export interface PronounMatrixData {
-    characters: string[];
-    relationships: Record<string, Record<string, string>>;
-}
-
-export function getParsedPronounMatrix(): PronounMatrixData {
-    try {
-        if (!globalState.pronounMatrix) return { characters: [], relationships: {} };
-        const parsed = typeof globalState.pronounMatrix === 'string'
-            ? JSON.parse(globalState.pronounMatrix)
-            : globalState.pronounMatrix;
-        if (parsed && typeof parsed === 'object' && Array.isArray(parsed.characters)) {
-            return parsed;
-        }
-    } catch (e) {
-        console.warn("Failed to parse pronoun matrix:", e);
-    }
-    return { characters: [], relationships: {} };
-}
+export type { PronounMatrixData };
+export { getParsedPronounMatrix };
 
 export function savePronounMatrix(matrixData: PronounMatrixData): void {
-    const jsonStr = JSON.stringify(matrixData);
-    globalState.pronounMatrix = jsonStr;
-    safeSetLocalStorage('gemini_manga_pronoun_matrix', jsonStr);
+    savePronounMatrixData(matrixData);
 }
+
 
 export function addCharacterToMatrix(): void {
     const charInput = document.getElementById('pronoun-char-name-input') as HTMLInputElement | null;
@@ -151,10 +136,11 @@ export function renderPronounMatrixTable(): void {
     wrapper.innerHTML = html;
 }
 
-export function compilePronounMatrixPrompt(): string {
-    const matrix = getParsedPronounMatrix();
+export function compilePronounMatrixPrompt(matrixData?: PronounMatrixData): string {
+    const matrix = matrixData || getParsedPronounMatrix();
     const chars = matrix.characters;
     if (chars.length === 0) return '';
+
 
     let prompt = '- CHARACTER PRONOUN RULES (MA TRẬN XƯNG HÔ):\n';
     let hasRules = false;

@@ -28,7 +28,10 @@ import {
     togglePreserveNames
 } from '../ui/index';
 import { normalizeAiBlockBox } from './ocr/ocr-service';
+import { getTranslationContext } from './ai/ai-state';
+import { getCharacterDossier, getLorebook, setCharacterDossier, setLorebook } from './dossier-lorebook';
 import { MangaPage } from '../types/index';
+
 
 export function getPageExportMimeType(page: MangaPage): { mimeType: string; quality?: number; ext: string } {
     const formatOverride = globalState.exportFormat || 'auto';
@@ -1202,19 +1205,21 @@ export async function buildProjectBackupJSON(): Promise<any> {
         });
     }
 
+    const ctx = getTranslationContext();
     return {
         version: '2.0',
         exportedAt: new Date().toISOString(),
-        sourceLanguage: globalState.sourceLanguage,
-        targetLanguage: globalState.targetLanguage,
+        sourceLanguage: ctx.sourceLanguage,
+        targetLanguage: ctx.targetLanguage,
         pronounMatrix: globalState.pronounMatrix,
-        preserveNames: globalState.preserveNames,
-        glossaryNames: globalState.glossaryNames,
-        characterDossier: globalState.characterDossier || [],
-        lorebook: globalState.lorebook || [],
+        preserveNames: ctx.preserveNames,
+        glossaryNames: ctx.glossaryNames,
+        characterDossier: getCharacterDossier(),
+        lorebook: getLorebook(),
         pages: pagesData
     };
 }
+
 
 export async function exportProjectBackup(): Promise<void> {
     if (globalState.pages.length === 0) {
@@ -1302,8 +1307,9 @@ export async function importProjectBackup(files: FileList | File[]): Promise<voi
             if (data.glossaryNames) updateGlossary(data.glossaryNames);
             if (data.preserveNames !== undefined) togglePreserveNames(!!data.preserveNames);
 
-            if (data.characterDossier) globalState.characterDossier = data.characterDossier;
-            if (data.lorebook) globalState.lorebook = data.lorebook;
+            if (data.characterDossier) setCharacterDossier(data.characterDossier, false);
+            if (data.lorebook) setLorebook(data.lorebook, false);
+
 
             for (const page of globalState.pages) {
                 await savePageToDB(page);

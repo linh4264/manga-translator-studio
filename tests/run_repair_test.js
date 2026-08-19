@@ -1,4 +1,4 @@
-import { parseGeminiJsonText } from './test_repair_robust.js';
+import { parseGeminiJsonText } from '../src/core/utils/json';
 
 const testCases = [
     {
@@ -55,6 +55,16 @@ for (const tc of testCases) {
     } else {
         console.log("   Sample block:", JSON.stringify(result.blocks[result.blocks.length - 1]));
     }
+}
+
+// TOEIC Specific Truncation Tests
+const toeicTest = `{\n  "grammar": "Câu này sử dụng cấu trúc bị động (Passive Voice) với dạng 'be + past participle' (was picked). Cấu trúc bị động thường xuyên xuất hiện trong Part 5 & 6 để nhấn mạnh vào hành động thay `;
+const toeicResult = parseGeminiJsonText(toeicTest);
+if (toeicResult && toeicResult.grammar) {
+    console.log(`✅ Case 9 (TOEIC Grammar cut-off): successfully recovered grammar analysis!`);
+} else {
+    console.log(`❌ Case 9 (TOEIC Grammar cut-off): FAILED!`);
+    allPassed = false;
 }
 
 if (!allPassed) {

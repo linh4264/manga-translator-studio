@@ -5,10 +5,44 @@ import { elements } from '../core/elements';
 import { showToast, escapeHTML } from '../core/utils';
 import { safeSetLocalStorage } from '../core/utils/storage';
 import { parseGeminiJsonText } from '../core/utils/json';
-import { getGeminiApiKey } from './ai/ai-service';
 import { getGeminiGenerateContentUrl, getConfiguredAiProvider } from './ai/ai-config';
+import { getAiConfig } from './ai/ai-state';
 import { ensureModalElement } from '../core/component-loader';
 import { ToeicWord } from '../types/index';
+
+export function getToeicSavedWords(): ToeicWord[] {
+    return Array.isArray(globalState.toeicSavedWords) ? globalState.toeicSavedWords : [];
+}
+
+export async function setToeicSavedWords(words: ToeicWord[]): Promise<void> {
+    globalState.toeicSavedWords = Array.isArray(words) ? words : [];
+    await saveToeicWordsToDB(globalState.toeicSavedWords);
+    persistToeicWordsToStorage(globalState.toeicSavedWords);
+}
+
+export function getToeicMode(): 'learn' | 'recall' {
+    return globalState.toeicMode || 'learn';
+}
+
+export function setToeicModeState(mode: 'learn' | 'recall'): void {
+    globalState.toeicMode = mode;
+}
+
+export function getActiveToeicAnalysis(): { blockId: string; analysis: any } | null {
+    return globalState.activeBlockToeicAnalysis || null;
+}
+
+export function setActiveToeicAnalysis(blockId: string, analysis: any): void {
+    globalState.activeBlockToeicAnalysis = { blockId, analysis };
+}
+
+export function getActiveToeicQuestionIndex(): number {
+    return typeof globalState.activeToeicQuestionIndex === 'number' ? globalState.activeToeicQuestionIndex : 0;
+}
+
+export function setActiveToeicQuestionIndex(idx: number): void {
+    globalState.activeToeicQuestionIndex = idx;
+}
 
 let srsReviewQueue: ToeicWord[] = [];
 let srsCurrentIndex = 0;
@@ -33,10 +67,11 @@ export function updateToeicTabUI(): void {
     if (elements.toeicAnalysisContainer) {
         elements.toeicAnalysisContainer.classList.remove('hidden');
 
-        setToeicMode(globalState.toeicMode || 'learn');
+        setToeicMode(getToeicMode());
 
-        if (globalState.activeBlockToeicAnalysis && globalState.activeBlockToeicAnalysis.blockId === block.id) {
-            displayToeicAnalysis(globalState.activeBlockToeicAnalysis.analysis);
+        const activeAnalysis = getActiveToeicAnalysis();
+        if (activeAnalysis && activeAnalysis.blockId === block.id) {
+            displayToeicAnalysis(activeAnalysis.analysis);
         } else {
             resetToeicAnalysisUI();
         }
@@ -44,6 +79,7 @@ export function updateToeicTabUI(): void {
 
     updateToeicNotebookUI();
 }
+
 
 export function resetToeicAnalysisUI(): void {
     if (elements.btnToeicAnalyze) elements.btnToeicAnalyze.classList.remove('hidden');
@@ -89,8 +125,9 @@ export function displayToeicAnalysis(analysis: any): void {
         if (vocabData.length === 0) {
             elements.toeicVocabList.innerHTML = '<div class="text-[11px] text-slate-500 italic">Không phát hiện từ vựng TOEIC 450+ đặc trưng.</div>';
         } else {
+            const savedWords = getToeicSavedWords();
             vocabData.forEach((item: any, index: number) => {
-                const isSaved = globalState.toeicSavedWords.some(w => w.word.toLowerCase() === item.word.toLowerCase());
+                const isSaved = savedWords.some(w => w.word.toLowerCase() === item.word.toLowerCase());
 
                 const card = document.createElement('div');
                 card.className = 'p-2.5 rounded bg-slate-900 border border-slate-800 space-y-1.5 text-xs';
@@ -144,14 +181,16 @@ export function displayToeicAnalysis(analysis: any): void {
             }
         }
 
-        if (globalState.activeToeicQuestionIndex >= pqs.length) {
-            globalState.activeToeicQuestionIndex = 0;
+        const activeQIndex = getActiveToeicQuestionIndex();
+        const currentQIndex = activeQIndex >= pqs.length ? 0 : activeQIndex;
+        if (currentQIndex !== activeQIndex) {
+            setActiveToeicQuestionIndex(0);
         }
 
         for (let i = 0; i < 3; i++) {
             const btn = document.getElementById(`btn-question-tab-${i}`);
             if (btn) {
-                if (i === globalState.activeToeicQuestionIndex) {
+                if (i === currentQIndex) {
                     btn.className = "flex-1 py-1 text-[9px] font-bold rounded bg-indigo-600 text-white transition-all text-center";
                 } else {
                     btn.className = "flex-1 py-1 text-[9px] font-bold rounded text-slate-400 hover:text-slate-200 transition-all text-center bg-slate-950 border border-slate-800";
@@ -159,7 +198,7 @@ export function displayToeicAnalysis(analysis: any): void {
             }
         }
 
-        renderActiveToeicQuestion(pqs, globalState.activeToeicQuestionIndex);
+        renderActiveToeicQuestion(pqs, currentQIndex);
     } else {
         if (elements.toeicQuestionSection) elements.toeicQuestionSection.classList.add('hidden');
     }
@@ -202,7 +241,8 @@ export async function analyzeBlockForToeic(): Promise<void> {
         return;
     }
 
-    const keyToUse = getGeminiApiKey();
+    const aiConfig = getAiConfig();
+    const keyToUse = aiConfig.apiKey;
     if (!keyToUse) {
         showToast("Vui lòng nhập Gemini API Key trong phần Cài đặt trước khi phân tích.", "error");
         import('../ui/index').then(ui => ui.openSettingsModal());
@@ -214,7 +254,7 @@ export async function analyzeBlockForToeic(): Promise<void> {
     if (elements.toeicResults) elements.toeicResults.classList.add('hidden');
 
     try {
-        const modelToUse = globalState.selectedModel || DEFAULT_MODEL;
+        const modelToUse = aiConfig.selectedModel || DEFAULT_MODEL;
         if (getConfiguredAiProvider() !== 'gemini') {
             throw new Error('Provider hiện tại chưa có adapter thực thi cho luồng TOEIC này.');
         }
@@ -251,8 +291,9 @@ Return ONLY the JSON. Do not wrap it in markdown code fences or anything else. J
             }],
             generationConfig: {
                 responseMimeType: "application/json",
-                maxOutputTokens: 2048
+                maxOutputTokens: 8192
             }
+
         };
 
         const response = await fetch(apiUrl, {
@@ -271,10 +312,7 @@ Return ONLY the JSON. Do not wrap it in markdown code fences or anything else. J
 
         const parsedData = parseGeminiJsonText(jsonText);
 
-        globalState.activeBlockToeicAnalysis = {
-            blockId: block.id,
-            analysis: parsedData
-        };
+        setActiveToeicAnalysis(block.id, parsedData);
 
         displayToeicAnalysis(parsedData);
         showToast("Đã phân tích cấu trúc TOEIC thành công!", "success");
@@ -291,17 +329,19 @@ export function persistToeicWordsToStorage(words: ToeicWord[]): void {
 }
 
 export async function toggleSaveToeicWordByIndex(index: number): Promise<void> {
-    if (!globalState.activeBlockToeicAnalysis || !globalState.activeBlockToeicAnalysis.analysis) return;
-    const item = globalState.activeBlockToeicAnalysis.analysis.vocabulary[index];
+    const activeAnalysis = getActiveToeicAnalysis();
+    if (!activeAnalysis || !activeAnalysis.analysis) return;
+    const item = activeAnalysis.analysis.vocabulary[index];
     if (!item) return;
 
     try {
-        const wordIndex = globalState.toeicSavedWords.findIndex(w => w.word.toLowerCase() === item.word.toLowerCase());
+        const savedWords = [...getToeicSavedWords()];
+        const wordIndex = savedWords.findIndex(w => w.word.toLowerCase() === item.word.toLowerCase());
         if (wordIndex !== -1) {
-            globalState.toeicSavedWords.splice(wordIndex, 1);
+            savedWords.splice(wordIndex, 1);
             showToast(`Đã xóa "${item.word}" khỏi sổ tay.`, "info");
         } else {
-            globalState.toeicSavedWords.unshift({
+            savedWords.unshift({
                 word: item.word,
                 pos: item.pos,
                 phonetic: item.phonetic || '',
@@ -312,12 +352,12 @@ export async function toggleSaveToeicWordByIndex(index: number): Promise<void> {
             showToast(`Đã lưu "${item.word}" vào sổ tay!`, "success");
         }
 
-        await saveToeicWordsToDB(globalState.toeicSavedWords);
-        persistToeicWordsToStorage(globalState.toeicSavedWords);
+        await setToeicSavedWords(savedWords);
 
         updateToeicNotebookUI();
-        if (globalState.activeBlockToeicAnalysis) {
-            displayToeicAnalysis(globalState.activeBlockToeicAnalysis.analysis);
+        const currentActive = getActiveToeicAnalysis();
+        if (currentActive) {
+            displayToeicAnalysis(currentActive.analysis);
         }
     } catch (e) {
         console.error("Lỗi khi lưu từ vựng:", e);
@@ -325,6 +365,7 @@ export async function toggleSaveToeicWordByIndex(index: number): Promise<void> {
 }
 
 export function updateToeicNotebookUI(): void {
+
     const listContainer = elements.toeicNotebookList;
     const emptyState = elements.toeicNotebookEmpty;
     const countBadge = elements.toeicSavedCount;
@@ -334,7 +375,7 @@ export function updateToeicNotebookUI(): void {
 
     if (!listContainer) return;
 
-    const savedWords = globalState.toeicSavedWords || [];
+    const savedWords = getToeicSavedWords();
     const dueWords = getDueSrsWords();
 
     if (countBadge) countBadge.textContent = String(savedWords.length);
@@ -395,7 +436,7 @@ export function updateToeicNotebookUI(): void {
 
 export async function openSrsReviewModal(): Promise<void> {
     const dueWords = getDueSrsWords();
-    const allWords = globalState.toeicSavedWords || [];
+    const allWords = getToeicSavedWords();
 
     if (allWords.length === 0) {
         showToast("Bạn chưa lưu từ vựng nào để ôn tập.", "warn");
@@ -528,37 +569,36 @@ export async function submitSrsReview(quality: number): Promise<void> {
     item.nextReviewDate = Date.now() + (interval * 24 * 60 * 60 * 1000);
     item.reviewCount = reviewCount;
 
-    const targetIdx = globalState.toeicSavedWords.findIndex(w => w.word.toLowerCase() === item.word.toLowerCase());
+    const savedWords = [...getToeicSavedWords()];
+    const targetIdx = savedWords.findIndex(w => w.word.toLowerCase() === item.word.toLowerCase());
     if (targetIdx !== -1) {
-        globalState.toeicSavedWords[targetIdx] = item;
+        savedWords[targetIdx] = item;
     }
 
-    await saveToeicWordsToDB(globalState.toeicSavedWords);
+    await setToeicSavedWords(savedWords);
     srsCurrentIndex++;
     renderSrsCurrentCard();
-
-    persistToeicWordsToStorage(globalState.toeicSavedWords);
 }
 
 export async function deleteSavedToeicWord(index: number): Promise<void> {
-    if (index < 0 || index >= globalState.toeicSavedWords.length) return;
-    const word = globalState.toeicSavedWords[index].word;
-    globalState.toeicSavedWords.splice(index, 1);
+    const savedWords = [...getToeicSavedWords()];
+    if (index < 0 || index >= savedWords.length) return;
+    const word = savedWords[index].word;
+    savedWords.splice(index, 1);
 
-    await saveToeicWordsToDB(globalState.toeicSavedWords);
+    await setToeicSavedWords(savedWords);
     updateToeicNotebookUI();
 
-    if (globalState.activeBlockToeicAnalysis) {
-        displayToeicAnalysis(globalState.activeBlockToeicAnalysis.analysis);
+    const activeAnalysis = getActiveToeicAnalysis();
+    if (activeAnalysis) {
+        displayToeicAnalysis(activeAnalysis.analysis);
     }
 
     showToast(`Đã xóa từ "${word}" khỏi sổ tay.`, "info");
-
-    persistToeicWordsToStorage(globalState.toeicSavedWords);
 }
 
 export function exportToeicWordsToAnki(): void {
-    const savedWords = globalState.toeicSavedWords || [];
+    const savedWords = getToeicSavedWords();
     if (savedWords.length === 0) {
         showToast("Không có từ vựng nào trong sổ tay để xuất.", "warn");
         return;
@@ -606,7 +646,7 @@ export function speakText(text: string, lang: string = 'en-US'): void {
 }
 
 export function setToeicMode(mode: 'learn' | 'recall'): void {
-    globalState.toeicMode = mode;
+    setToeicModeState(mode);
 
     if (mode === 'learn') {
         if (elements.btnToeicModeLearn) elements.btnToeicModeLearn.className = "flex-1 py-1.5 text-[11px] font-bold rounded bg-indigo-600 text-white transition-all";
@@ -757,7 +797,7 @@ export function speakCorrectRecallSentence(): void {
 }
 
 export function selectToeicQuestion(index: number): void {
-    globalState.activeToeicQuestionIndex = index;
+    setActiveToeicQuestionIndex(index);
 
     for (let i = 0; i < 3; i++) {
         const btn = document.getElementById(`btn-question-tab-${i}`);
@@ -770,9 +810,10 @@ export function selectToeicQuestion(index: number): void {
         }
     }
 
-    if (globalState.activeBlockToeicAnalysis && globalState.activeBlockToeicAnalysis.analysis) {
-        const pqs = globalState.activeBlockToeicAnalysis.analysis.practice_questions ||
-            (globalState.activeBlockToeicAnalysis.analysis.practice_question ? [globalState.activeBlockToeicAnalysis.analysis.practice_question] : []);
+    const activeAnalysis = getActiveToeicAnalysis();
+    if (activeAnalysis && activeAnalysis.analysis) {
+        const pqs = activeAnalysis.analysis.practice_questions ||
+            (activeAnalysis.analysis.practice_question ? [activeAnalysis.analysis.practice_question] : []);
         renderActiveToeicQuestion(pqs, index);
     }
 }
@@ -822,11 +863,12 @@ export function renderActiveToeicQuestion(pqs: any[], index: number): void {
 
 function getDueSrsWords(): ToeicWord[] {
     const now = Date.now();
-    return (globalState.toeicSavedWords || []).filter(item => {
+    return getToeicSavedWords().filter(item => {
         if (!item.nextReviewDate) return true;
         return item.nextReviewDate <= now;
     });
 }
+
 
 if (typeof window !== 'undefined') {
     (window as any).quickOpenToeicAnalysis = quickOpenToeicAnalysis;

@@ -5,6 +5,8 @@ import { safeSetLocalStorage } from '../core/utils/storage';
 import { ensureModalElement } from '../core/component-loader';
 import { dataURLtoBlob } from './io';
 import { updatePageListUI, selectPage, updateSourceLanguage, updateTargetLanguage, updatePronounMatrix, updateGlossary, togglePreserveNames } from '../ui/index';
+import { getTranslationContext } from './ai/ai-state';
+import { getCharacterDossier, getLorebook, setCharacterDossier, setLorebook } from './dossier-lorebook';
 
 let gdriveAccessToken: string = localStorage.getItem('gdrive_access_token') || '';
 let selectedFolderId: string = localStorage.getItem('gdrive_selected_folder_id') || '';
@@ -33,6 +35,7 @@ export function getGDriveAccessToken(): string {
 
 export async function getProjectBackupJSON(): Promise<any> {
     if (globalState.pages.length === 0) return null;
+    const ctx = getTranslationContext();
     const pagesData = [];
     for (const page of globalState.pages) {
         const imgDataURL = await getPageDataURL(page);
@@ -55,16 +58,17 @@ export async function getProjectBackupJSON(): Promise<any> {
     return {
         version: '2.0',
         exportedAt: new Date().toISOString(),
-        sourceLanguage: globalState.sourceLanguage,
-        targetLanguage: globalState.targetLanguage,
+        sourceLanguage: ctx.sourceLanguage,
+        targetLanguage: ctx.targetLanguage,
         pronounMatrix: globalState.pronounMatrix,
-        preserveNames: globalState.preserveNames,
-        glossaryNames: globalState.glossaryNames,
-        characterDossier: globalState.characterDossier || [],
-        lorebook: globalState.lorebook || [],
+        preserveNames: ctx.preserveNames,
+        glossaryNames: ctx.glossaryNames,
+        characterDossier: getCharacterDossier(),
+        lorebook: getLorebook(),
         pages: pagesData
     };
 }
+
 
 export function parseGDriveFileId(input: string): string {
     if (!input) return '';
@@ -414,8 +418,9 @@ export async function importProjectFromGDrive(fileId: string): Promise<void> {
             if (data.pronounMatrix) updatePronounMatrix(data.pronounMatrix);
             if (data.glossaryNames) updateGlossary(data.glossaryNames);
             if (data.preserveNames !== undefined) togglePreserveNames(!!data.preserveNames);
-            if (data.characterDossier) globalState.characterDossier = data.characterDossier;
-            if (data.lorebook) globalState.lorebook = data.lorebook;
+            if (data.characterDossier) setCharacterDossier(data.characterDossier, false);
+            if (data.lorebook) setLorebook(data.lorebook, false);
+
 
             for (const page of globalState.pages) {
                 await savePageToDB(page);

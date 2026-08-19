@@ -3,8 +3,33 @@ import { globalState } from '../core/state';
 import { showToast, escapeHTML } from '../core/utils';
 import { safeSetLocalStorage } from '../core/utils/storage';
 import { ensureModalElement } from '../core/component-loader';
-import { elements } from '../core/elements';
-import { MangaBlock, MangaPage } from '../types/index';
+import { MangaBlock, MangaPage, AudioSettings } from '../types/index';
+import { getCharacterDossier } from './dossier-lorebook';
+import { getTranslationContext } from './ai/ai-state';
+
+export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
+    maleVoiceURI: '',
+    femaleVoiceURI: '',
+    narratorVoiceURI: '',
+    rate: 1.0,
+    malePitch: 0.92,
+    femalePitch: 1.08,
+    narratorPitch: 1.0
+};
+
+export function getAudioSettings(): AudioSettings {
+    if (!globalState.audioSettings) {
+        globalState.audioSettings = { ...DEFAULT_AUDIO_SETTINGS };
+    }
+    return globalState.audioSettings;
+}
+
+export function setAudioSettings(settings: Partial<AudioSettings>): AudioSettings {
+    const current = getAudioSettings();
+    globalState.audioSettings = { ...current, ...settings };
+    safeSetLocalStorage('gemini_manga_audio_settings', globalState.audioSettings);
+    return globalState.audioSettings;
+}
 
 interface AudioState {
     isPlaying: boolean;
@@ -26,41 +51,30 @@ let synthesis: SpeechSynthesis | undefined = typeof window !== 'undefined' ? win
 let currentUtterance: SpeechSynthesisUtterance | null = null;
 let cachedVoices: SpeechSynthesisVoice[] = [];
 
-if (!globalState.audioSettings) {
-    globalState.audioSettings = {
-        maleVoiceURI: '',
-        femaleVoiceURI: '',
-        narratorVoiceURI: '',
-        rate: 1.0,
-        malePitch: 0.92,
-        femalePitch: 1.08,
-        narratorPitch: 1.0
-    };
-}
-
 export function autoAssign3DistinctVoices(): void {
     if (!synthesis) return;
     cachedVoices = synthesis.getVoices() || [];
     if (cachedVoices.length === 0) return;
 
-    const currentLang = globalState.targetLanguage || 'vi';
+    const currentLang = getTranslationContext().targetLanguage || 'vi';
     const langPrefix = currentLang === 'vi' ? 'vi' : (currentLang === 'en' ? 'en' : 'ja');
 
     let matched = cachedVoices.filter(v => v.lang.toLowerCase().startsWith(langPrefix));
     if (matched.length === 0) matched = cachedVoices;
 
+    const settings = getAudioSettings();
     if (matched.length >= 3) {
-        if (!globalState.audioSettings?.maleVoiceURI) globalState.audioSettings!.maleVoiceURI = matched[0].voiceURI;
-        if (!globalState.audioSettings?.femaleVoiceURI) globalState.audioSettings!.femaleVoiceURI = matched[1].voiceURI;
-        if (!globalState.audioSettings?.narratorVoiceURI) globalState.audioSettings!.narratorVoiceURI = matched[2].voiceURI;
+        if (!settings.maleVoiceURI) settings.maleVoiceURI = matched[0].voiceURI;
+        if (!settings.femaleVoiceURI) settings.femaleVoiceURI = matched[1].voiceURI;
+        if (!settings.narratorVoiceURI) settings.narratorVoiceURI = matched[2].voiceURI;
     } else if (matched.length === 2) {
-        if (!globalState.audioSettings?.maleVoiceURI) globalState.audioSettings!.maleVoiceURI = matched[0].voiceURI;
-        if (!globalState.audioSettings?.femaleVoiceURI) globalState.audioSettings!.femaleVoiceURI = matched[1].voiceURI;
-        if (!globalState.audioSettings?.narratorVoiceURI) globalState.audioSettings!.narratorVoiceURI = matched[0].voiceURI;
+        if (!settings.maleVoiceURI) settings.maleVoiceURI = matched[0].voiceURI;
+        if (!settings.femaleVoiceURI) settings.femaleVoiceURI = matched[1].voiceURI;
+        if (!settings.narratorVoiceURI) settings.narratorVoiceURI = matched[0].voiceURI;
     } else if (matched.length === 1) {
-        if (!globalState.audioSettings?.maleVoiceURI) globalState.audioSettings!.maleVoiceURI = matched[0].voiceURI;
-        if (!globalState.audioSettings?.femaleVoiceURI) globalState.audioSettings!.femaleVoiceURI = matched[0].voiceURI;
-        if (!globalState.audioSettings?.narratorVoiceURI) globalState.audioSettings!.narratorVoiceURI = matched[0].voiceURI;
+        if (!settings.maleVoiceURI) settings.maleVoiceURI = matched[0].voiceURI;
+        if (!settings.femaleVoiceURI) settings.femaleVoiceURI = matched[0].voiceURI;
+        if (!settings.narratorVoiceURI) settings.narratorVoiceURI = matched[0].voiceURI;
     }
 }
 
@@ -78,8 +92,9 @@ export function populateVoiceSelectorsUI(): void {
 
     if (!maleSelect && !femaleSelect && !narratorSelect) return;
 
-    const currentLang = globalState.targetLanguage || 'vi';
+    const currentLang = getTranslationContext().targetLanguage || 'vi';
     const langPrefix = currentLang === 'vi' ? 'vi' : (currentLang === 'en' ? 'en' : 'ja');
+    const settings = getAudioSettings();
 
     const generateOptionsHTML = (selectedURI?: string) => {
         if (cachedVoices.length === 0) {
@@ -103,13 +118,13 @@ export function populateVoiceSelectorsUI(): void {
         return html;
     };
 
-    if (maleSelect) maleSelect.innerHTML = generateOptionsHTML(globalState.audioSettings?.maleVoiceURI);
-    if (femaleSelect) femaleSelect.innerHTML = generateOptionsHTML(globalState.audioSettings?.femaleVoiceURI);
-    if (narratorSelect) narratorSelect.innerHTML = generateOptionsHTML(globalState.audioSettings?.narratorVoiceURI);
+    if (maleSelect) maleSelect.innerHTML = generateOptionsHTML(settings.maleVoiceURI);
+    if (femaleSelect) femaleSelect.innerHTML = generateOptionsHTML(settings.femaleVoiceURI);
+    if (narratorSelect) narratorSelect.innerHTML = generateOptionsHTML(settings.narratorVoiceURI);
 
-    if (malePitchInp) malePitchInp.value = String(globalState.audioSettings?.malePitch || 0.92);
-    if (femalePitchInp) femalePitchInp.value = String(globalState.audioSettings?.femalePitch || 1.08);
-    if (rateInp) rateInp.value = String(globalState.audioSettings?.rate || 1.0);
+    if (malePitchInp) malePitchInp.value = String(settings.malePitch || 0.92);
+    if (femalePitchInp) femalePitchInp.value = String(settings.femalePitch || 1.08);
+    if (rateInp) rateInp.value = String(settings.rate || 1.0);
 }
 
 if (synthesis) {
@@ -123,17 +138,18 @@ function getVoiceForGender(gender: string = 'neutral'): SpeechSynthesisVoice | n
     const voices = synthesis.getVoices();
     if (!voices || voices.length === 0) return null;
 
+    const settings = getAudioSettings();
     let targetURI = '';
-    if (gender === 'male') targetURI = globalState.audioSettings?.maleVoiceURI || '';
-    else if (gender === 'female') targetURI = globalState.audioSettings?.femaleVoiceURI || '';
-    else targetURI = globalState.audioSettings?.narratorVoiceURI || '';
+    if (gender === 'male') targetURI = settings.maleVoiceURI || '';
+    else if (gender === 'female') targetURI = settings.femaleVoiceURI || '';
+    else targetURI = settings.narratorVoiceURI || '';
 
     if (targetURI) {
         const found = voices.find(v => v.voiceURI === targetURI);
         if (found) return found;
     }
 
-    const currentLang = globalState.targetLanguage || 'vi';
+    const currentLang = getTranslationContext().targetLanguage || 'vi';
     const langPrefix = currentLang === 'vi' ? 'vi' : (currentLang === 'en' ? 'en' : 'ja');
     const matched = voices.filter(v => v.lang.toLowerCase().startsWith(langPrefix));
     
@@ -152,12 +168,13 @@ function getCharacterGenderForBlock(block?: MangaBlock, indexInPage: number = 0)
         return block.style.gender;
     }
 
-    if (globalState.characterDossier && globalState.characterDossier.length > 0) {
+    const dossier = getCharacterDossier();
+    if (dossier.length > 0) {
         const origText = (block.original || '').toLowerCase();
         const transText = (block.translated || '').toLowerCase();
         const speakerName = (block.speaker || '').toLowerCase();
 
-        for (const char of globalState.characterDossier) {
+        for (const char of dossier) {
             const origName = (char.originalName || '').toLowerCase();
             const transName = (char.translatedName || '').toLowerCase();
             if ((origName && (origText.includes(origName) || speakerName.includes(origName))) ||
@@ -173,6 +190,7 @@ function getCharacterGenderForBlock(block?: MangaBlock, indexInPage: number = 0)
 
     return 'neutral';
 }
+
 
 function setSpeakingHighlight(blockId: string): void {
     const overlays = document.querySelectorAll('.bubble-overlay');
@@ -235,18 +253,20 @@ export function playNextBlockInQueue(): void {
     const gender = getCharacterGenderForBlock(block, audioState.currentBlockIndex);
     const textToSpeak = block.translated.trim();
 
+    const targetLang = getTranslationContext().targetLanguage || 'vi';
     currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
-    currentUtterance.lang = globalState.targetLanguage === 'vi' ? 'vi-VN' : 'en-US';
+    currentUtterance.lang = targetLang === 'vi' ? 'vi-VN' : 'en-US';
     
-    const baseRate = globalState.audioSettings?.rate || 1.0;
+    const settings = getAudioSettings();
+    const baseRate = settings.rate || 1.0;
     if (gender === 'female') {
-        currentUtterance.pitch = globalState.audioSettings?.femalePitch || 1.08;
+        currentUtterance.pitch = settings.femalePitch || 1.08;
         currentUtterance.rate = baseRate * 1.02;
     } else if (gender === 'male') {
-        currentUtterance.pitch = globalState.audioSettings?.malePitch || 0.92;
+        currentUtterance.pitch = settings.malePitch || 0.92;
         currentUtterance.rate = baseRate * 0.98;
     } else {
-        currentUtterance.pitch = globalState.audioSettings?.narratorPitch || 1.0;
+        currentUtterance.pitch = settings.narratorPitch || 1.0;
         currentUtterance.rate = baseRate;
     }
 
@@ -347,17 +367,19 @@ export function speakActiveBlock(): void {
     setSpeakingHighlight(block.id);
     const gender = getCharacterGenderForBlock(block);
     const utterance = new SpeechSynthesisUtterance(block.translated.trim());
-    utterance.lang = globalState.targetLanguage === 'vi' ? 'vi-VN' : 'en-US';
+    const targetLang = getTranslationContext().targetLanguage || 'vi';
+    utterance.lang = targetLang === 'vi' ? 'vi-VN' : 'en-US';
 
-    const baseRate = globalState.audioSettings?.rate || 1.0;
+    const settings = getAudioSettings();
+    const baseRate = settings.rate || 1.0;
     if (gender === 'female') {
-        utterance.pitch = globalState.audioSettings?.femalePitch || 1.08;
+        utterance.pitch = settings.femalePitch || 1.08;
         utterance.rate = baseRate * 1.02;
     } else if (gender === 'male') {
-        utterance.pitch = globalState.audioSettings?.malePitch || 0.92;
+        utterance.pitch = settings.malePitch || 0.92;
         utterance.rate = baseRate * 0.98;
     } else {
-        utterance.pitch = globalState.audioSettings?.narratorPitch || 1.0;
+        utterance.pitch = settings.narratorPitch || 1.0;
         utterance.rate = baseRate;
     }
 
@@ -380,14 +402,16 @@ export function testVoice(gender: string = 'neutral'): void {
         : (gender === 'male' ? "Xin chào, đây là giọng đọc Nam cho kịch truyền thanh manga!" : "Xin chào, đây là giọng đọc Người dẫn chuyện.");
 
     const utterance = new SpeechSynthesisUtterance(sampleText);
-    utterance.lang = globalState.targetLanguage === 'vi' ? 'vi-VN' : 'en-US';
+    const targetLang = getTranslationContext().targetLanguage || 'vi';
+    utterance.lang = targetLang === 'vi' ? 'vi-VN' : 'en-US';
 
-    const baseRate = globalState.audioSettings?.rate || 1.0;
+    const settings = getAudioSettings();
+    const baseRate = settings.rate || 1.0;
     if (gender === 'female') {
-        utterance.pitch = globalState.audioSettings?.femalePitch || 1.08;
+        utterance.pitch = settings.femalePitch || 1.08;
         utterance.rate = baseRate * 1.02;
     } else if (gender === 'male') {
-        utterance.pitch = globalState.audioSettings?.malePitch || 0.92;
+        utterance.pitch = settings.malePitch || 0.92;
         utterance.rate = baseRate * 0.98;
     }
 
@@ -398,7 +422,7 @@ export function testVoice(gender: string = 'neutral'): void {
 }
 
 export function saveAudioSettings(): void {
-    safeSetLocalStorage('gemini_manga_audio_settings', globalState.audioSettings);
+    safeSetLocalStorage('gemini_manga_audio_settings', getAudioSettings());
 }
 
 export function updateAudioSettingsFromUI(): void {
@@ -409,15 +433,16 @@ export function updateAudioSettingsFromUI(): void {
     const malePitchInput = document.getElementById('audio-male-pitch-input') as HTMLInputElement | null;
     const femalePitchInput = document.getElementById('audio-female-pitch-input') as HTMLInputElement | null;
 
-    if (maleSelect && globalState.audioSettings) globalState.audioSettings.maleVoiceURI = maleSelect.value;
-    if (femaleSelect && globalState.audioSettings) globalState.audioSettings.femaleVoiceURI = femaleSelect.value;
-    if (narratorSelect && globalState.audioSettings) globalState.audioSettings.narratorVoiceURI = narratorSelect.value;
-    if (rateInput && globalState.audioSettings) globalState.audioSettings.rate = parseFloat(rateInput.value) || 1.0;
-    if (malePitchInput && globalState.audioSettings) globalState.audioSettings.malePitch = parseFloat(malePitchInput.value) || 0.92;
-    if (femalePitchInput && globalState.audioSettings) globalState.audioSettings.femalePitch = parseFloat(femalePitchInput.value) || 1.08;
-    
-    saveAudioSettings();
+    setAudioSettings({
+        maleVoiceURI: maleSelect?.value || '',
+        femaleVoiceURI: femaleSelect?.value || '',
+        narratorVoiceURI: narratorSelect?.value || '',
+        rate: rateInput ? (parseFloat(rateInput.value) || 1.0) : 1.0,
+        malePitch: malePitchInput ? (parseFloat(malePitchInput.value) || 0.92) : 0.92,
+        femalePitch: femalePitchInput ? (parseFloat(femalePitchInput.value) || 1.08) : 1.08
+    });
 }
+
 
 export async function openAudioSettingsModal(): Promise<void> {
     const modal = await ensureModalElement('audio-settings-modal');

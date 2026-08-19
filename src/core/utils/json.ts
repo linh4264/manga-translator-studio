@@ -48,10 +48,16 @@ export function balanceJsonBrackets(jsonStr: string): string {
         s += '"';
     }
 
+    // If trailing item is a key without a colon (e.g. `,\s*"incompleteKey"`), strip that incomplete key and trailing comma
+    s = s.replace(/,\s*"[^"]*"\s*$/, '');
+    s = s.replace(/\{\s*"[^"]*"\s*$/, '{');
+    s = s.replace(/\[\s*"[^"]*"\s*$/, '[');
+
     // Clean up trailing incomplete property or key fragment before closing brackets
     s = s.replace(/:\s*$/, ': ""');
     s = s.replace(/,\s*$/, '');
     s = s.replace(/,\s*\{\s*$/, '');
+    s = s.replace(/,\s*\[\s*$/, '');
 
     // Close remaining open brackets in reverse order
     while (stack.length > 0) {
@@ -94,6 +100,35 @@ export function extractJsonFromText(text: string): string {
     return candidate;
 }
 
+export function fixUnescapedQuotesInJson(jsonStr: string): string {
+    let result = '';
+    let inString = false;
+    let escaped = false;
+
+    for (let i = 0; i < jsonStr.length; i++) {
+        const char = jsonStr[i];
+        if (char === '"' && !escaped) {
+            if (!inString) {
+                inString = true;
+                result += char;
+            } else {
+                const rest = jsonStr.slice(i + 1).trimStart();
+                const isClosing = rest.length === 0 || /^[:,\]\}]/.test(rest);
+                if (isClosing) {
+                    inString = false;
+                    result += char;
+                } else {
+                    result += '\\"';
+                }
+            }
+        } else {
+            result += char;
+        }
+        escaped = (char === '\\' && !escaped);
+    }
+    return result;
+}
+
 export function repairJsonString(jsonStr: string): string {
     let cleaned = extractJsonFromText(jsonStr);
     if (!cleaned) return "{}";
@@ -102,6 +137,9 @@ export function repairJsonString(jsonStr: string): string {
     cleaned = cleaned.replace(/\bTrue\b/g, 'true')
         .replace(/\bFalse\b/g, 'false')
         .replace(/\bNone\b/g, 'null');
+
+    // Fix unescaped inner quotes
+    cleaned = fixUnescapedQuotesInJson(cleaned);
 
     // Fix missing commas between adjacent objects/arrays
     cleaned = cleaned.replace(/\}\s*\{/g, '},{')
@@ -123,6 +161,7 @@ export function repairJsonString(jsonStr: string): string {
 
     return cleaned;
 }
+
 
 export function extractBlocksWithRegex(rawText: string): Array<{ id: string; translated: string }> {
     if (!rawText) return [];
@@ -251,6 +290,62 @@ export function parseGeminiJsonText(rawText: string): any {
         }
     } catch (e) { }
 
+    // 6. Regex rescue fallback for TOEIC structured analysis
+    try {
+        const toeicFallback = extractStructuredToeicWithRegex(text);
+        if (toeicFallback) {
+            console.warn("Đã cứu hộ thành công JSON TOEIC bị cắt đuôi bằng Structured Extraction:", toeicFallback);
+            return toeicFallback;
+        }
+    } catch (e) { }
+
     console.warn("JSON parse failed for AI output:", text.slice(0, 200));
     return null;
 }
+
+export function extractStructuredToeicWithRegex(rawText: string): any {
+    if (!rawText) return null;
+    const text = String(rawText);
+
+    // Extract grammar
+    const grammarMatch = text.match(/"grammar"\s*:\s*"((?:[^"\\]|\\.)*?)(?:"|$)/i);
+    const grammar = grammarMatch ? grammarMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"') : '';
+
+    // Extract vocabulary items
+    const vocabList: any[] = [];
+    const vocabRegex = /\{\s*"word"\s*:\s*"([^"]+)"[\s\S]*?"pos"\s*:\s*"([^"]*)"[\s\S]*?"vietnamese"\s*:\s*"([^"]*)"(?:[\s\S]*?"toeic_example"\s*:\s*"([^"]*)")?/gi;
+    let vm: RegExpExecArray | null;
+    while ((vm = vocabRegex.exec(text)) !== null) {
+        vocabList.push({
+            word: vm[1],
+            pos: vm[2] || '',
+            phonetic: '',
+            vietnamese: vm[3] || '',
+            toeic_example: vm[4] || ''
+        });
+    }
+
+    // Extract practice questions
+    const questions: any[] = [];
+    const qRegex = /\{\s*"type"\s*:\s*"([^"]+)"[\s\S]*?"question"\s*:\s*"([^"]+)"[\s\S]*?"correct_answer"\s*:\s*"([^"]+)"[\s\S]*?"explanation"\s*:\s*"([^"]*)"/gi;
+    let qm: RegExpExecArray | null;
+    while ((qm = qRegex.exec(text)) !== null) {
+        questions.push({
+            type: qm[1],
+            question: qm[2],
+            options: [],
+            correct_answer: qm[3],
+            explanation: qm[4]
+        });
+    }
+
+    if (grammar || vocabList.length > 0 || questions.length > 0) {
+        return {
+            grammar: grammar || 'Phân tích ngữ pháp được khôi phục từ phản hồi AI.',
+            vocabulary: vocabList,
+            practice_questions: questions
+        };
+    }
+    return null;
+}
+
