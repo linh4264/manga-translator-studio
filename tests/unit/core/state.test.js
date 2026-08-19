@@ -197,3 +197,50 @@ test('Core State - AutoFit Cache Dirty Invalidation', () => {
     assert.strictEqual(page.blocks[1].autoFitCache, null);
     assert.strictEqual(page.blocks[1].maskCache, null);
 });
+
+test('Core State - Undo/Redo Restores Deleted Pages Completely', () => {
+    clearHistory();
+
+    const page1 = {
+        id: 'page_1',
+        name: 'Page 1',
+        status: 'done',
+        width: 1000,
+        height: 1500,
+        blocks: [{ id: 'b1', original: 'Hello', translated: 'Xin chào', box: { x: 10, y: 10, w: 20, h: 20 }, style: {} }]
+    };
+    const page2 = {
+        id: 'page_2',
+        name: 'Page 2',
+        status: 'draft',
+        width: 1000,
+        height: 1500,
+        blocks: [{ id: 'b2', original: 'World', translated: 'Thế giới', box: { x: 30, y: 30, w: 20, h: 20 }, style: {} }]
+    };
+
+    globalState.pages = [page1, page2];
+    globalState.activePageIndex = 1;
+
+    // 1. Snapshot initial state (2 pages)
+    pushStateToHistory();
+
+    // 2. Simulate deleting page 2
+    globalState.pages = [page1];
+    globalState.activePageIndex = 0;
+
+    assert.strictEqual(globalState.pages.length, 1, 'Pages count should be 1 after deletion');
+
+    // 3. Restore state via snapshot (Undo)
+    const snapshot = undoStack[undoStack.length - 1];
+    applyStateFromSnapshot(snapshot);
+
+    // 4. Assert page 2 is fully restored
+    assert.strictEqual(globalState.pages.length, 2, 'Pages count must be restored to 2');
+    assert.strictEqual(globalState.pages[0].id, 'page_1');
+    assert.strictEqual(globalState.pages[1].id, 'page_2');
+    assert.strictEqual(globalState.pages[1].name, 'Page 2');
+    assert.strictEqual(globalState.pages[1].blocks.length, 1);
+    assert.strictEqual(globalState.pages[1].blocks[0].translated, 'Thế giới');
+    assert.strictEqual(globalState.activePageIndex, 1, 'Active page index must be restored');
+});
+

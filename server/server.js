@@ -92,31 +92,45 @@ const server = http.createServer((req, res) => {
     }
 
     // Extract path name without query strings
-    const urlPath = decodedUrl.split('?')[0];
-    const projectRoot = path.join(__dirname, '..');
+    const urlPath = decodedUrl.split('?')[0].split('#')[0];
+    const projectRoot = path.resolve(__dirname, '..');
     const publicPath = path.join(projectRoot, 'public');
 
-    // Security check to prevent directory traversal outside projectRoot
-    let rawFilePath = path.join(projectRoot, urlPath === '/' ? 'index.html' : urlPath);
-    const relative = path.relative(projectRoot, rawFilePath);
-    const isSafe = relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
-    if (!isSafe) {
+    // Clean and normalize requested path
+    const cleanUrlPath = urlPath.replace(/\0/g, '');
+    const normalizedRelative = path.normalize(cleanUrlPath).replace(/^(\.\.[\/\\])+/, '');
+    const segments = normalizedRelative.split(/[/\\]/).filter(Boolean);
+
+    // Block hidden files, git, env, config files, and private server folders
+    const isSensitive = segments.some(seg => seg.startsWith('.')) ||
+        segments.includes('server') ||
+        (segments.includes('node_modules') && !normalizedRelative.includes('typescript')) ||
+        ['package.json', 'package-lock.json', 'bun.lock', 'bun.lockb', 'tsconfig.json', 'vite.config.ts'].includes(normalizedRelative.toLowerCase());
+
+    if (isSensitive) {
+        res.statusCode = 403;
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.end('403 Cấm truy cập: Tệp tin hoặc thư mục được bảo vệ.');
+        return;
+    }
+
+    let safePath = normalizedRelative;
+    if (safePath === '/' || safePath === '.' || safePath === '\\' || safePath === '') {
+        safePath = 'index.html';
+    }
+
+    let filePath = path.resolve(projectRoot, safePath);
+    if (!filePath.startsWith(projectRoot)) {
         res.statusCode = 403;
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.end('403 Cấm truy cập: Yêu cầu ngoài phạm vi thư mục dự án.');
         return;
     }
 
-    let safePath = path.normalize(urlPath);
-    if (safePath === '/' || safePath === '.' || safePath === '\\') {
-        safePath = 'index.html';
-    }
-
-    let filePath = path.join(projectRoot, safePath);
     if (!fs.existsSync(filePath)) {
         // Fallback to public/ directory
-        const pubCandidate = path.join(publicPath, safePath);
-        if (fs.existsSync(pubCandidate)) {
+        const pubCandidate = path.resolve(publicPath, safePath);
+        if (pubCandidate.startsWith(publicPath) && fs.existsSync(pubCandidate)) {
             filePath = pubCandidate;
         } else if (fs.existsSync(filePath + '.ts')) {
             filePath = filePath + '.ts';
@@ -186,15 +200,15 @@ const server = http.createServer((req, res) => {
         }
 
         const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-        fs.readFile(filePath, (readErr, content) => {
-            if (readErr) {
+        res.writeHead(200, { 'Content-Type': contentType });
+        const stream = fs.createReadStream(filePath);
+        stream.on('error', (streamErr) => {
+            if (!res.headersSent) {
                 res.statusCode = 500;
-                res.end(`<h1>Lỗi Máy Chủ: ${escapeHTML(readErr.code)}</h1>`);
-                return;
+                res.end(`<h1>Lỗi Máy Chủ: ${escapeHTML(streamErr.code)}</h1>`);
             }
-            res.writeHead(200, { 'Content-Type': contentType });
-            res.end(content);
         });
+        stream.pipe(res);
     });
 });
 

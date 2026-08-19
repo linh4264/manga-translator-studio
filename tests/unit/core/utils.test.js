@@ -115,3 +115,38 @@ test('Core Utils - Rich Text DOM Elements Creation', () => {
     assert.strictEqual(colorSpan.style.color, '#3b82f6');
     assert.strictEqual(colorSpan.style.textDecoration, 'underline');
 });
+
+test('Core Utils - parseGeminiJsonText Supports TOEIC and Truncated JSON', async () => {
+    const { parseGeminiJsonText } = await import('../../../src/core/utils/json.ts');
+
+    // 1. Full TOEIC response
+    const fullToeic = `{
+        "grammar": "Câu sử dụng cấu trúc bị động.",
+        "vocabulary": [
+            { "word": "frequency", "pos": "noun", "vietnamese": "tần suất", "toeic_example": "The frequency increased." }
+        ],
+        "practice_questions": [
+            { "type": "Part 5", "question": "The ______ of attacks increased.", "correct_answer": "A" }
+        ]
+    }`;
+    const parsedToeic = parseGeminiJsonText(fullToeic);
+    assert.ok(parsedToeic, 'Should parse full TOEIC JSON successfully');
+    assert.strictEqual(parsedToeic.grammar, 'Câu sử dụng cấu trúc bị động.');
+    assert.strictEqual(parsedToeic.vocabulary.length, 1);
+    assert.strictEqual(parsedToeic.vocabulary[0].word, 'frequency');
+
+    // 2. Truncated TOEIC response (cut off in grammar string)
+    const truncatedToeic = `{
+  "grammar": "Câu sử dụng thì Hiện tại tiếp diễn (Present Continuous) với cấu trúc 'seem to be + V-ing' để diễn tả một xu hướng đang xảy ra. 'The frequency of attacks' đóng vai trò là chủ ngữ số ít,`;
+
+    const parsedTruncated = parseGeminiJsonText(truncatedToeic);
+    assert.ok(parsedTruncated, 'Should repair and parse truncated TOEIC JSON');
+    assert.ok(parsedTruncated.grammar.includes('Hiện tại tiếp diễn'));
+
+    // 3. Markdown fenced JSON
+    const fenced = "```json\n" + fullToeic + "\n```";
+    const parsedFenced = parseGeminiJsonText(fenced);
+    assert.ok(parsedFenced, 'Should parse markdown fenced JSON');
+    assert.strictEqual(parsedFenced.grammar, 'Câu sử dụng cấu trúc bị động.');
+});
+

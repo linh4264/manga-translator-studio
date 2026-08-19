@@ -180,15 +180,17 @@ export function normalizeParsedAiData(data: any): any {
     }
     if (typeof data === 'object') {
         if (Array.isArray(data.blocks)) return { ...data, blocks: cleanBlocksList(data.blocks) };
-        if (Array.isArray(data.translations)) return { blocks: cleanBlocksList(data.translations) };
-        if (Array.isArray(data.dialogues)) return { blocks: cleanBlocksList(data.dialogues) };
-        if (Array.isArray(data.items)) return { blocks: cleanBlocksList(data.items) };
-        if (Array.isArray(data.regions)) return { blocks: cleanBlocksList(data.regions) };
-        if (Array.isArray(data.data)) return { blocks: cleanBlocksList(data.data) };
+        if (Array.isArray(data.translations)) return { ...data, blocks: cleanBlocksList(data.translations) };
+        if (Array.isArray(data.dialogues)) return { ...data, blocks: cleanBlocksList(data.dialogues) };
+        if (Array.isArray(data.items)) return { ...data, blocks: cleanBlocksList(data.items) };
+        if (Array.isArray(data.regions)) return { ...data, blocks: cleanBlocksList(data.regions) };
+        if (Array.isArray(data.data)) return { ...data, blocks: cleanBlocksList(data.data) };
 
         // Key-value map format e.g. { "p1_b1": "Chào bạn", "p1_b2": "Tạm biệt" }
         const keys = Object.keys(data);
-        if (keys.length > 0 && keys.every(k => typeof data[k] === 'string')) {
+        const isGeneralNonBlockObject = keys.some(k => ['grammar', 'vocabulary', 'practice_questions', 'practice_question', 'characterDossier', 'lorebook', 'version', 'pages'].includes(k));
+
+        if (!isGeneralNonBlockObject && keys.length > 0 && keys.every(k => typeof data[k] === 'string')) {
             const mappedBlocks = keys
                 .filter(k => data[k].trim().length > 0)
                 .map(k => ({ id: k, translated: data[k] }));
@@ -196,6 +198,13 @@ export function normalizeParsedAiData(data: any): any {
         }
     }
     return data;
+}
+
+export function isValidAiJson(obj: any): boolean {
+    if (!obj || typeof obj !== 'object') return false;
+    if (Array.isArray(obj)) return obj.length > 0;
+    if (Array.isArray(obj.blocks)) return obj.blocks.length > 0;
+    return Object.keys(obj).length > 0;
 }
 
 export function parseGeminiJsonText(rawText: string): any {
@@ -206,7 +215,7 @@ export function parseGeminiJsonText(rawText: string): any {
     try {
         const parsed = JSON.parse(text);
         const norm = normalizeParsedAiData(parsed);
-        if (norm && Array.isArray(norm.blocks) && norm.blocks.length > 0) return norm;
+        if (isValidAiJson(norm)) return norm;
     } catch (e) { }
 
     // 2. Extracted text direct parse
@@ -214,7 +223,7 @@ export function parseGeminiJsonText(rawText: string): any {
     try {
         const parsed = JSON.parse(extracted);
         const norm = normalizeParsedAiData(parsed);
-        if (norm && Array.isArray(norm.blocks) && norm.blocks.length > 0) return norm;
+        if (isValidAiJson(norm)) return norm;
     } catch (e) { }
 
     // 3. Multi-layer repair parse
@@ -222,7 +231,7 @@ export function parseGeminiJsonText(rawText: string): any {
         const cleaned = repairJsonString(text);
         const parsed = JSON.parse(cleaned);
         const norm = normalizeParsedAiData(parsed);
-        if (norm && Array.isArray(norm.blocks) && norm.blocks.length > 0) return norm;
+        if (isValidAiJson(norm)) return norm;
     } catch (e) { }
 
     // 4. Secondary repair on raw extracted
@@ -230,10 +239,10 @@ export function parseGeminiJsonText(rawText: string): any {
         const balanced = balanceJsonBrackets(extracted);
         const parsed = JSON.parse(balanced);
         const norm = normalizeParsedAiData(parsed);
-        if (norm && Array.isArray(norm.blocks) && norm.blocks.length > 0) return norm;
+        if (isValidAiJson(norm)) return norm;
     } catch (e) { }
 
-    // 5. Regex rescue fallback for cut-off / malformed outputs
+    // 5. Regex rescue fallback for cut-off / malformed outputs (translation blocks)
     try {
         const extractedBlocks = extractBlocksWithRegex(text);
         if (extractedBlocks.length > 0) {

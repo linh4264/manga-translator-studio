@@ -101,12 +101,11 @@ export function displayToeicAnalysis(analysis: any): void {
                             <span class="font-bold text-indigo-300 text-sm truncate">${escapeHTML(item.word)}</span>
                             <span class="text-[9px] text-slate-400 italic shrink-0">(${escapeHTML(item.pos)})</span>
                             <span class="text-[10px] text-slate-500 font-mono shrink-0">${escapeHTML(item.phonetic || '')}</span>
-                            <button onclick="speakText('${escapeHTML(item.word).replace(/'/g, "\\'")}')" class="text-slate-500 hover:text-indigo-400 shrink-0" title="Nghe từ vựng">
+                            <button class="btn-speak-vocab text-slate-500 hover:text-indigo-400 shrink-0" title="Nghe từ vựng">
                                 <i class="fa-solid fa-volume-high text-[10px]"></i>
                             </button>
                         </div>
-                        <button id="btn-save-vocab-${index}" onclick="toggleSaveToeicWordByIndex(${index})"
-                            class="text-[10px] px-2 py-0.5 rounded border transition-all shrink-0 ${isSaved
+                        <button id="btn-save-vocab-${index}" class="btn-save-vocab text-[10px] px-2 py-0.5 rounded border transition-all shrink-0 ${isSaved
                         ? 'bg-emerald-600/10 border-emerald-500/30 text-emerald-400 hover:bg-red-950/30 hover:border-red-500/30 hover:text-red-400'
                         : 'bg-indigo-600/10 border-indigo-500/30 text-indigo-400 hover:bg-indigo-600 hover:text-white'
                     }">
@@ -116,11 +115,16 @@ export function displayToeicAnalysis(analysis: any): void {
                     <div class="text-[11px] text-slate-300"><span class="font-semibold text-slate-400">Nghĩa:</span> ${escapeHTML(item.vietnamese)}</div>
                     <div class="text-[10px] text-slate-400 italic leading-relaxed flex items-center justify-between gap-1.5">
                         <div class="flex-1 min-w-0"><span class="font-semibold text-slate-500">Ví dụ:</span> "${escapeHTML(item.toeic_example)}"</div>
-                        <button onclick="speakText('${escapeHTML(item.toeic_example).replace(/'/g, "\\'")}')" class="text-slate-500 hover:text-indigo-400 shrink-0" title="Nghe câu ví dụ">
+                        <button class="btn-speak-example text-slate-500 hover:text-indigo-400 shrink-0" title="Nghe câu ví dụ">
                             <i class="fa-solid fa-volume-high text-[9px]"></i>
                         </button>
                     </div>
                 `;
+
+                card.querySelector('.btn-speak-vocab')?.addEventListener('click', () => speakText(item.word));
+                card.querySelector('.btn-save-vocab')?.addEventListener('click', () => toggleSaveToeicWordByIndex(index));
+                card.querySelector('.btn-speak-example')?.addEventListener('click', () => speakText(item.toeic_example));
+
                 elements.toeicVocabList?.appendChild(card);
             });
         }
@@ -379,11 +383,12 @@ export function updateToeicNotebookUI(): void {
                 </div>
                 <div class="text-[11px] text-indigo-300 truncate">${escapeHTML(item.vietnamese)}</div>
             </div>
-            <button onclick="deleteSavedToeicWord(${idx})" title="Xóa"
-                class="w-6 h-6 rounded bg-slate-900 border border-slate-800 text-slate-500 hover:bg-red-950/40 hover:border-red-500/30 hover:text-red-400 flex items-center justify-center transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100">
+            <button title="Xóa"
+                class="btn-delete-saved-word w-6 h-6 rounded bg-slate-900 border border-slate-800 text-slate-500 hover:bg-red-950/40 hover:border-red-500/30 hover:text-red-400 flex items-center justify-center transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100">
                 <i class="fa-solid fa-trash-can text-[10px]"></i>
             </button>
         `;
+        itemEl.querySelector('.btn-delete-saved-word')?.addEventListener('click', () => deleteSavedToeicWord(idx));
         listContainer.appendChild(itemEl);
     });
 }
@@ -808,11 +813,9 @@ export function renderActiveToeicQuestion(pqs: any[], index: number): void {
         btn.className = 'w-full text-left p-2 rounded bg-slate-900 border border-slate-800 hover:bg-slate-800 hover:border-slate-700 transition-all block';
         btn.textContent = opt;
 
-        const safeCorrectAnswer = String(pq.correct_answer).replace(/'/g, "\\'");
-        const safeExplanation = String(pq.explanation).replace(/'/g, "\\'").replace(/"/g, "&quot;");
-        const safeLetter = letter.replace(/'/g, "\\'");
-
-        btn.setAttribute('onclick', `checkToeicAnswer('${safeLetter}', '${safeCorrectAnswer}', '${safeExplanation}')`);
+        btn.addEventListener('click', () => {
+            checkToeicAnswer(letter, pq.correct_answer || '', pq.explanation || '');
+        });
         elements.toeicQuestionOptions?.appendChild(btn);
     });
 }

@@ -292,14 +292,30 @@ function cloneBlocksForHistory(blocks: any[]): any[] {
     }));
 }
 
+function clonePageForHistory(page: any): any {
+    return {
+        id: page.id,
+        name: page.name || 'Page',
+        width: page.width,
+        height: page.height,
+        apiWidth: page.apiWidth,
+        apiHeight: page.apiHeight,
+        status: page.status,
+        file: page.file || null,
+        originalFile: page.originalFile || null,
+        thumbnailBlob: page.thumbnailBlob || null,
+        thumbnailSrc: page.thumbnailSrc || null,
+        src: page.src || null,
+        apiSrc: page.apiSrc || null,
+        eraserLayerBlob: page.eraserLayerBlob || null,
+        autoFitRevision: page.autoFitRevision || 0,
+        blocks: cloneBlocksForHistory(page.blocks)
+    };
+}
+
 // --- UNDO / REDO CONTROLLERS ---
 export function pushStateToHistory(): void {
-    const currentState = globalState.pages.map((page: any) => ({
-        id: page.id,
-        status: page.status,
-        eraserLayerBlob: page.eraserLayerBlob || null,
-        blocks: cloneBlocksForHistory(page.blocks)
-    }));
+    const currentState = globalState.pages.map((page: any) => clonePageForHistory(page));
 
     undoStack.push({
         pagesState: currentState,
@@ -323,24 +339,71 @@ export function clearHistory(): void {
 }
 
 export function applyStateFromSnapshot(snapshot: any): void {
-    if (!snapshot) return;
+    if (!snapshot || !Array.isArray(snapshot.pagesState)) return;
 
-    snapshot.pagesState.forEach((savedPage: any) => {
-        const targetPage = globalState.pages.find((p: any) => p.id === savedPage.id);
-        if (targetPage) {
-            targetPage.status = savedPage.status;
-            targetPage.eraserLayerBlob = savedPage.eraserLayerBlob || null;
-            targetPage.blocks = cloneBlocksForHistory(savedPage.blocks);
-            targetPage.autoFitRevision = (targetPage.autoFitRevision || 0) + 1;
-            savePageToDB(targetPage);
-        }
+    const snapshotPageIds = new Set(snapshot.pagesState.map((sp: any) => sp.id));
+
+    // 1. Remove pages from DB that are not in snapshot
+    const pagesToDelete = globalState.pages.filter((p: any) => !snapshotPageIds.has(p.id));
+    pagesToDelete.forEach((p: any) => {
+        deletePageFromDB(p.id);
     });
 
-    globalState.activePageIndex = snapshot.activePageIndex;
-    globalState.selectedBlockId = snapshot.selectedBlockId;
+    // 2. Restore or update all pages from snapshot
+    const existingPagesMap = new Map(globalState.pages.map((p: any) => [p.id, p]));
+    const restoredPages: any[] = [];
+
+    snapshot.pagesState.forEach((savedPage: any) => {
+        let page = existingPagesMap.get(savedPage.id);
+        if (page) {
+            page.name = savedPage.name || page.name;
+            page.status = savedPage.status;
+            page.width = savedPage.width || page.width;
+            page.height = savedPage.height || page.height;
+            page.apiWidth = savedPage.apiWidth || page.apiWidth;
+            page.apiHeight = savedPage.apiHeight || page.apiHeight;
+            page.file = savedPage.file || page.file;
+            page.originalFile = savedPage.originalFile || page.originalFile;
+            page.thumbnailBlob = savedPage.thumbnailBlob || page.thumbnailBlob;
+            page.eraserLayerBlob = savedPage.eraserLayerBlob || null;
+            page.blocks = cloneBlocksForHistory(savedPage.blocks);
+            page.autoFitRevision = (page.autoFitRevision || 0) + 1;
+        } else {
+            page = {
+                id: savedPage.id,
+                name: savedPage.name || 'Page',
+                width: savedPage.width || 800,
+                height: savedPage.height || 1200,
+                apiWidth: savedPage.apiWidth || savedPage.width || 800,
+                apiHeight: savedPage.apiHeight || savedPage.height || 1200,
+                status: savedPage.status || 'draft',
+                file: savedPage.file || null,
+                originalFile: savedPage.originalFile || null,
+                thumbnailBlob: savedPage.thumbnailBlob || null,
+                thumbnailSrc: savedPage.thumbnailSrc || null,
+                src: null,
+                apiSrc: null,
+                eraserLayerBlob: savedPage.eraserLayerBlob || null,
+                blocks: cloneBlocksForHistory(savedPage.blocks),
+                autoFitRevision: 1
+            };
+        }
+        savePageToDB(page);
+        restoredPages.push(page);
+    });
+
+    globalState.pages = restoredPages;
+
+    globalState.activePageIndex = (typeof snapshot.activePageIndex === 'number' && snapshot.activePageIndex >= 0 && snapshot.activePageIndex < globalState.pages.length)
+        ? snapshot.activePageIndex
+        : (globalState.pages.length > 0 ? 0 : -1);
+
+    globalState.selectedBlockId = snapshot.selectedBlockId || null;
     globalState.selectedBlockIds = Array.isArray(snapshot.selectedBlockIds)
         ? [...snapshot.selectedBlockIds]
         : (snapshot.selectedBlockId ? [snapshot.selectedBlockId] : []);
+
+    saveProjectMeta(globalState.pages.map(p => p.id), globalState.activePageIndex);
 
     if (onUndoRedoChange) onUndoRedoChange();
 
@@ -361,12 +424,7 @@ export function applyStateFromSnapshot(snapshot: any): void {
 
 export function executeUndo(): void {
     if (undoStack.length === 0) return;
-    const currentState = globalState.pages.map((page: any) => ({
-        id: page.id,
-        status: page.status,
-        eraserLayerBlob: page.eraserLayerBlob || null,
-        blocks: cloneBlocksForHistory(page.blocks)
-    }));
+    const currentState = globalState.pages.map((page: any) => clonePageForHistory(page));
 
     redoStack.push({
         pagesState: currentState,
@@ -381,12 +439,7 @@ export function executeUndo(): void {
 
 export function executeRedo(): void {
     if (redoStack.length === 0) return;
-    const currentState = globalState.pages.map((page: any) => ({
-        id: page.id,
-        status: page.status,
-        eraserLayerBlob: page.eraserLayerBlob || null,
-        blocks: cloneBlocksForHistory(page.blocks)
-    }));
+    const currentState = globalState.pages.map((page: any) => clonePageForHistory(page));
 
     undoStack.push({
         pagesState: currentState,
