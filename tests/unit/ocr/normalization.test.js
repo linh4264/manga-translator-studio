@@ -7,23 +7,23 @@ import {
     expandAiBox
 } from '../../../src/features/ocr/ocr-service.ts';
 
-test('OCR Normalization - Coordinate Scale Conversions (0-1000, 0-1, 0-100)', () => {
-    // 1. Scale 0-1000 (Gemini Vision Object Detection standard)
+test('OCR Normalization - Strictly 0-1000 Coordinate Scale Standardization', () => {
+    // 1. Scale 0-1000 Object { x, y, w, h }
     const geminiBox = { x: 250, y: 180, w: 300, h: 420 };
     const norm1 = normalizeAiBlockBox(geminiBox);
     assert.deepStrictEqual(norm1, { x: 25, y: 18, w: 30, h: 42 });
 
-    // 2. Scale 0-1 (Float percentage)
-    const floatBox = { x: 0.15, y: 0.20, w: 0.40, h: 0.35 };
-    const norm2 = normalizeAiBlockBox(floatBox);
+    // 2. Scale 0-1000 4-Element Array [x, y, w, h]
+    const array4DBox = [150, 200, 400, 350];
+    const norm2 = normalizeAiBlockBox(array4DBox);
     assert.deepStrictEqual(norm2, { x: 15, y: 20, w: 40, h: 35 });
 
-    // 3. Scale 0-100 (Standard percentage)
-    const standardBox = { x: 10, y: 15, w: 50, h: 60 };
-    const norm3 = normalizeAiBlockBox(standardBox);
-    assert.deepStrictEqual(norm3, { x: 10, y: 15, w: 50, h: 60 });
+    // 3. Scale 0-1000 Small coordinates near top-left (e.g. x=50, y=80 -> 5%, 8%)
+    const topLeftBox = { x: 50, y: 80, w: 200, h: 150 };
+    const norm3 = normalizeAiBlockBox(topLeftBox);
+    assert.deepStrictEqual(norm3, { x: 5, y: 8, w: 20, h: 15 });
 
-    // 4. Scale 0-1000 2-Element Array [x, y] Center Anchor (x = anchorX - 200px, y = anchorY - 200px -> w=400px, h=400px)
+    // 4. Scale 0-1000 2-Element Array [centerX, centerY]
     const array2DBox = [500, 300];
     const norm4 = normalizeAiBlockBox(array2DBox);
     assert.deepStrictEqual(norm4, { x: 30, y: 10, w: 40, h: 40 });

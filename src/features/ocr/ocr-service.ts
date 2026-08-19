@@ -725,36 +725,19 @@ export function normalizeAiBlockBox(box: any, imgW: number = 1000, imgH: number 
 
     if (Array.isArray(box)) {
         if (box.length === 2) {
-            x = Number(box[0]);
-            y = Number(box[1]);
-            if (x > 100 || y > 100) {
-                x /= 10;
-                y /= 10;
-            } else if (x <= 1.0 && y <= 1.0 && (x > 0 || y > 0)) {
-                x *= 100;
-                y *= 100;
-            }
-            x = x - (defaultWPct / 2);
-            y = y - (defaultHPct / 2);
+            // [centerX, centerY] on 0-1000 scale -> convert to 0-100% and offset to top-left
+            const centerX = Number(box[0]) / 10;
+            const centerY = Number(box[1]) / 10;
+            x = centerX - (defaultWPct / 2);
+            y = centerY - (defaultHPct / 2);
             w = defaultWPct;
             h = defaultHPct;
         } else if (box.length >= 4) {
-            x = Number(box[0]);
-            y = Number(box[1]);
-            w = Number(box[2]);
-            h = Number(box[3]);
-
-            if (x <= 1.0 && y <= 1.0 && w <= 1.0 && h <= 1.0) {
-                x *= 100;
-                y *= 100;
-                w *= 100;
-                h *= 100;
-            } else if ((x > 100 || y > 100 || w > 100 || h > 100 || (x + w > 100) || (y + h > 100)) && (x <= 1000 && y <= 1000 && w <= 1000 && h <= 1000)) {
-                x /= 10;
-                y /= 10;
-                w /= 10;
-                h /= 10;
-            }
+            // [x, y, w, h] on 0-1000 scale -> convert to 0-100%
+            x = Number(box[0]) / 10;
+            y = Number(box[1]) / 10;
+            w = Number(box[2]) / 10;
+            h = Number(box[3]) / 10;
         } else {
             return {
                 x: Math.max(0, Math.round((50 - defaultWPct / 2) * 100) / 100),
@@ -764,25 +747,14 @@ export function normalizeAiBlockBox(box: any, imgW: number = 1000, imgH: number 
             };
         }
     } else if (typeof box === 'object') {
-        x = Number(box.x !== undefined ? box.x : box.left);
-        y = Number(box.y !== undefined ? box.y : box.top);
+        // { x, y, w, h } on 0-1000 scale -> convert to 0-100%
+        x = Number(box.x !== undefined ? box.x : box.left) / 10;
+        y = Number(box.y !== undefined ? box.y : box.top) / 10;
         const rawW = box.w !== undefined ? box.w : box.width;
         const rawH = box.h !== undefined ? box.h : box.height;
 
-        w = rawW !== undefined ? Number(rawW) : defaultWPct;
-        h = rawH !== undefined ? Number(rawH) : defaultHPct;
-
-        if (x <= 1.0 && y <= 1.0 && w <= 1.0 && h <= 1.0) {
-            x *= 100;
-            y *= 100;
-            w *= 100;
-            h *= 100;
-        } else if ((x > 100 || y > 100 || w > 100 || h > 100 || (x + w > 100) || (y + h > 100)) && (x <= 1000 && y <= 1000 && w <= 1000 && h <= 1000)) {
-            x /= 10;
-            y /= 10;
-            w /= 10;
-            h /= 10;
-        }
+        w = rawW !== undefined ? Number(rawW) / 10 : defaultWPct;
+        h = rawH !== undefined ? Number(rawH) / 10 : defaultHPct;
     } else {
         return {
             x: Math.max(0, Math.round((50 - defaultWPct / 2) * 100) / 100),
@@ -805,8 +777,8 @@ export function normalizeAiBlockBox(box: any, imgW: number = 1000, imgH: number 
 
     const cleanX = Math.max(0, Math.min(100, x));
     const cleanY = Math.max(0, Math.min(100, y));
-    const cleanW = Math.max(1, Math.min(100 - cleanX, w));
-    const cleanH = Math.max(1, Math.min(100 - cleanY, h));
+    const cleanW = Math.max(0.1, Math.min(100 - cleanX, w));
+    const cleanH = Math.max(0.1, Math.min(100 - cleanY, h));
 
     return {
         x: Math.round(cleanX * 100) / 100,

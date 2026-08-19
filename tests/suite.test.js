@@ -11,14 +11,14 @@ const __dirname = path.dirname(__filename);
 test('OCR Box Normalization (scale 0-1000 to 0-100)', async () => {
     const { normalizeAiBlockBox } = await import('../src/features/ocr/ocr-service.ts');
     
-    // Scale 0-1000
+    // Scale 0-1000 Object { x, y, w, h }
     const rawBox1000 = { x: 200, y: 150, w: 300, h: 400 };
     const norm1 = normalizeAiBlockBox(rawBox1000);
     assert.deepStrictEqual(norm1, { x: 20, y: 15, w: 30, h: 40 });
 
-    // Scale 0-1 (float)
-    const rawBoxFloat = { x: 0.2, y: 0.15, w: 0.3, h: 0.4 };
-    const norm2 = normalizeAiBlockBox(rawBoxFloat);
+    // Scale 0-1000 Array [x, y, w, h]
+    const rawBoxArray = [200, 150, 300, 400];
+    const norm2 = normalizeAiBlockBox(rawBoxArray);
     assert.deepStrictEqual(norm2, { x: 20, y: 15, w: 30, h: 40 });
 });
 
