@@ -651,28 +651,3 @@ export function toggleDiamondWrapActiveBlock(): void {
     showToast(activeBlock.style.diamondWrap ? "Đã bật ngắt dòng Elip Manga 💎" : "Đã chuyển về ngắt dòng chữ nhật", "info");
 }
 
-if (typeof window !== 'undefined') {
-    Object.assign(window, {
-        setBlockType,
-        updateImageBlockOpacity,
-        updateImageBlockFit,
-        updateImageBlockBorderRadius,
-        toggleGradientEnabled,
-        syncGradientStartHex,
-        syncGradientEndHex,
-        updateGradientAngle,
-        restoreBackgroundForBlock,
-        restoreOriginalBackground,
-        syncTextColorHex,
-        syncBgColorHex,
-        syncStrokeColorHex,
-        syncShadowColorHex,
-        setBilingualMode,
-        setActiveBlockGender,
-        insertRichTextTag,
-        applyRichColorToSelection,
-        applyRichSizeToSelection,
-        clearRichFormattingFromSelection,
-        toggleDiamondWrapActiveBlock
-    });
-}

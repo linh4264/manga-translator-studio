@@ -2,9 +2,22 @@
 import { globalState, pushStateToHistory, savePageToDB, uiUpdateActiveBlockEditor } from '../core/state';
 import { elements } from '../core/elements';
 import { showToast } from '../core/utils';
-import { requestOverlayRender } from './canvas/canvas-service';
-import { computeBubbleMask } from './ocr/ocr-service';
+import { closeMobileMenus } from '../ui/layout-ui';
 import { MangaBlock, MangaPage } from '../types/index';
+import { computeBubbleMask } from './ocr/ocr-service';
+import { requestOverlayRender } from './canvas/canvas-renderer';
+
+let activeLassoPoints: { x: number; y: number }[] | null = null;
+let lassoOriginalImageData: ImageData | null = null;
+let cloneSourcePoint: { x: number; y: number } | null = null;
+
+export function getActiveLassoPoints(): { x: number; y: number }[] | null {
+    return activeLassoPoints;
+}
+
+export function setActiveLassoPoints(points: { x: number; y: number }[] | null): void {
+    activeLassoPoints = points;
+}
 
 export let isEraserModeActive = false;
 export let isDrawingOnEraser = false;
@@ -239,7 +252,7 @@ export function pickLassoRectSample(): void {
 }
 
 export function autoSampleNearbyLassoRect(): boolean {
-    const points = (window as any).activeLassoPoints;
+    const points = activeLassoPoints;
     const imgElement = elements.mangaBgImage;
     if (!imgElement || !imgElement.naturalWidth) {
         showToast("Không tìm thấy ảnh gốc để lấy mẫu.", "warn");
@@ -394,9 +407,7 @@ export function setEraserMode(active: boolean): void {
     const floatingBtn = document.getElementById('btn-eraser-mode-floating');
 
     if (isEraserModeActive) {
-        if (typeof window !== 'undefined' && (window as any).closeMobileMenus) {
-            (window as any).closeMobileMenus();
-        }
+        closeMobileMenus();
         const rightPanel = document.getElementById('right-panel');
         if (rightPanel && rightPanel.classList.contains('hidden')) {
             rightPanel.classList.remove('hidden');
@@ -536,7 +547,7 @@ export function setEraserBrushMode(mode: string): void {
         isPatchStampActive = false;
         isSelectingPatch = false;
 
-        (window as any).activeLassoPoints = null;
+        activeLassoPoints = null;
         updateLassoButtons(false);
     } else {
         if (btnEraser) {
@@ -718,7 +729,7 @@ export function initEraserDrawingEvents(): void {
                             updateLassoSampleUI(cropW, cropH, tempCanvas);
 
                             // 3. Update Live Preview in active Lasso Polygon
-                            if ((window as any).activeLassoPoints) {
+                            if (activeLassoPoints) {
                                 renderActiveLassoPreview();
                             }
                         }
@@ -780,7 +791,7 @@ export function initEraserDrawingEvents(): void {
             isSelectingLassoSample = false;
             initEraserDrawingEvents();
 
-            const activePts = (window as any).activeLassoPoints;
+            const activePts = activeLassoPoints;
             if (activePts && activePts.length >= 3) {
                 updateLassoButtons(true);
             }
@@ -814,13 +825,13 @@ export function initEraserDrawingEvents(): void {
             startPos = pos;
             points = [pos];
 
-            if ((window as any).lassoOriginalImageData) {
-                ctx.putImageData((window as any).lassoOriginalImageData, 0, 0);
+            if (lassoOriginalImageData) {
+                ctx.putImageData(lassoOriginalImageData, 0, 0);
             }
 
             preLassoImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            (window as any).lassoOriginalImageData = preLassoImageData;
-            (window as any).activeLassoPoints = null;
+            lassoOriginalImageData = preLassoImageData;
+            activeLassoPoints = null;
             updateLassoButtons(false);
 
             ctx.beginPath();
@@ -872,7 +883,7 @@ export function initEraserDrawingEvents(): void {
                     ctx.putImageData(preLassoImageData, 0, 0);
                 }
                 points = [];
-                (window as any).activeLassoPoints = null;
+                activeLassoPoints = null;
                 updateLassoButtons(false);
                 return;
             }
@@ -896,7 +907,7 @@ export function initEraserDrawingEvents(): void {
             ctx.fill();
             ctx.restore();
 
-            (window as any).activeLassoPoints = points;
+            activeLassoPoints = points;
             updateLassoButtons(true);
             renderActiveLassoPreview();
         };
@@ -1263,19 +1274,19 @@ export function initEraserDrawingEvents(): void {
             e.preventDefault();
             const pos = getMousePos(e);
             if (e.altKey) {
-                (window as any).cloneSourcePoint = { x: pos.x, y: pos.y };
+                cloneSourcePoint = { x: pos.x, y: pos.y };
                 showToast(`🎯 Đã ghim điểm mẫu tại (${Math.round(pos.x)}, ${Math.round(pos.y)})`, "success");
                 return;
             }
 
-            if (!(window as any).cloneSourcePoint) {
+            if (!cloneSourcePoint) {
                 showToast("⚠️ Vui lòng giữ phím Alt và Click chuột lên vùng ảnh mẫu trước!", "warn");
                 return;
             }
 
             isDrawingClone = true;
             strokeStartPos = { x: pos.x, y: pos.y };
-            sourceAnchor = { x: (window as any).cloneSourcePoint.x, y: (window as any).cloneSourcePoint.y };
+            sourceAnchor = { x: cloneSourcePoint.x, y: cloneSourcePoint.y };
             pushStateToHistory();
             drawCloneAt(pos.x, pos.y);
         };
@@ -1799,8 +1810,8 @@ export async function activateEyedropper(): Promise<void> {
         toggleEraserMode();
     }
 
-    if ((window as any).EyeDropper) {
-        const eyeDropper = new (window as any).EyeDropper();
+    if (typeof window !== 'undefined' && window.EyeDropper) {
+        const eyeDropper = new window.EyeDropper();
         try {
             const result = await eyeDropper.open();
             setEraserColor(result.sRGBHex);
@@ -1857,14 +1868,14 @@ export async function activateEyedropper(): Promise<void> {
 }
 
 export function clearLassoSelection(): void {
-    (window as any).activeLassoPoints = null;
+    activeLassoPoints = null;
     updateLassoButtons(false);
 
     const canvas = elements.eraserCanvas;
     const ctx = canvas?.getContext('2d');
-    if ((window as any).lassoOriginalImageData && ctx) {
-        ctx.putImageData((window as any).lassoOriginalImageData, 0, 0);
-        (window as any).lassoOriginalImageData = null;
+    if (lassoOriginalImageData && ctx) {
+        ctx.putImageData(lassoOriginalImageData, 0, 0);
+        lassoOriginalImageData = null;
     } else {
         const activePage = globalState.pages[globalState.activePageIndex];
         if (activePage) {
@@ -1877,7 +1888,7 @@ export function clearLassoSelection(): void {
 }
 
 export async function runLassoContentAwareFill(): Promise<void> {
-    const points = (window as any).activeLassoPoints;
+    const points = activeLassoPoints;
     if (!points || points.length < 3) {
         showToast("Vui lòng vẽ khoanh vùng chọn Lasso trước.", "warn");
         return;
@@ -1936,8 +1947,8 @@ export async function runLassoContentAwareFill(): Promise<void> {
     try {
         pushStateToHistory();
 
-        if ((window as any).lassoOriginalImageData) {
-            ctx.putImageData((window as any).lassoOriginalImageData, 0, 0);
+        if (lassoOriginalImageData) {
+            ctx.putImageData(lassoOriginalImageData, 0, 0);
         } else {
             await restorePageEraserDrawing(page);
         }
@@ -2147,8 +2158,8 @@ export async function runLassoContentAwareFill(): Promise<void> {
         await saveEraserDrawingToPage();
         requestOverlayRender();
 
-        (window as any).activeLassoPoints = null;
-        (window as any).lassoOriginalImageData = null;
+        activeLassoPoints = null;
+        lassoOriginalImageData = null;
         updateLassoButtons(false);
 
         showToast("✨ Đã lấp đầy vùng chọn Lasso thành công!", "success");
@@ -2237,7 +2248,7 @@ export function setLassoPatternType(type: LassoPatternType): void {
 }
 
 export function renderActiveLassoPreview(): void {
-    const points = (window as any).activeLassoPoints;
+    const points = activeLassoPoints;
     if (!points || points.length < 3) return;
 
     const canvas = elements.eraserCanvas;
@@ -2245,8 +2256,8 @@ export function renderActiveLassoPreview(): void {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return;
 
-    if ((window as any).lassoOriginalImageData) {
-        ctx.putImageData((window as any).lassoOriginalImageData, 0, 0);
+    if (lassoOriginalImageData) {
+        ctx.putImageData(lassoOriginalImageData, 0, 0);
     }
 
     if (lassoActiveTab === 'pattern') {
@@ -2592,7 +2603,7 @@ export function createMangaPatternTile(options: PatternTileOptions): HTMLCanvasE
 }
 
 export async function runLassoPatternFill(): Promise<void> {
-    const points = (window as any).activeLassoPoints;
+    const points = activeLassoPoints;
     if (!points || points.length < 3) {
         showToast("Vui lòng vẽ khoanh vùng chọn Lasso trước.", "warn");
         return;
@@ -2656,8 +2667,8 @@ export async function runLassoPatternFill(): Promise<void> {
     try {
         pushStateToHistory();
 
-        if ((window as any).lassoOriginalImageData) {
-            ctx.putImageData((window as any).lassoOriginalImageData, 0, 0);
+        if (lassoOriginalImageData) {
+            ctx.putImageData(lassoOriginalImageData, 0, 0);
         } else {
             await restorePageEraserDrawing(page);
         }
@@ -2778,8 +2789,8 @@ export async function runLassoPatternFill(): Promise<void> {
         await saveEraserDrawingToPage();
         requestOverlayRender();
 
-        (window as any).activeLassoPoints = null;
-        (window as any).lassoOriginalImageData = null;
+        activeLassoPoints = null;
+        lassoOriginalImageData = null;
         updateLassoButtons(false);
 
         showToast("✨ Đã lấp đầy vùng chọn Lasso bằng mảng vân thành công!", "success");
@@ -2811,32 +2822,3 @@ export function expandEraserPanel(): void {
     if (trigger) trigger.classList.add('hidden');
 }
 
-if (typeof window !== 'undefined') {
-    (window as any).autoCleanActiveBlock = autoCleanActiveBlock;
-    (window as any).toggleEraserMode = toggleEraserMode;
-    (window as any).openEraserMode = openEraserMode;
-    (window as any).closeEraserMode = closeEraserMode;
-    (window as any).updateEraserBrushSize = updateEraserBrushSize;
-    (window as any).setEraserColor = setEraserColor;
-    (window as any).clearEraserDrawing = clearEraserDrawing;
-    (window as any).aiSmartInpaintBlock = aiSmartInpaintBlock;
-    (window as any).activateEyedropper = activateEyedropper;
-    (window as any).setEraserBrushMode = setEraserBrushMode;
-    (window as any).startTexturePatchSelection = startTexturePatchSelection;
-    (window as any).clearLassoSelection = clearLassoSelection;
-    (window as any).runLassoContentAwareFill = runLassoContentAwareFill;
-    (window as any).runLassoPatternFill = runLassoPatternFill;
-    (window as any).setLassoFillTab = setLassoFillTab;
-    (window as any).setLassoFillTechnique = setLassoFillTechnique;
-    (window as any).setLassoPatternType = setLassoPatternType;
-    (window as any).setLassoPatternOffsetX = setLassoPatternOffsetX;
-    (window as any).setLassoPatternOffsetY = setLassoPatternOffsetY;
-    (window as any).nudgeLassoPatternOffset = nudgeLassoPatternOffset;
-    (window as any).resetLassoPatternOffset = resetLassoPatternOffset;
-    (window as any).renderActiveLassoPreview = renderActiveLassoPreview;
-    (window as any).pickLassoSamplePatch = pickLassoSamplePatch;
-    (window as any).pickLassoRectSample = pickLassoRectSample;
-    (window as any).autoSampleNearbyLassoRect = autoSampleNearbyLassoRect;
-    (window as any).minimizeEraserPanel = minimizeEraserPanel;
-    (window as any).expandEraserPanel = expandEraserPanel;
-}

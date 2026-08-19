@@ -7,6 +7,7 @@ import {
     openMobileLeftPanel, openMobileRightPanel, toggleMobileLeftPanel, toggleMobileRightPanel,
     toggleMobileMoreMenu, closeMobileMoreMenu, navigateMobilePage, updateMobileNavUI
 } from './layout-ui';
+import { elements } from '../core/elements';
 import { initTouchGestures, toggleMobileHandMode, isMobileHandModeActive } from '../features/canvas/touch-gestures';
 
 import {
@@ -52,8 +53,7 @@ import {
 import { globalState, stateEvents, debounceSavePage } from '../core/state';
 import { CUSTOM_MODEL_VALUE } from '../config/constants';
 import { globalBus } from '../core/events';
-import { elements } from '../core/elements';
-import { copyBlockStyle, pasteBlockStyle, navigateBlocks, syncActiveBlockStyle, selectAllBlocksOnPage, copiedStyle } from '../features/canvas/canvas-service';
+import { copyBlockStyle, pasteBlockStyle, navigateBlocks, syncActiveBlockStyle, selectAllBlocksOnPage, copiedStyle, isSpacePanPressed, setSpacePanPressed } from '../features/canvas/canvas-service';
 import { safeSetLocalStorage } from '../core/utils/storage';
 import { runLocalOcrDetectionOnPage } from '../features/ocr/ocr-service';
 
@@ -286,7 +286,7 @@ export function initEventListeners(): void {
         syncMobileToolbarState();
     });
 
-    (window as any).__isSpacePanPressed = false;
+    setSpacePanPressed(false);
     let isPanning = false;
     let panStartX = 0;
     let panStartY = 0;
@@ -304,8 +304,8 @@ export function initEventListeners(): void {
     window.addEventListener('keydown', (e: KeyboardEvent) => {
         if (e.code === 'Space' || e.key === ' ') {
             if (isTextInputActive(e.target)) return;
-            if (!(window as any).__isSpacePanPressed) {
-                (window as any).__isSpacePanPressed = true;
+            if (!isSpacePanPressed()) {
+                setSpacePanPressed(true);
                 const viewport = document.getElementById('workspace-viewport');
                 if (viewport) viewport.classList.add('space-pan-active');
                 document.body?.classList.add('space-pan-active');
@@ -316,7 +316,7 @@ export function initEventListeners(): void {
 
     window.addEventListener('keyup', (e: KeyboardEvent) => {
         if (e.code === 'Space' || e.key === ' ') {
-            (window as any).__isSpacePanPressed = false;
+            setSpacePanPressed(false);
             const viewport = document.getElementById('workspace-viewport');
             if (viewport) viewport.classList.remove('space-pan-active');
             document.body?.classList.remove('space-pan-active');
@@ -328,7 +328,7 @@ export function initEventListeners(): void {
     });
 
     window.addEventListener('blur', () => {
-        (window as any).__isSpacePanPressed = false;
+        setSpacePanPressed(false);
         isPanning = false;
         const viewport = document.getElementById('workspace-viewport');
         if (viewport) {
@@ -341,7 +341,7 @@ export function initEventListeners(): void {
 
     window.addEventListener('mousedown', (e: MouseEvent) => {
         const isMiddleClick = e.button === 1;
-        const isLeftSpaceDrag = e.button === 0 && (window as any).__isSpacePanPressed;
+        const isLeftSpaceDrag = e.button === 0 && isSpacePanPressed();
 
         if (isMiddleClick || isLeftSpaceDrag) {
             const viewport = document.getElementById('workspace-viewport');
@@ -381,12 +381,12 @@ export function initEventListeners(): void {
             const viewport = document.getElementById('workspace-viewport');
             if (viewport) {
                 viewport.classList.remove('space-panning');
-                if (!(window as any).__isSpacePanPressed) {
+                if (!isSpacePanPressed()) {
                     viewport.classList.remove('space-pan-active');
                 }
             }
             document.body?.classList.remove('space-panning');
-            if (!(window as any).__isSpacePanPressed) {
+            if (!isSpacePanPressed()) {
                 document.body?.classList.remove('space-pan-active');
             }
         }
@@ -770,126 +770,3 @@ export function initEventListeners(): void {
     }
 }
 
-if (typeof window !== 'undefined') {
-    Object.assign(window, {
-        triggerReplaceBgImage,
-        handleReplaceBgFileInput,
-        uploadCustomFonts,
-        updateUndoRedoUI,
-        setRightTab,
-        setViewMode,
-        changeZoom,
-        resetZoom,
-        fitCanvasToScreen,
-        toggleLeftSidebarMoreMenu,
-        toggleApiKeyVisibility,
-        updateSelectedModel,
-        openSettingsModal,
-        closeSettingsModal,
-        switchSettingsTab,
-        openHelpModal,
-        closeHelpModal,
-        switchHelpTab,
-        updateSourceLanguage,
-        updateTargetLanguage,
-        updatePronounMatrix,
-        updateGlossary,
-        toggleStoryMemory,
-        togglePreserveNames,
-        updateTranslationGenrePreset,
-        updateComicUniverse,
-        updateComicGenre,
-        toggleComicGenre,
-        updateComicTone,
-        updateTranslationContextPrompt,
-        updateApiDelay,
-        updateMaxRetries,
-        updateAiProvider,
-        updateDefaultFont,
-        updateDefaultTypeFont,
-        setBlockType,
-        updateApiEndpoint,
-        updateExportFormat,
-        updateExportPdfQuality,
-        toggleSidebarToolsMenu,
-        toggleMobileSidebar,
-        openMobileLeftPanel,
-        openMobileRightPanel,
-        toggleMobileLeftPanel,
-        toggleMobileRightPanel,
-        toggleMobileMoreMenu,
-        closeMobileMoreMenu,
-        navigateMobilePage,
-        updateMobileNavUI,
-        toggleMobileHandMode,
-        isMobileHandModeActive,
-        syncMobileMenuState,
-        syncMobileToolbarState,
-        closeMobileMenus,
-        toggleLeftSidebar,
-        toggleRightSidebar,
-        toggleQuickBilingualMode,
-        toggleQuickAudioDrama,
-        openPreviewMode,
-        closePreviewMode,
-        previewPrevPage,
-        previewNextPage,
-        restoreOriginalBackground,
-        copyBlockStyle,
-        pasteBlockStyle,
-        selectPage,
-        removePage,
-        toggleExportRangeInputs,
-        validateExportRange,
-        syncTextColorHex,
-        syncBgColorHex,
-        syncStrokeColorHex,
-        syncShadowColorHex,
-        openLorebookModal,
-        closeLorebookModal,
-        switchLorebookTab,
-        addCharacterDossierEntry,
-        removeCharacterDossierEntry,
-        addLorebookTermEntry,
-        removeLorebookTermEntry,
-        exportLorebookJSON,
-        importLorebookJSON,
-        filterPagesList,
-        setBilingualMode,
-        setActiveBlockGender,
-        runLocalOcrDetectionOnPage,
-        insertRichTextTag,
-        applyRichColorToSelection,
-        applyRichSizeToSelection,
-        clearRichFormattingFromSelection,
-        toggleDiamondWrapActiveBlock,
-        toggleGradientEnabled,
-        syncGradientStartHex,
-        syncGradientEndHex,
-        updateGradientAngle,
-        exportCurrentPagePSD: async () => {
-            const io = await import('../features/io');
-            return io.exportCurrentPagePSD();
-        },
-        openLocalFolderPicker: async () => {
-            const fs = await import('../features/fs-access');
-            return fs.openLocalFolderPicker();
-        },
-        exportPagesDirectlyToDisk: async () => {
-            const fs = await import('../features/fs-access');
-            return fs.exportPagesDirectlyToDisk();
-        },
-        saveProjectDirectlyToDisk: async () => {
-            const fs = await import('../features/fs-access');
-            return fs.saveProjectDirectlyToDisk();
-        },
-        reconnectDirectoryHandle: async () => {
-            const fs = await import('../features/fs-access');
-            return fs.reconnectDirectoryHandle();
-        },
-        unlinkConnectedFolder: async () => {
-            const fs = await import('../features/fs-access');
-            return fs.unlinkConnectedFolder();
-        }
-    });
-}

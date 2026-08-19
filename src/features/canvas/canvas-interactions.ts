@@ -6,8 +6,16 @@ import { autoFitBlock, isBlockAutoFit, copiedStyle } from './canvas-styling';
 import { showToast } from '../../core/utils';
 import { MangaBlock, BlockStyle } from '../../types/index';
 
+let spacePanActive = false;
+export function isSpacePanPressed(): boolean {
+    return spacePanActive;
+}
+export function setSpacePanPressed(pressed: boolean): void {
+    spacePanActive = pressed;
+}
+
 export function startBlockDrag(e: any, block: MangaBlock): void {
-    if ((window as any).__isSpacePanPressed || e.button === 1) return;
+    if (isSpacePanPressed() || e.button === 1) return;
     if (e.target.classList.contains('resize-handle')) return;
     if (e.target.isContentEditable || (block as any)._isEditingInline) return;
 
@@ -137,7 +145,7 @@ export function startBlockDrag(e: any, block: MangaBlock): void {
 }
 
 export function startBlockResize(e: any, block: MangaBlock, handleDir: string): void {
-    if ((window as any).__isSpacePanPressed || e.button === 1) return;
+    if (isSpacePanPressed() || e.button === 1) return;
     e.stopPropagation();
     e.preventDefault();
     pushStateToHistory();
@@ -626,7 +634,7 @@ export function initMarqueeSelection(): void {
     }
 
     viewport.addEventListener('mousedown', (e: MouseEvent) => {
-        if ((window as any).__isSpacePanPressed || e.button !== 0) return;
+        if (isSpacePanPressed() || e.button !== 0) return;
         if ((globalState as any).magicWandActive) return;
 
         const target = e.target as HTMLElement;

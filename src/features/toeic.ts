@@ -869,28 +869,3 @@ function getDueSrsWords(): ToeicWord[] {
     });
 }
 
-
-if (typeof window !== 'undefined') {
-    (window as any).quickOpenToeicAnalysis = quickOpenToeicAnalysis;
-    (window as any).updateToeicTabUI = updateToeicTabUI;
-    (window as any).resetToeicAnalysisUI = resetToeicAnalysisUI;
-    (window as any).displayToeicAnalysis = displayToeicAnalysis;
-    (window as any).checkToeicAnswer = checkToeicAnswer;
-    (window as any).analyzeBlockForToeic = analyzeBlockForToeic;
-    (window as any).toggleSaveToeicWordByIndex = toggleSaveToeicWordByIndex;
-    (window as any).updateToeicNotebookUI = updateToeicNotebookUI;
-    (window as any).openSrsReviewModal = openSrsReviewModal;
-    (window as any).closeSrsReviewModal = closeSrsReviewModal;
-    (window as any).flipSrsCard = flipSrsCard;
-    (window as any).speakSrsCurrentWord = speakSrsCurrentWord;
-    (window as any).submitSrsReview = submitSrsReview;
-    (window as any).deleteSavedToeicWord = deleteSavedToeicWord;
-    (window as any).exportToeicWordsToAnki = exportToeicWordsToAnki;
-    (window as any).speakText = speakText;
-    (window as any).setToeicMode = setToeicMode;
-    (window as any).showToeicRecallHint = showToeicRecallHint;
-    (window as any).checkToeicRecall = checkToeicRecall;
-    (window as any).speakCorrectRecallSentence = speakCorrectRecallSentence;
-    (window as any).selectToeicQuestion = selectToeicQuestion;
-    (window as any).renderActiveToeicQuestion = renderActiveToeicQuestion;
-}

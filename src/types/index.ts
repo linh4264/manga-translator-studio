@@ -227,3 +227,17 @@ export interface TranslationResultItem {
     speaker?: string;
     target?: string;
 }
+
+declare global {
+    interface Window {
+        EyeDropper?: new () => { open: () => Promise<{ sRGBHex: string }> };
+        showDirectoryPicker?: (options?: any) => Promise<any>;
+        agPsd?: any;
+        JSZip?: any;
+        jspdf?: any;
+        jsPDF?: any;
+        google?: any;
+    }
+}
+
+

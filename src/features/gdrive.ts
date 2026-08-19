@@ -442,11 +442,11 @@ export async function importProjectFromGDrive(fileId: string): Promise<void> {
 export function initGoogleGISClient(customClientId: string = ''): boolean {
     const idToUse = customClientId || googleClientId || localStorage.getItem('gdrive_client_id') || '';
     if (!idToUse) return false;
-    if ((window as any).google?.accounts?.oauth2) {
+    if (typeof window !== 'undefined' && window.google?.accounts?.oauth2) {
         try {
             googleClientId = idToUse;
             safeSetLocalStorage('gdrive_client_id', idToUse);
-            tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+            tokenClient = window.google.accounts.oauth2.initTokenClient({
                 client_id: idToUse,
                 scope: 'https://www.googleapis.com/auth/drive.file',
                 callback: (tokenResponse: any) => {
@@ -529,16 +529,3 @@ export function saveGDriveTokenFromUI(): void {
     }
 }
 
-if (typeof window !== 'undefined') {
-    Object.assign(window, {
-        openGDriveModal,
-        closeGDriveModal,
-        saveGDriveTokenFromUI,
-        loginWithGoogleOAuth,
-        uploadProjectToGDrive,
-        importProjectFromGDrive,
-        loadGDriveProjectList,
-        createNewGDriveFolder,
-        onGDriveFolderChange
-    });
-}

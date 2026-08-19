@@ -172,8 +172,3 @@ export function compilePronounMatrixPrompt(matrixData?: PronounMatrixData): stri
     return hasRules ? prompt : '';
 }
 
-if (typeof window !== 'undefined') {
-    (window as any).addCharacterToMatrix = addCharacterToMatrix;
-    (window as any).removeCharacterFromMatrix = removeCharacterFromMatrix;
-    (window as any).updateRelationship = updateRelationship;
-}

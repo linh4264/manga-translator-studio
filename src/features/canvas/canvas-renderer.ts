@@ -1288,7 +1288,3 @@ export function commitActiveEditingState(): void {
     }
 }
 
-if (typeof window !== 'undefined') {
-    (window as any).triggerInlineEditActiveBlock = triggerInlineEditActiveBlock;
-    (window as any).commitActiveEditingState = commitActiveEditingState;
-}

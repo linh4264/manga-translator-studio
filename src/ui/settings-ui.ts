@@ -260,18 +260,28 @@ export function updateAllModelDropdowns(fetchedModels: string[] = []): void {
     }
 }
 
+let cachedGeminiModels: string[] = [];
+
+export function getCachedGeminiModels(): string[] {
+    return cachedGeminiModels;
+}
+
+export function setCachedGeminiModels(models: string[]): void {
+    cachedGeminiModels = models;
+}
+
 export async function fetchGeminiModels(isManual: boolean = false): Promise<void> {
     const keyToUse = ((elements.apiKeyInput ? elements.apiKeyInput.value : "") || globalState.apiKey || "").trim();
     if (!keyToUse) {
-        updateAllModelDropdowns((window as any).__cachedGeminiModels || []);
+        updateAllModelDropdowns(cachedGeminiModels);
         if (isManual) {
             showToast("Vui lòng nhập API Key trước khi tải danh sách Model.", "warn");
         }
         return;
     }
 
-    if (!isManual && (window as any).__cachedGeminiModels && (window as any).__cachedGeminiModels.length > 0) {
-        updateAllModelDropdowns((window as any).__cachedGeminiModels);
+    if (!isManual && cachedGeminiModels.length > 0) {
+        updateAllModelDropdowns(cachedGeminiModels);
         return;
     }
 
@@ -283,7 +293,7 @@ export async function fetchGeminiModels(isManual: boolean = false): Promise<void
     try {
         const response = await fetch(getGeminiModelsUrl(keyToUse));
         if (!response.ok) {
-            updateAllModelDropdowns((window as any).__cachedGeminiModels || []);
+            updateAllModelDropdowns(cachedGeminiModels);
             if (isManual) {
                 showToast(`Không thể tải Model từ API (Mã lỗi ${response.status}). Vui lòng kiểm tra lại API Key.`, "error");
             }
@@ -307,18 +317,18 @@ export async function fetchGeminiModels(isManual: boolean = false): Promise<void
                 .map((m: any) => m.name.replace('models/', ''));
 
             if (geminiModels.length > 0) {
-                (window as any).__cachedGeminiModels = geminiModels;
+                cachedGeminiModels = geminiModels;
                 updateAllModelDropdowns(geminiModels);
                 if (isManual) {
                     showToast(`Đã nạp và cập nhật thành công ${geminiModels.length} mô hình từ Google Gemini!`, "success");
                 }
             } else {
-                updateAllModelDropdowns((window as any).__cachedGeminiModels || []);
+                updateAllModelDropdowns(cachedGeminiModels);
             }
         }
     } catch (e) {
         console.warn("Không thể tự động tải danh sách Gemini models:", e);
-        updateAllModelDropdowns((window as any).__cachedGeminiModels || []);
+        updateAllModelDropdowns(cachedGeminiModels);
         if (isManual) {
             showToast("Lỗi kết nối mạng khi tải danh sách model.", "error");
         }
@@ -401,7 +411,7 @@ export async function openSettingsModal(): Promise<void> {
     syncPipelineModeUI(globalState.translationPipelineMode || 'two-step');
     syncGenrePresetCheckboxes();
 
-    updateAllModelDropdowns((window as any).__cachedGeminiModels || []);
+    updateAllModelDropdowns(cachedGeminiModels);
     updateModelLockingUI();
 
     const defaultFontSelect = document.getElementById('default-font') as HTMLSelectElement | null;
@@ -736,16 +746,3 @@ export function updateExportPdfQuality(value: string): void {
     safeSetLocalStorage('manga_pdf_quality', globalState.pdfQuality);
 }
 
-if (typeof window !== 'undefined') {
-    Object.assign(window, {
-        switchSettingsTab,
-        updateDefaultTypeFont,
-        updateDefaultFont,
-        updateTranslationContextPrompt,
-        updatePipelineMode,
-        updateOcrModel,
-        updateTranslationModel,
-        fetchGeminiModels,
-        updateAllModelDropdowns
-    });
-}

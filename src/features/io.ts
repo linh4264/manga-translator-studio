@@ -477,7 +477,7 @@ export async function runBatchExport(): Promise<void> {
             updateProcessingOverlay(true, "Đang nén dữ liệu...", "Đang tạo file .zip tải về...", 95);
 
             let zipBlob: Blob;
-            const JSZipClass = (window as any).JSZip;
+            const JSZipClass = typeof window !== 'undefined' ? window.JSZip : undefined;
 
             if (JSZipClass) {
                 const zip = new JSZipClass();
@@ -550,7 +550,7 @@ export async function runPdfExport(): Promise<void> {
     commitActiveEditingState();
     await saveEraserDrawingToPage();
 
-    const jsPDFClass = ((window as any).jspdf && (window as any).jspdf.jsPDF) || (window as any).jsPDF;
+    const jsPDFClass = typeof window !== 'undefined' ? ((window.jspdf && window.jspdf.jsPDF) || window.jsPDF) : undefined;
     if (!jsPDFClass) {
         showToast("Thư viện jsPDF chưa sẵn sàng. Vui lòng tải lại trang.", "error");
         return;
@@ -1468,28 +1468,6 @@ export function executeFindReplaceAll(): void {
     updateActiveBlockEditor();
     showToast(`⚡ Đã tìm và thay thế thành công ${count} vị trí trên tất cả các trang!`, "success");
     closeFindReplaceModal();
-}
-
-if (typeof window !== 'undefined') {
-    Object.assign(window, {
-        handleUploadedFiles,
-        sortPagesByName,
-        exportActivePage,
-        closeExportModal,
-        runBatchExport,
-        runPdfExport,
-        promptExportScript,
-        exportTranslationScript,
-        importTranslationScript,
-        triggerImportScript,
-        exportProjectBackup,
-        importProjectBackup,
-        clearMemoryCache,
-        clearCurrentProject,
-        openFindReplaceModal,
-        closeFindReplaceModal,
-        executeFindReplaceAll
-    });
 }
 
 export { runBatchExport as exportAllPagesZip };

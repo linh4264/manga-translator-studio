@@ -38,6 +38,7 @@ import { copyBlockStyle, pasteBlockStyle, applyStylePreset } from '../features/c
 import { renderCustomPresetsUI, openPresetModal, closePresetModal, savePresetFromActiveBlockUI } from '../ui/preset-ui';
 import { playPageAudioDrama, pauseAudioDrama, stopAudioDrama, speakActiveBlock, openAudioSettingsModal, closeAudioSettingsModal } from '../features/audio';
 import { initI18n, changeUILanguage } from './i18n';
+import { initGlobalBridge } from './global-bridge';
 
 export async function initApplication(): Promise<void> {
 
@@ -45,7 +46,9 @@ export async function initApplication(): Promise<void> {
 
     // Initialize UI language translation (i18n)
     initI18n();
-    (window as any).changeUILanguage = changeUILanguage;
+
+    // Initialize Centralized Global Bridge for HTML inline event handlers
+    initGlobalBridge();
 
     // Register actions for global event delegation router
     registerAction('openSettingsModal', openSettingsModal);
@@ -259,11 +262,5 @@ export async function initApplication(): Promise<void> {
         updateUndoRedoUI();
     } catch (dbErr) {
         console.error("Lỗi khởi tạo/khôi phục dữ liệu từ IndexedDB:", dbErr);
-    }
-
-    if (typeof window !== 'undefined') {
-        Object.assign(window, {
-            loadDemoManga: () => import('../ui/pages-ui').then(m => m.loadDemoManga())
-        });
     }
 }

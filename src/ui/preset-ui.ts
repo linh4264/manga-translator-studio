@@ -485,22 +485,3 @@ export function clearAllPresetsWithConfirm(): void {
     }
 }
 
-// Global window bindings for direct HTML onclick handlers
-if (typeof window !== 'undefined') {
-    Object.assign(window, {
-        renderCustomPresetsUI,
-        renderQuickPresetsBar,
-        applyCustomPresetUI,
-        savePresetFromActiveBlockUI,
-        updatePresetFromActiveBlockUI,
-        duplicatePresetUI,
-        deletePresetUI,
-        openPresetModal,
-        closePresetModal,
-        selectPresetIconEmoji,
-        submitPresetModal,
-        triggerImportPresetsFile,
-        clearAllPresetsWithConfirm,
-        exportPresetsJSON
-    });
-}

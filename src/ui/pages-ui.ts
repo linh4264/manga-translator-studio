@@ -429,14 +429,3 @@ export async function loadDemoManga(): Promise<void> {
     }
 }
 
-if (typeof window !== 'undefined') {
-    Object.assign(window, {
-        toggleExportRangeInputs,
-        validateExportRange,
-        setExportRangeToCurrent,
-        triggerReplaceBgImage,
-        handleReplaceBgFileInput,
-        replacePageBackgroundImage,
-        loadDemoManga
-    });
-}

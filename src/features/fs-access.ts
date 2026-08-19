@@ -37,7 +37,7 @@ export async function openLocalFolderPicker(): Promise<void> {
     }
 
     try {
-        const dirHandle = await (window as any).showDirectoryPicker({
+        const dirHandle = await window.showDirectoryPicker!({
             id: 'manga_folder_input',
             mode: 'readwrite'
         });
@@ -55,7 +55,7 @@ export async function openLocalFolderPicker(): Promise<void> {
         const imageFiles: File[] = [];
         const validExtensions = /\.(png|jpe?g|webp|avif|bmp|gif)$/i;
 
-        for await (const [name, handle] of dirHandle.entries()) {
+        for await (const [name, handle] of (dirHandle as any).entries()) {
             if (handle.kind === 'file' && validExtensions.test(name)) {
                 try {
                     const file = await handle.getFile();
@@ -192,7 +192,7 @@ export async function exportPagesDirectlyToDisk(): Promise<void> {
     if (!targetDirHandle || !isFileSystemAccessSupported()) {
         if (isFileSystemAccessSupported()) {
             try {
-                targetDirHandle = await (window as any).showDirectoryPicker({
+                targetDirHandle = await window.showDirectoryPicker!({
                     id: 'manga_folder_output',
                     mode: 'readwrite'
                 });
@@ -380,9 +380,3 @@ export async function saveProjectDirectlyToDisk(): Promise<void> {
     }
 }
 
-if (typeof window !== 'undefined') {
-    (window as any).exportPagesDirectlyToDisk = exportPagesDirectlyToDisk;
-    (window as any).reconnectDirectoryHandle = reconnectDirectoryHandle;
-    (window as any).openLocalFolderPicker = openLocalFolderPicker;
-    (window as any).saveProjectDirectlyToDisk = saveProjectDirectlyToDisk;
-}

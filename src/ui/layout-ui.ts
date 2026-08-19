@@ -730,26 +730,3 @@ export function updateStepperUI(): void {
     updateMobileNavUI();
 }
 
-if (typeof window !== 'undefined') {
-    Object.assign(window, {
-        updateStepperUI,
-        fitCanvasToScreen,
-        toggleLeftSidebarMoreMenu,
-        openMobileLeftPanel,
-        openMobileRightPanel,
-        toggleMobileLeftPanel,
-        toggleMobileRightPanel,
-        closeMobileMenus,
-        toggleMobileMoreMenu,
-        closeMobileMoreMenu,
-        navigateMobilePage,
-        updateMobileNavUI,
-        openMobileQuickEditor,
-        closeMobileQuickEditor,
-        triggerMobileQuickEdit,
-        changeMobileActiveFontSize,
-        toggleMobileActiveOrientation,
-        balanceMobileActiveDiamond,
-        deleteMobileActiveBlock
-    });
-}

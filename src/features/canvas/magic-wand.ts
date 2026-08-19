@@ -1,12 +1,12 @@
 // Magic Wand Tool: High-Performance Automatic Speech Bubble Detection & Snapping
+import type { BoundingBox } from '../../types';
 import { globalState, pushStateToHistory, savePageToDB, uiUpdateActiveBlockEditor } from '../../core/state';
 import { elements } from '../../core/elements';
 import { showToast } from '../../core/utils';
 import { detectSpeechBubbleAtPoint } from '../ocr/ocr-service';
 import { autoFitBlock, isBlockAutoFit } from './canvas-styling';
+import { selectBlock, isSpacePanPressed } from './canvas-interactions';
 import { requestOverlayRender } from './canvas-renderer';
-import { selectBlock } from './canvas-interactions';
-import { BoundingBox } from '../../types/index';
 
 export { detectSpeechBubbleAtPoint };
 
@@ -317,7 +317,7 @@ export function initMagicWandEvents(): void {
     magicWandEventsInitialized = true;
 
     viewport.addEventListener('mousedown', (e: MouseEvent) => {
-        if ((window as any).__isSpacePanPressed || e.button !== 0) return;
+        if (isSpacePanPressed() || e.button !== 0) return;
 
         const target = e.target as HTMLElement;
         if (target.closest('#canvas-floating-toolbar') || target.closest('button') || target.classList.contains('resize-handle')) {

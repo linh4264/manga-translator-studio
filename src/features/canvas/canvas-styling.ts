@@ -661,9 +661,7 @@ export function normalizeAllBlocksToHorizontal(): void {
     if (count > 0) {
         markPageAutoFitDirty(page);
         pushStateToHistory();
-        if (typeof (window as any).selectPage === 'function') {
-            (window as any).selectPage(globalState.activePageIndex);
-        }
+        import('../../ui/pages-ui').then(m => m.selectPage(globalState.activePageIndex));
         showToast(`✅ Đã chuyển ${count} ô thoại thành chữ viết Ngang!`, "success");
     }
 }
@@ -1062,35 +1060,3 @@ export function batchDiamondBalanceSelectedBlocks(): void {
     });
 }
 
-if (typeof window !== 'undefined') {
-    Object.assign(window, {
-        toggleBlockAutoFit,
-        toggleAutoFit,
-        applyStylePreset,
-        updateSfxSkewX,
-        updateSfxSkewY,
-        updateSfxWave,
-        updateSfxBulge,
-        updateSfxArc,
-        updateSfxRotate,
-        resetWarpTransformControls,
-        resetSfxAngleControls,
-        toggleActiveBlockBold,
-        toggleActiveBlockItalic,
-        toggleActiveBlockUnderline,
-        setActiveBlockTextTransform,
-        updateLineHeight,
-        updateLetterSpacing,
-        updateStrokeWidth2,
-        syncStrokeColor2Hex,
-        updateShadowOffsetX,
-        updateShadowOffsetY,
-        cleanActiveBlockPunctuation,
-        cleanAllBlocksPunctuation,
-        applyCurrentStyleToPage,
-        applyCurrentStyleToAllPages,
-        alignActiveBlockPosition,
-        toggleSelectedBlocksOrientation,
-        batchDiamondBalanceSelectedBlocks
-    });
-}

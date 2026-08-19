@@ -170,10 +170,3 @@ export function initTouchGestures(): void {
     viewport.addEventListener('touchcancel', endPinchOrPan);
 }
 
-if (typeof window !== 'undefined') {
-    Object.assign(window, {
-        toggleMobileHandMode,
-        isMobileHandModeActive,
-        initTouchGestures
-    });
-}

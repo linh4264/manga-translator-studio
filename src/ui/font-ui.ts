@@ -173,10 +173,3 @@ export async function uploadCustomFonts(files: FileList | File[]): Promise<void>
     }
 }
 
-if (typeof window !== 'undefined') {
-    Object.assign(window, {
-        deleteCustomFont,
-        uploadCustomFonts,
-        renderCustomFontsListUI
-    });
-}

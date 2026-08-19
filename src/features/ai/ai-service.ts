@@ -26,15 +26,3 @@ import {
     runAIEraseTextPage
 } from './ai-inpainting';
 
-if (typeof window !== 'undefined') {
-    Object.assign(window, {
-        toggleStoryMemory,
-        clearStoryMemory,
-        viewStoryMemoryModal,
-        cancelBatchTranslation,
-        translateActivePage,
-        runBatchTranslation,
-        requestAiInpaintPatch,
-        runAIEraseTextPage
-    });
-}

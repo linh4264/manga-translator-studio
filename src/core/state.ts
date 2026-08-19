@@ -411,8 +411,8 @@ export function applyStateFromSnapshot(snapshot: any): void {
         onSnapshotRestored(snapshot);
     } else {
         uiUpdatePageListUI();
-        if (typeof window !== 'undefined' && typeof (window as any).selectPage === 'function' && globalState.activePageIndex !== -1) {
-            (window as any).selectPage(globalState.activePageIndex);
+        if (globalState.activePageIndex !== -1) {
+            import('../ui/pages-ui').then(m => m.selectPage(globalState.activePageIndex));
         }
         globalState.selectedBlockId = snapshot.selectedBlockId;
         globalState.selectedBlockIds = Array.isArray(snapshot.selectedBlockIds)
@@ -450,11 +450,6 @@ export function executeRedo(): void {
 
     const next = redoStack.pop();
     applyStateFromSnapshot(next);
-}
-
-if (typeof window !== 'undefined') {
-    (window as any).executeUndo = executeUndo;
-    (window as any).executeRedo = executeRedo;
 }
 
 // --- INDEXEDDB PERSISTENCE MANAGER FOR AUTO-SAVE & RESTORE ---

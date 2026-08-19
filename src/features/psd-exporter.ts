@@ -37,7 +37,7 @@ export async function createMangaPSD(page: MangaPage, originalImgEl: HTMLImageEl
 
     // Try loading ag-psd from CDN first for full PSD features
     try {
-        let agPsd = (window as any).agPsd;
+        let agPsd = typeof window !== 'undefined' ? window.agPsd : undefined;
         if (!agPsd) {
             try {
                 // @ts-ignore

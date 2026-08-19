@@ -477,13 +477,3 @@ function updateAudioControlsUI(): void {
     }
 }
 
-if (typeof window !== 'undefined') {
-    (window as any).playPageAudioDrama = playPageAudioDrama;
-    (window as any).pauseAudioDrama = pauseAudioDrama;
-    (window as any).stopAudioDrama = stopAudioDrama;
-    (window as any).speakActiveBlock = speakActiveBlock;
-    (window as any).testVoice = testVoice;
-    (window as any).openAudioSettingsModal = openAudioSettingsModal;
-    (window as any).closeAudioSettingsModal = closeAudioSettingsModal;
-    (window as any).updateAudioSettingsFromUI = updateAudioSettingsFromUI;
-}
