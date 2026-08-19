@@ -46,8 +46,6 @@ export function isFlash31LiteModel(modelId?: string): boolean {
     return String(modelId || '') === 'gemini-3.1-flash-lite';
 }
 
-export const apiKey = "";
-
 export let undoStack: any[] = [];
 export let redoStack: any[] = [];
 
@@ -967,19 +965,14 @@ export async function loadAndRegisterCustomFonts(): Promise<void> {
                 continue;
             }
 
-            let fontUrl: string | null = null;
             try {
-                fontUrl = URL.createObjectURL(fontEntry.blob);
-                const fontFace = new FontFace(fontEntry.family, `url(${fontUrl})`);
+                const buffer = await fontEntry.blob.arrayBuffer();
+                const fontFace = new FontFace(fontEntry.family, buffer);
                 await fontFace.load();
                 (document.fonts as any).add(fontFace);
                 loadedCustomFontFamilies.add(fontEntry.family);
             } catch (fontErr) {
                 console.warn(`Không thể tải phông chữ "${fontEntry.family}":`, fontErr);
-            } finally {
-                if (fontUrl) {
-                    URL.revokeObjectURL(fontUrl);
-                }
             }
         }
         if (fonts.length > 0) {

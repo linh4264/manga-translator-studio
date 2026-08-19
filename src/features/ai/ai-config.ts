@@ -1,4 +1,4 @@
-import { globalState, apiKey } from '../../core/state';
+import { globalState } from '../../core/state';
 
 export const DEFAULT_GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta';
 
@@ -14,7 +14,7 @@ export function getConfiguredApiEndpoint(): string {
 }
 
 export function getConfiguredApiKey(): string {
-    return (globalState.apiKey || apiKey || '').trim();
+    return (globalState.apiKey || '').trim();
 }
 
 export function getGeminiGenerateContentUrl(modelId?: string, key: string = getConfiguredApiKey()): string {
