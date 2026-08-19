@@ -1,20 +1,21 @@
-import { globalState } from '../../core/state';
+import { getAiConfig } from './ai-state';
 
 export const DEFAULT_GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta';
 
 export function getConfiguredAiProvider(): string {
-    return (globalState.aiProvider || 'gemini').trim();
+    return getAiConfig().aiProvider;
 }
 
 export function getConfiguredApiEndpoint(): string {
-    if (globalState.aiProvider === 'custom' && globalState.apiEndpoint && globalState.apiEndpoint.trim()) {
-        return globalState.apiEndpoint.trim().replace(/\/$/, '');
+    const config = getAiConfig();
+    if (config.aiProvider === 'custom' && config.apiEndpoint && config.apiEndpoint.trim()) {
+        return config.apiEndpoint.trim().replace(/\/$/, '');
     }
     return DEFAULT_GEMINI_ENDPOINT;
 }
 
 export function getConfiguredApiKey(): string {
-    return (globalState.apiKey || '').trim();
+    return getAiConfig().apiKey;
 }
 
 export function getGeminiGenerateContentUrl(modelId?: string, key: string = getConfiguredApiKey()): string {
@@ -27,3 +28,4 @@ export function getGeminiModelsUrl(key: string = getConfiguredApiKey()): string 
     const endpoint = getConfiguredApiEndpoint();
     return `${endpoint}/models?key=${encodeURIComponent(key)}`;
 }
+

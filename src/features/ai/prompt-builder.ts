@@ -1,5 +1,4 @@
 // Master Localization Prompt Builder
-import { globalState } from '../../core/state';
 import {
     DEFAULT_MODEL,
     COMIC_UNIVERSE_PRESETS,
@@ -9,12 +8,25 @@ import {
 } from '../../config/constants';
 import { compilePronounMatrixPrompt } from '../pronoun';
 import { buildLorebookPromptContext, getModelTranslationProfile } from './story-memory';
+import {
+    getTranslationContext,
+    getStoryMemoryState,
+    getAiConfig,
+    TranslationContextOptions
+} from './ai-state';
+import { CharacterDossierEntry, LorebookEntry } from '../../types/index';
 
-export function getTranslationGuidancePrompt(): string {
+export function getTranslationGuidancePrompt(
+    options?: Partial<TranslationContextOptions>,
+    customDossier?: CharacterDossierEntry[],
+    customLorebook?: LorebookEntry[]
+): string {
     const guidanceParts: string[] = [];
-    const customContextPrompt = (globalState.translationContextPrompt || '').trim();
-    const currentModelId = globalState.selectedModel || DEFAULT_MODEL;
-    const targetLang = globalState.targetLanguage || 'vi';
+    const ctx = getTranslationContext(options);
+    const aiConfig = getAiConfig();
+    const customContextPrompt = (ctx.translationContextPrompt || '').trim();
+    const currentModelId = aiConfig.selectedModel || DEFAULT_MODEL;
+    const targetLang = ctx.targetLanguage || 'vi';
     const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
     const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
 
@@ -59,7 +71,7 @@ export function getTranslationGuidancePrompt(): string {
         );
     }
 
-    const srcLang = globalState.sourceLanguage || 'ja';
+    const srcLang = ctx.sourceLanguage || 'ja';
     if (srcLang === 'ja') {
         if (targetLang === 'vi') {
             guidanceParts.push(
@@ -135,7 +147,7 @@ export function getTranslationGuidancePrompt(): string {
                 `     - 후배 (Hubae) -> "Hậu bối", "Đàn em", "Em".`,
                 `     - 오빠 (Oppa) / 형 (Hyung) -> "Anh" (linh hoạt theo ngữ cảnh tình cảm, anh em ruột hoặc anh kết nghĩa).`,
                 `     - 언니 (Unnie) / 누나 (Noona) -> "Chị".`,
-                `     - 아저씨 (Ahjussi) / 아줌마 (Ahjumma) -> "Chú / Bác / Cô".`,
+                `     - 아저씨 (Ahjussi) / 아줌MA (Ahjumma) -> "Chú / Bác / Cô".`,
                 `     - 님 (-nim) -> "Ngài / Sếp / Trưởng phòng / Anh / Chị".`,
                 `  3. TỪ CẢM THÁN & KHẨU NGỮ WEBTOON (EXCLAMATIONS & SPOKEN SLANG):`,
                 `     - 헐 (Heol) -> "Sốc thật!", "Vãi!", "Trời đất!".`,
@@ -163,11 +175,11 @@ export function getTranslationGuidancePrompt(): string {
         guidanceParts.push(`- WRITING DIRECTION RULE: The target language (${targetLangName}) is written HORIZONTALLY (left-to-right).`);
     }
 
-    const currentUniverseKey = (globalState.comicUniverse as keyof typeof COMIC_UNIVERSE_PRESETS) || 'auto';
-    const selectedGenres = Array.isArray(globalState.comicGenres) && globalState.comicGenres.length > 0
-        ? globalState.comicGenres
-        : [globalState.comicGenre || 'fantasy'];
-    const currentToneKey = (globalState.comicTone as keyof typeof COMIC_TONE_PRESETS) || 'classic';
+    const currentUniverseKey = (ctx.comicUniverse as keyof typeof COMIC_UNIVERSE_PRESETS) || 'auto';
+    const selectedGenres = ctx.comicGenres && ctx.comicGenres.length > 0
+        ? ctx.comicGenres
+        : ['fantasy'];
+    const currentToneKey = (ctx.comicTone as keyof typeof COMIC_TONE_PRESETS) || 'classic';
 
     const universeSpec = COMIC_UNIVERSE_PRESETS[currentUniverseKey]?.prompt || COMIC_UNIVERSE_PRESETS.auto.prompt;
     guidanceParts.push(universeSpec);
@@ -198,13 +210,14 @@ export function getTranslationGuidancePrompt(): string {
         guidanceParts.push(`- USER CONTEXT / TRANSLATION GUIDANCE: ${customContextPrompt}`);
     }
 
-    const lorebookPrompt = buildLorebookPromptContext();
+    const lorebookPrompt = buildLorebookPromptContext(customDossier, customLorebook);
     if (lorebookPrompt) {
         guidanceParts.push(lorebookPrompt);
     }
 
-    if (globalState.enableStoryMemory && (globalState.chapterStoryMemory || []).length > 0) {
-        const memoryText = globalState.chapterStoryMemory.map(m => `Trang ${m.pageIndex}: ${m.excerpt}`).join('; ');
+    const storyMem = getStoryMemoryState();
+    if (storyMem.enableStoryMemory && storyMem.chapterStoryMemory.length > 0) {
+        const memoryText = storyMem.chapterStoryMemory.map(m => `Trang ${m.pageIndex}: ${m.excerpt}`).join('; ');
         guidanceParts.push(`- CHAPTER STORY MEMORY (PREVIOUS PAGES CONTEXT): Here is the recent dialogue history from earlier pages in this chapter: ${memoryText}. Reuse the exact same character ${pronounTerm}, names, and overall tone.`);
     }
 
@@ -224,7 +237,8 @@ export function getTranslationGuidancePrompt(): string {
         '- BUBBLE RULE: Keep manga-friendly phrasing short and punchy. Do not overexplain.'
     );
 
-    getModelTranslationProfile(currentModelId).forEach((rule) => guidanceParts.push(rule));
+    getModelTranslationProfile(currentModelId, targetLang).forEach((rule) => guidanceParts.push(rule));
 
     return guidanceParts.length > 0 ? `\n${guidanceParts.join('\n')}` : '';
 }
+

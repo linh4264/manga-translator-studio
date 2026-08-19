@@ -1,14 +1,20 @@
 // Story Memory, Lorebook Context, AI State & Model Helpers
-import { globalState } from '../../core/state';
 import {
     VALID_MODEL_IDS,
     DEFAULT_MODEL,
     TARGET_LANG_MAP
 } from '../../config/constants';
 import { showToast } from '../../core/utils/dom';
-import { safeSetLocalStorage } from '../../core/utils/storage';
 import { getConfiguredApiKey } from './ai-config';
-import { MangaBlock } from '../../types/index';
+import {
+    getStoryMemoryState,
+    setStoryMemoryEnabled,
+    pushStoryMemorySummary,
+    clearStoryMemoryState,
+    getTranslationContext
+} from './ai-state';
+import { MangaBlock, CharacterDossierEntry, LorebookEntry } from '../../types/index';
+import { globalState } from '../../core/state';
 
 export let cancelTranslationFlag = false;
 export let isBatchTranslating = false;
@@ -32,19 +38,20 @@ export function normalizeModelId(modelId?: string): string {
 }
 
 export function getDefaultFontForBlockType(type?: string): string {
+    const ctx = getTranslationContext();
     const cleanType = String(type || '').trim().toLowerCase();
-    if (cleanType === 'narration') return globalState.defaultNarrationFont || 'font-vietnamese';
-    if (cleanType === 'thought') return globalState.defaultThoughtFont || 'font-comicneue';
-    if (cleanType === 'sfx') return globalState.defaultSfxFont || 'font-impact';
-    return globalState.defaultDialogueFont || globalState.defaultFont || 'font-manga';
+    if (cleanType === 'narration') return ctx.defaultNarrationFont || 'font-vietnamese';
+    if (cleanType === 'thought') return ctx.defaultThoughtFont || 'font-comicneue';
+    if (cleanType === 'sfx') return ctx.defaultSfxFont || 'font-impact';
+    return ctx.defaultDialogueFont || ctx.defaultFont || 'font-manga';
 }
 
-export function getModelTranslationProfile(modelId?: string): string[] {
+export function getModelTranslationProfile(modelId?: string, targetLang?: string): string[] {
     const normalized = normalizeModelId(modelId);
-    const targetLang = globalState.targetLanguage || 'vi';
-    const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
-    const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
-    const pronounSimple = targetLang === 'vi' ? 'xưng hô (pronouns)' : 'pronouns';
+    const lang = targetLang || getTranslationContext().targetLanguage || 'vi';
+    const targetLangName = TARGET_LANG_MAP[lang] || 'Vietnamese';
+    const pronounTerm = lang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
+    const pronounSimple = lang === 'vi' ? 'xưng hô (pronouns)' : 'pronouns';
 
     if (normalized === 'gemini-3.1-flash-lite') {
         return [
@@ -89,28 +96,27 @@ export function getModelTranslationProfile(modelId?: string): string[] {
 }
 
 export function toggleStoryMemory(enabled: boolean): void {
-    globalState.enableStoryMemory = Boolean(enabled);
-    safeSetLocalStorage('manga_enable_story_memory', globalState.enableStoryMemory);
+    setStoryMemoryEnabled(enabled);
     showToast(enabled ? 'Đã bật Bộ nhớ ngữ cảnh chương' : 'Đã tắt Bộ nhớ ngữ cảnh chương', 'info');
 }
 
 export function updateStoryMemoryBadge(): void {
     const badge = document.getElementById('story-memory-badge');
     if (badge) {
-        const count = (globalState.chapterStoryMemory || []).length;
+        const count = getStoryMemoryState().chapterStoryMemory.length;
         badge.textContent = `${count} trang`;
     }
 }
 
 export function clearStoryMemory(): void {
-    globalState.chapterStoryMemory = [];
-    localStorage.removeItem('manga_chapter_story_memory');
+    clearStoryMemoryState();
     updateStoryMemoryBadge();
     showToast('Đã xóa bộ nhớ ngữ cảnh chương.', 'success');
 }
 
 export function recordPageToStoryMemory(pageIndex: number, blocks: MangaBlock[]): void {
-    if (!blocks || !blocks.length || !globalState.enableStoryMemory) return;
+    const memState = getStoryMemoryState();
+    if (!blocks || !blocks.length || !memState.enableStoryMemory) return;
     const translatedLines = blocks.map(b => `${b.original} -> ${b.translated}`).filter(Boolean);
     if (!translatedLines.length) return;
 
@@ -120,17 +126,12 @@ export function recordPageToStoryMemory(pageIndex: number, blocks: MangaBlock[])
         excerpt: translatedLines.slice(0, 4).join('; ')
     };
 
-    if (!globalState.chapterStoryMemory) globalState.chapterStoryMemory = [];
-    globalState.chapterStoryMemory = globalState.chapterStoryMemory.filter(m => m.pageIndex !== summary.pageIndex);
-    globalState.chapterStoryMemory.push(summary);
-    if (globalState.chapterStoryMemory.length > 10) {
-        globalState.chapterStoryMemory.shift();
-    }
+    pushStoryMemorySummary(summary);
     updateStoryMemoryBadge();
 }
 
 export function viewStoryMemoryModal(): void {
-    const memories = globalState.chapterStoryMemory || [];
+    const memories = getStoryMemoryState().chapterStoryMemory;
     if (!memories.length) {
         showToast('Bộ nhớ ngữ cảnh hiện đang trống. Hãy dịch vài trang để tích lũy ngữ cảnh!', 'info');
         return;
@@ -144,11 +145,14 @@ export function cancelBatchTranslation(): void {
     showToast("Đang dừng tiến trình dịch thuật ngầm theo yêu cầu...", "warn");
 }
 
-export function buildLorebookPromptContext(): string {
+export function buildLorebookPromptContext(
+    dossier: CharacterDossierEntry[] = globalState.characterDossier || [],
+    lorebook: LorebookEntry[] = globalState.lorebook || []
+): string {
     const parts: string[] = [];
 
-    if (globalState.characterDossier && globalState.characterDossier.length > 0) {
-        const charLines = globalState.characterDossier.map(c => {
+    if (dossier && dossier.length > 0) {
+        const charLines = dossier.map(c => {
             let info = `${c.originalName || ''} -> ${c.translatedName || ''}`;
             if (c.gender) info += ` (${c.gender === 'male' ? 'Nam' : c.gender === 'female' ? 'Nữ' : 'Khác'})`;
             if (c.pronounSelf || c.pronounTarget) info += ` [Xưng hô: ${c.pronounSelf || 'tôi'} - ${c.pronounTarget || 'cậu'}]`;
@@ -159,8 +163,8 @@ export function buildLorebookPromptContext(): string {
         parts.push(`- CHARACTER DOSSIER (STRICT NAMES & PRONOUNS): Enforce the following character names, gender, pronouns, and speech tone strictly across all pages: ${charLines}`);
     }
 
-    if (globalState.lorebook && globalState.lorebook.length > 0) {
-        const loreLines = globalState.lorebook.map(l => {
+    if (lorebook && lorebook.length > 0) {
+        const loreLines = lorebook.map(l => {
             let info = `${l.originalTerm || ''} -> ${l.translatedTerm || ''}`;
             if (l.category) info += ` [Thể loại: ${l.category}]`;
             if (l.note) info += ` (Ghi chú: ${l.note})`;
@@ -171,3 +175,4 @@ export function buildLorebookPromptContext(): string {
 
     return parts.join('\n');
 }
+

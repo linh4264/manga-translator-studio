@@ -1,11 +1,12 @@
 // 2-Step & Chapter Chunk Translation Pipelines
-import { globalState, uiUpdateBackgroundTaskOverlay } from '../../core/state';
+import { uiUpdateBackgroundTaskOverlay } from '../../core/state';
 import { parseGeminiJsonText } from '../../core/utils/json';
 import { getGeminiGenerateContentUrl } from './ai-config';
 import { executeAiJsonRequestWithRetry } from './ai-client';
 import { matchTranslationsToBlocks } from './matching-engine';
 import { getTranslationGuidancePrompt } from './prompt-builder';
 import { cancelTranslationFlag } from './story-memory';
+import { getTranslationContext, TranslationContextOptions } from './ai-state';
 
 export async function executeTextTranslationStep({
     blocksToTranslate,
@@ -16,7 +17,8 @@ export async function executeTextTranslationStep({
     keyToUse,
     isOpenAiFormat,
     endpoint,
-    requestHeaders
+    requestHeaders,
+    contextOptions
 }: {
     blocksToTranslate: any[];
     translationModel: string;
@@ -27,8 +29,10 @@ export async function executeTextTranslationStep({
     isOpenAiFormat: boolean;
     endpoint: string;
     requestHeaders: Record<string, string>;
+    contextOptions?: Partial<TranslationContextOptions>;
 }): Promise<any[]> {
-    const targetLang = globalState.targetLanguage || 'vi';
+    const ctx = getTranslationContext(contextOptions);
+    const targetLang = ctx.targetLanguage || 'vi';
     const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
 
     const transSystemInstruction = [
@@ -36,9 +40,9 @@ export async function executeTextTranslationStep({
         `SEQUENTIAL DIALOGUE CONTEXT: The input dialogue blocks are arranged in sequential manga reading order (Top-Right to Bottom-Left). Treat them as continuous, interactive conversational turns between characters.`,
         `COMPACT MANGA DIALOGUE: Speech bubble space is limited. Keep ${targetLangName} translations natural, crisp, punchy, and concise.`,
         `Ensure ${pronounTerm} are consistent across the dialogue blocks and faithfully reflect character dynamics.`,
-        globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
+        ctx.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
         glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
-        getTranslationGuidancePrompt().trim(),
+        getTranslationGuidancePrompt(contextOptions).trim(),
         "Strict Rule: Maintain the exact same block IDs. Return valid JSON only with schema: {\"blocks\": [{\"id\": \"...\", \"translated\": \"...\"}]}"
     ].filter(Boolean).join("\n\n");
 
@@ -125,7 +129,8 @@ export async function executeChapterChunkTranslationStep({
     keyToUse,
     isOpenAiFormat,
     endpoint,
-    requestHeaders
+    requestHeaders,
+    contextOptions
 }: {
     chunkBlocks: any[];
     translationModel: string;
@@ -136,8 +141,10 @@ export async function executeChapterChunkTranslationStep({
     isOpenAiFormat: boolean;
     endpoint: string;
     requestHeaders: Record<string, string>;
+    contextOptions?: Partial<TranslationContextOptions>;
 }): Promise<any[]> {
-    const targetLang = globalState.targetLanguage || 'vi';
+    const ctx = getTranslationContext(contextOptions);
+    const targetLang = ctx.targetLanguage || 'vi';
     const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
 
     const transSystemInstruction = [
@@ -145,11 +152,12 @@ export async function executeChapterChunkTranslationStep({
         `CHAPTER NARRATIVE CONTEXT: The input dialogues are grouped by page in chronological reading sequence. Maintain consistent character voices across the entire chapter.`,
         `COMPACT MANGA DIALOGUE: Speech bubble space is limited. Keep ${targetLangName} translations natural, punchy, concise, and rhythmically flowing.`,
         `Ensure ${pronounTerm} are 100% consistent across all pages.`,
-        globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
+        ctx.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
         glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
-        getTranslationGuidancePrompt().trim(),
+        getTranslationGuidancePrompt(contextOptions).trim(),
         "Strict Rule: Maintain the exact same block IDs. Return valid JSON only containing all block translations with schema: {\"blocks\": [{\"id\": \"...\", \"translated\": \"...\"}]}"
     ].filter(Boolean).join("\n\n");
+
 
     const groupedNarrative: string[] = [];
     let currentPage = -1;
@@ -248,7 +256,8 @@ export async function executeChapterTranslationStep({
     keyToUse,
     isOpenAiFormat,
     endpoint,
-    requestHeaders
+    requestHeaders,
+    contextOptions
 }: {
     allChapterBlocks: any[];
     translationModel: string;
@@ -258,6 +267,7 @@ export async function executeChapterTranslationStep({
     isOpenAiFormat: boolean;
     endpoint: string;
     requestHeaders: Record<string, string>;
+    contextOptions?: Partial<TranslationContextOptions>;
 }): Promise<any[]> {
     if (!allChapterBlocks || allChapterBlocks.length === 0) return [];
 
@@ -272,7 +282,8 @@ export async function executeChapterTranslationStep({
             keyToUse,
             isOpenAiFormat,
             endpoint,
-            requestHeaders
+            requestHeaders,
+            contextOptions
         });
     }
 
@@ -325,7 +336,8 @@ export async function executeChapterTranslationStep({
             keyToUse,
             isOpenAiFormat,
             endpoint,
-            requestHeaders
+            requestHeaders,
+            contextOptions
         });
 
         allTranslatedBlocks.push(...translatedChunk);
@@ -337,3 +349,4 @@ export async function executeChapterTranslationStep({
 
     return allTranslatedBlocks;
 }
+

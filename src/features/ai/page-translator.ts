@@ -12,10 +12,6 @@ import {
     uiUpdateActiveBlockEditor
 } from '../../core/state';
 import {
-    DEFAULT_MODEL,
-    DEFAULT_PIPELINE_MODE,
-    DEFAULT_OCR_MODEL,
-    DEFAULT_TRANSLATION_MODEL,
     DEFAULT_AI_BLOCK_BOX,
     TARGET_LANG_MAP
 } from '../../config/constants';
@@ -25,7 +21,7 @@ import { refineAiBlockBox, mergeOverlappingAiBlocks } from '../ocr/ocr-service';
 import { requestOverlayRender, autoMatchBlockStyle } from '../canvas/canvas-service';
 import { autoFitBlock, isBlockAutoFit } from '../canvas/canvas-styling';
 import { balanceTextToDiamond } from '../canvas/canvas-renderer';
-import { getConfiguredAiProvider, getConfiguredApiEndpoint, getGeminiGenerateContentUrl } from './ai-config';
+import { getConfiguredApiEndpoint, getGeminiGenerateContentUrl } from './ai-config';
 import {
     cancelTranslationFlag,
     isBatchTranslating,
@@ -44,6 +40,8 @@ import {
     executeOcrVisionStep
 } from './ai-client';
 import { executeTextTranslationStep, executeChapterTranslationStep } from './translation-pipeline';
+import { getAiConfig, getTranslationContext } from './ai-state';
+
 
 export async function translateActivePage(): Promise<void> {
     if (globalState.activePageIndex === -1) {
@@ -69,8 +67,10 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
 
     await activatePage(page);
 
-    const provider = getConfiguredAiProvider();
-    const keyToUse = getGeminiApiKey() || (provider === 'custom' ? 'local' : '');
+    const aiConfig = getAiConfig();
+    const ctx = getTranslationContext();
+    const provider = aiConfig.aiProvider;
+    const keyToUse = aiConfig.apiKey || (provider === 'custom' ? 'local' : '');
     if (!keyToUse && provider !== 'custom') {
         showToast("Vui lòng nhập Gemini API Key trước khi dịch.", "error");
         if (elements.apiKeyInput) elements.apiKeyInput.focus();
@@ -98,7 +98,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
         isBackgroundMode ? progressVal : 20
     );
 
-    const maxRetriesConfig = globalState.maxRetries !== undefined && globalState.maxRetries !== null ? Number(globalState.maxRetries) : 3;
+    const maxRetriesConfig = aiConfig.maxRetries;
     let attempts = Math.max(1, maxRetriesConfig);
     let retryDelay = 10000;
 
@@ -112,12 +112,12 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
 
         try {
             const pageFile = (page.file || page.originalFile) as File;
-            const fileForOcr = globalState.ocrEnhanceEnabled ? await enhanceImageForOcr(pageFile) : pageFile;
+            const fileForOcr = ctx.ocrEnhanceEnabled ? await enhanceImageForOcr(pageFile) : pageFile;
             const rawBase64 = await getBase64(fileForOcr);
             const mimeType = fileForOcr.type || pageFile.type;
-            const targetLang = globalState.targetLanguage || 'vi';
+            const targetLang = ctx.targetLanguage || 'vi';
             const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
-            const glossaryNames = globalState.preserveNames ? (globalState.glossaryNames || '').trim() : "";
+            const glossaryNames = ctx.preserveNames ? (ctx.glossaryNames || '').trim() : "";
 
             let prevPageContext = "";
             if (pageIndex > 0) {
@@ -131,9 +131,9 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 }
             }
 
-            const pipelineMode = globalState.translationPipelineMode || DEFAULT_PIPELINE_MODE;
-            const ocrModelToUse = globalState.ocrModel || DEFAULT_OCR_MODEL;
-            const transModelToUse = globalState.translationModel || DEFAULT_TRANSLATION_MODEL;
+            const pipelineMode = ctx.translationPipelineMode;
+            const ocrModelToUse = aiConfig.ocrModel;
+            const transModelToUse = aiConfig.translationModel;
             const endpoint = getConfiguredApiEndpoint();
             const isOpenAiFormat = provider === 'openai' || (provider === 'custom' && !endpoint.includes('generateContent'));
             const requestHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -190,7 +190,8 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                         keyToUse,
                         isOpenAiFormat,
                         endpoint,
-                        requestHeaders
+                        requestHeaders,
+                        contextOptions: ctx
                     });
                 }
 
@@ -204,12 +205,12 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                     "POSITION CALCULATION FORMULA: Output 2 integers [x, y] on scale 0 to 1000. Set x = centerX, y = centerY.",
                     `Translate to short, natural ${targetLangName} that matches the scene and speaker relationship.`,
                     `Preserve the same ${targetLangName} ${pronounTerm} and terminology within the page.`,
-                    globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
+                    ctx.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
                     glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
-                    getTranslationGuidancePrompt().trim()
+                    getTranslationGuidancePrompt(ctx).trim()
                 ].filter(Boolean).join("\n\n");
 
-                const selectedModel = globalState.selectedModel || DEFAULT_MODEL;
+                const selectedModel = aiConfig.selectedModel;
                 let apiUrl = '';
                 let requestBody = null;
 
@@ -248,6 +249,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                         generationConfig: {
                             responseMimeType: "application/json",
                             maxOutputTokens: 4096,
+
                             responseSchema: {
                                 type: "OBJECT",
                                 properties: {
@@ -447,8 +449,10 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
 
 export async function runBatchTranslation(): Promise<void> {
     if (globalState.pages.length === 0) return;
-    const provider = getConfiguredAiProvider();
-    const keyToUse = getGeminiApiKey() || (provider === 'custom' ? 'local' : '');
+    const aiConfig = getAiConfig();
+    const ctx = getTranslationContext();
+    const provider = aiConfig.aiProvider;
+    const keyToUse = aiConfig.apiKey || (provider === 'custom' ? 'local' : '');
     if (!keyToUse && provider !== 'custom') {
         showToast("Vui lòng nhập API Key trước khi dịch.", "error");
         if (elements.apiKeyInput) elements.apiKeyInput.focus();
@@ -473,14 +477,14 @@ export async function runBatchTranslation(): Promise<void> {
     uiUpdatePageListUI();
 
     const totalPages = globalState.pages.length;
-    const pipelineMode = globalState.translationPipelineMode || DEFAULT_PIPELINE_MODE;
+    const pipelineMode = ctx.translationPipelineMode;
 
     if (pipelineMode === 'two-step') {
-        const ocrModelToUse = globalState.ocrModel || DEFAULT_OCR_MODEL;
-        const transModelToUse = globalState.translationModel || DEFAULT_TRANSLATION_MODEL;
-        const targetLang = globalState.targetLanguage || 'vi';
+        const ocrModelToUse = aiConfig.ocrModel;
+        const transModelToUse = aiConfig.translationModel;
+        const targetLang = ctx.targetLanguage || 'vi';
         const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
-        const glossaryNames = globalState.preserveNames ? (globalState.glossaryNames || '').trim() : "";
+        const glossaryNames = ctx.preserveNames ? (ctx.glossaryNames || '').trim() : "";
         const endpoint = getConfiguredApiEndpoint();
         const isOpenAiFormat = provider === 'openai' || (provider === 'custom' && !endpoint.includes('generateContent'));
         const requestHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -530,7 +534,7 @@ export async function runBatchTranslation(): Promise<void> {
 
                     try {
                         const pageFile = (page.file || page.originalFile) as File;
-                        const fileForOcr = globalState.ocrEnhanceEnabled ? await enhanceImageForOcr(pageFile) : pageFile;
+                        const fileForOcr = ctx.ocrEnhanceEnabled ? await enhanceImageForOcr(pageFile) : pageFile;
                         const rawBase64 = await getBase64(fileForOcr);
                         const mimeType = fileForOcr.type || pageFile.type;
 
@@ -550,7 +554,7 @@ export async function runBatchTranslation(): Promise<void> {
                         page.blocks = (detectedRawBlocks || []).map((b, bIdx) => {
                             const normalisedBox = b.positionKnown === false
                                 ? { ...DEFAULT_AI_BLOCK_BOX }
-                                : refineAiBlockBox(b.box, pageImageData, globalState.selectedModel);
+                                : refineAiBlockBox(b.box, pageImageData, aiConfig.selectedModel);
 
                             const blockVertical = isVerticalTarget
                                 ? (typeof b.vertical === 'boolean' ? b.vertical : ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true))
@@ -649,7 +653,8 @@ export async function runBatchTranslation(): Promise<void> {
                             keyToUse,
                             isOpenAiFormat,
                             endpoint,
-                            requestHeaders
+                            requestHeaders,
+                            contextOptions: ctx
                         });
 
                         const lookupMap = new Map<string, string>();
@@ -724,7 +729,7 @@ export async function runBatchTranslation(): Promise<void> {
             if (page.status !== 'queued') continue;
 
             try {
-                const delaySteps = (globalState.apiDelay !== undefined ? globalState.apiDelay : 8) * 10;
+                const delaySteps = (aiConfig.apiDelay !== undefined ? aiConfig.apiDelay : 2) * 10;
                 if (i > 0 && delaySteps > 0) {
                     let delayProgress = 0;
                     for (let delay = 0; delay < delaySteps; delay++) {
@@ -766,6 +771,7 @@ export async function runBatchTranslation(): Promise<void> {
             }
         }
     }
+
 
     for (let i = 0; i < globalState.pages.length; i++) {
         if (globalState.pages[i].status === 'queued') {
