@@ -870,6 +870,10 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
         }
     }
 
+    if (!isCurrentActivePage) {
+        page.imageDataCache = null;
+    }
+
     return canvas;
 }
 

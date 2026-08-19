@@ -1,4 +1,4 @@
-import { showToast } from '../core/utils';
+import { showToast, escapeHTML } from '../core/utils';
 import { requestOverlayRender } from '../features/canvas/canvas-service';
 
 const FONT_SELECT_IDS = [
@@ -9,6 +9,19 @@ const FONT_SELECT_IDS = [
     'default-thought-font',
     'default-sfx-font'
 ];
+
+let isFontDelegationInit = false;
+function initFontDelegationOnce(container: HTMLElement): void {
+    if (isFontDelegationInit) return;
+    container.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement | null;
+        const btn = target?.closest('[data-action="delete-custom-font"]') as HTMLElement | null;
+        if (btn?.dataset.family) {
+            deleteCustomFont(btn.dataset.family);
+        }
+    });
+    isFontDelegationInit = true;
+}
 
 function appendCustomFontToSelect(selectEl: HTMLSelectElement | null, family: string): void {
     if (!selectEl) return;
@@ -50,6 +63,8 @@ export async function renderCustomFontsListUI(fontsParam: any[] | null = null): 
     const countBadge = document.getElementById('custom-fonts-count');
     if (!listContainer) return;
 
+    initFontDelegationOnce(listContainer);
+
     try {
         let fonts = fontsParam;
         if (!fonts) {
@@ -64,19 +79,22 @@ export async function renderCustomFontsListUI(fontsParam: any[] | null = null): 
             return;
         }
 
-        listContainer.innerHTML = fonts.map(font => `
-            <div class="bg-slate-900 border border-slate-800 rounded-lg p-2 flex items-center justify-between gap-2 hover:border-slate-700 transition-all">
-                <div class="min-w-0 flex-1">
-                    <p class="text-xs font-bold text-indigo-300 truncate" style="font-family: '${font.family}', sans-serif;">${font.family}</p>
-                    <p class="text-[9px] text-slate-500 font-mono">Tùy chỉnh</p>
+        listContainer.innerHTML = fonts.map(font => {
+            const safeFamily = escapeHTML(font.family);
+            return `
+                <div class="bg-slate-900 border border-slate-800 rounded-lg p-2 flex items-center justify-between gap-2 hover:border-slate-700 transition-all">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs font-bold text-indigo-300 truncate" style="font-family: '${safeFamily}', sans-serif;">${safeFamily}</p>
+                        <p class="text-[9px] text-slate-500 font-mono">Tùy chỉnh</p>
+                    </div>
+                    <button data-family="${safeFamily}" data-action="delete-custom-font"
+                        class="px-2 py-1 rounded bg-red-950/40 hover:bg-red-900 border border-red-500/30 text-red-300 text-[10px] font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                        title="Xóa phông chữ này">
+                        <i class="fa-solid fa-trash-can text-[9px]"></i> Xóa
+                    </button>
                 </div>
-                <button onclick="deleteCustomFont('${font.family}')"
-                    class="px-2 py-1 rounded bg-red-950/40 hover:bg-red-900 border border-red-500/30 text-red-300 text-[10px] font-semibold flex items-center gap-1 transition-all"
-                    title="Xóa phông chữ này">
-                    <i class="fa-solid fa-trash-can text-[9px]"></i> Xóa
-                </button>
-            </div>
-        `).join('');
+            `;
+        }).join('');
     } catch (err) {
         console.error("Lỗi render danh sách Font:", err);
     }

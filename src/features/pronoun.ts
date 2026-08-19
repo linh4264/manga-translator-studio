@@ -1,5 +1,6 @@
 import { globalState } from '../core/state';
 import { showToast } from '../core/utils';
+import { safeSetLocalStorage } from '../core/utils/storage';
 
 export interface PronounMatrixData {
     characters: string[];
@@ -24,7 +25,7 @@ export function getParsedPronounMatrix(): PronounMatrixData {
 export function savePronounMatrix(matrixData: PronounMatrixData): void {
     const jsonStr = JSON.stringify(matrixData);
     globalState.pronounMatrix = jsonStr;
-    localStorage.setItem('gemini_manga_pronoun_matrix', jsonStr);
+    safeSetLocalStorage('gemini_manga_pronoun_matrix', jsonStr);
 }
 
 export function addCharacterToMatrix(): void {

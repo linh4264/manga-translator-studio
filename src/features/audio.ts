@@ -1,6 +1,7 @@
 // Manga Audio Drama Generator & Advanced Speech Synthesis Engine
 import { globalState } from '../core/state';
 import { showToast, escapeHTML } from '../core/utils';
+import { safeSetLocalStorage } from '../core/utils/storage';
 import { ensureModalElement } from '../core/component-loader';
 import { elements } from '../core/elements';
 import { MangaBlock, MangaPage } from '../types/index';
@@ -397,7 +398,7 @@ export function testVoice(gender: string = 'neutral'): void {
 }
 
 export function saveAudioSettings(): void {
-    localStorage.setItem('gemini_manga_audio_settings', JSON.stringify(globalState.audioSettings));
+    safeSetLocalStorage('gemini_manga_audio_settings', globalState.audioSettings);
 }
 
 export function updateAudioSettingsFromUI(): void {

@@ -20,10 +20,11 @@ export function toggleApiKeyVisibility(): void {
     }
 }
 
-export function updatePipelineMode(mode: 'two-step' | 'legacy'): void {
-    globalState.translationPipelineMode = 'two-step';
-    safeSetLocalStorage('gemini_manga_pipeline_mode', 'two-step');
-    syncPipelineModeUI('two-step');
+export function updatePipelineMode(mode: 'two-step' | 'legacy' | 'single-step'): void {
+    const val = (mode === 'legacy' || mode === 'single-step') ? mode : 'two-step';
+    globalState.translationPipelineMode = val;
+    safeSetLocalStorage('gemini_manga_pipeline_mode', val);
+    syncPipelineModeUI(val);
 }
 
 export function syncPipelineModeUI(mode?: string): void {

@@ -1,5 +1,6 @@
 // Simple UI Internationalization (i18n) for Manga Translator Studio
 import { globalState } from './state';
+import { safeSetLocalStorage } from './utils/storage';
 
 export const i18nDict: Record<string, Record<string, string>> = {
     vi: {
@@ -416,7 +417,7 @@ export function applyTranslations(): void {
 export function changeUILanguage(lang: string): void {
     if (!i18nDict[lang]) return;
     globalState.uiLanguage = lang as any;
-    localStorage.setItem('gemini_manga_ui_lang', lang);
+    safeSetLocalStorage('gemini_manga_ui_lang', lang);
     applyTranslations();
 
     // Redraw canvas overlay if needed

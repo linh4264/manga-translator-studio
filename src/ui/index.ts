@@ -495,7 +495,7 @@ export function initEventListeners(): void {
 
         if ((e.key === 'b' || e.key === 'B') && !e.ctrlKey && !e.metaKey) {
             e.preventDefault();
-            import('../features/inpainting').then(inpainting => inpainting.toggleEraserMode());
+            import('../features/canvas/canvas-service').then(canvas => canvas.addNewBlock());
             return;
         }
 

@@ -188,7 +188,10 @@ const server = http.createServer((req, res) => {
     });
 });
 
+let currentPort = PORT;
+
 function startServer(port) {
+    currentPort = port;
     server.listen(port, '0.0.0.0', () => {
         const localUrl = `http://localhost:${port}`;
         const interfaces = os.networkInterfaces();
@@ -232,8 +235,8 @@ function startServer(port) {
 
 server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-        const nextPort = (server.address()?.port || PORT) + 1;
-        console.warn(`\x1b[33m⚠️ Cổng ${PORT} đang được tiến trình khác sử dụng, tự động chuyển sang cổng ${nextPort}...\x1b[0m`);
+        const nextPort = currentPort + 1;
+        console.warn(`\x1b[33m⚠️ Cổng ${currentPort} đang được tiến trình khác sử dụng, tự động chuyển sang cổng ${nextPort}...\x1b[0m`);
         startServer(nextPort);
     } else {
         console.error('Lỗi máy chủ:', err);

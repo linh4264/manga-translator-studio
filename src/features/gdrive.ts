@@ -1,6 +1,7 @@
 // Google Drive Cloud Sync & Team Collaboration Module
 import { globalState, savePageToDB, saveProjectMeta, getPageDataURL, clearProjectDB } from '../core/state';
 import { showToast, escapeHTML, getCleanFileBaseName } from '../core/utils';
+import { safeSetLocalStorage } from '../core/utils/storage';
 import { ensureModalElement } from '../core/component-loader';
 import { dataURLtoBlob } from './io';
 import { updatePageListUI, selectPage, updateSourceLanguage, updateTargetLanguage, updatePronounMatrix, updateGlossary, togglePreserveNames } from '../ui/index';
@@ -13,7 +14,7 @@ let googleClientId: string = localStorage.getItem('gdrive_client_id') || '';
 export function setGDriveAccessToken(token: string): void {
     gdriveAccessToken = (token || '').trim();
     if (gdriveAccessToken) {
-        localStorage.setItem('gdrive_access_token', gdriveAccessToken);
+        safeSetLocalStorage('gdrive_access_token', gdriveAccessToken);
     } else {
         localStorage.removeItem('gdrive_access_token');
     }
@@ -24,7 +25,7 @@ export function getGDriveAccessToken(): string {
     const inputVal = input ? input.value.trim() : '';
     if (inputVal) {
         gdriveAccessToken = inputVal;
-        localStorage.setItem('gdrive_access_token', inputVal);
+        safeSetLocalStorage('gdrive_access_token', inputVal);
         return inputVal;
     }
     return gdriveAccessToken || localStorage.getItem('gdrive_access_token') || '';
@@ -117,7 +118,7 @@ export async function onGDriveFolderChange(): Promise<void> {
                     }
                 }
                 selectedFolderId = cleanId;
-                localStorage.setItem('gdrive_selected_folder_id', selectedFolderId);
+                safeSetLocalStorage('gdrive_selected_folder_id', selectedFolderId);
                 const opt = document.createElement('option');
                 opt.value = cleanId;
                 opt.textContent = `📁 ${folderName} (Tùy chỉnh)`;
@@ -135,7 +136,7 @@ export async function onGDriveFolderChange(): Promise<void> {
     }
 
     selectedFolderId = select.value;
-    localStorage.setItem('gdrive_selected_folder_id', selectedFolderId);
+    safeSetLocalStorage('gdrive_selected_folder_id', selectedFolderId);
     loadGDriveProjectList();
 }
 
@@ -196,7 +197,7 @@ export async function createNewGDriveFolder(): Promise<void> {
         }
         const newFolder = await response.json();
         selectedFolderId = newFolder.id;
-        localStorage.setItem('gdrive_selected_folder_id', selectedFolderId);
+        safeSetLocalStorage('gdrive_selected_folder_id', selectedFolderId);
         showToast(`Tạo thư mục "${newFolder.name}" thành công!`, "success");
         await loadGDriveFolders();
         loadGDriveProjectList();
@@ -439,7 +440,7 @@ export function initGoogleGISClient(customClientId: string = ''): boolean {
     if ((window as any).google?.accounts?.oauth2) {
         try {
             googleClientId = idToUse;
-            localStorage.setItem('gdrive_client_id', idToUse);
+            safeSetLocalStorage('gdrive_client_id', idToUse);
             tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
                 client_id: idToUse,
                 scope: 'https://www.googleapis.com/auth/drive.file',
@@ -471,7 +472,7 @@ export function loginWithGoogleOAuth(): void {
         );
         if (inputId && inputId.trim()) {
             googleClientId = inputId.trim();
-            localStorage.setItem('gdrive_client_id', googleClientId);
+            safeSetLocalStorage('gdrive_client_id', googleClientId);
         }
     }
     if (googleClientId) {

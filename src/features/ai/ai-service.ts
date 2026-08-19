@@ -26,6 +26,7 @@ import {
 } from '../../config/constants';
 import { elements } from '../../core/elements';
 import { showToast } from '../../core/utils/dom';
+import { safeSetLocalStorage } from '../../core/utils/storage';
 import { parseGeminiJsonText } from '../../core/utils/json';
 import { refineAiBlockBox, mergeOverlappingAiBlocks } from '../ocr/ocr-service';
 import { requestOverlayRender, autoMatchBlockStyle } from '../canvas/canvas-service';
@@ -115,7 +116,7 @@ export function getModelTranslationProfile(modelId?: string): string[] {
 
 export function toggleStoryMemory(enabled: boolean): void {
     globalState.enableStoryMemory = Boolean(enabled);
-    localStorage.setItem('manga_enable_story_memory', JSON.stringify(globalState.enableStoryMemory));
+    safeSetLocalStorage('manga_enable_story_memory', globalState.enableStoryMemory);
     showToast(enabled ? 'Đã bật Bộ nhớ ngữ cảnh chương' : 'Đã tắt Bộ nhớ ngữ cảnh chương', 'info');
 }
 
@@ -636,7 +637,31 @@ async function executeOcrVisionStep({
         });
     }
 
-    const maxRetries = 2;
+    return fetchOCRWithRetry({
+        apiUrl,
+        requestHeaders,
+        requestBody,
+        isOpenAiFormat
+    });
+}
+
+export interface AiFetchOptions {
+    apiUrl: string;
+    headers: Record<string, string>;
+    body: string;
+    isOpenAiFormat: boolean;
+    timeoutMs?: number;
+    maxRetries?: number;
+    errorLabel?: string;
+}
+
+export async function executeAiJsonRequestWithRetry<T = any>(
+    opts: AiFetchOptions,
+    parser?: (jsonText: string) => T
+): Promise<T> {
+    const maxRetries = opts.maxRetries ?? 2;
+    const timeoutMs = opts.timeoutMs ?? 120000;
+    const errorLabel = opts.errorLabel ?? "AI API";
     let lastError: any = null;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -644,16 +669,14 @@ async function executeOcrVisionStep({
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
-            try {
-                controller.abort();
-            } catch (e) { }
-        }, 120000);
+            try { controller.abort(); } catch (e) { }
+        }, timeoutMs);
 
         try {
-            const response = await fetch(apiUrl, {
+            const response = await fetch(opts.apiUrl, {
                 method: 'POST',
-                headers: requestHeaders,
-                body: requestBody,
+                headers: opts.headers,
+                body: opts.body,
                 signal: controller.signal
             });
 
@@ -665,28 +688,18 @@ async function executeOcrVisionStep({
                     const errorJson = await response.json();
                     errorDetail = errorJson.error?.message || errorJson.message || "";
                 } catch (e) { }
-                throw new Error(errorDetail ? `Lỗi OCR (${response.status}): ${errorDetail}` : `Lỗi OCR API: ${response.status}`);
+                throw new Error(errorDetail ? `Lỗi ${errorLabel} (${response.status}): ${errorDetail}` : `Lỗi ${errorLabel}: ${response.status}`);
             }
 
             const result = await response.json();
-            const jsonText = isOpenAiFormat
+            const jsonText = opts.isOpenAiFormat
                 ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
                 : result.candidates?.[0]?.content?.parts?.[0]?.text;
 
-            const data = parseGeminiJsonText(jsonText);
-            let rawBlocks: any[] = [];
-            if (Array.isArray(data)) {
-                rawBlocks = data;
-            } else if (data && Array.isArray(data.blocks)) {
-                rawBlocks = data.blocks;
-            } else if (data && Array.isArray(data.dialogues)) {
-                rawBlocks = data.dialogues;
-            } else if (data && Array.isArray(data.regions)) {
-                rawBlocks = data.regions;
-            } else if (data && Array.isArray(data.items)) {
-                rawBlocks = data.items;
+            if (parser) {
+                return parser(jsonText || "");
             }
-            return mergeOverlappingAiBlocks(rawBlocks);
+            return parseGeminiJsonText(jsonText) as T;
         } catch (fetchErr: any) {
             clearTimeout(timeoutId);
             lastError = fetchErr;
@@ -703,7 +716,42 @@ async function executeOcrVisionStep({
         }
     }
 
-    throw lastError || new Error("Không thể hoàn tất OCR.");
+    throw lastError || new Error(`Không thể hoàn tất ${errorLabel}.`);
+}
+
+export async function fetchOCRWithRetry({
+    apiUrl,
+    requestHeaders,
+    requestBody,
+    isOpenAiFormat
+}: {
+    apiUrl: string;
+    requestHeaders: Record<string, string>;
+    requestBody: string;
+    isOpenAiFormat: boolean;
+}): Promise<any[]> {
+    return executeAiJsonRequestWithRetry<any[]>({
+        apiUrl,
+        headers: requestHeaders,
+        body: requestBody,
+        isOpenAiFormat,
+        errorLabel: "OCR"
+    }, (jsonText) => {
+        const data = parseGeminiJsonText(jsonText);
+        let rawBlocks: any[] = [];
+        if (Array.isArray(data)) {
+            rawBlocks = data;
+        } else if (data && Array.isArray(data.blocks)) {
+            rawBlocks = data.blocks;
+        } else if (data && Array.isArray(data.dialogues)) {
+            rawBlocks = data.dialogues;
+        } else if (data && Array.isArray(data.regions)) {
+            rawBlocks = data.regions;
+        } else if (data && Array.isArray(data.items)) {
+            rawBlocks = data.items;
+        }
+        return mergeOverlappingAiBlocks(rawBlocks);
+    });
 }
 
 export function matchTranslationsToBlocks(blocks: any[], rawResponseData: any): any[] {
@@ -883,65 +931,16 @@ async function executeTextTranslationStep({
         });
     }
 
-    const maxRetries = 2;
-    let lastError: any = null;
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        if (cancelTranslationFlag) break;
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-            try {
-                controller.abort();
-            } catch (e) { }
-        }, 120000);
-
-        try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: requestHeaders,
-                body: requestBody,
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                let errorDetail = "";
-                try {
-                    const errorJson = await response.json();
-                    errorDetail = errorJson.error?.message || errorJson.message || "";
-                } catch (e) { }
-                throw new Error(errorDetail ? `Lỗi Dịch thuật (${response.status}): ${errorDetail}` : `Lỗi Dịch thuật API: ${response.status}`);
-            }
-
-            const result = await response.json();
-            const choice = result.choices?.[0];
-            const candidate = result.candidates?.[0];
-
-            const jsonText = isOpenAiFormat
-                ? (choice?.message?.content || choice?.text)
-                : candidate?.content?.parts?.[0]?.text;
-
-            const data = parseGeminiJsonText(jsonText);
-            return matchTranslationsToBlocks(blocksToTranslate, data);
-        } catch (fetchErr: any) {
-            clearTimeout(timeoutId);
-            lastError = fetchErr;
-
-            const isRetryable = fetchErr.name === 'AbortError' || fetchErr.name === 'TimeoutError' ||
-                (fetchErr.message && (fetchErr.message.includes('429') || fetchErr.message.includes('503') || fetchErr.message.includes('500') || fetchErr.message.includes('Timeout') || fetchErr.message.includes('aborted') || fetchErr.message.includes('Failed to fetch')));
-
-            if (isRetryable && attempt < maxRetries) {
-                const waitSec = (attempt + 1) * 2;
-                await new Promise(r => setTimeout(r, waitSec * 1000));
-                continue;
-            }
-            throw fetchErr;
-        }
-    }
-
-    throw lastError || new Error("Không thể hoàn tất dịch thuật.");
+    return executeAiJsonRequestWithRetry<any[]>({
+        apiUrl,
+        headers: requestHeaders,
+        body: requestBody,
+        isOpenAiFormat,
+        errorLabel: "Dịch thuật"
+    }, (jsonText) => {
+        const data = parseGeminiJsonText(jsonText);
+        return matchTranslationsToBlocks(blocksToTranslate, data);
+    });
 }
 
 async function executeChapterChunkTranslationStep({
@@ -1055,65 +1054,17 @@ async function executeChapterChunkTranslationStep({
         });
     }
 
-    const maxRetries = 2;
-    let lastError: any = null;
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        if (cancelTranslationFlag) break;
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-            try {
-                controller.abort();
-            } catch (e) { }
-        }, 180000);
-
-        try {
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: requestHeaders,
-                body: requestBody,
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                let errorDetail = "";
-                try {
-                    const errorJson = await response.json();
-                    errorDetail = errorJson.error?.message || errorJson.message || "";
-                } catch (e) { }
-                throw new Error(errorDetail ? `Lỗi Dịch thuật (${response.status}): ${errorDetail}` : `Lỗi Dịch thuật API: ${response.status}`);
-            }
-
-            const result = await response.json();
-            const choice = result.choices?.[0];
-            const candidate = result.candidates?.[0];
-
-            const jsonText = isOpenAiFormat
-                ? (choice?.message?.content || choice?.text)
-                : candidate?.content?.parts?.[0]?.text;
-
-            const data = parseGeminiJsonText(jsonText);
-            return matchTranslationsToBlocks(chunkBlocks, data);
-        } catch (fetchErr: any) {
-            clearTimeout(timeoutId);
-            lastError = fetchErr;
-
-            const isRetryable = fetchErr.name === 'AbortError' || fetchErr.name === 'TimeoutError' ||
-                (fetchErr.message && (fetchErr.message.includes('429') || fetchErr.message.includes('503') || fetchErr.message.includes('500') || fetchErr.message.includes('Timeout') || fetchErr.message.includes('aborted') || fetchErr.message.includes('Failed to fetch')));
-
-            if (isRetryable && attempt < maxRetries) {
-                const waitSec = (attempt + 1) * 3;
-                await new Promise(r => setTimeout(r, waitSec * 1000));
-                continue;
-            }
-            throw fetchErr;
-        }
-    }
-
-    throw lastError || new Error("Không thể hoàn tất dịch thuật Chapter.");
+    return executeAiJsonRequestWithRetry<any[]>({
+        apiUrl,
+        headers: requestHeaders,
+        body: requestBody,
+        isOpenAiFormat,
+        timeoutMs: 180000,
+        errorLabel: "Dịch thuật Chapter"
+    }, (jsonText) => {
+        const data = parseGeminiJsonText(jsonText);
+        return matchTranslationsToBlocks(chunkBlocks, data);
+    });
 }
 
 export async function executeChapterTranslationStep({

@@ -3,6 +3,7 @@ import { globalState, loadToeicWordsFromDB, saveToeicWordsToDB, uiSetRightTab } 
 import { DEFAULT_MODEL } from '../config/constants';
 import { elements } from '../core/elements';
 import { showToast, escapeHTML } from '../core/utils';
+import { safeSetLocalStorage } from '../core/utils/storage';
 import { parseGeminiJsonText } from '../core/utils/json';
 import { getGeminiApiKey } from './ai/ai-service';
 import { getGeminiGenerateContentUrl, getConfiguredAiProvider } from './ai/ai-config';
@@ -282,11 +283,7 @@ Return ONLY the JSON. Do not wrap it in markdown code fences or anything else. J
 }
 
 export function persistToeicWordsToStorage(words: ToeicWord[]): void {
-    try {
-        localStorage.setItem('manga_permanent_toeic_words', JSON.stringify(words));
-    } catch (e) {
-        console.warn("Lỗi lưu TOEIC vào localStorage:", e);
-    }
+    safeSetLocalStorage('manga_permanent_toeic_words', words);
 }
 
 export async function toggleSaveToeicWordByIndex(index: number): Promise<void> {

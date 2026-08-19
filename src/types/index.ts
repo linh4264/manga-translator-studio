@@ -164,7 +164,7 @@ export interface GlobalState {
     selectedModel: string;
     ocrModel?: string;
     translationModel?: string;
-    translationPipelineMode?: 'two-step' | 'legacy';
+    translationPipelineMode?: 'two-step' | 'legacy' | 'single-step';
     defaultDialogueFont: string;
     defaultNarrationFont: string;
     defaultThoughtFont: string;

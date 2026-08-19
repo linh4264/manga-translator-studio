@@ -18,6 +18,7 @@ import {
     DEFAULT_TYPE_FONTS
 } from '../config/constants';
 import { MangaBlock, MangaPage, BlockStyle, GlobalState } from '../types/index';
+import { safeSetLocalStorage } from './utils/storage';
 
 export {
     DEFAULT_MODEL,
@@ -189,11 +190,7 @@ export const globalState: GlobalState & Record<string, any> = {
 };
 
 export function saveCustomPresetsToStorage(): void {
-    try {
-        localStorage.setItem('manga_custom_style_presets', JSON.stringify(globalState.customStylePresets || []));
-    } catch (e) {
-        console.error('Không thể lưu custom style presets vào localStorage:', e);
-    }
+    safeSetLocalStorage('manga_custom_style_presets', globalState.customStylePresets || []);
 }
 
 export function initializeStateFromStorage(): void {
