@@ -1,211 +1,346 @@
-# 📚 Manga Translator Studio - AI Translation & Typesetting Tool
+<div align="center">
 
-[![Vietnamese](https://img.shields.io/badge/Language-Tiếng%20Việt-red)](README.md)
-[![English](https://img.shields.io/badge/Language-English-blue)](#)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Online-success?style=flat-square&logo=cloudflare)](https://manga-translator-studio.pages.dev/)
+# 📚 Manga Translator Studio
 
-![Manga Translator Studio Banner](https://img.shields.io/badge/Manga%20Translator-Studio-indigo?style=for-the-badge&logo=google-gemini)
-[![Try Online](https://img.shields.io/badge/Live%20Web-manga--translator--studio.pages.dev-success?style=for-the-badge&logo=cloudflare)](https://manga-translator-studio.pages.dev/)
-![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)
-![AI Powered](https://img.shields.io/badge/AI-Google%20Gemini%203.1-orange?style=for-the-badge&logo=google)
+### **Next-Gen Multimodal AI Manga Translation & Professional Typesetting Studio**
 
-> [!NOTE]
-> **Vietnamese Version**: [README.md](README.md) is available for Vietnamese-speaking users.
+*Engineered for Scanlation Groups, Comic Translators, and Readers Worldwide.*
 
-> [!TIP]
-> 🌐 **Try it directly in your browser (No installation required)**: Access the live web app at **[https://manga-translator-studio.pages.dev/](https://manga-translator-studio.pages.dev/)**
+[![Version](https://img.shields.io/badge/version-2.5.0-blue.svg?style=for-the-badge)](package.json)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Online-success?style=for-the-badge&logo=cloudflare)](https://manga-translator-studio.pages.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](tsconfig.json)
+[![Vite](https://img.shields.io/badge/Vite-5.2-646CFF?style=for-the-badge&logo=vite&logoColor=white)](vite.config.ts)
+[![Vitest](https://img.shields.io/badge/Tested%20with-Vitest-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](package.json)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
-### 📸 Translation Preview
+[![Tiếng Việt](https://img.shields.io/badge/Language-Ti%E1%BA%BFng%20Vi%E1%BB%87t-ED1C24?style=flat-square&logo=google-translate&logoColor=white)](README.md)
+[![English](https://img.shields.io/badge/Language-English-007ACC?style=flat-square&logo=google-translate&logoColor=white)](#)
+[![AI Providers](https://img.shields.io/badge/AI%20Providers-Gemini%20%7C%20Claude%20%7C%20OpenAI%20%7C%20Local%20LLM-orange?style=flat-square&logo=openai&logoColor=white)](#-multi-provider-ai--local-llms)
 
-![Manga Translation Demo](public/demo.jpg)
+<br/>
 
-**Manga Translator Studio** is a professional web application designed for automatic translation and typesetting of comic books (*Manga, Manhua, Manhwa, Comic, Scanlation*). Leveraging Google's state-of-the-art multimodal AI **Google Gemini** (Gemini 3.1 Flash-Lite, Gemini 3.5 Flash, Gemini Pro...), this tool automatically detects speech bubbles (OCR), translates them into natural target languages while preserving comic writing styles, and automatically typesets the translated text to fit perfectly inside the bubbles. You can try it directly online at [manga-translator-studio.pages.dev](https://manga-translator-studio.pages.dev/) or self-host it locally.
+> 🌐 **Try it directly in your browser (No installation required)**:  
+> 👉 **[https://manga-translator-studio.pages.dev/](https://manga-translator-studio.pages.dev/)**
+
+<br/>
 
 ---
 
-## ✨ Features
+### 📸 Translation Demo Preview
 
-- 🌐 **Simple UI Internationalization (i18n)**:
-  - Toggle the entire Studio interface between **English** and **Vietnamese** with a single click in the Settings panel.
-- 🤖 **Multi-Provider AI & Local LLM Integration**:
-  - Connect with **Google Gemini**, **Anthropic Claude** (Claude 3.7/3.5 Sonnet), **OpenAI** (GPT-4o), and **Custom Local LLMs** (Ollama: `http://localhost:11434/v1`, LM Studio: `http://localhost:1234/v1`).
-- ⛩️ **Japanese-to-Vietnamese Scanlation Master Spec**:
-  - 5-layer Japanese-to-Vietnamese localization rules covering pronoun nuances (*Watashi, Boku, Ore, Atashi, Oresama, Anata, Omae, Kisama, Kimi*), sentence-ending modal particles (*ne, yo, na, zo, wa, kashira, jan, kke*), conversational slang/aizuchi, Japanese honorific suffixes (-san, -kun, -chan, -sama, -senpai, -sensei, -dono, -tan preserved for scanlation), and SFX sound effects.
-- 🧠 **Chapter Story Memory**:
-  - Automatically chains summaries and character relationships from previous pages so the AI maintains contextual continuity from page 1 to the end of the chapter.
-- 🖼️ **Quick Background Image Replacement**:
-  - Swap the underlying manga page background image (e.g. after upscaling with Waifu2x or retouching in Photoshop) while **preserving 100% of speech bubble coordinates, translations, fonts, and lorebook bindings**. Supports direct drag-and-drop onto the workspace viewport.
-- 🎨 **Photoshop-Grade Redrawing & Inpainting Tools**:
-  - **Spot Healing Brush (Cọ xóa AI)**: Paint a quick purple highlight over text/SFX and release to instantly reconstruct clean background artwork client-side.
-  - **Lasso AI & Content-Aware Fill**: Draw freeform selection boundaries, isolate text pixels with contrast thresholds (Fuzziness), dilate borders, and fill using offline BSS or online Gemini AI (with automatic offline fallback on rate limit errors).
-  - **Best-Shift Patch Synthesis (BSS) & Adaptive Grain Matching**: Analyzes surrounding screentone grain patterns and injects matching sand noise to avoid smooth computer blur.
-  - **Circular Texture Stamp Tool**: Copy clean screentone patches and stamp them with circular feathered edges.
-  - **Eyedropper Tool**: Sample exact background colors directly from canvas pixels.
-- 💥 **Advanced SFX & Styling Tools**:
-  - Distinguish bubbles as `Dialogue` or `💥 SFX (Sound Effects)`. Adjust angle rotation (`Rotation Slider: -180° to 180°`), vertical/horizontal layout, curved path (`Arc Slider`), stroke outlines, and text shadows.
-- 📐 **Decoupled Interactive Zoom Controls**:
-  - Translucent zoom toolbar, mouse wheel zoom (`Ctrl + Scroll`), keyboard shortcuts (`Ctrl + +`, `Ctrl + -`, `Ctrl + 0`). All zoom operations are fully decoupled from export resolution.
-- ⚡ **Quick Format Preset (Opacity 0% + Stroke 4px)**:
-  - 1-click quick styling button to set 0% background opacity and 4px text stroke with smart contrasting outline colors for overlay dialogue.
-- 🎨 **Robust Typeset & Canvas System**:
-  - **Auto-fit Font Size**: Shrinks or grows text dynamically to fit bubble bounds.
-  - **Vertical Text Support**: Auto-centers and wraps vertical columns (standard in traditional Manga/Manhua/Manhwa layouts).
-  - Packed with professional comic book fonts: *Be Vietnam Pro, Bangers, Comic Neue, Caveat, Chakra Petch, Permanent Marker, Bungee, Saira Condensed, Nunito, Inter*.
-  - Full customization of text color, background mask color & opacity, padding, line height, and letter spacing.
-- 🖌️ **Manual Eraser Brush**:
-  - Manually erase complex backgrounds or tricky SFX using customizable brush sizes and custom background colors (White/Black/Custom Eyedropper).
-- ⚙️ **Advanced Translation Controls**:
-  - **Glossary & Name Preservation**: Keep specific names/nouns untranslated (e.g., *Luffy, Zoro, Nami, Sakura*).
-  - **Genre-Based Prompt Presets**: School life, Comedy, Shounen, Fantasy/Isekai, Horror, Drama, Romance...
-  - **OCR Contrast Enhancer**: Enhances page contrast to help the AI detect faded text or stylized SFX.
-- 📦 **Batch Operations & Output Packaging**:
-  - Translate the entire chapter in one click with **Translate All**.
-  - Review all pages in the chapter sequentially using **Preview/Reader Mode**.
-  - Custom **Page Range Export** (from Start Page to End Page) for ZIP and PDF exports.
-  - Export final assets as individual images (PNG/JPG/WebP), packaged **ZIP** archives, or consolidated **HD PDFs** for tablets and Kindle readers.
-  - **Backup & Restore**: Download progress as `.manga` or `.json` project files and resume anytime.
-  - **Consistency Checker**: Scans the entire project for translation inconsistencies and glossary violations.
+![Manga Translation Demo Preview](public/demo.jpg)
+
+---
+
+</div>
+
+## 📌 Table of Contents
+
+- [🌟 Overview](#-overview)
+- [✨ Key Features](#-key-features)
+  - [🤖 Multi-Provider AI & Multimodal Translation](#-multi-provider-ai--multimodal-translation)
+  - [⛩️ Japanese Localization & Scanlation Master Spec](#️-japanese-localization--scanlation-master-spec)
+  - [🎨 Photoshop-Grade Redrawing & Inpainting Suite](#-photoshop-grade-redrawing--inpainting-suite)
+  - [✍️ Advanced Typesetting & Canvas Layout Engine](#️-advanced-typesetting--canvas-layout-engine)
+  - [🧠 Chapter Story Memory & Dossier Lorebook](#-chapter-story-memory--dossier-lorebook)
+  - [📦 Multi-Format Publishing Ecosystem (PSD, PDF, ZIP, Project)](#-multi-format-publishing-ecosystem)
+- [🔑 How to Get a Free Gemini API Key](#-how-to-get-a-free-gemini-api-key)
+- [🚀 Quick Start & Installation](#-quick-start--installation)
+  - [Option 1: Use Live Online App (Recommended)](#option-1-use-live-online-app-recommended)
+  - [Option 2: Run Local Dev Server (Vite)](#option-2-run-local-dev-server-vite)
+  - [Option 3: 1-Click Launch Scripts (Windows / macOS / Linux)](#option-3-1-click-launch-scripts-windows--macos--linux)
+  - [Option 4: Standalone Node.js or Python CLI](#option-4-standalone-nodejs-or-python-cli)
+- [📖 Professional Translation Workflow](#-professional-translation-workflow)
+- [⌨️ Keyboard Shortcuts Reference](#️-keyboard-shortcuts-reference)
+- [🛠️ Project Architecture & Structure](#️-project-architecture--structure)
+- [🧪 Testing & Quality Assurance](#-testing--quality-assurance)
+- [❓ FAQ & Troubleshooting](#-faq--troubleshooting)
+- [📄 License](#-license)
+
+---
+
+## 🌟 Overview
+
+**Manga Translator Studio** is an all-in-one, client-side web application crafted for professional comic translation, intelligent inpainting, and precise typesetting (*Manga, Manhua, Manhwa, Comic, Webtoon*). Powered by leading vision-language AI models (**Google Gemini 3.1 Flash-Lite / 3.5 Flash / Pro**, **Anthropic Claude 3.7**, **OpenAI GPT-4o**, and **Local LLMs via Ollama/LM Studio**), it streamlines the entire scanlation pipeline:
+
+1. **OCR & Bubble Detection**: Accurately detects dialogue bubble boundaries, vertical Japanese text columns, and furigana groupings.
+2. **Scanlation-Grade AI Translation**: Analyzes context, pronoun dynamics, honorifics, sentence particles, and sound effects (SFX) with story continuity.
+3. **Smart Inpainting & Redrawing**: Cleanly erases original text and reconstructs background textures using Best-Shift Patch Synthesis (BSS) without blurring halftone screentones.
+4. **Automated Typesetting & Canvas Tools**: Dynamic font auto-fitting, diamond-shaped bubble text wrapping, arc text curvature, SFX 360° rotation, and multi-layered PSD export.
+
+> [!NOTE]
+> **100% Client-Side Privacy**: All image editing, inpainting, and project storage happen locally within your browser. API keys and manga images are never transferred to any intermediary servers.
+
+---
+
+## ✨ Key Features
+
+### 🤖 Multi-Provider AI & Multimodal Translation
+- **Google Gemini**: Optimized for `Gemini 3.1 Flash-Lite`, `Gemini 3.5 Flash`, and `Gemini 3.1 Pro Preview`.
+- **Anthropic Claude**: Full support for `Claude 3.7 Sonnet` and `Claude 3.5 Sonnet` for natural, literary translations.
+- **OpenAI**: Integrated with `GPT-4o` and `GPT-4o-mini`.
+- **Local Offline LLMs**: Direct connection to **Ollama** (`http://localhost:11434/v1`) or **LM Studio** (`http://localhost:1234/v1`) for private, offline translation.
+- **Smart Exponential Backoff & Retry**: Robust rate-limit mitigation that prevents `429 Too Many Requests` halts during batch translations.
+
+### ⛩️ Japanese Localization & Scanlation Master Spec
+- **5-Layer Pronoun Hierarchy**: Nuanced contextual mapping for first/second/third-person pronouns (*Watashi, Boku, Ore, Atashi, Oresama, Anata, Omae, Kisama, Kimi*).
+- **Honorific Suffix Preservation**: Flexible handling of scanlation conventions (*-san, -kun, -chan, -sama, -senpai, -sensei, -dono, -tan*).
+- **Sentence-Ending Particles & Tone**: Accurate tone adjustment via modal particles (*ne, yo, na, zo, wa, kashira, jan, kke*).
+- **Comic Onomatopoeia (SFX) & Slang**: Specialized translation presets for sound effects and conversational Japanese.
+
+### 🎨 Photoshop-Grade Redrawing & Inpainting Suite
+- **Spot Healing Brush (Cọ xóa AI)**: Highlight text or SFX and release to reconstruct clean background art client-side in milliseconds.
+- **Lasso AI & Content-Aware Fill**: Freeform selection tool with automatic edge isolation (Fuzziness threshold) and background reconstruction.
+- **Best-Shift Patch Synthesis (BSS)**: Analyzes neighboring halftone screentones to stitch continuous texture patches.
+- **Adaptive Grain Matching**: Generates authentic fine sand grain noise to blend seamlessly into vintage paper textures.
+- **Clone Stamp Tool** & **Eyedropper**: Sample clean textures and pick exact pixel colors across the canvas.
+- **Background Replacement with Dialogue Preservation**: Swap underlying raw art (e.g., after Waifu2x upscaling or manual Photoshop retouching) with **100% retention of text coordinates, styles, and translations**.
+
+### ✍️ Advanced Typesetting & Canvas Layout Engine
+- **Diamond Wrap Algorithm**: Automatically wraps text lines into an oval/diamond profile to hug comic dialogue bubbles naturally.
+- **Vertical & Horizontal Text Support**: True vertical typesetting with auto-centered columns and top-to-bottom reading order for traditional manga.
+- **Dynamic Auto-Fit Font Size**: Automatically calculates optimal font sizes to fill bubbles cleanly without boundary overflow.
+- **Curated Comic Font Catalog**: Preloaded with high-grade manga typography: *Be Vietnam Pro, Bangers, Comic Neue, Caveat, Chakra Petch, Permanent Marker, Bungee, Saira Condensed, Nunito, Inter*.
+- **Advanced SFX Controls**: Freely rotate text (`-180° to 180°`), apply curved circular paths (`Arc Slider`), multi-colored outlines (`Stroke`), and drop shadows.
+- **1-Click Quick Preset**: Instantly apply 4px outline stroke + 0% background opacity for overlay dialogue over artwork.
+
+### 🧠 Chapter Story Memory & Dossier Lorebook
+- **Chapter Story Memory**: Automatically chains scene context and character dynamics between pages to guarantee tone consistency across the entire chapter.
+- **Dossier & Glossary System**: Lock character names, locations, and special moves (e.g., *Luffy, Zoro, Bankai, Rasengan*) from mistranslation.
+- **Consistency Checker**: Scans all pages in the project to detect pronoun shifts or terminology discrepancies.
+
+### 📦 Multi-Format Publishing Ecosystem
+- **Layered Photoshop Export (PSD)**: Generates PSD files with separate editable text layers for downstream post-processing.
+- **HD PDF Packaging**: Produces crisp, tablet-ready PDF documents formatted for Kindle, iPad, and e-readers.
+- **Custom Page Range ZIP Export**: Download full chapters or extract specific ranges (Page A to Page B).
+- **Project Backup & Restore**: Export and import complete workspace sessions using `.manga` or `.json` formats.
 
 ---
 
 ## 🔑 How to Get a Free Gemini API Key
 
-Manga Translator Studio relies on the **Google Gemini API** for image recognition (OCR) and translation. You can get an API Key **100% free** from Google by following these steps:
+Manga Translator Studio is compatible with **Google Gemini's generous Free Tier**:
 
-### Step 1: Go to Google AI Studio
-Visit: **[https://aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)**.
+```mermaid
+flowchart LR
+    A[1. Visit AI Studio] --> B[2. Sign in with Google]
+    B --> C[3. Click Create API Key]
+    C --> D[4. Copy AIzaSy... Key]
+    D --> E[5. Paste into Studio Settings]
+```
 
-### Step 2: Sign In with your Google Account
-Use any personal Gmail account to log in.
-
-### Step 3: Create your API Key
-1. In the Google AI Studio dashboard, click the **"Create API key"** button.
-2. Choose **"Create API key in new project"** (or select an existing Google Cloud project).
-3. Wait a few seconds for Google to generate your key.
-
-### Step 4: Copy the API Key
-Click **"Copy"** to save your new key (which starts with `AIzaSy...`).
+1. **Visit**: **[https://aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)**
+2. **Sign In**: Log in using your Google (Gmail) account.
+3. **Generate Key**: Click **"Create API key"** -> Select **"Create API key in new project"**.
+4. **Copy**: Click **Copy** to save your new key (`AIzaSy...`).
+5. **Activate**: In Manga Translator Studio, open **Settings** (gear icon), paste the key into **Gemini API Key**, and save.
 
 > [!TIP]
-> **Privacy Note**: Your API Key is saved securely directly inside your browser's local storage (`LocalStorage`). It is never uploaded to any intermediate servers.
+> **Recommended Model**: Select **Gemini 3.1 Flash-Lite** for lightning-fast latency, natural dialogue translation, and generous free quota allowances.
 
 ---
 
-## 🚀 How to Run the App
+## 🚀 Quick Start & Installation
 
-### 🌐 Option 1: Use Directly on the Web (Fastest - No Setup Needed)
-
-Access the free live online version directly in your browser without installing any tools or configuring environments:
-👉 **Live Web App:** **[https://manga-translator-studio.pages.dev/](https://manga-translator-studio.pages.dev/)**  
-*(Simply enter your personal Gemini API Key and start translating right away)*
+### Option 1: Use Live Online App (Recommended)
+No installation or environment setup required:
+👉 **Launch Now:** **[https://manga-translator-studio.pages.dev/](https://manga-translator-studio.pages.dev/)**
 
 ---
 
-### 💻 Running Locally on your Machine
+### Option 2: Run Local Dev Server (Vite)
+For developers looking to contribute, modify, or extend the source code:
 
-> [!IMPORTANT]
-> **ES Modules Requirement**: Since this app is built with modern ES Modules (`import`/`export`), opening `index.html` directly using the `file://` protocol will result in CORS blocks. **You must run the application using a local web server when running locally.**
-
-Choose one of these easy methods to run locally:
-
-#### Method 2: Launch in One Click (Recommended for local host)
-*   **On Windows:** Double-click the [start.bat](start.bat) script in the root directory. It automatically spins up a local web server (Node.js or Python) and opens the app at `http://localhost:3000`.
-*   **On macOS/Linux:** Open a terminal in the project directory, grant execution permission with `chmod +x start.sh` (only needed once), then double-click or run `./start.sh`.
-
-#### Method 3: Run via Node.js Server
-Open your Command Prompt / Terminal in the project folder and run:
 ```bash
-node server.js
+# 1. Clone the repository
+git clone https://github.com/linh4264/manga_translator_studio.git
+cd manga_translator_studio
+
+# 2. Install dependencies (Node.js 18+ or Bun required)
+npm install
+# or with Bun:
+# bun install
+
+# 3. Start the Vite development server
+npm run dev
+# or:
+# bun run dev
 ```
-The zero-dependency static file server will launch and automatically open the application in your default browser.
-
-#### Method 4: Use VS Code Live Server Extension
-1. Open the project folder in **VS Code**.
-2. Install the **Live Server** extension (by *Ritwick Dey*).
-3. Right-click [index.html](public/index.html) -> select **"Open with Live Server"** (or click **"Go Live"** in the status bar at the bottom right).
-
-#### Method 5: CLI Utilities
-*   **Using npx:** Run `npx serve public` and open `http://localhost:3000`.
-*   **Using Python:** Run `python -m http.server 3000 --directory public` and open `http://localhost:3000`.
+Open your browser at: `http://localhost:5173`.
 
 ---
 
-## 📖 Quick Start Guide
-
-### 1. Configure the AI Settings
-1. Open the **Settings** modal (click the gear icon in the toolbar or left panel).
-2. Paste your **Gemini API Key** in the API Key input field.
-3. Choose an **AI Model**:
-   - `Gemini 3.1 Flash-Lite` *(Recommended)*: Very fast, generous rate limits, and provides natural comic-oriented translations.
-   - `Gemini 3.5 Flash` / `Gemini 3 Flash Preview`: Excellent OCR accuracy and response speed.
-   - `Gemini 3.1 Pro Preview` / `Gemini 2.5 Pro`: Ideal for complex prose, dialogue, or cultural localization.
-4. Select your **Source Language** (`Japanese`, `Chinese`, `Korean`, `English`, or `Auto Detect`).
-5. Select your **Target Language** (default is Vietnamese, supports English, Spanish, French, etc.).
-
-### 2. Upload Pages & Translate
-1. Drag and drop or click the **Upload** zone on the left sidebar to add manga images.
-2. Select a page from the sidebar page list.
-3. Click **"Translate this page"** or use the **"Translate All"** button to translate the entire chapter automatically.
-4. The AI will extract the text, mask the background, and typeset the target translation over the page.
-
-### 3. Polish & Typeset
-- **Edit Text**: Click any text box on the canvas to edit the translation text, font styles, color, alignment, border stroke, and drop shadow.
-- **Manual Bubble Addition**: Click **"Add Text Box"** to manually place boxes if the AI missed any dialogue.
-- **Eraser Mode & Spot Healing Brush**: Toggle eraser mode or spot healing brush to wipe away raw text, background details, or complex SFX.
-- **Quick Image Swap**: Click **Replace Image** or drop a new background image onto the workspace to update upscaled/retouched art without losing text blocks.
-
-### 4. Rate-Limiting for Free API Keys
-- If using Google's free tier, configure the API settings to have **Giãn cách gửi (API Delay): 8-12 seconds** and **Số lần thử lại (Max Retries): 5** to avoid `429 Too Many Requests` errors.
-
-### 5. Export Assets
-- Use **Preview** to read the translated chapter in full reader format.
-- Click **Export ZIP** (supports custom page range A to B) to download all final images in a single ZIP.
-- Click **Export PDF** to output a tablet-optimized PDF file.
-- Click **Backup** to export a `.manga` file to save your project state.
+### Option 3: 1-Click Launch Scripts (Windows / macOS / Linux)
+- **On Windows**: Double-click [server/start.bat](file:///d:/manga/manga_translator_studio/server/start.bat).
+- **On macOS / Linux**: Grant executable permission and run:
+  ```bash
+  chmod +x server/start.sh
+  ./server/start.sh
+  ```
 
 ---
 
-## ⌨️ Keyboard Shortcuts
+### Option 4: Standalone Node.js or Python CLI
+Run the zero-dependency static file server:
+
+```bash
+# Run the built-in server:
+node server/server.js
+
+# Or using npx serve:
+npx serve public -l 3000
+
+# Or using Python 3:
+python -m http.server 3000 --directory public
+```
+Access the application at: `http://localhost:3000`.
+
+---
+
+## 📖 Professional Translation Workflow
+
+```mermaid
+graph TD
+    A[📥 Upload Manga Pages] --> B[⚙️ Configure Language & AI Model]
+    B --> C[🚀 Batch or Single-Page Translate]
+    C --> D[🔍 AI OCR, Inpaint & Translate]
+    D --> E[✍️ Fine-tune Typeset, Fonts & SFX]
+    E --> F[🧹 Refine Inpainting with Spot Healing / Lasso]
+    F --> G[📦 Export: Layered PSD / PDF / ZIP]
+```
+
+1. **Step 1: Upload Pages**: Drag and drop all chapter images into the left sidebar.
+2. **Step 2: Settings & Prompts**: Select source language (Japanese/Korean/Chinese/English), target language, and genre preset.
+3. **Step 3: Auto Translation**: Click **"Translate this page"** or **"Translate All"** to trigger batch processing.
+4. **Step 4: Typeset & Polish**:
+   - Click any bubble to customize text, change font, adjust arc curvature, or rotate SFX.
+   - Use the **Spot Healing Brush** or **Eraser** to clean residual background noise.
+5. **Step 5: Export**: Choose **Export ZIP**, **Export PDF**, or **Export PSD** to deliver the finished scanlation.
+
+---
+
+## ⌨️ Keyboard Shortcuts Reference
 
 | Shortcut | Description |
 | :--- | :--- |
-| `Ctrl + Z` / `Cmd + Z` | Undo the last action |
-| `Ctrl + Y` / `Cmd + Y` | Redo the last action |
-| `Scroll` | Vertical scroll workspace |
-| `Ctrl + Scroll` | Horizontal scroll workspace |
-| `Alt + Scroll` | Zoom in / Zoom out centered at mouse cursor position |
-| `Ctrl + +` / `Ctrl + =` | Zoom in to workspace |
-| `Ctrl + -` | Zoom out of workspace |
-| `Ctrl + 0` | Reset workspace zoom to 100% |
-| `Tab` / `Shift + Tab` | Focus on the next / previous text block |
-| `Ctrl + D` / `Cmd + D` | Duplicate the selected text block |
-| `Delete` / `Backspace` | Delete the selected text block |
-| Keys `[` / `]` | Decrease / Increase font size of the active block |
-| `N` / `P` | Go to the Next / Previous page |
-| `Arrow Keys (↑ ↓ ← →)` | Nudge the selected block position (Hold `Shift` to move faster) |
+| `Ctrl + Z` / `Cmd + Z` | **Undo** last canvas operation |
+| `Ctrl + Y` / `Cmd + Y` | **Redo** last undone operation |
+| `Mouse Scroll` | Vertical canvas pan |
+| `Ctrl + Scroll` | Horizontal canvas pan |
+| `Alt + Scroll` | **Smooth Zoom** centered at mouse cursor |
+| `Ctrl + +` / `Ctrl + -` | Zoom in / Zoom out canvas |
+| `Ctrl + 0` | Reset canvas zoom to 100% |
+| `Tab` / `Shift + Tab` | Navigate to next / previous dialogue bubble |
+| `Ctrl + D` / `Cmd + D` | Duplicate currently selected bubble |
+| `Delete` / `Backspace` | Delete currently selected bubble |
+| Keys `[` / `]` | Decrease / Increase font size of active text box |
+| `N` / `P` | Navigate to Next / Previous page |
+| `Arrow Keys (↑ ↓ ← →)` | Nudge bubble position (Hold `Shift` to move 10px) |
+
+---
+
+## 🛠️ Project Architecture & Structure
+
+```text
+manga_translator_studio/
+├── index.html                 # Main Studio interface entry
+├── vite.config.ts             # Vite bundler & Vitest configuration
+├── tsconfig.json              # TypeScript compilation rules
+├── package.json               # Package scripts & dependencies
+├── public/                    # Static assets, fonts, demo files
+│   └── demo.jpg               # Demo preview screenshot
+├── src/                       # Modular TypeScript codebase
+│   ├── main.ts                # Application initialization entry
+│   ├── config/                # System constants, font catalogues, defaults
+│   ├── core/                  # State management, Event Bus, i18n, bootstrap
+│   ├── types/                 # TypeScript interfaces & types
+│   ├── ui/                    # Modals, toolbars, notifications, sliders
+│   ├── workers/               # Web Workers for multi-threaded processing
+│   └── features/              # Modular feature domains
+│       ├── ai/                # Gemini, Claude, OpenAI clients & Story Memory
+│       ├── canvas/            # Canvas Renderer, Diamond Wrap, Autofit, Arc
+│       ├── inpainting/        # PatchMatch, BSS, Spot Healing, Lasso AI
+│       ├── ocr/               # OCR Normalizer, Magic Wand, Reading Order
+│       ├── io/                # ZIP, PDF, PSD layers, Manga project export
+│       ├── fs-access.ts       # File System Access API (Local sync)
+│       └── dossier-lorebook.ts# Character Dossier & Glossary management
+├── server/                    # Standalone Zero-dependency server & scripts
+│   ├── server.js              # Node.js Static Server
+│   ├── start.bat              # 1-Click launcher for Windows
+│   └── start.sh               # 1-Click launcher for Linux/macOS
+└── tests/                     # Automated Vitest test suite
+    ├── setup/                 # Browser & DOM environment mock
+    ├── unit/                  # Unit tests: core, ai, canvas, ocr, io, inpaint
+    └── regression/            # Regression prevention tests
+```
+
+---
+
+## 🧪 Testing & Quality Assurance
+
+The codebase includes an extensive automated test suite with **Vitest**:
+
+```bash
+# Run the entire test suite
+npm run test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Execute static typecheck
+npm run typecheck
+
+# Run domain-specific test suites
+npm run test:canvas      # Diamond wrap & canvas rendering tests
+npm run test:ai          # AI client, retry & story memory tests
+npm run test:ocr         # OCR coordinate normalization tests
+npm run test:inpainting  # BSS & PatchMatch inpainting tests
+npm run test:io          # PSD, PDF, and ZIP packaging tests
+```
 
 ---
 
 ## ❓ FAQ & Troubleshooting
 
 <details>
-<summary><b>1. Is using the Gemini API Key free?</b></summary>
-Yes! Google provides a generous free tier for personal projects (several requests per minute depending on the model). You can easily translate hundreds of pages daily without incurring charges.
+<summary><b>1. Is using the Gemini API Key completely free?</b></summary>
+<br/>
+<b>Yes!</b> Google AI Studio provides a free tier with generous limits for personal usage. You can translate hundreds of manga pages every day without incurring any costs.
 </details>
 
 <details>
-<summary><b>2. Why am I getting "429 Too Many Requests" or "503 Service Unavailable" errors?</b></summary>
-This indicates that the free API key quota is being saturated by rapid requests.
-<br/><b>Solution:</b> Open the Settings dialog, find the <i>API Rate Limit</i> section, increase the <b>API Delay</b> (Giãn cách gửi) to 8-12 seconds, and set <b>Max Retries</b> (Số lần thử lại) to 5.
+<summary><b>2. How can I resolve "429 Too Many Requests" errors?</b></summary>
+<br/>
+Error 429 happens when requests exceed Google's free rate limits.  
+<b>Solution:</b> Open <b>Settings</b> -> In the <b>API Rate Limit</b> section:  
+- Set <b>API Delay (Giãn cách gửi)</b>: 8 to 12 seconds.  
+- Set <b>Max Retries (Số lần thử lại)</b>: 5.  
+The studio will automatically manage queues and retry smoothly.
 </details>
 
 <details>
-<summary><b>3. Are my uploaded images or keys stored on your server?</b></summary>
-No. The entire application operates <b>locally in your browser (Client-side)</b>. No images or database objects are sent to any remote server except for direct API payloads routed from your browser to Google's official Gemini endpoint.
+<summary><b>3. How do I typeset vertical Japanese text?</b></summary>
+<br/>
+Select the dialogue bubble on the canvas and toggle the <b>Vertical Text</b> icon in the Typesetting toolbar. The layout engine will automatically break lines top-to-bottom and center vertical columns cleanly.
+</details>
+
+<details>
+<summary><b>4. Is my private data or images stored anywhere?</b></summary>
+<br/>
+<b>No.</b> The entire application runs 100% client-side in your browser. Images and API keys are never uploaded to any third-party databases or tracking servers.
 </details>
 
 ---
 
 ## 📄 License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the open-source [MIT License](LICENSE). You are free to use, modify, and distribute it for personal or non-commercial purposes.
+
+<div align="center">
+
+**Manga Translator Studio** — *Built with passion for the Manga & Scanlation Community.*
+
+[![GitHub Stars](https://img.shields.io/github/stars/linh4264/manga_translator_studio?style=social)](https://github.com/linh4264/manga_translator_studio)
+[![GitHub Forks](https://img.shields.io/github/forks/linh4264/manga_translator_studio?style=social)](https://github.com/linh4264/manga_translator_studio/fork)
+
+</div>
