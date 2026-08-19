@@ -60,6 +60,10 @@ test('Core State - Undo/Redo Invariant Test (Complete Data Preservation)', () =>
                 type: 'dialogue',
                 original: 'こんにちは！',
                 translated: 'Xin chào bạn!',
+                speaker: 'Taro',
+                target: 'Hanako',
+                vertical: true,
+                originalBackgroundBackup: 'data:image/png;base64,bgBackupData',
                 box: { x: 20, y: 15, w: 30, h: 25 },
                 style: {
                     fontFamily: 'font-manga',
@@ -69,7 +73,7 @@ test('Core State - Undo/Redo Invariant Test (Complete Data Preservation)', () =>
                     bgOpacity: 90,
                     bold: true,
                     align: 'center',
-                    vertical: false,
+                    vertical: true,
                     strokeColor: '#000000',
                     strokeWidth: 2,
                     shadowColor: '#333333',
@@ -148,6 +152,10 @@ test('Core State - Undo/Redo Invariant Test (Complete Data Preservation)', () =>
     const b1 = restoredPage.blocks[0];
     assert.strictEqual(b1.id, 'blk_dialogue_1');
     assert.strictEqual(b1.translated, 'Xin chào bạn!');
+    assert.strictEqual(b1.speaker, 'Taro', 'Speaker must be preserved across Undo/Redo');
+    assert.strictEqual(b1.target, 'Hanako', 'Target must be preserved across Undo/Redo');
+    assert.strictEqual(b1.vertical, true, 'Vertical writing flag must be preserved across Undo/Redo');
+    assert.strictEqual(b1.originalBackgroundBackup, 'data:image/png;base64,bgBackupData', 'Background backup must be preserved');
     assert.strictEqual(b1.style.fontFamily, 'font-manga');
     assert.strictEqual(b1.style.autoFit, false);
     assert.strictEqual(b1.style.maskShape, 'bubble-fit');

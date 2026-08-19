@@ -118,6 +118,7 @@ export function startBlockDrag(e: any, block: MangaBlock): void {
         document.removeEventListener('mouseup', onDragEnd);
         document.removeEventListener('touchmove', onDragging);
         document.removeEventListener('touchend', onDragEnd);
+        document.removeEventListener('touchcancel', onDragEnd);
 
         if (hasMoved) {
             block.maskCache = null;
@@ -132,6 +133,7 @@ export function startBlockDrag(e: any, block: MangaBlock): void {
     document.addEventListener('mouseup', onDragEnd);
     document.addEventListener('touchmove', onDragging, { passive: false });
     document.addEventListener('touchend', onDragEnd);
+    document.addEventListener('touchcancel', onDragEnd);
 }
 
 export function startBlockResize(e: any, block: MangaBlock, handleDir: string): void {
@@ -244,6 +246,7 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
         document.removeEventListener('mouseup', onResizeEnd);
         document.removeEventListener('touchmove', onResizing);
         document.removeEventListener('touchend', onResizeEnd);
+        document.removeEventListener('touchcancel', onResizeEnd);
 
         block.maskCache = null;
         requestOverlayRender();
@@ -257,6 +260,7 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
     document.addEventListener('mouseup', onResizeEnd);
     document.addEventListener('touchmove', onResizing, { passive: false });
     document.addEventListener('touchend', onResizeEnd);
+    document.addEventListener('touchcancel', onResizeEnd);
 }
 
 export function updateBlockSelectionDOM(): void {

@@ -272,21 +272,33 @@ export function initializeStateFromStorage(): void {
     }
 }
 
+// Helper to deep clone block array for Undo/Redo history snapshots
+function cloneBlocksForHistory(blocks: any[]): any[] {
+    if (!Array.isArray(blocks)) return [];
+    return blocks.map((block: any) => ({
+        id: block.id,
+        type: block.type || 'dialogue',
+        imageUrl: block.imageUrl || null,
+        original: block.original || '',
+        translated: block.translated || '',
+        box: block.box ? { ...block.box } : { x: 0, y: 0, w: 10, h: 10 },
+        style: block.style ? { ...block.style } : {},
+        speaker: block.speaker !== undefined ? block.speaker : undefined,
+        target: block.target !== undefined ? block.target : undefined,
+        vertical: block.vertical !== undefined ? block.vertical : undefined,
+        originalBackgroundBackup: block.originalBackgroundBackup || undefined,
+        textWidth: block.textWidth,
+        textHeight: block.textHeight
+    }));
+}
+
 // --- UNDO / REDO CONTROLLERS ---
 export function pushStateToHistory(): void {
     const currentState = globalState.pages.map((page: any) => ({
         id: page.id,
         status: page.status,
         eraserLayerBlob: page.eraserLayerBlob || null,
-        blocks: page.blocks.map((block: any) => ({
-            id: block.id,
-            type: block.type,
-            imageUrl: block.imageUrl || null,
-            original: block.original,
-            translated: block.translated,
-            box: { ...block.box },
-            style: { ...block.style }
-        }))
+        blocks: cloneBlocksForHistory(page.blocks)
     }));
 
     undoStack.push({
@@ -318,17 +330,7 @@ export function applyStateFromSnapshot(snapshot: any): void {
         if (targetPage) {
             targetPage.status = savedPage.status;
             targetPage.eraserLayerBlob = savedPage.eraserLayerBlob || null;
-            targetPage.blocks = savedPage.blocks.map((b: any) => ({
-                id: b.id,
-                type: b.type,
-                imageUrl: b.imageUrl || null,
-                original: b.original,
-                translated: b.translated,
-                box: { ...b.box },
-                style: { ...b.style },
-                textWidth: b.textWidth,
-                textHeight: b.textHeight
-            }));
+            targetPage.blocks = cloneBlocksForHistory(savedPage.blocks);
             targetPage.autoFitRevision = (targetPage.autoFitRevision || 0) + 1;
             savePageToDB(targetPage);
         }
@@ -363,15 +365,7 @@ export function executeUndo(): void {
         id: page.id,
         status: page.status,
         eraserLayerBlob: page.eraserLayerBlob || null,
-        blocks: page.blocks.map((block: any) => ({
-            id: block.id,
-            type: block.type,
-            imageUrl: block.imageUrl || null,
-            original: block.original,
-            translated: block.translated,
-            box: { ...block.box },
-            style: { ...block.style }
-        }))
+        blocks: cloneBlocksForHistory(page.blocks)
     }));
 
     redoStack.push({
@@ -391,15 +385,7 @@ export function executeRedo(): void {
         id: page.id,
         status: page.status,
         eraserLayerBlob: page.eraserLayerBlob || null,
-        blocks: page.blocks.map((block: any) => ({
-            id: block.id,
-            type: block.type,
-            imageUrl: block.imageUrl || null,
-            original: block.original,
-            translated: block.translated,
-            box: { ...block.box },
-            style: { ...block.style }
-        }))
+        blocks: cloneBlocksForHistory(page.blocks)
     }));
 
     undoStack.push({

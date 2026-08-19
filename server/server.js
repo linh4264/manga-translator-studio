@@ -151,19 +151,29 @@ const server = http.createServer((req, res) => {
                     return;
                 }
 
+                if (!ts) {
+                    res.statusCode = 500;
+                    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+                    res.end(`
+                        <div style="font-family: sans-serif; text-align: center; padding: 50px; background: #0f172a; color: #f8fafc; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                            <h1 style="color: #f43f5e; font-size: 32px; margin: 0 0 10px 0;">Thiếu Module TypeScript</h1>
+                            <p style="color: #94a3b8; font-size: 16px;">Server cần module <code>typescript</code> để biên dịch trực tiếp các file <code>.ts</code>.</p>
+                            <p style="color: #cbd5e1; font-size: 14px;">Vui lòng chạy lệnh <code>npm install</code> hoặc <code>bun install</code> rồi khởi động lại máy chủ.</p>
+                        </div>
+                    `);
+                    return;
+                }
+
                 try {
                     const resolvedTs = resolveTsImports(tsContent, path.dirname(filePath));
-                    let jsCode = resolvedTs;
-                    if (ts) {
-                        const resObj = ts.transpileModule(resolvedTs, {
-                            compilerOptions: {
-                                module: ts.ModuleKind.ESNext,
-                                target: ts.ScriptTarget.ES2022,
-                                isolatedModules: true
-                            }
-                        });
-                        jsCode = resObj.outputText;
-                    }
+                    const resObj = ts.transpileModule(resolvedTs, {
+                        compilerOptions: {
+                            module: ts.ModuleKind.ESNext,
+                            target: ts.ScriptTarget.ES2022,
+                            isolatedModules: true
+                        }
+                    });
+                    const jsCode = resObj.outputText;
                     res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' });
                     res.end(jsCode, 'utf-8');
                 } catch (compileErr) {
