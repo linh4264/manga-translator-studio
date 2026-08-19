@@ -1,5 +1,4 @@
-import test from 'node:test';
-import assert from 'node:assert';
+import { test, expect, assert } from 'vitest';
 import '../../setup/browser-env.js';
 
 import { i18nDict, t, changeUILanguage } from '../../../src/core/i18n.ts';

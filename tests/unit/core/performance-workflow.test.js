@@ -1,5 +1,4 @@
-import test from 'node:test';
-import assert from 'node:assert';
+import { test, expect, assert } from 'vitest';
 import '../../setup/browser-env.js';
 
 import { segmentString, setMultilineText } from '../../../src/core/utils.ts';

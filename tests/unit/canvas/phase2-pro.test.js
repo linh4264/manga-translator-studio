@@ -1,5 +1,4 @@
-import test from 'node:test';
-import assert from 'node:assert';
+import { test, expect, assert } from 'vitest';
 import '../../setup/browser-env.js';
 
 import { PRO_STYLE_PRESETS } from '../../../src/config/constants.ts';

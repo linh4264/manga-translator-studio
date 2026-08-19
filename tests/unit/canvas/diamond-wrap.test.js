@@ -1,5 +1,4 @@
-import test from 'node:test';
-import assert from 'node:assert';
+import { test, expect, assert } from 'vitest';
 import '../../setup/browser-env.js';
 
 import { wrapCanvasText, wrapCanvasDiamondText, wrapRichTextTokens, balanceTextToDiamond } from '../../../src/features/canvas/canvas-renderer.ts';

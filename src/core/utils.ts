@@ -420,9 +420,13 @@ export function showToast(message: string, type: 'info' | 'success' | 'error' | 
 
     const container = elements.toastContainer || document.getElementById('toast-container');
     if (container) {
-        while (container.children.length >= 3) {
-            const first = container.firstChild;
-            if (first) container.removeChild(first);
+        while (container.children && container.children.length >= 3) {
+            const first = container.firstChild || container.children[0];
+            if (first && typeof container.removeChild === 'function') {
+                container.removeChild(first);
+            } else {
+                break;
+            }
         }
         container.appendChild(toast);
     }

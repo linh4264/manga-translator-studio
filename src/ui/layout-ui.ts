@@ -1,6 +1,6 @@
 import { globalState } from '../core/state';
 import { elements } from '../core/elements';
-import { requestOverlayRender, renderOverlays } from '../features/canvas/canvas-service';
+import { requestOverlayRender, renderOverlays } from '../features/canvas/canvas-renderer';
 import { updateToeicTabUI } from '../features/toeic';
 
 export function setRightTab(tab: string): void {
@@ -436,7 +436,7 @@ export function openMobileQuickEditor(blockId?: string): void {
                 if (curBlock) {
                     curBlock.translated = textarea.value;
                     curBlock.autoFitCache = null;
-                    import('../features/canvas/canvas-service').then(m => m.requestOverlayRender());
+                    requestOverlayRender();
                 }
             });
         }
@@ -493,7 +493,7 @@ export function changeMobileActiveFontSize(delta: number): void {
     const fontSizeText = document.getElementById('mobile-quick-font-size-text');
     if (fontSizeText) fontSizeText.innerText = `${newSize}px`;
 
-    import('../features/canvas/canvas-service').then(m => m.requestOverlayRender());
+    requestOverlayRender();
 }
 
 export function toggleMobileActiveOrientation(): void {
@@ -509,7 +509,7 @@ export function toggleMobileActiveOrientation(): void {
     const orientText = document.getElementById('mobile-quick-orientation-text');
     if (orientText) orientText.innerText = block.style.vertical ? "Dọc" : "Ngang";
 
-    import('../features/canvas/canvas-service').then(m => m.requestOverlayRender());
+    requestOverlayRender();
 }
 
 export function balanceMobileActiveDiamond(): void {

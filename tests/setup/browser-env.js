@@ -92,8 +92,18 @@ export function setupBrowserEnvironment() {
             offsetHeight: 1400,
             scrollWidth: 1000,
             scrollHeight: 1400,
-            scrollLeft: 0,
-            scrollTop: 0,
+            get firstChild() { return children[0] || null; },
+            get lastChild() { return children[children.length - 1] || null; },
+            get firstElementChild() { return children.find(c => c.nodeType === 1) || null; },
+            get lastElementChild() { return [...children].reverse().find(c => c.nodeType === 1) || null; },
+            get innerHTML() {
+                if (children.length === 0) return explicitTextContent;
+                return children.map(c => c.innerHTML !== undefined ? c.innerHTML : (c.textContent || '')).join('');
+            },
+            set innerHTML(val) {
+                children.length = 0;
+                explicitTextContent = String(val ?? '');
+            },
             parentElement: null,
             parentNode: null,
 

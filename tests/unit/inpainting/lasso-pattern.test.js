@@ -1,5 +1,4 @@
-import test from 'node:test';
-import assert from 'node:assert';
+import { test, expect, assert } from 'vitest';
 import '../../setup/browser-env.js';
 import '../../setup/canvas-mock.js';
 import '../../setup/indexeddb-mock.js';
@@ -26,7 +25,9 @@ import {
     lassoPatternOffsetY,
     autoSampleNearbyLassoRect,
     pickLassoRectSample,
-    setIsEraserModeActive
+    setIsEraserModeActive,
+    getActiveLassoPoints,
+    setActiveLassoPoints
 } from '../../../src/features/inpainting.ts';
 import { patchCanvasElement } from '../../setup/canvas-mock.js';
 import { globalState } from '../../../src/core/state.ts';
@@ -199,12 +200,12 @@ test('Lasso Pattern Fill - runLassoPatternFill with Rectangular Sample Tiling an
     globalState.activePageIndex = 0;
 
     // 1. Test autoSampleNearbyLassoRect
-    globalThis.activeLassoPoints = [
+    setActiveLassoPoints([
         { x: 100, y: 100 },
         { x: 200, y: 100 },
         { x: 200, y: 200 },
         { x: 100, y: 200 }
-    ];
+    ]);
 
     const sampled = autoSampleNearbyLassoRect();
     assert.strictEqual(sampled, true, 'autoSampleNearbyLassoRect should succeed when image is available');
@@ -217,7 +218,7 @@ test('Lasso Pattern Fill - runLassoPatternFill with Rectangular Sample Tiling an
     await runLassoPatternFill();
 
     // Verify completion
-    assert.strictEqual(globalThis.activeLassoPoints, null, 'Active lasso points must be cleared');
+    assert.strictEqual(getActiveLassoPoints(), null, 'Active lasso points must be cleared');
     const patBtn = document.getElementById('btn-lasso-pattern-fill');
     assert.strictEqual(patBtn.disabled, true, 'Pattern fill button must be disabled after completion');
 });

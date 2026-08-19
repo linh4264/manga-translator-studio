@@ -1,5 +1,4 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
+import { test, expect, assert } from 'vitest';
 
 import { dilateMask, computeMaskROI, extractROI, generateValidSourceMap } from '../../../src/features/patchmatch/maskUtils.ts';
 import { rgbToGrayscale, analyzeMangaTexture } from '../../../src/features/patchmatch/textureAnalysis.ts';

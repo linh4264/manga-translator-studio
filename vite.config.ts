@@ -31,6 +31,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['tests/**/*.test.{js,ts}']
+    include: ['tests/**/*.test.{js,ts}'],
+    setupFiles: ['./tests/setup/browser-env.js', './tests/setup/indexeddb-mock.js']
   }
 });
