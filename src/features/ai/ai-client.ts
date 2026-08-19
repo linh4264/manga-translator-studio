@@ -397,7 +397,7 @@ export async function executeOcrVisionStep({
                 {
                     role: "user",
                     content: [
-                        { type: "text", text: "Detect each speech bubble, narration box, thought bubble, and SFX with the 0-1000 center coordinate [x, y] of its VISIBLE TEXT GLYPHS (not the bubble center), type ('dialogue'|'narration'|'thought'|'sfx'), and raw original text. Return JSON." },
+                        { type: "text", text: "Detect each speech bubble, narration box, thought bubble, and SFX with exact 2-integer center coordinates [x, y] of its VISIBLE TEXT GLYPHS on a 0-1000 scale (x = centerX, y = centerY), type ('dialogue'|'narration'|'thought'|'sfx'), and raw original text. Return JSON matching schema: {\"blocks\": [{\"id\": \"b1\", \"type\": \"dialogue\", \"original\": \"...\", \"box\": [x, y], \"vertical\": true}]}." },
                         { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
                     ]
                 }
@@ -411,7 +411,7 @@ export async function executeOcrVisionStep({
         requestBody = JSON.stringify({
             contents: [{
                 parts: [
-                    { text: "Detect each speech bubble, narration box, thought bubble, SFX with the 0-1000 integer center [x, y] coordinates of its VISIBLE TEXT GLYPHS (not the bubble center), classified type ('dialogue'|'narration'|'thought'|'sfx'), and raw original text. Return JSON." },
+                    { text: "Detect each speech bubble, narration box, thought bubble, SFX with exact 2-integer center coordinates [x, y] of its VISIBLE TEXT GLYPHS on a 0-1000 scale (x = centerX, y = centerY), classified type ('dialogue'|'narration'|'thought'|'sfx'), and raw original text. Return JSON." },
                     { inlineData: { mimeType, data: rawBase64 } }
                 ]
             }],
@@ -434,7 +434,10 @@ export async function executeOcrVisionStep({
                                     original: { type: "STRING" },
                                     box: {
                                         type: "ARRAY",
-                                        items: { type: "NUMBER" }
+                                        items: { type: "INTEGER" },
+                                        minItems: 2,
+                                        maxItems: 2,
+                                        description: "Exactly two 0-1000 integers [x, y] representing text glyph center (x = centerX, y = centerY)."
                                     },
                                     vertical: { type: "BOOLEAN" }
                                 },

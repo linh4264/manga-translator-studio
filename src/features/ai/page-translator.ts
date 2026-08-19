@@ -243,7 +243,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
             if (isOpenAiFormat) {
                 apiUrl = `${endpoint.replace(/\/$/, '')}/chat/completions`;
                 const openAiUserContent: any[] = [
-                    { type: "text", text: `Detect each speech bubble, narration box, thought bubble, and SFX with the 0-1000 center coordinate [x, y] of its VISIBLE TEXT GLYPHS (not the bubble center) and type ('dialogue'|'narration'|'thought'|'sfx'). Translate their contents into ${targetLangName}. Return valid JSON.` },
+                    { type: "text", text: `Detect each speech bubble, narration box, thought bubble, and SFX with exact 2-integer center coordinates [x, y] of its VISIBLE TEXT GLYPHS on a 0-1000 scale (x = centerX, y = centerY) and type ('dialogue'|'narration'|'thought'|'sfx'). Translate their contents into ${targetLangName}. Return JSON matching schema: {"blocks": [{"id": "b1", "type": "dialogue", "original": "...", "translated": "...", "box": [x, y], "vertical": true}]}.` },
                     { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
                 ];
                 if (prevPageContext) {
@@ -263,7 +263,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
             } else {
                 apiUrl = getGeminiGenerateContentUrl(selectedModel, keyToUse);
                 const contentsParts: any[] = [
-                    { text: `Detect each speech bubble, narration box, thought bubble, and SFX with the 0-1000 center coordinate [x, y] of its VISIBLE TEXT GLYPHS (not the bubble center) and type ('dialogue'|'narration'|'thought'|'sfx'). Translate their contents into ${targetLangName}. Return valid JSON.` }
+                    { text: `Detect each speech bubble, narration box, thought bubble, and SFX with exact 2-integer center coordinates [x, y] of its VISIBLE TEXT GLYPHS on a 0-1000 scale (x = centerX, y = centerY) and type ('dialogue'|'narration'|'thought'|'sfx'). Translate their contents into ${targetLangName}. Return JSON.` }
                 ];
                 if (prevPageContext) {
                     contentsParts.push({ text: prevPageContext });
@@ -293,7 +293,10 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                                             translated: { type: "STRING" },
                                             box: {
                                                 type: "ARRAY",
-                                                items: { type: "NUMBER" }
+                                                items: { type: "INTEGER" },
+                                                minItems: 2,
+                                                maxItems: 2,
+                                                description: "Exactly two 0-1000 integers [x, y] representing text glyph center (x = centerX, y = centerY)."
                                             },
                                             vertical: { type: "BOOLEAN" }
                                         },
