@@ -1,0 +1,784 @@
+// Single-Page and Full-Chapter Batch Translation Orchestration
+import {
+    globalState,
+    pushStateToHistory,
+    savePageToDB,
+    activatePage,
+    deactivatePage,
+    garbageCollectPageCaches,
+    uiUpdatePageListUI,
+    uiUpdateProcessingOverlay,
+    uiUpdateBackgroundTaskOverlay,
+    uiUpdateActiveBlockEditor
+} from '../../core/state';
+import {
+    DEFAULT_MODEL,
+    DEFAULT_PIPELINE_MODE,
+    DEFAULT_OCR_MODEL,
+    DEFAULT_TRANSLATION_MODEL,
+    DEFAULT_AI_BLOCK_BOX,
+    TARGET_LANG_MAP
+} from '../../config/constants';
+import { elements } from '../../core/elements';
+import { showToast } from '../../core/utils/dom';
+import { refineAiBlockBox, mergeOverlappingAiBlocks } from '../ocr/ocr-service';
+import { requestOverlayRender, autoMatchBlockStyle } from '../canvas/canvas-service';
+import { autoFitBlock, isBlockAutoFit } from '../canvas/canvas-styling';
+import { balanceTextToDiamond } from '../canvas/canvas-renderer';
+import { getConfiguredAiProvider, getConfiguredApiEndpoint, getGeminiGenerateContentUrl } from './ai-config';
+import {
+    cancelTranslationFlag,
+    isBatchTranslating,
+    setCancelTranslationFlag,
+    setIsBatchTranslating,
+    getGeminiApiKey,
+    getDefaultFontForBlockType,
+    recordPageToStoryMemory
+} from './story-memory';
+import { getTranslationGuidancePrompt } from './prompt-builder';
+import {
+    getBase64,
+    enhanceImageForOcr,
+    ensurePageImageData,
+    executeAiJsonRequestWithRetry,
+    executeOcrVisionStep
+} from './ai-client';
+import { executeTextTranslationStep, executeChapterTranslationStep } from './translation-pipeline';
+
+export async function translateActivePage(): Promise<void> {
+    if (globalState.activePageIndex === -1) {
+        showToast("Vui lòng chọn một trang trước khi dịch.", "warn");
+        return;
+    }
+
+    await translatePage(globalState.activePageIndex, true);
+}
+
+export async function translateSinglePageInBatch(index: number): Promise<void> {
+    if (isBatchTranslating) {
+        showToast("Tiến trình dịch hàng loạt đang chạy. Vui lòng dừng hoặc chờ hoàn tất trước.", "warn");
+        return;
+    }
+
+    await translatePage(index, true);
+}
+
+export async function translatePage(pageIndex: number, isBackgroundMode: boolean = false): Promise<boolean> {
+    if (pageIndex < 0 || pageIndex >= globalState.pages.length) return false;
+    const page = globalState.pages[pageIndex];
+
+    await activatePage(page);
+
+    const provider = getConfiguredAiProvider();
+    const keyToUse = getGeminiApiKey() || (provider === 'custom' ? 'local' : '');
+    if (!keyToUse && provider !== 'custom') {
+        showToast("Vui lòng nhập Gemini API Key trước khi dịch.", "error");
+        if (elements.apiKeyInput) elements.apiKeyInput.focus();
+        return false;
+    }
+
+    const totalPages = globalState.pages.length;
+    const progressVal = Math.round((pageIndex / totalPages) * 100);
+
+    page.status = 'processing';
+    uiUpdatePageListUI();
+    savePageToDB(page);
+
+    const updateProgressMsg = (title: string, subtitle: string, percent: number) => {
+        if (isBackgroundMode) {
+            uiUpdateBackgroundTaskOverlay(true, title, subtitle, percent);
+        } else {
+            uiUpdateProcessingOverlay(true, title, subtitle, percent);
+        }
+    };
+
+    updateProgressMsg(
+        "Đang nhận diện & dịch...",
+        `Trang ${pageIndex + 1}/${totalPages}: Đang đọc ảnh thô...`,
+        isBackgroundMode ? progressVal : 20
+    );
+
+    const maxRetriesConfig = globalState.maxRetries !== undefined && globalState.maxRetries !== null ? Number(globalState.maxRetries) : 3;
+    let attempts = Math.max(1, maxRetriesConfig);
+    let retryDelay = 10000;
+
+    while (attempts > 0) {
+        if (cancelTranslationFlag) {
+            page.status = 'draft';
+            uiUpdatePageListUI();
+            savePageToDB(page);
+            return false;
+        }
+
+        try {
+            const pageFile = (page.file || page.originalFile) as File;
+            const fileForOcr = globalState.ocrEnhanceEnabled ? await enhanceImageForOcr(pageFile) : pageFile;
+            const rawBase64 = await getBase64(fileForOcr);
+            const mimeType = fileForOcr.type || pageFile.type;
+            const targetLang = globalState.targetLanguage || 'vi';
+            const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
+            const glossaryNames = globalState.preserveNames ? (globalState.glossaryNames || '').trim() : "";
+
+            let prevPageContext = "";
+            if (pageIndex > 0) {
+                const prevPage = globalState.pages[pageIndex - 1];
+                if (prevPage && prevPage.blocks && prevPage.blocks.length > 0) {
+                    const prevDialogues = prevPage.blocks
+                        .filter(b => b.translated && b.translated.trim())
+                        .map((b, idx) => `Bubble #${idx + 1}: "${b.translated}"`)
+                        .join("\n");
+                    if (prevDialogues) prevPageContext = `[PREVIOUS PAGE DIALOGUE HISTORY FOR CONSISTENCY]\n${prevDialogues}`;
+                }
+            }
+
+            const pipelineMode = globalState.translationPipelineMode || DEFAULT_PIPELINE_MODE;
+            const ocrModelToUse = globalState.ocrModel || DEFAULT_OCR_MODEL;
+            const transModelToUse = globalState.translationModel || DEFAULT_TRANSLATION_MODEL;
+            const endpoint = getConfiguredApiEndpoint();
+            const isOpenAiFormat = provider === 'openai' || (provider === 'custom' && !endpoint.includes('generateContent'));
+            const requestHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (isOpenAiFormat && keyToUse) {
+                requestHeaders['Authorization'] = `Bearer ${keyToUse}`;
+            }
+
+            const hasExistingBlocks = page.blocks && page.blocks.length > 0 && page.blocks.some(b => b.original && b.original.trim());
+            let finalBlocks: any[] = [];
+
+            if (pipelineMode === 'two-step') {
+                let detectedRawBlocks: any[] = [];
+
+                if (hasExistingBlocks) {
+                    detectedRawBlocks = page.blocks;
+                } else {
+                    updateProgressMsg(
+                        "Bước 1/2: Đang quét khung thoại & chữ gốc...",
+                        `Trang ${pageIndex + 1}/${totalPages}: Sử dụng ${ocrModelToUse} (Vision)...`,
+                        isBackgroundMode ? progressVal : 35
+                    );
+
+                    detectedRawBlocks = await executeOcrVisionStep({
+                        rawBase64,
+                        mimeType,
+                        ocrModel: ocrModelToUse,
+                        keyToUse,
+                        isOpenAiFormat,
+                        endpoint,
+                        requestHeaders
+                    });
+                }
+
+                if (!detectedRawBlocks || detectedRawBlocks.length === 0) {
+                    finalBlocks = [];
+                } else {
+                    detectedRawBlocks = detectedRawBlocks.map((b, bIdx) => ({
+                        ...b,
+                        id: `p${pageIndex + 1}_b${bIdx + 1}`
+                    }));
+
+                    updateProgressMsg(
+                        "Bước 2/2: Đang dịch ngữ cảnh văn học...",
+                        `Trang ${pageIndex + 1}/${totalPages}: Sử dụng ${transModelToUse} (Text Only)...`,
+                        isBackgroundMode ? progressVal : 70
+                    );
+
+                    finalBlocks = await executeTextTranslationStep({
+                        blocksToTranslate: detectedRawBlocks,
+                        translationModel: transModelToUse,
+                        targetLangName,
+                        prevPageContext,
+                        glossaryNames,
+                        keyToUse,
+                        isOpenAiFormat,
+                        endpoint,
+                        requestHeaders
+                    });
+                }
+
+            } else {
+                const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
+
+                const systemInstruction = [
+                    "Detect every manga speech bubble, narration box, thought bubble, and SFX label, classify its block type ('dialogue'|'narration'|'thought'|'sfx'), then return JSON only.",
+                    "EXHAUSTIVE OCR COMPLETENESS MANDATE (BẢO TOÀN 100% NỘI DUNG CHỮ, TUYỆT ĐỐI KHÔNG BỎ SÓT):",
+                    "- Detect and transcribe 100% of text on this manga page without skipping.",
+                    "POSITION CALCULATION FORMULA: Output 2 integers [x, y] on scale 0 to 1000. Set x = centerX, y = centerY.",
+                    `Translate to short, natural ${targetLangName} that matches the scene and speaker relationship.`,
+                    `Preserve the same ${targetLangName} ${pronounTerm} and terminology within the page.`,
+                    globalState.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
+                    glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
+                    getTranslationGuidancePrompt().trim()
+                ].filter(Boolean).join("\n\n");
+
+                const selectedModel = globalState.selectedModel || DEFAULT_MODEL;
+                let apiUrl = '';
+                let requestBody = null;
+
+                if (isOpenAiFormat) {
+                    apiUrl = `${endpoint.replace(/\/$/, '')}/chat/completions`;
+                    const openAiUserContent: any[] = [
+                        { type: "text", text: `Detect each speech bubble, narration box, thought bubble, and SFX with [x, y] center anchor coordinates (x = centerX, y = centerY) and type ('dialogue'|'narration'|'thought'|'sfx'). Translate their contents into ${targetLangName}. Return valid JSON.` },
+                        { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
+                    ];
+                    if (prevPageContext) {
+                        openAiUserContent.splice(1, 0, { type: "text", text: prevPageContext });
+                    }
+
+                    requestBody = JSON.stringify({
+                        model: selectedModel,
+                        messages: [
+                            { role: "system", content: systemInstruction },
+                            { role: "user", content: openAiUserContent }
+                        ],
+                        temperature: 0.3,
+                        max_tokens: 4096,
+                        response_format: { type: "json_object" }
+                    });
+                } else {
+                    apiUrl = getGeminiGenerateContentUrl(selectedModel, keyToUse);
+                    const contentsParts: any[] = [
+                        { text: `Detect each speech bubble, narration box, thought bubble, and SFX with [x, y] center anchor coordinates (x = centerX, y = centerY) and type ('dialogue'|'narration'|'thought'|'sfx'). Translate their contents into ${targetLangName}. Return valid JSON.` }
+                    ];
+                    if (prevPageContext) {
+                        contentsParts.push({ text: prevPageContext });
+                    }
+                    contentsParts.push({ inlineData: { mimeType: mimeType, data: rawBase64 } });
+
+                    requestBody = JSON.stringify({
+                        contents: [{ parts: contentsParts }],
+                        generationConfig: {
+                            responseMimeType: "application/json",
+                            maxOutputTokens: 4096,
+                            responseSchema: {
+                                type: "OBJECT",
+                                properties: {
+                                    blocks: {
+                                        type: "ARRAY",
+                                        items: {
+                                            type: "OBJECT",
+                                            properties: {
+                                                id: { type: "STRING" },
+                                                type: {
+                                                    type: "STRING",
+                                                    enum: ["dialogue", "narration", "thought", "sfx"]
+                                                },
+                                                original: { type: "STRING" },
+                                                translated: { type: "STRING" },
+                                                box: {
+                                                    type: "ARRAY",
+                                                    items: { type: "NUMBER" }
+                                                },
+                                                vertical: { type: "BOOLEAN" }
+                                            },
+                                            required: ["id", "type", "original", "translated", "box"]
+                                        }
+                                    }
+                                },
+                                required: ["blocks"]
+                            }
+                        },
+                        systemInstruction: {
+                            parts: [{ text: systemInstruction }]
+                        }
+                    });
+                }
+
+                const data = await executeAiJsonRequestWithRetry({
+                    apiUrl,
+                    headers: requestHeaders,
+                    body: requestBody,
+                    isOpenAiFormat,
+                    errorLabel: "Dịch trang"
+                });
+
+                if (!data || !Array.isArray(data.blocks)) {
+                    throw new Error("Phản hồi từ AI bị lỗi định dạng JSON hoặc bị ngắt câu.");
+                }
+                finalBlocks = mergeOverlappingAiBlocks(data.blocks);
+            }
+
+            updateProgressMsg(
+                "Đang dựng bản dịch...",
+                `Trang ${pageIndex + 1}/${totalPages}: Đang tính toán tỷ lệ bong bóng thoại...`,
+                isBackgroundMode ? progressVal : 85
+            );
+
+            const pageImageData = await ensurePageImageData(page);
+
+            pushStateToHistory();
+
+            page.blocks = (finalBlocks || []).map((b, idx) => {
+                const normalisedBox = b.positionKnown === false
+                    ? { ...DEFAULT_AI_BLOCK_BOX }
+                    : refineAiBlockBox(b.box, pageImageData, globalState.selectedModel);
+
+                const isVerticalTarget = ['ja', 'zh', 'ko'].includes(targetLang);
+                const blockVertical = isVerticalTarget
+                    ? (typeof b.vertical === 'boolean' ? b.vertical : ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true))
+                    : false;
+
+                const blockType = b.type || 'dialogue';
+                const chosenFont = getDefaultFontForBlockType(blockType);
+                let maskShape = globalState.globalStyle.maskShape;
+                let italic = false;
+                const bold = globalState.globalStyle.bold;
+
+                if (blockType === 'narration') {
+                    maskShape = 'rect';
+                } else if (blockType === 'thought') {
+                    maskShape = 'ellipse';
+                    italic = true;
+                }
+
+                return {
+                    id: b.id || `block_${Date.now()}_${idx}`,
+                    type: blockType,
+                    original: b.original || '',
+                    translated: b.translated ? balanceTextToDiamond(b.translated, normalisedBox.w, normalisedBox.h) : '',
+                    box: normalisedBox,
+                    style: {
+                        fontFamily: chosenFont,
+                        fontSize: globalState.globalStyle.fontSize,
+                        textColor: '#000000',
+                        bgColor: '#ffffff',
+                        bgOpacity: 100,
+                        padding: globalState.globalStyle.padding,
+                        rotate: 0,
+                        vertical: blockVertical,
+                        bold: bold,
+                        italic: italic,
+                        align: globalState.globalStyle.align,
+                        maskShape: maskShape,
+                        maskSize: globalState.globalStyle.maskSize,
+                        strokeColor: '#ffffff',
+                        strokeWidth: 0,
+                        shadowColor: '#000000',
+                        shadowBlur: 0
+                    }
+                };
+            });
+
+            const imgEl = elements.mangaBgImage;
+            if (imgEl && imgEl.naturalWidth) {
+                try {
+                    page.blocks.forEach(b => autoMatchBlockStyle(b, imgEl));
+                } catch (e) { }
+            }
+
+            page.blocks.forEach(b => {
+                b.autoFitCache = null;
+                if (isBlockAutoFit(b)) {
+                    autoFitBlock(b);
+                }
+            });
+            page.status = 'done';
+            recordPageToStoryMemory(pageIndex, page.blocks);
+            uiUpdatePageListUI();
+            savePageToDB(page);
+
+            if (globalState.activePageIndex === pageIndex) {
+                if (page.blocks.length > 0 && !globalState.selectedBlockId) {
+                    globalState.selectedBlockId = page.blocks[0].id;
+                }
+                requestOverlayRender();
+                uiUpdateActiveBlockEditor();
+            }
+
+            showToast(`Đã dịch xong trang ${pageIndex + 1}!`, "success");
+            return true;
+
+        } catch (error: any) {
+            console.error("Lỗi chi tiết khi dịch trang:", error);
+
+            const isTimeout = error.name === 'AbortError' || error.name === 'TimeoutError' || (error.message && (error.message.includes('Timeout') || error.message.includes('aborted') || error.message.includes('AbortError')));
+            const isNetworkError = error.message && (error.message.includes('Failed to fetch') || error.message.includes('network') || error.message.includes('NetworkError'));
+
+            if (isTimeout || isNetworkError) {
+                attempts--;
+                if (attempts > 0) {
+                    const errorLabel = isTimeout ? "Thời gian yêu cầu quá hạn (Timeout 120s)" : "Mất kết nối mạng";
+                    showToast(`API bận ở trang ${pageIndex + 1}: ${errorLabel}. Tự động chờ ${retryDelay / 1000}s rồi thử lại...`, "warn");
+
+                    for (let delay = 0; delay < (retryDelay / 100); delay++) {
+                        if (cancelTranslationFlag) break;
+                        const delayPercent = Math.round((delay / (retryDelay / 100)) * 100);
+                        updateProgressMsg(
+                            "Đang tự động kết nối lại...",
+                            `${isTimeout ? "Quá hạn (Timeout)" : "Lỗi mạng"}. Đang dừng nghỉ ${retryDelay / 1000}s để gửi lại...`,
+                            delayPercent
+                        );
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                    retryDelay *= 2;
+                    continue;
+                }
+            }
+
+            page.status = 'error';
+            uiUpdatePageListUI();
+            savePageToDB(page);
+
+            let errorMessage = "Đã xảy ra lỗi không xác định.";
+            if (isTimeout) {
+                errorMessage = "Kết nối API quá hạn (Timeout 120s). Vui lòng kiểm tra lại mạng hoặc chuyển đổi Model.";
+            } else if (error instanceof Error) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            } else if (error && typeof error === 'object') {
+                errorMessage = error.message || error.statusText || JSON.stringify(error);
+            }
+
+            showToast(`Lỗi khi dịch trang ${pageIndex + 1}: ${errorMessage}`, "error");
+            return false;
+        } finally {
+            if (!isBackgroundMode) {
+                uiUpdateProcessingOverlay(false);
+            } else {
+                uiUpdateBackgroundTaskOverlay(false);
+            }
+            if (isBackgroundMode && pageIndex !== globalState.activePageIndex) {
+                deactivatePage(page);
+            }
+            garbageCollectPageCaches();
+        }
+    }
+    return false;
+}
+
+export async function runBatchTranslation(): Promise<void> {
+    if (globalState.pages.length === 0) return;
+    const provider = getConfiguredAiProvider();
+    const keyToUse = getGeminiApiKey() || (provider === 'custom' ? 'local' : '');
+    if (!keyToUse && provider !== 'custom') {
+        showToast("Vui lòng nhập API Key trước khi dịch.", "error");
+        if (elements.apiKeyInput) elements.apiKeyInput.focus();
+        return;
+    }
+
+    if (isBatchTranslating) {
+        showToast("Tiến trình dịch thuật đang chạy ngầm!", "warn");
+        return;
+    }
+
+    setCancelTranslationFlag(false);
+    setIsBatchTranslating(true);
+    showToast('Đang tiến hành dịch toàn bộ Chapter dưới nền. Bạn có thể tiếp tục xem và chỉnh sửa!', 'success');
+
+    for (let i = 0; i < globalState.pages.length; i++) {
+        if (globalState.pages[i].status === 'draft' || globalState.pages[i].status === 'error') {
+            globalState.pages[i].status = 'queued';
+            savePageToDB(globalState.pages[i]);
+        }
+    }
+    uiUpdatePageListUI();
+
+    const totalPages = globalState.pages.length;
+    const pipelineMode = globalState.translationPipelineMode || DEFAULT_PIPELINE_MODE;
+
+    if (pipelineMode === 'two-step') {
+        const ocrModelToUse = globalState.ocrModel || DEFAULT_OCR_MODEL;
+        const transModelToUse = globalState.translationModel || DEFAULT_TRANSLATION_MODEL;
+        const targetLang = globalState.targetLanguage || 'vi';
+        const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
+        const glossaryNames = globalState.preserveNames ? (globalState.glossaryNames || '').trim() : "";
+        const endpoint = getConfiguredApiEndpoint();
+        const isOpenAiFormat = provider === 'openai' || (provider === 'custom' && !endpoint.includes('generateContent'));
+        const requestHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (isOpenAiFormat && keyToUse) {
+            requestHeaders['Authorization'] = `Bearer ${keyToUse}`;
+        }
+
+        try {
+            const queuedIndices: number[] = [];
+            for (let i = 0; i < totalPages; i++) {
+                if (globalState.pages[i].status === 'queued') {
+                    queuedIndices.push(i);
+                }
+            }
+
+            for (let idx = 0; idx < queuedIndices.length; idx++) {
+                if (cancelTranslationFlag) {
+                    showToast("Đã dừng tiến trình dịch Chapter.", "warn");
+                    break;
+                }
+
+                const pageIndex = queuedIndices[idx];
+                const page = globalState.pages[pageIndex];
+                await activatePage(page);
+
+                const hasExistingBlocks = page.blocks && page.blocks.length > 0 && page.blocks.some(b => b.original && b.original.trim());
+
+                if (hasExistingBlocks) {
+                    page.blocks.forEach((b, bIdx) => {
+                        b.id = `p${pageIndex + 1}_b${bIdx + 1}`;
+                    });
+                    const progressVal = Math.round(((idx + 1) / queuedIndices.length) * 50);
+                    uiUpdateBackgroundTaskOverlay(
+                        true,
+                        "Giai đoạn 1/2: Đã có sẵn khung thoại",
+                        `Trang ${pageIndex + 1}/${totalPages}: Tận dụng khung có sẵn, bỏ qua OCR...`,
+                        progressVal
+                    );
+                } else {
+                    const progressVal = Math.round(((idx + 1) / queuedIndices.length) * 50);
+                    uiUpdateBackgroundTaskOverlay(
+                        true,
+                        "Giai đoạn 1/2: Quét OCR Khung thoại...",
+                        `Trang ${pageIndex + 1}/${totalPages}: Sử dụng ${ocrModelToUse} (Vision)...`,
+                        progressVal
+                    );
+
+                    try {
+                        const pageFile = (page.file || page.originalFile) as File;
+                        const fileForOcr = globalState.ocrEnhanceEnabled ? await enhanceImageForOcr(pageFile) : pageFile;
+                        const rawBase64 = await getBase64(fileForOcr);
+                        const mimeType = fileForOcr.type || pageFile.type;
+
+                        const detectedRawBlocks = await executeOcrVisionStep({
+                            rawBase64,
+                            mimeType,
+                            ocrModel: ocrModelToUse,
+                            keyToUse,
+                            isOpenAiFormat,
+                            endpoint,
+                            requestHeaders
+                        });
+
+                        const pageImageData = await ensurePageImageData(page);
+
+                        const isVerticalTarget = ['ja', 'zh', 'ko'].includes(targetLang);
+                        page.blocks = (detectedRawBlocks || []).map((b, bIdx) => {
+                            const normalisedBox = b.positionKnown === false
+                                ? { ...DEFAULT_AI_BLOCK_BOX }
+                                : refineAiBlockBox(b.box, pageImageData, globalState.selectedModel);
+
+                            const blockVertical = isVerticalTarget
+                                ? (typeof b.vertical === 'boolean' ? b.vertical : ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true))
+                                : false;
+
+                            const blockType = b.type || 'dialogue';
+                            const chosenFont = getDefaultFontForBlockType(blockType);
+                            let maskShape = globalState.globalStyle.maskShape;
+                            let italic = false;
+                            const bold = globalState.globalStyle.bold;
+
+                            if (blockType === 'narration') {
+                                maskShape = 'rect';
+                            } else if (blockType === 'thought') {
+                                maskShape = 'ellipse';
+                                italic = true;
+                            }
+
+                            return {
+                                id: `p${pageIndex + 1}_b${bIdx + 1}`,
+                                type: blockType,
+                                original: b.original || '',
+                                translated: '',
+                                box: normalisedBox,
+                                style: {
+                                    fontFamily: chosenFont,
+                                    fontSize: globalState.globalStyle.fontSize,
+                                    textColor: '#000000',
+                                    bgColor: '#ffffff',
+                                    bgOpacity: 100,
+                                    padding: globalState.globalStyle.padding,
+                                    rotate: 0,
+                                    vertical: blockVertical,
+                                    bold: bold,
+                                    italic: italic,
+                                    align: globalState.globalStyle.align,
+                                    maskShape: maskShape,
+                                    maskSize: globalState.globalStyle.maskSize,
+                                    strokeColor: '#ffffff',
+                                    strokeWidth: 0,
+                                    shadowColor: '#000000',
+                                    shadowBlur: 0
+                                }
+                            };
+                        });
+
+                        savePageToDB(page);
+                    } catch (ocrErr) {
+                        console.error(`Lỗi OCR ở trang ${pageIndex + 1}:`, ocrErr);
+                        page.status = 'error';
+                        savePageToDB(page);
+                    }
+                }
+
+                if (pageIndex !== globalState.activePageIndex) {
+                    deactivatePage(page);
+                }
+                garbageCollectPageCaches();
+
+                if (idx < queuedIndices.length - 1 && !cancelTranslationFlag) {
+                    await new Promise(r => setTimeout(r, 1500));
+                }
+            }
+
+            if (!cancelTranslationFlag) {
+                const allChapterBlocks: any[] = [];
+                queuedIndices.forEach(i => {
+                    const p = globalState.pages[i];
+                    if (p.status === 'queued' && p.blocks && p.blocks.length > 0) {
+                        p.blocks.forEach(b => {
+                            if (b.original && b.original.trim()) {
+                                allChapterBlocks.push({
+                                    id: b.id,
+                                    original: b.original,
+                                    pageIndex: i
+                                });
+                            }
+                        });
+                    }
+                });
+
+                if (allChapterBlocks.length > 0) {
+                    uiUpdateBackgroundTaskOverlay(
+                        true,
+                        "Giai đoạn 2/2: Đang dịch toàn bộ Chapter...",
+                        `Đang gửi ${allChapterBlocks.length} câu thoại của toàn bộ Chapter đến ${transModelToUse} (1 Request duy nhất)...`,
+                        75
+                    );
+
+                    try {
+                        const translatedChapterBlocks = await executeChapterTranslationStep({
+                            allChapterBlocks,
+                            translationModel: transModelToUse,
+                            targetLangName,
+                            glossaryNames,
+                            keyToUse,
+                            isOpenAiFormat,
+                            endpoint,
+                            requestHeaders
+                        });
+
+                        const lookupMap = new Map<string, string>();
+                        translatedChapterBlocks.forEach(b => {
+                            if (b && b.id) {
+                                lookupMap.set(String(b.id), b.translated || '');
+                                lookupMap.set(String(b.id).toLowerCase(), b.translated || '');
+                            }
+                        });
+
+                        queuedIndices.forEach(i => {
+                            const p = globalState.pages[i];
+                            if (p.status === 'queued' && p.blocks) {
+                                p.blocks.forEach((b, bIdx) => {
+                                    const expectedId = `p${i + 1}_b${bIdx + 1}`;
+                                    const rawTrans = lookupMap.get(String(b.id)) ||
+                                        lookupMap.get(expectedId) ||
+                                        lookupMap.get(expectedId.toLowerCase()) ||
+                                        b.translated || '';
+                                    b.translated = rawTrans ? balanceTextToDiamond(rawTrans, b.box ? b.box.w : null, b.box ? b.box.h : null) : '';
+                                    b.autoFitCache = null;
+                                });
+
+                                const imgEl = elements.mangaBgImage;
+                                if (imgEl && imgEl.naturalWidth && i === globalState.activePageIndex) {
+                                    try {
+                                        p.blocks.forEach(b => autoMatchBlockStyle(b, imgEl));
+                                    } catch (e) { }
+                                }
+
+                                p.status = 'done';
+                                recordPageToStoryMemory(i, p.blocks);
+                                savePageToDB(p);
+                            }
+                        });
+
+                        showToast(`Đã dịch thành công toàn bộ Chapter (${allChapterBlocks.length} câu thoại) trong 1 lượt gọi duy nhất!`, "success");
+                    } catch (transErr: any) {
+                        console.error("Lỗi khi dịch gộp Chapter:", transErr);
+                        showToast(`Đã hoàn thành OCR (${allChapterBlocks.length} ô thoại), nhưng bước dịch gặp lỗi: ${transErr.message || transErr}. Bạn có thể bấm Thử Dịch Lại mà không cần quét OCR lại.`, "warn");
+                        queuedIndices.forEach(i => {
+                            const p = globalState.pages[i];
+                            if (p.status === 'queued') {
+                                p.status = (p.blocks && p.blocks.length > 0) ? 'draft' : 'error';
+                                savePageToDB(p);
+                            }
+                        });
+                    }
+                } else {
+                    queuedIndices.forEach(i => {
+                        const p = globalState.pages[i];
+                        if (p.status === 'queued') {
+                            p.status = 'done';
+                            savePageToDB(p);
+                        }
+                    });
+                }
+            }
+
+        } catch (chapterErr) {
+            console.error("Lỗi quy trình Chapter Batch:", chapterErr);
+        }
+
+    } else {
+        for (let i = 0; i < totalPages; i++) {
+            if (cancelTranslationFlag) {
+                showToast("Đã dừng hàng loạt tiến trình dịch ngầm.", "warn");
+                break;
+            }
+
+            const page = globalState.pages[i];
+            if (page.status !== 'queued') continue;
+
+            try {
+                const delaySteps = (globalState.apiDelay !== undefined ? globalState.apiDelay : 8) * 10;
+                if (i > 0 && delaySteps > 0) {
+                    let delayProgress = 0;
+                    for (let delay = 0; delay < delaySteps; delay++) {
+                        if (cancelTranslationFlag) break;
+                        delayProgress = Math.round((delay / delaySteps) * 100);
+                        uiUpdateBackgroundTaskOverlay(
+                            true,
+                            "Đang chờ giãn cách API...",
+                            `Trang ${i + 1}/${totalPages}: Tạm nghỉ bảo vệ API Key... (Còn ${Math.ceil((delaySteps - delay) / 10)} giây)`,
+                            delayProgress
+                        );
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                }
+
+                if (cancelTranslationFlag) break;
+
+                const progressPercent = Math.round((i / totalPages) * 100);
+                uiUpdateBackgroundTaskOverlay(true, "Đang xử lý...", `Đang chuẩn bị gửi trang ${i + 1}/${totalPages}...`, progressPercent);
+
+                const success = await translatePage(i, true);
+                if (!success) {
+                    let errorDelayProgress = 0;
+                    const cooldownSeconds = 15;
+                    for (let delay = 0; delay < cooldownSeconds * 10; delay++) {
+                        if (cancelTranslationFlag) break;
+                        errorDelayProgress = Math.round((delay / (cooldownSeconds * 10)) * 100);
+                        uiUpdateBackgroundTaskOverlay(
+                            true,
+                            "Lỗi kết nối - Đang chờ khôi phục...",
+                            `Tạm nghỉ bảo vệ API sau khi lỗi... (Chờ ${Math.ceil((cooldownSeconds * 10 - delay) / 10)} giây)`,
+                            errorDelayProgress
+                        );
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    }
+                }
+            } catch (e) {
+                console.error("Background batch translation error on page:", i, e);
+            }
+        }
+    }
+
+    for (let i = 0; i < globalState.pages.length; i++) {
+        if (globalState.pages[i].status === 'queued') {
+            globalState.pages[i].status = 'draft';
+            savePageToDB(globalState.pages[i]);
+        }
+    }
+
+    setIsBatchTranslating(false);
+    uiUpdatePageListUI();
+    uiUpdateBackgroundTaskOverlay(false);
+    if (globalState.activePageIndex >= 0) {
+        requestOverlayRender();
+        uiUpdateActiveBlockEditor();
+    }
+}
