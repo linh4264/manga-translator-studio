@@ -5,6 +5,7 @@ import { parseGeminiJsonText } from '../../core/utils/json';
 import { mergeOverlappingAiBlocks } from '../ocr/ocr-service';
 import { getGeminiGenerateContentUrl } from './ai-config';
 import { cancelTranslationFlag } from './story-memory';
+import { getAiConfig } from './ai-state';
 import { MangaPage } from '../../types/index';
 
 export async function getBase64(file: Blob): Promise<string> {
@@ -128,6 +129,15 @@ export async function ensurePageImageData(page?: MangaPage): Promise<ImageData |
     return null;
 }
 
+export interface AiRetryInfo {
+    attempt: number;
+    maxRetries: number;
+    delayMs: number;
+    error: any;
+    errorLabel: string;
+    isRateLimit: boolean;
+}
+
 export interface AiFetchOptions {
     apiUrl: string;
     headers: Record<string, string>;
@@ -136,19 +146,70 @@ export interface AiFetchOptions {
     timeoutMs?: number;
     maxRetries?: number;
     errorLabel?: string;
+    onRetry?: (info: AiRetryInfo) => void;
+}
+
+export function isRetryableAiError(error: any, httpStatus?: number): boolean {
+    if (!error) return false;
+
+    if (httpStatus !== undefined) {
+        if (httpStatus === 429) return true;
+        if (httpStatus >= 500 && httpStatus <= 599) return true;
+        if (httpStatus === 400 || httpStatus === 401 || httpStatus === 403 || httpStatus === 404) return false;
+    }
+
+    const errName = error.name || '';
+    if (errName === 'AbortError' || errName === 'TimeoutError') {
+        return !cancelTranslationFlag;
+    }
+
+    const msg = (error.message || String(error)).toLowerCase();
+    if (msg.includes('429') || msg.includes('quota') || msg.includes('rate limit') || msg.includes('resource_exhausted')) {
+        return true;
+    }
+    if (msg.includes('500') || msg.includes('502') || msg.includes('503') || msg.includes('504')) {
+        return true;
+    }
+    if (msg.includes('timeout') || msg.includes('timed out') || msg.includes('time out') || msg.includes('failed to fetch') || msg.includes('network') || msg.includes('econnreset') || msg.includes('etimedout') || msg.includes('aborted')) {
+        return true;
+    }
+    if (msg.includes('401') || msg.includes('403') || msg.includes('api key') || msg.includes('unauthorized') || msg.includes('forbidden')) {
+        return false;
+    }
+
+    return false;
+}
+
+export async function interruptibleDelay(ms: number): Promise<boolean> {
+    const checkInterval = 100;
+    let elapsed = 0;
+    while (elapsed < ms) {
+        if (cancelTranslationFlag) {
+            return false;
+        }
+        const waitTime = Math.min(checkInterval, ms - elapsed);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        elapsed += waitTime;
+    }
+    return !cancelTranslationFlag;
 }
 
 export async function executeAiJsonRequestWithRetry<T = any>(
     opts: AiFetchOptions,
     parser?: (jsonText: string) => T
 ): Promise<T> {
-    const maxRetries = opts.maxRetries ?? 2;
+    const aiConfig = getAiConfig();
+    const maxRetries = typeof opts.maxRetries === 'number'
+        ? Math.max(0, opts.maxRetries)
+        : (typeof aiConfig.maxRetries === 'number' ? Math.max(0, aiConfig.maxRetries) : 3);
     const timeoutMs = opts.timeoutMs ?? 120000;
     const errorLabel = opts.errorLabel ?? "AI API";
     let lastError: any = null;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        if (cancelTranslationFlag) break;
+        if (cancelTranslationFlag) {
+            throw new Error("Tiến trình đã bị dừng bởi người dùng.");
+        }
 
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
@@ -171,7 +232,13 @@ export async function executeAiJsonRequestWithRetry<T = any>(
                     const errorJson = await response.json();
                     errorDetail = errorJson.error?.message || errorJson.message || "";
                 } catch (e) { }
-                throw new Error(errorDetail ? `Lỗi ${errorLabel} (${response.status}): ${errorDetail}` : `Lỗi ${errorLabel}: ${response.status}`);
+                const statusError: any = new Error(
+                    errorDetail
+                        ? `Lỗi ${errorLabel} (${response.status}): ${errorDetail}`
+                        : `Lỗi ${errorLabel}: ${response.status}`
+                );
+                statusError.status = response.status;
+                throw statusError;
             }
 
             const result = await response.json();
@@ -187,14 +254,44 @@ export async function executeAiJsonRequestWithRetry<T = any>(
             clearTimeout(timeoutId);
             lastError = fetchErr;
 
-            const isRetryable = fetchErr.name === 'AbortError' || fetchErr.name === 'TimeoutError' ||
-                (fetchErr.message && (fetchErr.message.includes('429') || fetchErr.message.includes('503') || fetchErr.message.includes('500') || fetchErr.message.includes('Timeout') || fetchErr.message.includes('aborted') || fetchErr.message.includes('Failed to fetch')));
+            if (cancelTranslationFlag) {
+                throw new Error("Tiến trình đã bị dừng bởi người dùng.");
+            }
+
+            const httpStatus = fetchErr.status;
+            const isRetryable = isRetryableAiError(fetchErr, httpStatus);
 
             if (isRetryable && attempt < maxRetries) {
-                const waitSec = (attempt + 1) * 2;
-                await new Promise(r => setTimeout(r, waitSec * 1000));
+                const is429 = httpStatus === 429 || (fetchErr.message && (fetchErr.message.includes('429') || fetchErr.message.includes('quota') || fetchErr.message.includes('rate limit')));
+                const jitter = Math.floor(Math.random() * 500);
+                const baseDelay = is429
+                    ? Math.min(30000, 4000 * Math.pow(2, attempt) + jitter)
+                    : Math.min(16000, 2000 * Math.pow(2, attempt) + jitter);
+
+                const retryInfo: AiRetryInfo = {
+                    attempt: attempt + 1,
+                    maxRetries,
+                    delayMs: baseDelay,
+                    error: fetchErr,
+                    errorLabel,
+                    isRateLimit: is429
+                };
+
+                if (opts.onRetry) {
+                    try {
+                        opts.onRetry(retryInfo);
+                    } catch (cbErr) {
+                        console.warn("Lỗi trong onRetry callback:", cbErr);
+                    }
+                }
+
+                const completed = await interruptibleDelay(baseDelay);
+                if (!completed || cancelTranslationFlag) {
+                    throw new Error("Tiến trình đã bị dừng bởi người dùng.");
+                }
                 continue;
             }
+
             throw fetchErr;
         }
     }
@@ -206,19 +303,25 @@ export async function fetchOCRWithRetry({
     apiUrl,
     requestHeaders,
     requestBody,
-    isOpenAiFormat
+    isOpenAiFormat,
+    maxRetries,
+    onRetry
 }: {
     apiUrl: string;
     requestHeaders: Record<string, string>;
     requestBody: string;
     isOpenAiFormat: boolean;
+    maxRetries?: number;
+    onRetry?: (info: AiRetryInfo) => void;
 }): Promise<any[]> {
     return executeAiJsonRequestWithRetry<any[]>({
         apiUrl,
         headers: requestHeaders,
         body: requestBody,
         isOpenAiFormat,
-        errorLabel: "OCR"
+        errorLabel: "OCR",
+        maxRetries,
+        onRetry
     }, (jsonText) => {
         const data = parseGeminiJsonText(jsonText);
         let rawBlocks: any[] = [];
@@ -244,7 +347,9 @@ export async function executeOcrVisionStep({
     keyToUse,
     isOpenAiFormat,
     endpoint,
-    requestHeaders
+    requestHeaders,
+    maxRetries,
+    onRetry
 }: {
     rawBase64: string;
     mimeType: string;
@@ -253,6 +358,8 @@ export async function executeOcrVisionStep({
     isOpenAiFormat: boolean;
     endpoint: string;
     requestHeaders: Record<string, string>;
+    maxRetries?: number;
+    onRetry?: (info: AiRetryInfo) => void;
 }): Promise<any[]> {
     const ocrSystemInstruction = [
         "You are an expert manga Vision OCR system specialized in pixel-accurate speech bubble, narration box, thought bubble, and sound effect (SFX) detection.",
@@ -340,6 +447,8 @@ export async function executeOcrVisionStep({
         apiUrl,
         requestHeaders,
         requestBody,
-        isOpenAiFormat
+        isOpenAiFormat,
+        maxRetries,
+        onRetry
     });
 }

@@ -2,7 +2,7 @@
 import { uiUpdateBackgroundTaskOverlay } from '../../core/state';
 import { parseGeminiJsonText } from '../../core/utils/json';
 import { getGeminiGenerateContentUrl } from './ai-config';
-import { executeAiJsonRequestWithRetry } from './ai-client';
+import { executeAiJsonRequestWithRetry, AiRetryInfo } from './ai-client';
 import { matchTranslationsToBlocks } from './matching-engine';
 import { getTranslationGuidancePrompt } from './prompt-builder';
 import { cancelTranslationFlag } from './story-memory';
@@ -18,7 +18,9 @@ export async function executeTextTranslationStep({
     isOpenAiFormat,
     endpoint,
     requestHeaders,
-    contextOptions
+    contextOptions,
+    maxRetries,
+    onRetry
 }: {
     blocksToTranslate: any[];
     translationModel: string;
@@ -30,6 +32,8 @@ export async function executeTextTranslationStep({
     endpoint: string;
     requestHeaders: Record<string, string>;
     contextOptions?: Partial<TranslationContextOptions>;
+    maxRetries?: number;
+    onRetry?: (info: AiRetryInfo) => void;
 }): Promise<any[]> {
     const ctx = getTranslationContext(contextOptions);
     const targetLang = ctx.targetLanguage || 'vi';
@@ -113,7 +117,9 @@ export async function executeTextTranslationStep({
         headers: requestHeaders,
         body: requestBody,
         isOpenAiFormat,
-        errorLabel: "Dịch thuật"
+        errorLabel: "Dịch thuật",
+        maxRetries,
+        onRetry
     }, (jsonText) => {
         const data = parseGeminiJsonText(jsonText);
         return matchTranslationsToBlocks(blocksToTranslate, data);
@@ -130,7 +136,9 @@ export async function executeChapterChunkTranslationStep({
     isOpenAiFormat,
     endpoint,
     requestHeaders,
-    contextOptions
+    contextOptions,
+    maxRetries,
+    onRetry
 }: {
     chunkBlocks: any[];
     translationModel: string;
@@ -142,6 +150,8 @@ export async function executeChapterChunkTranslationStep({
     endpoint: string;
     requestHeaders: Record<string, string>;
     contextOptions?: Partial<TranslationContextOptions>;
+    maxRetries?: number;
+    onRetry?: (info: AiRetryInfo) => void;
 }): Promise<any[]> {
     const ctx = getTranslationContext(contextOptions);
     const targetLang = ctx.targetLanguage || 'vi';
@@ -241,7 +251,9 @@ export async function executeChapterChunkTranslationStep({
         body: requestBody,
         isOpenAiFormat,
         timeoutMs: 180000,
-        errorLabel: "Dịch thuật Chapter"
+        errorLabel: "Dịch thuật Chapter",
+        maxRetries,
+        onRetry
     }, (jsonText) => {
         const data = parseGeminiJsonText(jsonText);
         return matchTranslationsToBlocks(chunkBlocks, data);
@@ -257,7 +269,9 @@ export async function executeChapterTranslationStep({
     isOpenAiFormat,
     endpoint,
     requestHeaders,
-    contextOptions
+    contextOptions,
+    maxRetries,
+    onRetry
 }: {
     allChapterBlocks: any[];
     translationModel: string;
@@ -268,6 +282,8 @@ export async function executeChapterTranslationStep({
     endpoint: string;
     requestHeaders: Record<string, string>;
     contextOptions?: Partial<TranslationContextOptions>;
+    maxRetries?: number;
+    onRetry?: (info: AiRetryInfo) => void;
 }): Promise<any[]> {
     if (!allChapterBlocks || allChapterBlocks.length === 0) return [];
 
@@ -283,7 +299,9 @@ export async function executeChapterTranslationStep({
             isOpenAiFormat,
             endpoint,
             requestHeaders,
-            contextOptions
+            contextOptions,
+            maxRetries,
+            onRetry
         });
     }
 
@@ -337,7 +355,9 @@ export async function executeChapterTranslationStep({
             isOpenAiFormat,
             endpoint,
             requestHeaders,
-            contextOptions
+            contextOptions,
+            maxRetries,
+            onRetry
         });
 
         allTranslatedBlocks.push(...translatedChunk);
