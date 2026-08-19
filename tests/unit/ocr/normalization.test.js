@@ -1,10 +1,12 @@
-import { test, expect, assert } from 'vitest';
+import { test, expect } from 'vitest';
+import assert from 'node:assert';
 import '../../setup/browser-env.js';
 
 import {
     normalizeAiBlockBox,
     isSuspiciousAiBlockBox,
-    expandAiBox
+    expandAiBox,
+    refineAiBlockBox
 } from '../../../src/features/ocr/ocr-service.ts';
 
 test('OCR Normalization - Strictly 0-1000 Coordinate Scale Standardization', () => {
@@ -182,7 +184,7 @@ test('OCR Normalization - Japanese Multi-Column Vertical Text & Furigana Groupin
     }
 
     const mockImageData = { width: W, height: H, data };
-    const rawBox = { x: 30, y: 15, w: 45, h: 65 }; // Rough box covering the area
+    const rawBox = { x: 300, y: 150, w: 450, h: 650 }; // 0-1000 scale box covering the area
 
     const resultBox = computeTextMaskDilatedRoi(rawBox, mockImageData, {
         dilationRadiusX: 6,
@@ -202,4 +204,49 @@ test('OCR Normalization - Japanese Multi-Column Vertical Text & Furigana Groupin
     assert.ok(pxRight >= 210, `Right edge should encompass Furigana (got ${pxRight})`);
     assert.ok(pxTop <= 52, `Top edge should encompass highest character (got ${pxTop})`);
     assert.ok(pxBottom >= 220, `Bottom edge should encompass lowest character (got ${pxBottom})`);
+});
+
+test('OCR Normalization - Block Type Specific Refinement (dialogue/thought vs narration/sfx)', () => {
+    // 1000x1000 synthetic image with a white bubble at center (400, 300) to (600, 500)
+    const W = 1000, H = 1000;
+    const data = new Uint8ClampedArray(W * H * 4);
+    data.fill(50); // Dark background
+
+    // Draw white speech bubble at center
+    for (let y = 300; y <= 500; y++) {
+        for (let x = 400; x <= 600; x++) {
+            const idx = (y * W + x) * 4;
+            data[idx] = 255; data[idx + 1] = 255; data[idx + 2] = 255; data[idx + 3] = 255;
+        }
+    }
+    const mockImageData = { width: W, height: H, data };
+
+    // Anchor at center of bubble: [500, 400]
+    const anchor = [500, 400];
+
+    // Dialogue: Snaps to detected speech bubble
+    const dialogueBox = refineAiBlockBox(anchor, mockImageData, undefined, 'dialogue');
+    assert.strictEqual(dialogueBox.x, 40);
+    assert.strictEqual(dialogueBox.y, 30);
+    assert.strictEqual(dialogueBox.w, 20);
+    assert.strictEqual(dialogueBox.h, 20);
+
+    // Thought: Snaps to detected speech bubble
+    const thoughtBox = refineAiBlockBox(anchor, mockImageData, undefined, 'thought');
+    assert.strictEqual(thoughtBox.x, 40);
+    assert.strictEqual(thoughtBox.y, 30);
+
+    // Narration: Does NOT run bubble CV detection, keeps normalized center anchor box (40% width, 40% height centered at 50%, 40%)
+    const narrationBox = refineAiBlockBox(anchor, mockImageData, undefined, 'narration');
+    assert.strictEqual(narrationBox.x, 30); // 50 - 40/2 = 30
+    assert.strictEqual(narrationBox.y, 20); // 40 - 40/2 = 20
+    assert.strictEqual(narrationBox.w, 40);
+    assert.strictEqual(narrationBox.h, 40);
+
+    // SFX: Does NOT run bubble CV detection, default size is 200px x 200px (20% on 1000x1000 image)
+    const sfxBox = refineAiBlockBox(anchor, mockImageData, undefined, 'sfx');
+    assert.strictEqual(sfxBox.x, 40); // 50 - 20/2 = 40
+    assert.strictEqual(sfxBox.y, 30); // 40 - 20/2 = 30
+    assert.strictEqual(sfxBox.w, 20); // 200px = 20%
+    assert.strictEqual(sfxBox.h, 20); // 200px = 20%
 });

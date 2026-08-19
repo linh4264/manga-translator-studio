@@ -1,6 +1,5 @@
-// OCR Processing & Bubble Snap to Contours
 import { isWeakTranslationModel, isFlash31LiteModel, globalState, pushStateToHistory, savePageToDB, uiUpdateProcessingOverlay } from '../../core/state';
-import { DEFAULT_AI_BLOCK_BOX, DEFAULT_BLOCK_SIZE_PX } from '../../config/constants';
+import { DEFAULT_AI_BLOCK_BOX, DEFAULT_BLOCK_SIZE_PX, DEFAULT_SFX_BLOCK_SIZE_PX } from '../../config/constants';
 import { detectLocalTextRegions } from './local-ocr';
 import { elements } from '../../core/elements';
 import { showToast } from '../../core/utils/dom';
@@ -657,7 +656,12 @@ export function detectSpeechBubbleAtPoint(imageData: ImageData, clickPixelX: num
     };
 }
 
-export function refineAiBlockBox(box: any, imageData?: ImageData | null, _modelId?: string): BoundingBox {
+export function refineAiBlockBox(
+    box: any,
+    imageData?: ImageData | null,
+    _modelId?: string,
+    blockType?: string
+): BoundingBox {
     let effectiveImageData = imageData;
     if (!effectiveImageData) {
         if (typeof globalState !== 'undefined' && globalState.activePageIndex >= 0) {
@@ -677,18 +681,26 @@ export function refineAiBlockBox(box: any, imageData?: ImageData | null, _modelI
         ? effectiveImageData.height 
         : ((typeof elements !== 'undefined' && elements?.mangaBgImage?.naturalHeight! > 0) ? elements.mangaBgImage!.naturalHeight : 1000);
 
-    const normalized = normalizeAiBlockBox(box, imgW, imgH);
-    const wPx = DEFAULT_BLOCK_SIZE_PX || 400;
-    const hPx = DEFAULT_BLOCK_SIZE_PX || 400;
-    const defaultWPct = Math.round(((wPx / imgW) * 100) * 100) / 100;
-    const defaultHPct = Math.round(((hPx / imgH) * 100) * 100) / 100;
+    const normalizedType = (blockType || 'dialogue').toLowerCase();
+    const isSfx = normalizedType === 'sfx';
+    const targetBlockSizePx = isSfx ? (DEFAULT_SFX_BLOCK_SIZE_PX || 200) : (DEFAULT_BLOCK_SIZE_PX || 400);
+
+    const normalized = normalizeAiBlockBox(box, imgW, imgH, blockType);
+    const defaultWPct = Math.round(((targetBlockSizePx / imgW) * 100) * 100) / 100;
+    const defaultHPct = Math.round(((targetBlockSizePx / imgH) * 100) * 100) / 100;
 
     normalized.w = defaultWPct;
     normalized.h = defaultHPct;
     normalized.x = Math.max(0, Math.min(100 - defaultWPct, normalized.x));
     normalized.y = Math.max(0, Math.min(100 - defaultHPct, normalized.y));
 
-    if (effectiveImageData && effectiveImageData.data && effectiveImageData.width > 0 && effectiveImageData.height > 0) {
+    // Differentiate block types:
+    // - 'dialogue' & 'thought': speech bubbles with white/bright interiors and closed contours -> apply bubble CV snap.
+    // - 'narration': rectangular caption boxes -> keep normalized center box without bubble watershed.
+    // - 'sfx': sound effects directly over artwork/backgrounds (default 200x200px) -> never run bubble flood-fill to prevent false snapping and panel bleeding.
+    const isBubbleType = normalizedType === 'dialogue' || normalizedType === 'thought';
+
+    if (isBubbleType && effectiveImageData && effectiveImageData.data && effectiveImageData.width > 0 && effectiveImageData.height > 0) {
         try {
             const centerX = (normalized.x + normalized.w / 2) * (imgW / 100);
             const centerY = (normalized.y + normalized.h / 2) * (imgH / 100);
@@ -705,12 +717,17 @@ export function refineAiBlockBox(box: any, imageData?: ImageData | null, _modelI
     return normalized;
 }
 
-export function normalizeAiBlockBox(box: any, imgW: number = 1000, imgH: number = 1000): BoundingBox {
-    const wPx = DEFAULT_BLOCK_SIZE_PX || 400;
-    const hPx = DEFAULT_BLOCK_SIZE_PX || 400;
+export function normalizeAiBlockBox(
+    box: any,
+    imgW: number = 1000,
+    imgH: number = 1000,
+    blockType?: string
+): BoundingBox {
+    const isSfx = (blockType || '').toLowerCase() === 'sfx';
+    const targetBlockSizePx = isSfx ? (DEFAULT_SFX_BLOCK_SIZE_PX || 200) : (DEFAULT_BLOCK_SIZE_PX || 400);
 
-    const defaultWPct = Math.round(((wPx / imgW) * 100) * 100) / 100;
-    const defaultHPct = Math.round(((hPx / imgH) * 100) * 100) / 100;
+    const defaultWPct = Math.round(((targetBlockSizePx / imgW) * 100) * 100) / 100;
+    const defaultHPct = Math.round(((targetBlockSizePx / imgH) * 100) * 100) / 100;
 
     if (!box) {
         return {

@@ -339,16 +339,16 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
         pushStateToHistory();
 
         page.blocks = (finalBlocks || []).map((b, idx) => {
+            const blockType = b.type || 'dialogue';
             const normalisedBox = b.positionKnown === false
                 ? { ...DEFAULT_AI_BLOCK_BOX }
-                : refineAiBlockBox(b.box, pageImageData, globalState.selectedModel);
+                : refineAiBlockBox(b.box, pageImageData, globalState.selectedModel, blockType);
 
             const isVerticalTarget = ['ja', 'zh', 'ko'].includes(targetLang);
             const blockVertical = isVerticalTarget
                 ? (typeof b.vertical === 'boolean' ? b.vertical : ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true))
                 : false;
 
-            const blockType = b.type || 'dialogue';
             const chosenFont = getDefaultFontForBlockType(blockType);
             let maskShape = globalState.globalStyle.maskShape;
             let italic = false;
@@ -573,15 +573,15 @@ export async function runBatchTranslation(): Promise<void> {
 
                         const isVerticalTarget = ['ja', 'zh', 'ko'].includes(targetLang);
                         page.blocks = (detectedRawBlocks || []).map((b, bIdx) => {
+                            const blockType = b.type || 'dialogue';
                             const normalisedBox = b.positionKnown === false
                                 ? { ...DEFAULT_AI_BLOCK_BOX }
-                                : refineAiBlockBox(b.box, pageImageData, aiConfig.selectedModel);
+                                : refineAiBlockBox(b.box, pageImageData, aiConfig.selectedModel, blockType);
 
                             const blockVertical = isVerticalTarget
                                 ? (typeof b.vertical === 'boolean' ? b.vertical : ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true))
                                 : false;
 
-                            const blockType = b.type || 'dialogue';
                             const chosenFont = getDefaultFontForBlockType(blockType);
                             let maskShape = globalState.globalStyle.maskShape;
                             let italic = false;

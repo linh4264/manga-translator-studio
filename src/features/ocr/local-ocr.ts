@@ -81,21 +81,21 @@ export function detectLocalTextRegions(imageData: ImageData): BoundingBox[] {
 
                 if (!isBorderLine && !isPageFrame && pixelCount >= 2 && compW >= 4 && compH >= 4 && compW < W * 0.6 && compH < H * 0.6) {
                     glyphComponents.push({
-                        x: (minX * gridScale / W) * 100,
-                        y: (minY * gridScale / H) * 100,
-                        w: (compW / W) * 100,
-                        h: (compH / H) * 100
+                        x: (minX * gridScale / W) * 1000,
+                        y: (minY * gridScale / H) * 1000,
+                        w: (compW / W) * 1000,
+                        h: (compH / H) * 1000
                     });
                 }
             }
         }
     }
 
-    // 3. Merge adjacent glyph components into full speech bubble text regions (4.5% proximity margin)
-    const mergedBlocks = mergeAdjacentBoxes(glyphComponents, 4.5);
+    // 3. Merge adjacent glyph components into full speech bubble text regions (45 units proximity margin on 0-1000 scale)
+    const mergedBlocks = mergeAdjacentBoxes(glyphComponents, 45);
 
-    // Filter final merged blocks (min 0.8% width/height)
-    const validBlocks = mergedBlocks.filter(b => b.w >= 0.8 && b.h >= 0.8 && b.w <= 75 && b.h <= 75);
+    // Filter final merged blocks (min 8 units on 0-1000 scale)
+    const validBlocks = mergedBlocks.filter(b => b.w >= 8 && b.h >= 8 && b.w <= 750 && b.h <= 750);
 
     return validBlocks.map(b => normalizeAiBlockBox(b));
 }
