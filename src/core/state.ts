@@ -1053,7 +1053,10 @@ export async function deleteFontFromDB(family: string): Promise<boolean> {
         const tx = dbInstance.transaction(STORE_FONTS, 'readwrite');
         const store = tx.objectStore(STORE_FONTS);
         const req = store.delete(family);
-        req.onsuccess = () => resolve(true);
+        req.onsuccess = () => {
+            loadedCustomFontFamilies.delete(family);
+            resolve(true);
+        };
         req.onerror = (e: any) => reject(e.target.error);
     });
 }

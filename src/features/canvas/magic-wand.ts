@@ -308,9 +308,13 @@ export function autoSnapSelectedBlocksToBubbles(): void {
     showToast(`🎯 Đã khớp ${snappedCount}/${targetIds.length} ô thoại được chọn vào bóng thoại gốc!`, 'success');
 }
 
+let magicWandEventsInitialized = false;
+
 export function initMagicWandEvents(): void {
+    if (magicWandEventsInitialized) return;
     const viewport = document.getElementById('workspace-viewport');
     if (!viewport) return;
+    magicWandEventsInitialized = true;
 
     viewport.addEventListener('mousedown', (e: MouseEvent) => {
         if ((window as any).__isSpacePanPressed || e.button !== 0) return;

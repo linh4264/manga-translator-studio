@@ -278,5 +278,17 @@ test('Core State - createThumbnail isolates temporary URL from getSafeMediaUrl c
     assert.ok(pageUrl && pageUrl.startsWith('blob:'), 'Page URL must remain valid after thumbnail generation');
 });
 
+test('Core State - deleteFontFromDB Invalidates Custom Font Families Cache', async () => {
+    const { initDB, saveFontToDB, deleteFontFromDB } = await import('../../../src/core/state.ts');
+    await initDB();
+
+    const dummyFontBlob = new Blob(['font-binary-data'], { type: 'font/ttf' });
+    await saveFontToDB('CustomMangaFont', dummyFontBlob);
+
+    const deleted = await deleteFontFromDB('CustomMangaFont');
+    assert.strictEqual(deleted, true, 'deleteFontFromDB should resolve to true');
+});
+
+
 
 

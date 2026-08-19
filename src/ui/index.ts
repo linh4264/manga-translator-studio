@@ -511,7 +511,6 @@ export function initEventListeners(): void {
 
         if ((e.key === 'h' || e.key === 'H') && !e.ctrlKey && !e.metaKey) {
             e.preventDefault();
-            import('../core/utils').then(u => u.showToast("Công cụ Hand (Pan): Giữ phím Space hoặc bấm chuột giữa để kéo trang truyện.", "info"));
             return;
         }
 
@@ -534,11 +533,9 @@ export function initEventListeners(): void {
                 globalState.selectedBlockIds = [];
                 updateActiveBlockEditor();
                 import('../features/canvas/canvas-service').then(cs => cs.requestOverlayRender());
-                import('../core/utils').then(u => u.showToast("Công cụ Select (V): Đã bỏ chọn ô thoại.", "info"));
             } else {
                 const nextMode = globalState.viewMode === 'overlay' ? 'split' : (globalState.viewMode === 'split' ? 'original' : 'overlay');
                 setViewMode(nextMode);
-                import('../core/utils').then(u => u.showToast(`Chế độ xem: ${nextMode.toUpperCase()}`, 'info'));
             }
             return;
         }
@@ -614,7 +611,6 @@ export function initEventListeners(): void {
                     const lbl = document.getElementById('lbl-eraser-size');
                     if (slider) slider.value = String(newSize);
                     if (lbl) lbl.textContent = `${newSize}px`;
-                    import('../core/utils').then(u => u.showToast(`Kích thước cọ: ${newSize}px`, 'info'));
                 }
             });
         }

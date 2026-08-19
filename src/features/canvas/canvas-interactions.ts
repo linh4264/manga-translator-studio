@@ -410,7 +410,9 @@ export async function deleteActiveBlock(): Promise<void> {
     requestOverlayRender();
     uiUpdateActiveBlockEditor();
     savePageToDB(page);
-    showToast(`Đã xóa ${targetIds.length} ô thoại thành công.`, "info");
+    if (targetIds.length > 1) {
+        showToast(`Đã xóa ${targetIds.length} ô thoại.`, "info");
+    }
 }
 
 export function addNewBlock(): void {
@@ -560,10 +562,14 @@ export function handleReplaceImageBlockSelect(event: any): void {
     reader.readAsDataURL(file);
 }
 
+let bilingualTooltipInitialized = false;
+
 export function initBilingualTooltipEvents(): void {
+    if (bilingualTooltipInitialized) return;
     const tooltip = document.getElementById('bilingual-hover-tooltip');
     const container = elements.mangaOverlaysContainer;
     if (!tooltip || !container) return;
+    bilingualTooltipInitialized = true;
 
     container.addEventListener('mousemove', (e: MouseEvent) => {
         if (!globalState.enableHoverTooltip) {
@@ -598,10 +604,14 @@ export function initBilingualTooltipEvents(): void {
     });
 }
 
+let marqueeSelectionInitialized = false;
+
 export function initMarqueeSelection(): void {
+    if (marqueeSelectionInitialized) return;
     const container = elements.mangaCanvasContainer || document.getElementById('manga-canvas-container');
     const viewport = document.getElementById('workspace-viewport');
     if (!container || !viewport) return;
+    marqueeSelectionInitialized = true;
 
     let isMarquee = false;
     let startClientX = 0;

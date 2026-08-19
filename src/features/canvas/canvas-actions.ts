@@ -38,5 +38,4 @@ export function duplicateActiveBlock(): void {
     selectBlock(newBlockId);
     requestOverlayRender();
     savePageToDB(page);
-    showToast(sourceBlock.type === 'image' ? "Đã nhân đôi ô ảnh thành công!" : "Đã nhân đôi ô thoại thành công!", "success");
 }

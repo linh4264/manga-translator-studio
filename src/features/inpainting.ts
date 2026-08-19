@@ -1073,7 +1073,6 @@ export function initEraserDrawingEvents(): void {
             ctx.drawImage(patchCanvas, drawX, drawY);
 
             saveEraserDrawingToPage();
-            showToast("Đã đóng dấu dán đè họa tiết thành công!", "success");
         };
 
         canvas.onmousemove = updatePreview;

@@ -150,3 +150,31 @@ test('Core Utils - parseGeminiJsonText Supports TOEIC and Truncated JSON', async
     assert.strictEqual(parsedFenced.grammar, 'Câu sử dụng cấu trúc bị động.');
 });
 
+test('Core Utils - showToast Anti-Spam Deduplication and Max 3 Limit', async () => {
+    const { showToast } = await import('../../../src/core/utils.ts');
+
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        document.body.appendChild(toastContainer);
+    }
+    toastContainer.innerHTML = '';
+
+    // 1. Spawning identical toast repeatedly in rapid succession should only create 1 element
+    showToast("Đã đóng dấu dán đè họa tiết thành công!", "success");
+    showToast("Đã đóng dấu dán đè họa tiết thành công!", "success");
+    showToast("Đã đóng dấu dán đè họa tiết thành công!", "success");
+
+    assert.strictEqual(toastContainer.children.length, 1, 'Duplicate spam within 1.2s should be deduplicated to 1 toast');
+
+    // 2. Different messages should be allowed up to max 3
+    showToast("Thông báo số 1", "info");
+    showToast("Thông báo số 2", "warn");
+    showToast("Thông báo số 3", "error");
+    showToast("Thông báo số 4", "info");
+
+    assert.ok(toastContainer.children.length <= 3, 'Container should hold at most 3 simultaneous toasts');
+});
+
+

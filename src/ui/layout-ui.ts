@@ -595,7 +595,6 @@ export function toggleQuickAudioDrama(): void {
             btn.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-500');
             btn.classList.add('bg-slate-950', 'text-slate-400', 'border-slate-800');
         }
-        import('../core/utils/dom').then(m => m.showToast("Đã dừng phát Audio Drama", "info"));
     } else {
         import('../features/audio').then(m => m.playPageAudioDrama());
         if (icon) {
@@ -605,7 +604,6 @@ export function toggleQuickAudioDrama(): void {
             btn.classList.add('bg-indigo-600', 'text-white', 'border-indigo-500');
             btn.classList.remove('bg-slate-950', 'text-slate-400', 'border-slate-800');
         }
-        import('../core/utils/dom').then(m => m.showToast("Bắt đầu phát Audio Drama...", "info"));
     }
 }
 

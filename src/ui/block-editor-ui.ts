@@ -162,14 +162,6 @@ export function setBlockType(type: 'dialogue' | 'narration' | 'thought' | 'sfx' 
     requestOverlayRender();
     const page = globalState.pages[globalState.activePageIndex];
     if (page) savePageToDB(page);
-
-    const typeNames: Record<string, string> = {
-        dialogue: 'Lời thoại 💬',
-        narration: 'Dẫn chuyện 📜',
-        thought: 'Nghĩ thầm 💭',
-        sfx: 'Hiệu ứng SFX 💥'
-    };
-    showToast(`Đã chuyển ô sang dạng ${typeNames[type] || type}!`, 'info');
 }
 
 function syncBlockTypeUI(block: MangaBlock): void {
@@ -581,7 +573,6 @@ export function setActiveBlockGender(gender: 'male' | 'female' | 'neutral' | 'na
         block.style.gender = gender;
         savePageToDB(page);
         updateActiveBlockEditor();
-        showToast(`Đã gán giọng đọc ${gender === 'female' ? 'Nữ 👩' : (gender === 'male' ? 'Nam 👨' : 'Dẫn chuyện 🎙️')} cho ô thoại này!`, 'info');
     }
 }
 
@@ -625,7 +616,6 @@ export function clearRichFormattingFromSelection(): void {
         const cleaned = stripRichTextTags(val);
         textarea.value = cleaned;
         import('../features/canvas/canvas-styling').then(m => m.syncActiveBlockTranslation(cleaned));
-        showToast("Đã xóa toàn bộ thẻ định dạng Rich Text", "info");
     } else {
         const selected = val.substring(start, end);
         const cleanedPart = stripRichTextTags(selected);
@@ -634,7 +624,6 @@ export function clearRichFormattingFromSelection(): void {
         import('../features/canvas/canvas-styling').then(m => m.syncActiveBlockTranslation(newVal));
         textarea.focus();
         textarea.setSelectionRange(start, start + cleanedPart.length);
-        showToast("Đã xóa thẻ định dạng đoạn chọn", "info");
     }
 }
 

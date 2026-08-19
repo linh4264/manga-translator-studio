@@ -374,7 +374,20 @@ export function getCleanFileBaseName(fileName: string, fallback: string = 'page'
     return fileName.replace(/\.[^/.]+$/, "").replace(/[^a-zA-Z0-9_\-\u00C0-\u1EF9]/g, "_").trim() || fallback;
 }
 
+let lastToastMsg = '';
+let lastToastTime = 0;
+
 export function showToast(message: string, type: 'info' | 'success' | 'error' | 'warn' | 'warning' = 'info', duration: number = 4000): void {
+    const msgStr = String(message ?? '').trim();
+    if (!msgStr) return;
+
+    const now = Date.now();
+    if (msgStr === lastToastMsg && (now - lastToastTime) < 1200) {
+        return;
+    }
+    lastToastMsg = msgStr;
+    lastToastTime = now;
+
     const toast = document.createElement('div');
 
     let colorClasses = 'bg-slate-900 border-slate-800 text-slate-300';
@@ -400,16 +413,18 @@ export function showToast(message: string, type: 'info' | 'success' | 'error' | 
     iconWrapper.appendChild(icon);
     const messageText = document.createElement('span');
     messageText.className = "text-xs font-semibold leading-normal";
-    messageText.textContent = String(message ?? '');
+    messageText.textContent = msgStr;
 
     toast.appendChild(iconWrapper);
     toast.appendChild(messageText);
 
-    if (elements.toastContainer) {
-        elements.toastContainer.appendChild(toast);
-    } else {
-        const container = document.getElementById('toast-container');
-        if (container) container.appendChild(toast);
+    const container = elements.toastContainer || document.getElementById('toast-container');
+    if (container) {
+        while (container.children.length >= 3) {
+            const first = container.firstChild;
+            if (first) container.removeChild(first);
+        }
+        container.appendChild(toast);
     }
 
     setTimeout(() => {
