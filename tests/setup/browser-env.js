@@ -230,6 +230,16 @@ export function setupBrowserEnvironment() {
                             height: sh || el.height || 100,
                             data: new Uint8ClampedArray((sw || el.width || 100) * (sh || el.height || 100) * 4)
                         }),
+                        font: '16px sans-serif',
+                        textAlign: 'left',
+                        textBaseline: 'top',
+                        measureText: function(str) {
+                            const text = String(str || '');
+                            let fontSize = 16;
+                            const match = String(this.font || '').match(/(\d+)px/);
+                            if (match) fontSize = parseInt(match[1], 10);
+                            return { width: text.length * (fontSize * 0.55) };
+                        },
                         putImageData: () => {},
                         createImageData: (w, h) => ({
                             width: w,

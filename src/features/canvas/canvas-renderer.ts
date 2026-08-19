@@ -588,9 +588,186 @@ export function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxW
     return resultLines;
 }
 
-export function wrapCanvasDiamondText(ctx: CanvasRenderingContext2D, text: string, maxW: number, maxH: number, lineHeight: number = 20): string[] {
+export interface MeasuredWordToken {
+    text: string;
+    raw: string;
+    width: number;
+    style: {
+        font?: string | null;
+        fontFamily?: string | null;
+        fontSize?: number;
+        sizeRatio?: number;
+        bold?: boolean;
+        italic?: boolean;
+        underline?: boolean;
+        strikethrough?: boolean;
+        color?: string | null;
+    };
+    spaceWidth: number;
+}
+
+let measureCanvas: HTMLCanvasElement | null = null;
+let measureCtx: CanvasRenderingContext2D | null = null;
+
+export function getMeasureContext(): CanvasRenderingContext2D | null {
+    if (!measureCtx && typeof document !== 'undefined') {
+        try {
+            measureCanvas = document.createElement('canvas');
+            measureCtx = measureCanvas.getContext('2d');
+        } catch (e) {
+            measureCtx = null;
+        }
+    }
+    return measureCtx;
+}
+
+export function buildFontString(style: any = {}, baseFontSize: number = 16, baseFontFamily: string = 'sans-serif'): string {
+    const fontStyle = style.italic ? 'italic ' : 'normal ';
+    const fontWeight = style.bold ? 'bold ' : 'normal ';
+    const sizeRatio = typeof style.sizeRatio === 'number' ? style.sizeRatio : 1.0;
+    const fontSize = Math.max(1, Math.round((style.fontSize || baseFontSize) * sizeRatio));
+    const fontFam = style.font || style.fontFamily || baseFontFamily || 'sans-serif';
+    return `${fontStyle}${fontWeight}${fontSize}px ${fontFam}`.trim();
+}
+
+/**
+ * Calculate diamond / oval width profile factors for N lines.
+ * For 5 lines with standard aspect ratio: [0.55, 0.82, 1.00, 0.82, 0.55].
+ * Dynamically adjusts edge tapering based on box aspect ratio (boxW / boxH).
+ */
+export function getDiamondWidthProfile(numLines: number, boxAspect: number = 0.85): number[] {
+    if (numLines <= 0) return [];
+    if (numLines === 1) return [1.0];
+    if (numLines === 2) {
+        const base2 = Math.min(0.95, Math.max(0.70, 0.82 + 0.1 * (boxAspect - 0.85)));
+        return [Number(base2.toFixed(2)), Number(base2.toFixed(2))];
+    }
+
+    // Edge taper factor adjusted by aspect ratio (standard = 0.55 for 0.85 aspect)
+    const beta = Math.min(0.75, Math.max(0.42, 0.55 + 0.15 * (boxAspect - 0.85)));
+    const p = 1.321928; // Calibrated for [0.55, 0.82, 1.00, 0.82, 0.55] when N = 5
+
+    const profile: number[] = [];
+    const n = numLines;
+    for (let i = 0; i < n; i++) {
+        const y = (2 * i) / (n - 1) - 1; // Range [-1.0, 1.0]
+        const val = 1.0 - (1.0 - beta) * Math.pow(Math.abs(y), p);
+        profile.push(Number(val.toFixed(2)));
+    }
+    return profile;
+}
+
+export function measureWordTokens(
+    text: string,
+    baseStyle: any = {},
+    customCtx: CanvasRenderingContext2D | null = null
+): MeasuredWordToken[] {
     if (!text) return [];
-    const rawParagraphs = text.split('\n');
+    const cleanText = text.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!cleanText) return [];
+
+    const tokenLines = parseRichTextLines(cleanText, baseStyle);
+    const tokens = tokenLines.flat();
+    if (tokens.length === 0) return [];
+
+    const ctx = customCtx || getMeasureContext();
+    const baseFontSize = baseStyle.fontSize || 16;
+    const baseFontFamily = baseStyle.fontFamily || 'sans-serif';
+    const baseLetterSpacing = typeof baseStyle.letterSpacing === 'number' ? baseStyle.letterSpacing : 0;
+
+    const words: MeasuredWordToken[] = [];
+
+    tokens.forEach(tok => {
+        const segs = tok.text.trim().split(/\s+/);
+        segs.forEach((seg: string) => {
+            if (!seg) return;
+
+            let tagPrefix = '';
+            let tagSuffix = '';
+            if (tok.bold) { tagPrefix += '[b]'; tagSuffix = '[/b]' + tagSuffix; }
+            if (tok.italic) { tagPrefix += '[i]'; tagSuffix = '[/i]' + tagSuffix; }
+            if (tok.underline) { tagPrefix += '[u]'; tagSuffix = '[/u]' + tagSuffix; }
+            if (tok.strikethrough) { tagPrefix += '[s]'; tagSuffix = '[/s]' + tagSuffix; }
+            if (tok.color) { tagPrefix += `[color=${tok.color}]`; tagSuffix = '[/color]' + tagSuffix; }
+            if (tok.sizeRatio && tok.sizeRatio !== 1) {
+                tagPrefix += `[size=${Math.round(tok.sizeRatio * 100)}%]`;
+                tagSuffix = '[/size]' + tagSuffix;
+            }
+            if (tok.font) { tagPrefix += `[font=${tok.font}]`; tagSuffix = '[/font]' + tagSuffix; }
+
+            const sizeRatio = tok.sizeRatio || 1.0;
+            const wordStyle = {
+                bold: !!tok.bold || !!baseStyle.bold,
+                italic: !!tok.italic || !!baseStyle.italic,
+                underline: !!tok.underline || !!baseStyle.underline,
+                strikethrough: !!tok.strikethrough || !!baseStyle.strikethrough,
+                color: tok.color || null,
+                sizeRatio: sizeRatio,
+                font: tok.font || null,
+                fontFamily: tok.font || baseFontFamily,
+                fontSize: baseFontSize,
+                letterSpacing: baseLetterSpacing
+            };
+
+            const effLetterSpacing = baseLetterSpacing * sizeRatio;
+            const charCount = Array.from(seg).length;
+            const extraLetterSpacing = Math.max(0, charCount - 1) * effLetterSpacing;
+
+            let width = 0;
+            let spaceWidth = 0;
+
+            if (ctx) {
+                const prevFont = ctx.font;
+                const fontStr = buildFontString(wordStyle, baseFontSize, baseFontFamily);
+                ctx.font = fontStr;
+                width = ctx.measureText(seg).width + extraLetterSpacing;
+                spaceWidth = ctx.measureText(' ').width + effLetterSpacing;
+                ctx.font = prevFont;
+            } else {
+                // Secondary engine: autoFitRuler DOM measurement (same engine as autoFitBlock)
+                const ruler = typeof document !== 'undefined' ? (elements.autoFitRuler || document.getElementById('auto-fit-ruler')) : null;
+                if (ruler) {
+                    const prevFont = ruler.style.font;
+                    const prevLetterSpacing = ruler.style.letterSpacing;
+                    ruler.style.font = buildFontString(wordStyle, baseFontSize, baseFontFamily);
+                    ruler.style.letterSpacing = `${effLetterSpacing}px`;
+                    ruler.textContent = seg;
+                    width = ruler.scrollWidth || ruler.getBoundingClientRect().width;
+                    ruler.textContent = ' ';
+                    spaceWidth = ruler.scrollWidth || ruler.getBoundingClientRect().width;
+                    ruler.style.font = prevFont;
+                    ruler.style.letterSpacing = prevLetterSpacing;
+                } else {
+                    const effSize = baseFontSize * sizeRatio;
+                    width = Array.from(seg).length * (effSize * 0.6) + extraLetterSpacing;
+                    spaceWidth = effSize * 0.35 + effLetterSpacing;
+                }
+            }
+
+            words.push({
+                text: seg,
+                raw: `${tagPrefix}${seg}${tagSuffix}`,
+                width: Math.max(1, width),
+                style: wordStyle,
+                spaceWidth: Math.max(1, spaceWidth)
+            });
+        });
+    });
+
+    return words;
+}
+
+export function wrapCanvasDiamondText(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    maxW: number,
+    maxH: number,
+    lineHeight: number = 20,
+    baseStyle: any = {}
+): string[] {
+    if (!text) return [];
+    const normalized = text.replace(/\r\n/g, '\n');
+    const rawParagraphs = normalized.split('\n');
     const resultLines: string[] = [];
 
     for (const para of rawParagraphs) {
@@ -600,63 +777,13 @@ export function wrapCanvasDiamondText(ctx: CanvasRenderingContext2D, text: strin
             continue;
         }
 
-        const spaceTokens = trimmed.split(/\s+/);
-        const words: string[] = [];
-        for (const token of spaceTokens) {
-            if (!token) continue;
-            const parts = token.split(/([-–—])/);
-            let subWord = '';
-            for (let p = 0; p < parts.length; p++) {
-                const part = parts[p];
-                if (!part) continue;
-                subWord += part;
-                if (part === '-' || part === '–' || part === '—' || p === parts.length - 1) {
-                    words.push(subWord);
-                    subWord = '';
-                }
-            }
-        }
-
-        if (words.length <= 1) {
-            resultLines.push(trimmed);
-            continue;
-        }
-
-        const totalCleanWidth = words.reduce((acc, w) => acc + ctx.measureText(stripRichTextTags(w) + ' ').width, 0);
-        const avgAvailableWidth = maxW * 0.76;
-        let targetLines = Math.max(2, Math.min(Math.floor(maxH / Math.max(1, lineHeight)), Math.ceil(totalCleanWidth / Math.max(10, avgAvailableWidth))));
-        targetLines = Math.max(2, Math.min(words.length, targetLines));
-
-        // Enforce block height >= block width: increase targetLines if needed
-        while (targetLines < words.length && (targetLines * lineHeight) < (totalCleanWidth / targetLines)) {
-            targetLines++;
-        }
-        targetLines = Math.max(2, Math.min(words.length, targetLines));
-
-        let currentLine = words[0];
-        let currentLineIdx = 0;
-
-        for (let i = 1; i < words.length; i++) {
-            const word = words[i];
-            const needsSpace = !currentLine.endsWith('-') && !currentLine.endsWith('–') && !currentLine.endsWith('—');
-            const testLine = needsSpace ? currentLine + ' ' + word : currentLine + word;
-
-            const normalizedY = targetLines > 1 ? -0.5 + (currentLineIdx + 0.5) / targetLines : 0;
-            const widthFactor = Math.sqrt(Math.max(0.18, 1 - 4 * normalizedY * normalizedY));
-            const lineMaxW = Math.max(20, maxW * widthFactor);
-
-            const testMeasure = stripRichTextTags(testLine);
-            if (ctx.measureText(testMeasure).width <= lineMaxW) {
-                currentLine = testLine;
-            } else {
-                resultLines.push(currentLine);
-                currentLine = word;
-                currentLineIdx++;
-            }
-        }
-        if (currentLine) {
-            resultLines.push(currentLine);
-        }
+        // Diamond pipeline: Text -> Measure actual width -> Diamond profile -> Optimal DP Partition
+        const balanced = balanceSingleParagraphToDiamond(trimmed, maxW, maxH, {
+            ...baseStyle,
+            lineHeight: lineHeight / (baseStyle.fontSize || 16)
+        });
+        const paraLines = balanced.split('\n');
+        resultLines.push(...paraLines);
     }
 
     return resultLines;
@@ -774,18 +901,22 @@ export function wrapRichTextTokens(
             return ctx.measureText(wt.text).width;
         };
 
-        const totalCleanWidth = wordTokens.reduce((acc, wt) => acc + measureTokenWidth(wt), 0);
-        const avgAvailableWidth = maxW * 0.76;
+        const onlyWords = wordTokens.filter(wt => !wt.isSpace);
+        const totalCleanWidth = onlyWords.reduce((acc, wt) => acc + measureTokenWidth(wt), 0);
+        const avgAvailableWidth = maxW * 0.78;
         let targetLines = isDiamond
             ? Math.max(2, Math.min(Math.floor(maxH / Math.max(1, lineHeight)), Math.ceil(totalCleanWidth / Math.max(10, avgAvailableWidth))))
             : 1;
 
         if (isDiamond) {
-            while (targetLines < wordTokens.length && (targetLines * lineHeight) < (totalCleanWidth / targetLines)) {
+            while (targetLines < onlyWords.length && (targetLines * lineHeight) < (totalCleanWidth / targetLines)) {
                 targetLines++;
             }
-            targetLines = Math.max(2, Math.min(wordTokens.length, targetLines));
+            targetLines = Math.max(2, Math.min(onlyWords.length, targetLines));
         }
+
+        const boxAspect = (maxW && maxH && maxH > 0) ? (maxW / maxH) : 0.85;
+        const profile = isDiamond ? getDiamondWidthProfile(targetLines, boxAspect) : [];
 
         let currentLine: any[] = [];
         let currentLineWidth = 0;
@@ -793,85 +924,219 @@ export function wrapRichTextTokens(
 
         const getLineMaxW = (idx: number) => {
             if (!isDiamond) return maxW;
-            const normalizedY = targetLines > 1 ? -0.5 + (idx + 0.5) / targetLines : 0;
-            const widthFactor = Math.sqrt(Math.max(0.18, 1 - 4 * normalizedY * normalizedY));
-            return Math.max(20, maxW * widthFactor);
+            const factor = profile[Math.min(idx, profile.length - 1)] || 0.8;
+            return Math.max(20, maxW * factor);
         };
+
+        // Strict whitespace logic: space is only a separator, not a token that permits overflow
+        let pendingSpaceToken: any = null;
 
         for (let i = 0; i < wordTokens.length; i++) {
             const wt = wordTokens[i];
-            if (wt.isSpace && currentLine.length === 0) {
+
+            if (wt.isSpace) {
+                if (currentLine.length > 0) {
+                    pendingSpaceToken = wt;
+                }
                 continue;
             }
 
-            const tokW = measureTokenWidth(wt);
+            const wordW = measureTokenWidth(wt);
+            const spaceW = pendingSpaceToken ? measureTokenWidth(pendingSpaceToken) : 0;
             const lineMaxW = getLineMaxW(currentLineIdx);
 
-            if (currentLine.length === 0 || (currentLineWidth + tokW <= lineMaxW) || wt.isSpace) {
+            if (currentLine.length === 0) {
                 currentLine.push(wt);
-                currentLineWidth += tokW;
-            } else {
-                while (currentLine.length > 0 && currentLine[currentLine.length - 1].isSpace) {
-                    currentLine.pop();
+                currentLineWidth = wordW;
+                pendingSpaceToken = null;
+            } else if (currentLineWidth + spaceW + wordW <= lineMaxW) {
+                if (pendingSpaceToken) {
+                    currentLine.push(pendingSpaceToken);
+                    currentLineWidth += spaceW;
+                    pendingSpaceToken = null;
                 }
+                currentLine.push(wt);
+                currentLineWidth += wordW;
+            } else {
                 wrappedLines.push(currentLine);
+                currentLine = [wt];
+                currentLineWidth = wordW;
                 currentLineIdx++;
-                currentLine = wt.isSpace ? [] : [wt];
-                currentLineWidth = wt.isSpace ? 0 : tokW;
+                pendingSpaceToken = null;
             }
         }
 
         if (currentLine.length > 0) {
-            while (currentLine.length > 0 && currentLine[currentLine.length - 1].isSpace) {
-                currentLine.pop();
-            }
-            if (currentLine.length > 0) {
-                wrappedLines.push(currentLine);
-            }
+            wrappedLines.push(currentLine);
         }
     }
 
     return wrappedLines;
 }
 
-export function balanceTextToDiamond(text: string, boxW: number | null = null, boxH: number | null = null): string {
+/**
+ * Partition words into K lines matching target line widths using Dynamic Programming.
+ * 
+ * Priorities:
+ * 1. Asymmetric penalty for exceeding target width (do not overflow target width excessively).
+ * 2. High fidelity to target width profile (minimize variance from targetWidths[line]).
+ * 3. Anti-single-word penalty (avoid lines with only 1 word unless necessary).
+ * 4. Anti-too-short penalty (avoid lines that are excessively short / hollow).
+ * 5. Strict word boundary preservation (never split words).
+ */
+export function partitionWordsToTargetWidths(
+    words: MeasuredWordToken[],
+    targetWidths: number[],
+    avgSpaceWidth: number = 6
+): string[] {
+    const n = words.length;
+    const k = targetWidths.length;
+
+    if (k <= 0 || n <= 0) return [];
+    if (k === 1 || n === 1) return [words.map(w => w.raw).join(' ')];
+    if (k >= n) return words.map(w => w.raw);
+
+    // Precompute prefix sums of word widths for O(1) range queries
+    const prefixWidth = new Float64Array(n + 1);
+    for (let i = 0; i < n; i++) {
+        prefixWidth[i + 1] = prefixWidth[i] + words[i].width;
+    }
+
+    const getLineWidth = (start: number, end: number): number => {
+        if (start >= end) return 0;
+        const wordsW = prefixWidth[end] - prefixWidth[start];
+        const spacesW = (end - start - 1) * avgSpaceWidth;
+        return wordsW + spacesW;
+    };
+
+    // DP table: dp[lineIdx][wordIdx] = minimum cost
+    // parent[lineIdx][wordIdx] = starting word index p for this line
+    const dp: number[][] = Array.from({ length: k + 1 }, () => Array(n + 1).fill(Infinity));
+    const parent: number[][] = Array.from({ length: k + 1 }, () => Array(n + 1).fill(-1));
+
+    dp[0][0] = 0;
+
+    for (let line = 1; line <= k; line++) {
+        const targetW = Math.max(1, targetWidths[line - 1]);
+        const isLastLine = (line === k);
+        const isFirstLine = (line === 1);
+
+        for (let i = line; i <= n - (k - line); i++) {
+            for (let p = line - 1; p < i; p++) {
+                if (dp[line - 1][p] === Infinity) continue;
+
+                const actualW = getLineWidth(p, i);
+                const wordCountInLine = i - p;
+                if (wordCountInLine <= 0) continue;
+
+                let cost = 0;
+
+                // Priority 2: Base profile fidelity (squared normalized difference)
+                const diff = (actualW - targetW) / targetW;
+                cost += diff * diff * 1000;
+
+                // Priority 1: Heavy asymmetric penalty for overflowing target width
+                if (actualW > targetW) {
+                    const overflowRatio = (actualW - targetW) / targetW;
+                    cost += overflowRatio * 1500;
+                    if (overflowRatio > 0.25) {
+                        cost += Math.pow(overflowRatio, 2) * 5000;
+                    }
+                    if (overflowRatio > 0.50) {
+                        cost += 10000; // severe overflow penalty
+                    }
+                }
+
+                // Priority 3: Avoid 1-word lines if total words >= 4
+                if (wordCountInLine === 1 && n >= 4) {
+                    if (isLastLine) {
+                        cost += 1500; // anti-orphan on last line
+                    } else if (isFirstLine) {
+                        cost += 900;
+                    } else {
+                        cost += 700;
+                    }
+                }
+
+                // Priority 4: Avoid too short / hollow lines (< 50% of target width)
+                if (actualW < targetW * 0.50) {
+                    const underflowRatio = (targetW * 0.50 - actualW) / targetW;
+                    cost += Math.pow(underflowRatio, 2) * 3000;
+                }
+
+                const totalCost = dp[line - 1][p] + cost;
+                if (totalCost < dp[line][i]) {
+                    dp[line][i] = totalCost;
+                    parent[line][i] = p;
+                }
+            }
+        }
+    }
+
+    // Reconstruct lines from DP parents
+    const resultLines: string[] = [];
+    let curr = n;
+    for (let line = k; line >= 1; line--) {
+        const p = parent[line][curr];
+        if (p === -1) break;
+        const lineWords = words.slice(p, curr);
+        resultLines.unshift(lineWords.map(w => w.raw).join(' '));
+        curr = p;
+    }
+
+    if (resultLines.length === 0 || curr > 0) {
+        return [words.map(w => w.raw).join(' ')];
+    }
+
+    return resultLines;
+}
+
+export function partitionWordsToDiamondLines(
+    words: MeasuredWordToken[],
+    k: number,
+    boxAspect: number = 0.85,
+    avgSpaceWidth: number = 6
+): string[] {
+    const n = words.length;
+    if (k <= 1 || n <= 1) {
+        return [words.map(w => w.raw).join(' ')];
+    }
+    if (k >= n) {
+        return words.map(w => w.raw);
+    }
+
+    const totalWordsWidth = words.reduce((sum, w) => sum + w.width, 0);
+    const totalTextWidth = totalWordsWidth + (n - 1) * avgSpaceWidth;
+
+    const profile = getDiamondWidthProfile(k, boxAspect);
+    const totalWeight = profile.reduce((a, b) => a + b, 0);
+    const targetWidths = profile.map(w => (w / totalWeight) * totalTextWidth);
+
+    return partitionWordsToTargetWidths(words, targetWidths, avgSpaceWidth);
+}
+
+export function balanceSingleParagraphToDiamond(
+    text: string,
+    boxW: number | null = null,
+    boxH: number | null = null,
+    styleOptions: any = {}
+): string {
     if (!text) return '';
     const cleanText = text.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
     if (!cleanText) return '';
 
-    const tokenLines = parseRichTextLines(cleanText);
-    const tokens = tokenLines.flat();
-    if (tokens.length === 0) return cleanText;
+    const words = measureWordTokens(cleanText, styleOptions);
+    const wordCount = words.length;
+    if (wordCount <= 1) return words.map(w => w.raw).join(' ');
 
-    const wordsWithTags: Array<{ raw: string; clean: string; charLen: number }> = [];
-    tokens.forEach(tok => {
-        const segs = tok.text.trim().split(/\s+/);
-        segs.forEach((seg: string) => {
-            if (!seg) return;
-            let tagPrefix = '';
-            let tagSuffix = '';
-            if (tok.bold) { tagPrefix += '[b]'; tagSuffix = '[/b]' + tagSuffix; }
-            if (tok.italic) { tagPrefix += '[i]'; tagSuffix = '[/i]' + tagSuffix; }
-            if (tok.underline) { tagPrefix += '[u]'; tagSuffix = '[/u]' + tagSuffix; }
-            if (tok.strikethrough) { tagPrefix += '[s]'; tagSuffix = '[/s]' + tagSuffix; }
-            if (tok.color) { tagPrefix += `[color=${tok.color}]`; tagSuffix = '[/color]' + tagSuffix; }
-            if (tok.sizeRatio && tok.sizeRatio !== 1) {
-                tagPrefix += `[size=${Math.round(tok.sizeRatio * 100)}%]`;
-                tagSuffix = '[/size]' + tagSuffix;
-            }
-            if (tok.font) { tagPrefix += `[font=${tok.font}]`; tagSuffix = '[/font]' + tagSuffix; }
-            wordsWithTags.push({
-                raw: `${tagPrefix}${seg}${tagSuffix}`,
-                clean: seg,
-                charLen: seg.length
-            });
-        });
-    });
+    const boxAspect = (boxW && boxH && boxH > 0) ? (boxW / boxH) : 0.85;
+    const avgSpaceWidth = words.reduce((acc, w) => acc + w.spaceWidth, 0) / wordCount;
+    const totalWordsWidth = words.reduce((acc, w) => acc + w.width, 0);
+    const totalTextWidth = totalWordsWidth + (wordCount - 1) * avgSpaceWidth;
+    const totalCleanChars = words.reduce((sum, w) => sum + w.text.length, 0) + (wordCount - 1);
 
-    const wordCount = wordsWithTags.length;
-    if (wordCount <= 1) return wordsWithTags.map(w => w.raw).join(' ');
-
-    const totalCleanChars = wordsWithTags.reduce((sum, w) => sum + w.charLen, 0) + (wordCount - 1);
+    const baseFontSize = styleOptions.fontSize || 16;
+    const lineHeight = (styleOptions.lineHeight !== undefined ? styleOptions.lineHeight : 1.18) * baseFontSize;
 
     // ==========================================
     // TIER 1: Siêu ngắn (1 - 3 từ)
@@ -880,77 +1145,24 @@ export function balanceTextToDiamond(text: string, boxW: number | null = null, b
     // - Nếu dài hơn: chia tối đa 2 dòng. Tuyệt đối KHÔNG chia 3 dòng 1 chữ.
     if (wordCount <= 3) {
         if (totalCleanChars <= 14 || wordCount === 2) {
-            if (boxW && boxH && (boxW / boxH) < 0.45 && wordCount === 2) {
-                return `${wordsWithTags[0].raw}\n${wordsWithTags[1].raw}`;
+            if (boxAspect < 0.45 && wordCount === 2) {
+                return `${words[0].raw}\n${words[1].raw}`;
             }
-            if (totalCleanChars <= 14) {
-                return wordsWithTags.map(w => w.raw).join(' ');
+            if (totalCleanChars <= 14 || totalTextWidth < 180 || boxAspect >= 0.75) {
+                return words.map(w => w.raw).join(' ');
             }
+            return `${words[0].raw}\n${words[1].raw}`;
         }
         if (wordCount === 3) {
-            const len1 = wordsWithTags[0].charLen + wordsWithTags[1].charLen;
-            const len2 = wordsWithTags[1].charLen + wordsWithTags[2].charLen;
+            const len1 = words[0].width + words[1].width;
+            const len2 = words[1].width + words[2].width;
             if (len1 <= len2) {
-                return `${wordsWithTags[0].raw} ${wordsWithTags[1].raw}\n${wordsWithTags[2].raw}`;
+                return `${words[0].raw} ${words[1].raw}\n${words[2].raw}`;
             } else {
-                return `${wordsWithTags[0].raw}\n${wordsWithTags[1].raw} ${wordsWithTags[2].raw}`;
+                return `${words[0].raw}\n${words[1].raw} ${words[2].raw}`;
             }
         }
     }
-
-    const calcPartitionDimensions = (counts: number[]) => {
-        let maxChars = 0;
-        let wordIdx = 0;
-        counts.forEach(count => {
-            const lineWords = wordsWithTags.slice(wordIdx, wordIdx + count);
-            const lineChars = lineWords.reduce((sum, w) => sum + w.charLen, 0) + Math.max(0, lineWords.length - 1);
-            if (lineChars > maxChars) maxChars = lineChars;
-            wordIdx += count;
-        });
-        const estWidth = maxChars * 0.52;
-        const estHeight = counts.length * 1.18;
-        return { estWidth, estHeight, maxChars, ratio: estHeight / Math.max(0.01, estWidth) };
-    };
-
-    const buildDiamondCounts = (k: number): number[] => {
-        k = Math.max(1, Math.min(wordCount, k));
-        let weights: number[] = [];
-        for (let i = 0; i < k; i++) {
-            const y = -0.5 + (i + 0.5) / k;
-            const widthFactor = Math.sqrt(Math.max(0.25, 1 - 4 * y * y));
-            weights.push(widthFactor);
-        }
-        const totalWeight = weights.reduce((a, b) => a + b, 0);
-
-        let lineCounts = weights.map(w => Math.max(1, Math.round((w / totalWeight) * wordCount)));
-        let sum = lineCounts.reduce((a, b) => a + b, 0);
-
-        while (sum < wordCount) {
-            const mid = Math.floor(k / 2);
-            lineCounts[mid]++;
-            sum++;
-        }
-        while (sum > wordCount) {
-            const maxIdx = lineCounts.indexOf(Math.max(...lineCounts));
-            if (lineCounts[maxIdx] > 1) {
-                lineCounts[maxIdx]--;
-                sum--;
-            } else {
-                break;
-            }
-        }
-
-        // Anti-orphan on last line
-        if (lineCounts.length >= 2 && lineCounts[lineCounts.length - 1] === 1 && wordCount >= 5) {
-            const prevIdx = lineCounts.length - 2;
-            if (lineCounts[prevIdx] > 2) {
-                lineCounts[prevIdx]--;
-                lineCounts[lineCounts.length - 1]++;
-            }
-        }
-
-        return lineCounts;
-    };
 
     // ==========================================
     // TIER 2: Ngắn (4 - 6 từ)
@@ -958,24 +1170,15 @@ export function balanceTextToDiamond(text: string, boxW: number | null = null, b
     // - Dáng Oval nhẹ tự nhiên (2 - 3 dòng). Dòng dài nhất phải có ít nhất 2 từ.
     if (wordCount <= 6) {
         let candidateLines = 2;
-        if (wordCount >= 5 && totalCleanChars >= 22) {
+        if (wordCount >= 5 && (totalCleanChars >= 22 || totalTextWidth >= 220)) {
             candidateLines = 3;
         }
-        if (boxW && boxH && (boxW / boxH) < 0.65) {
+        if (boxAspect < 0.65) {
             candidateLines = Math.min(3, Math.ceil(wordCount / 2));
         }
 
-        const counts = buildDiamondCounts(candidateLines);
-        let resultLines: string[] = [];
-        let wordIdx = 0;
-        counts.forEach(count => {
-            const lineWords = wordsWithTags.slice(wordIdx, wordIdx + count);
-            if (lineWords.length > 0) {
-                resultLines.push(lineWords.map(w => w.raw).join(' '));
-            }
-            wordIdx += count;
-        });
-        return resultLines.join('\n');
+        const lines = partitionWordsToDiamondLines(words, candidateLines, boxAspect, avgSpaceWidth);
+        return lines.join('\n');
     }
 
     // ==========================================
@@ -996,16 +1199,25 @@ export function balanceTextToDiamond(text: string, boxW: number | null = null, b
     let bestNumLines = minLines;
 
     for (let k = minLines; k <= maxAllowedLines; k++) {
-        const counts = buildDiamondCounts(k);
-        const { estWidth, estHeight } = calcPartitionDimensions(counts);
+        const candidateLines = partitionWordsToDiamondLines(words, k, boxAspect, avgSpaceWidth);
+        let maxLineWidth = 0;
+        let wordIdx = 0;
+        candidateLines.forEach(lineStr => {
+            const segs = lineStr.split(' ');
+            const lineTokens = words.slice(wordIdx, wordIdx + segs.length);
+            const lineW = lineTokens.reduce((sum, t) => sum + t.width, 0) + (lineTokens.length - 1) * avgSpaceWidth;
+            if (lineW > maxLineWidth) maxLineWidth = lineW;
+            wordIdx += segs.length;
+        });
+
+        const estHeight = k * lineHeight;
         bestNumLines = k;
-        if (estHeight >= estWidth * 0.7) {
+        if (estHeight >= maxLineWidth * 0.7) {
             break;
         }
     }
 
     if (boxW && boxH && boxH > 0) {
-        const boxAspect = boxW / boxH;
         if (boxAspect < 0.55) {
             const candidateLines = Math.min(Math.ceil(wordCount / 2), Math.max(bestNumLines, Math.ceil(bestNumLines * (0.8 / Math.max(0.2, boxAspect)))));
             bestNumLines = candidateLines;
@@ -1014,24 +1226,37 @@ export function balanceTextToDiamond(text: string, boxW: number | null = null, b
         }
     }
 
-    const finalCounts = buildDiamondCounts(bestNumLines);
+    const finalLines = partitionWordsToDiamondLines(words, bestNumLines, boxAspect, avgSpaceWidth);
+    return finalLines.join('\n');
+}
 
-    let resultLines: string[] = [];
-    let wordIdx = 0;
-    finalCounts.forEach(count => {
-        const lineWords = wordsWithTags.slice(wordIdx, wordIdx + count);
-        if (lineWords.length > 0) {
-            resultLines.push(lineWords.map(w => w.raw).join(' '));
-        }
-        wordIdx += count;
-    });
+export function balanceTextToDiamond(
+    text: string,
+    boxW: number | null = null,
+    boxH: number | null = null,
+    styleOptions: any = {}
+): string {
+    if (!text) return '';
+    const normalized = text.replace(/\r\n/g, '\n');
+    if (!normalized.trim()) return '';
 
-    return resultLines.join('\n');
+    // Preserve user manual line breaks (\n): balance each paragraph independently
+    if (normalized.includes('\n')) {
+        const paragraphs = normalized.split('\n');
+        const balancedParagraphs = paragraphs.map(p => {
+            const trimmed = p.trim();
+            if (!trimmed) return '';
+            return balanceSingleParagraphToDiamond(trimmed, boxW, boxH, styleOptions);
+        });
+        return balancedParagraphs.join('\n');
+    }
+
+    return balanceSingleParagraphToDiamond(normalized.trim(), boxW, boxH, styleOptions);
 }
 
 export function balanceBlockDiamond(block: MangaBlock): void {
     if (!block || block.type === 'image') return;
-    const formatted = balanceTextToDiamond(block.translated, block.box ? block.box.w : null, block.box ? block.box.h : null);
+    const formatted = balanceTextToDiamond(block.translated, block.box ? block.box.w : null, block.box ? block.box.h : null, block.style);
     block.translated = formatted;
     block.autoFitCache = null;
     block.maskCache = null;
@@ -1042,7 +1267,7 @@ export function applyDiamondFormat(): void {
     const page = globalState.pages[globalState.activePageIndex];
     const block = page?.blocks.find(b => b.id === globalState.selectedBlockId);
     if (block && page) {
-        const formatted = balanceTextToDiamond(block.translated, block.box ? block.box.w : null, block.box ? block.box.h : null);
+        const formatted = balanceTextToDiamond(block.translated, block.box ? block.box.w : null, block.box ? block.box.h : null, block.style);
         block.translated = formatted;
         if (elements.editTranslatedText) {
             elements.editTranslatedText.value = formatted;
@@ -1068,7 +1293,7 @@ export function batchDiamondBalanceAllPages(): void {
     globalState.pages.forEach(page => {
         (page.blocks || []).forEach(block => {
             if (block.translated && block.type !== 'sfx') {
-                const balanced = balanceTextToDiamond(block.translated, block.box.w, block.box.h);
+                const balanced = balanceTextToDiamond(block.translated, block.box.w, block.box.h, block.style);
                 if (balanced && balanced !== block.translated) {
                     block.translated = balanced;
                     block.autoFitCache = null;
