@@ -7,6 +7,7 @@ import {
     wrapCanvasDiamondText,
     wrapRichTextTokens,
     balanceTextToDiamond,
+    balanceBlockDiamond,
     getDiamondWidthProfile,
     measureWordTokens,
     partitionWordsToTargetWidths,
@@ -206,5 +207,28 @@ test('Manual Line Breaks - Preserves user explicit newlines without merging', ()
 
     assert.strictEqual(lines[0], 'Chào các bạn!', 'First paragraph should remain on its own line');
     assert.ok(lines.length >= 3, 'Second paragraph should be diamond-balanced into multiple lines');
+});
+
+test('AI Translation Diamond Auto-Balance - balanceBlockDiamond flattens AI newlines and activates diamondWrap', () => {
+    const rawAiOutputWithNewlines = 'Chào cậu,\nngười bạn thân nhất\ncủa tớ từ thuở nhỏ!';
+    const block = {
+        id: 'b1',
+        type: 'dialogue',
+        original: 'こんにちは',
+        translated: rawAiOutputWithNewlines,
+        box: { x: 10, y: 10, w: 30, h: 40 },
+        style: {
+            fontFamily: 'font-manga',
+            fontSize: 16,
+            lineHeight: 1.15
+        }
+    };
+
+    balanceBlockDiamond(block);
+
+    assert.strictEqual(block.style.diamondWrap, true, 'balanceBlockDiamond must set style.diamondWrap to true');
+    assert.ok(block.translated.includes('\n'), 'Should be balanced into lines');
+    const lines = block.translated.split('\n');
+    assert.ok(lines.length >= 2, 'Should balance into at least 2 lines without preserving raw AI fragmentation');
 });
 

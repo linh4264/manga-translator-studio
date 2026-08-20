@@ -229,6 +229,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 "- Do not use the bubble center when text is offset inside the bubble.",
                 "- Do not use the center of the empty bubble area.",
                 "- For SFX outside bubbles, use the center of the visible glyphs.",
+                "- SINGLE CONTINUOUS LINE: Keep translated text as a single complete sentence/paragraph without manual newline characters (\\n). The layout engine automatically balances diamond shaping.",
                 `Translate to short, natural ${targetLangName} that matches the scene and speaker relationship.`,
                 `Preserve the same ${targetLangName} ${pronounTerm} and terminology within the page.`,
                 ctx.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
@@ -338,6 +339,14 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
 
         pushStateToHistory();
 
+        const imgEl = elements.mangaBgImage;
+        const imgW = (pageImageData && pageImageData.width > 0)
+            ? pageImageData.width
+            : ((imgEl && imgEl.naturalWidth > 0) ? imgEl.naturalWidth : 800);
+        const imgH = (pageImageData && pageImageData.height > 0)
+            ? pageImageData.height
+            : ((imgEl && imgEl.naturalHeight > 0) ? imgEl.naturalHeight : 1200);
+
         page.blocks = (finalBlocks || []).map((b, idx) => {
             const blockType = b.type || 'dialogue';
             const normalisedBox = b.positionKnown === false
@@ -361,35 +370,54 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 italic = true;
             }
 
+            const shouldDiamondWrap = !blockVertical && blockType !== 'sfx';
+
+            const blockStyle = {
+                fontFamily: chosenFont,
+                fontSize: globalState.globalStyle.fontSize,
+                textColor: '#000000',
+                bgColor: '#ffffff',
+                bgOpacity: 100,
+                padding: globalState.globalStyle.padding,
+                rotate: 0,
+                vertical: blockVertical,
+                bold: bold,
+                italic: italic,
+                align: globalState.globalStyle.align,
+                maskShape: maskShape,
+                maskSize: globalState.globalStyle.maskSize,
+                strokeColor: '#ffffff',
+                strokeWidth: 0,
+                shadowColor: '#000000',
+                shadowBlur: 0,
+                diamondWrap: shouldDiamondWrap
+            };
+
+            const rawTrans = (b.translated || '').trim();
+            let finalTranslated = '';
+            if (rawTrans) {
+                const cleanTrans = rawTrans.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
+                if (shouldDiamondWrap) {
+                    const pixelW = (normalisedBox.w / 100) * imgW;
+                    const pixelH = (normalisedBox.h / 100) * imgH;
+                    finalTranslated = balanceTextToDiamond(cleanTrans, pixelW, pixelH, blockStyle);
+                } else if (!blockVertical) {
+                    finalTranslated = cleanTrans;
+                } else {
+                    finalTranslated = rawTrans;
+                }
+            }
+
             return {
                 id: b.id || `block_${Date.now()}_${idx}`,
                 type: blockType,
                 original: b.original || '',
-                translated: b.translated ? balanceTextToDiamond(b.translated, normalisedBox.w, normalisedBox.h) : '',
+                translated: finalTranslated,
                 box: normalisedBox,
-                style: {
-                    fontFamily: chosenFont,
-                    fontSize: globalState.globalStyle.fontSize,
-                    textColor: '#000000',
-                    bgColor: '#ffffff',
-                    bgOpacity: 100,
-                    padding: globalState.globalStyle.padding,
-                    rotate: 0,
-                    vertical: blockVertical,
-                    bold: bold,
-                    italic: italic,
-                    align: globalState.globalStyle.align,
-                    maskShape: maskShape,
-                    maskSize: globalState.globalStyle.maskSize,
-                    strokeColor: '#ffffff',
-                    strokeWidth: 0,
-                    shadowColor: '#000000',
-                    shadowBlur: 0
-                }
+                style: blockStyle
             };
         });
 
-        const imgEl = elements.mangaBgImage;
         if (imgEl && imgEl.naturalWidth) {
             try {
                 page.blocks.forEach(b => autoMatchBlockStyle(b, imgEl));
@@ -594,6 +622,8 @@ export async function runBatchTranslation(): Promise<void> {
                                 italic = true;
                             }
 
+                            const shouldDiamondWrap = !blockVertical && blockType !== 'sfx';
+
                             return {
                                 id: `p${pageIndex + 1}_b${bIdx + 1}`,
                                 type: blockType,
@@ -617,7 +647,8 @@ export async function runBatchTranslation(): Promise<void> {
                                     strokeColor: '#ffffff',
                                     strokeWidth: 0,
                                     shadowColor: '#000000',
-                                    shadowBlur: 0
+                                    shadowBlur: 0,
+                                    diamondWrap: shouldDiamondWrap
                                 }
                             };
                         });
@@ -698,17 +729,48 @@ export async function runBatchTranslation(): Promise<void> {
                         queuedIndices.forEach(i => {
                             const p = globalState.pages[i];
                             if (p.status === 'queued' && p.blocks) {
+                                const pageImgData = p.imageDataCache;
+                                const imgEl = elements.mangaBgImage;
+                                const imgW = (pageImgData && pageImgData.width > 0)
+                                    ? pageImgData.width
+                                    : ((imgEl && imgEl.naturalWidth > 0 && i === globalState.activePageIndex) ? imgEl.naturalWidth : 800);
+                                const imgH = (pageImgData && pageImgData.height > 0)
+                                    ? pageImgData.height
+                                    : ((imgEl && imgEl.naturalHeight > 0 && i === globalState.activePageIndex) ? imgEl.naturalHeight : 1200);
+
                                 p.blocks.forEach((b, bIdx) => {
                                     const expectedId = `p${i + 1}_b${bIdx + 1}`;
                                     const rawTrans = lookupMap.get(String(b.id)) ||
                                         lookupMap.get(expectedId) ||
                                         lookupMap.get(expectedId.toLowerCase()) ||
                                         b.translated || '';
-                                    b.translated = rawTrans ? balanceTextToDiamond(rawTrans, b.box ? b.box.w : null, b.box ? b.box.h : null) : '';
+
+                                    const shouldDiamond = !b.style?.vertical && b.type !== 'sfx';
+                                    if (b.style) {
+                                        b.style.diamondWrap = shouldDiamond;
+                                    }
+
+                                    if (rawTrans) {
+                                        const cleanTrans = rawTrans.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
+                                        if (shouldDiamond) {
+                                            const pixelW = b.box ? (b.box.w / 100) * imgW : 200;
+                                            const pixelH = b.box ? (b.box.h / 100) * imgH : 200;
+                                            b.translated = balanceTextToDiamond(cleanTrans, pixelW, pixelH, b.style);
+                                        } else if (!b.style?.vertical) {
+                                            b.translated = cleanTrans;
+                                        } else {
+                                            b.translated = rawTrans;
+                                        }
+                                    } else {
+                                        b.translated = '';
+                                    }
+
                                     b.autoFitCache = null;
+                                    if (isBlockAutoFit(b)) {
+                                        autoFitBlock(b);
+                                    }
                                 });
 
-                                const imgEl = elements.mangaBgImage;
                                 if (imgEl && imgEl.naturalWidth && i === globalState.activePageIndex) {
                                     try {
                                         p.blocks.forEach(b => autoMatchBlockStyle(b, imgEl));

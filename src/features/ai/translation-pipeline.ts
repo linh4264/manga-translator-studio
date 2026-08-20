@@ -47,7 +47,7 @@ export async function executeTextTranslationStep({
         ctx.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
         glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
         getTranslationGuidancePrompt(contextOptions).trim(),
-        "Strict Rule: Maintain the exact same block IDs. Return valid JSON only with schema: {\"blocks\": [{\"id\": \"...\", \"translated\": \"...\"}]}"
+        "Strict Rule: Maintain the exact same block IDs. Each translation must be a single complete sentence/paragraph without arbitrary newline characters (\\n). Return valid JSON only with schema: {\"blocks\": [{\"id\": \"...\", \"translated\": \"...\"}]}"
     ].filter(Boolean).join("\n\n");
 
     const textPayloadList = blocksToTranslate.map(b => ({
@@ -165,7 +165,7 @@ export async function executeChapterChunkTranslationStep({
         ctx.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
         glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
         getTranslationGuidancePrompt(contextOptions).trim(),
-        "Strict Rule: Maintain the exact same block IDs. Return valid JSON only containing all block translations with schema: {\"blocks\": [{\"id\": \"...\", \"translated\": \"...\"}]}"
+        "Strict Rule: Maintain the exact same block IDs. Each translation must be a single complete sentence/paragraph without arbitrary newline characters (\\n). Return valid JSON only containing all block translations with schema: {\"blocks\": [{\"id\": \"...\", \"translated\": \"...\"}]}"
     ].filter(Boolean).join("\n\n");
 
 

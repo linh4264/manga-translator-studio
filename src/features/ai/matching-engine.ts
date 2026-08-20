@@ -15,7 +15,8 @@ export function matchTranslationsToBlocks(blocks: any[], rawResponseData: any): 
 
     rawList.forEach((item: any) => {
         if (!item) return;
-        const transText = (item.translated || item.translation || item.text || (typeof item === 'string' ? item : '') || '').trim();
+        const rawStr = (item.translated || item.translation || item.text || (typeof item === 'string' ? item : '') || '');
+        const transText = rawStr.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
         const origText = (item.original || item.source || '').trim();
 
         if (transText && item.id !== undefined && item.id !== null) {

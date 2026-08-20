@@ -1255,8 +1255,11 @@ export function balanceTextToDiamond(
 }
 
 export function balanceBlockDiamond(block: MangaBlock): void {
-    if (!block || block.type === 'image') return;
-    const formatted = balanceTextToDiamond(block.translated, block.box ? block.box.w : null, block.box ? block.box.h : null, block.style);
+    if (!block || block.type === 'image' || block.type === 'sfx') return;
+    if (!block.style) block.style = {} as any;
+    block.style.diamondWrap = true;
+    const cleanText = (block.translated || '').replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
+    const formatted = balanceTextToDiamond(cleanText, block.box ? block.box.w : null, block.box ? block.box.h : null, block.style);
     block.translated = formatted;
     block.autoFitCache = null;
     block.maskCache = null;
@@ -1266,8 +1269,11 @@ export function applyDiamondFormat(): void {
     if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) return;
     const page = globalState.pages[globalState.activePageIndex];
     const block = page?.blocks.find(b => b.id === globalState.selectedBlockId);
-    if (block && page) {
-        const formatted = balanceTextToDiamond(block.translated, block.box ? block.box.w : null, block.box ? block.box.h : null, block.style);
+    if (block && page && block.type !== 'image' && block.type !== 'sfx') {
+        if (!block.style) block.style = {} as any;
+        block.style.diamondWrap = true;
+        const cleanText = (block.translated || '').replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
+        const formatted = balanceTextToDiamond(cleanText, block.box ? block.box.w : null, block.box ? block.box.h : null, block.style);
         block.translated = formatted;
         if (elements.editTranslatedText) {
             elements.editTranslatedText.value = formatted;
@@ -1292,8 +1298,11 @@ export function batchDiamondBalanceAllPages(): void {
 
     globalState.pages.forEach(page => {
         (page.blocks || []).forEach(block => {
-            if (block.translated && block.type !== 'sfx') {
-                const balanced = balanceTextToDiamond(block.translated, block.box.w, block.box.h, block.style);
+            if (block.translated && block.type !== 'sfx' && !block.style?.vertical) {
+                if (!block.style) block.style = {} as any;
+                block.style.diamondWrap = true;
+                const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
+                const balanced = balanceTextToDiamond(cleanText, block.box?.w || null, block.box?.h || null, block.style);
                 if (balanced && balanced !== block.translated) {
                     block.translated = balanced;
                     block.autoFitCache = null;
