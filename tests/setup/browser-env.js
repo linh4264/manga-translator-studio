@@ -73,7 +73,13 @@ export function setupBrowserEnvironment() {
             dataset: {},
             get textContent() {
                 if (children.length === 0) return explicitTextContent;
-                return children.map(c => c.nodeType === 3 ? (c.textContent || '') : (c.textContent || '')).join('');
+                return children.map((c, idx) => {
+                    if (c.tagName === 'BR') return '\n';
+                    if (c.tagName === 'DIV') {
+                        return (c.textContent || '') + (idx < children.length - 1 ? '\n' : '');
+                    }
+                    return c.textContent || '';
+                }).join('');
             },
             set textContent(val) {
                 children.length = 0;
@@ -88,10 +94,42 @@ export function setupBrowserEnvironment() {
             height: 1400,
             clientWidth: 1000,
             clientHeight: 1400,
-            offsetWidth: 1000,
-            offsetHeight: 1400,
-            scrollWidth: 1000,
-            scrollHeight: 1400,
+            get scrollWidth() {
+                let fontSize = 16;
+                if (this.style && this.style.fontSize) {
+                    const match = String(this.style.fontSize).match(/(\d+)px/);
+                    if (match) fontSize = parseInt(match[1], 10);
+                }
+                let letterSpacing = 0;
+                if (this.style && this.style.letterSpacing) {
+                    const match = String(this.style.letterSpacing).match(/(\d+)px/);
+                    if (match) letterSpacing = parseInt(match[1], 10);
+                }
+                const text = this.textContent || '';
+                const lines = text.split('\n');
+                let maxLineChars = 0;
+                for (const l of lines) {
+                    const len = Array.from(l).length;
+                    if (len > maxLineChars) maxLineChars = len;
+                }
+                return Math.round(maxLineChars * (fontSize * 0.55) + Math.max(0, maxLineChars - 1) * letterSpacing);
+            },
+            get scrollHeight() {
+                let fontSize = 16;
+                let lineHeight = 1.15;
+                if (this.style && this.style.fontSize) {
+                    const match = String(this.style.fontSize).match(/(\d+)px/);
+                    if (match) fontSize = parseInt(match[1], 10);
+                }
+                if (this.style && this.style.lineHeight) {
+                    const num = parseFloat(this.style.lineHeight);
+                    if (!isNaN(num)) lineHeight = num;
+                }
+                const text = this.textContent || '';
+                const lines = text.split('\n');
+                const lineCount = Math.max(1, lines.length);
+                return Math.round(lineCount * fontSize * lineHeight);
+            },
             get firstChild() { return children[0] || null; },
             get lastChild() { return children[children.length - 1] || null; },
             get firstElementChild() { return children.find(c => c.nodeType === 1) || null; },

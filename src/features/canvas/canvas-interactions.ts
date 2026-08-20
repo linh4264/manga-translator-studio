@@ -1,7 +1,7 @@
 import { globalState, pushStateToHistory, savePageToDB, uiUpdateActiveBlockEditor, uiUpdateSplitView } from '../../core/state';
 import { elements } from '../../core/elements';
 import { DEFAULT_VERTICAL_WRITING_MODE, DEFAULT_BLOCK_SIZE_PX } from '../../config/constants';
-import { requestOverlayRender } from './canvas-renderer';
+import { requestOverlayRender, balanceTextToDiamond } from './canvas-renderer';
 import { autoFitBlock, isBlockAutoFit, copiedStyle } from './canvas-styling';
 import { showToast } from '../../core/utils';
 import { MangaBlock, BlockStyle } from '../../types/index';
@@ -227,11 +227,20 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
 
         updateFloatingToolbarPosition();
 
-        if (isBlockAutoFit(block)) {
-            if (!resizeRafId) {
-                resizeRafId = requestAnimationFrame(() => {
-                    resizeRafId = null;
-                    block.autoFitCache = null;
+        if (!resizeRafId) {
+            resizeRafId = requestAnimationFrame(() => {
+                resizeRafId = null;
+                block.autoFitCache = null;
+                if (block.style?.diamondWrap && block.translated && !block.style?.vertical && block.type !== 'sfx') {
+                    const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
+                    const imgEl = elements.mangaBgImage;
+                    const W = imgEl?.naturalWidth || 800;
+                    const H = imgEl?.naturalHeight || 1200;
+                    const pixelW = (block.box.w / 100) * W;
+                    const pixelH = (block.box.h / 100) * H;
+                    block.translated = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
+                }
+                if (isBlockAutoFit(block)) {
                     autoFitBlock(block);
                     const zoomScale = (globalState.zoom || 100) / 100;
                     const maskElem = blockElem?.firstElementChild as HTMLElement | null;
@@ -240,8 +249,8 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
                     }
                     if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px (Auto)`;
                     if (elements.styleFontSize) elements.styleFontSize.value = String(block.style.fontSize || 13);
-                });
-            }
+                }
+            });
         }
     }
 
@@ -257,6 +266,22 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
         document.removeEventListener('touchcancel', onResizeEnd);
 
         block.maskCache = null;
+        block.autoFitCache = null;
+        if (block.style?.diamondWrap && block.translated && !block.style?.vertical && block.type !== 'sfx') {
+            const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
+            const imgEl = elements.mangaBgImage;
+            const W = imgEl?.naturalWidth || 800;
+            const H = imgEl?.naturalHeight || 1200;
+            const pixelW = (block.box.w / 100) * W;
+            const pixelH = (block.box.h / 100) * H;
+            block.translated = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
+            if (elements.editTranslatedText && block.id === globalState.selectedBlockId) {
+                elements.editTranslatedText.value = block.translated;
+            }
+        }
+        if (isBlockAutoFit(block)) {
+            autoFitBlock(block);
+        }
         requestOverlayRender();
         uiUpdateActiveBlockEditor();
 

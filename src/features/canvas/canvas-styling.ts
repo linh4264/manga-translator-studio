@@ -21,7 +21,142 @@ export function isBlockAutoFit(block?: MangaBlock | null): boolean {
     return globalState.autoFitEnabled;
 }
 
-export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageElement | null = null, _forceExportScale: number = 1, targetPage: MangaPage | null = null): void {
+export const DIAMOND_REFLOW_THRESHOLDS = {
+    MIN_LINE_UTILIZATION: 0.55,       // Max line width < 55% of allowed width -> under-utilized
+    MIN_WORD_COUNT: 4,               // Short text (1-3 words) never needs reflow
+    MAX_ASPECT_LINE_DEVIATION: 1.5,  // Line count deviation based on box aspect
+};
+
+export function shouldReflowDiamond(
+    block: MangaBlock,
+    finalFontSize: number,
+    maxAllowedWidth: number,
+    maxAllowedHeight: number,
+    targetWidth: number,
+    targetHeight: number
+): boolean {
+    if (!block || !block.style?.diamondWrap || block.style?.vertical || block.type === 'sfx') {
+        return false;
+    }
+    const text = (block.translated || '').trim();
+    if (!text) return false;
+
+    // Check word count - 1 to 3 words are short text tier, never reflow
+    const words = text.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim().split(/\s+/).filter(Boolean);
+    if (words.length < DIAMOND_REFLOW_THRESHOLDS.MIN_WORD_COUNT) {
+        return false;
+    }
+
+    const lines = text.split('\n').filter(l => l.trim().length > 0);
+    if (lines.length <= 1) {
+        return false;
+    }
+
+    // Measure line widths at finalFontSize
+    const ruler = elements.autoFitRuler || (typeof document !== 'undefined' ? document.getElementById('auto-fit-ruler') : null);
+    const boxAspect = (targetWidth && targetHeight && targetHeight > 0) ? (targetWidth / targetHeight) : 0.85;
+
+    let maxLineWidth = 0;
+    const lineWidths: number[] = [];
+
+    const fontStyle = block.style.fontFamily || globalState.defaultFont || 'font-manga';
+    const isBuiltInFont = ['font-sans', 'font-manga', 'font-comic', 'font-comicneue', 'font-impact', 'font-marker', 'font-bungee', 'font-caveat', 'font-tech', 'font-condensed', 'font-vietnamese'].includes(fontStyle);
+
+    if (ruler) {
+        const prevStyle = {
+            fontSize: ruler.style.fontSize,
+            fontFamily: ruler.style.fontFamily,
+            fontWeight: ruler.style.fontWeight,
+            fontStyle: ruler.style.fontStyle,
+            letterSpacing: ruler.style.letterSpacing,
+            className: ruler.className,
+            whiteSpace: ruler.style.whiteSpace,
+            display: ruler.style.display,
+            width: ruler.style.width
+        };
+
+        if (isBuiltInFont) {
+            ruler.className = fontStyle;
+            ruler.style.fontFamily = '';
+        } else {
+            ruler.className = '';
+            ruler.style.fontFamily = `'${fontStyle}', sans-serif`;
+        }
+        ruler.style.fontSize = `${finalFontSize}px`;
+        ruler.style.fontWeight = block.style.bold ? 'bold' : 'normal';
+        ruler.style.fontStyle = block.style.italic ? 'italic' : 'normal';
+        ruler.style.letterSpacing = `${block.style.letterSpacing || 0}px`;
+        ruler.style.whiteSpace = 'nowrap';
+        ruler.style.display = 'inline-block';
+        ruler.style.width = 'auto';
+
+        for (const line of lines) {
+            ruler.textContent = line;
+            const w = ruler.scrollWidth || ruler.getBoundingClientRect().width;
+            lineWidths.push(w);
+            if (w > maxLineWidth) maxLineWidth = w;
+        }
+
+        // Restore ruler styles
+        ruler.style.fontSize = prevStyle.fontSize;
+        ruler.style.fontFamily = prevStyle.fontFamily;
+        ruler.style.fontWeight = prevStyle.fontWeight;
+        ruler.style.fontStyle = prevStyle.fontStyle;
+        ruler.style.letterSpacing = prevStyle.letterSpacing;
+        ruler.className = prevStyle.className;
+        ruler.style.whiteSpace = prevStyle.whiteSpace;
+        ruler.style.display = prevStyle.display;
+        ruler.style.width = prevStyle.width;
+    } else {
+        // Fallback token/char measurement (e.g. headless unit tests)
+        const letterSpacing = block.style.letterSpacing || 0;
+        for (const line of lines) {
+            const charCount = Array.from(line).length;
+            const w = charCount * (finalFontSize * 0.55) + Math.max(0, charCount - 1) * letterSpacing;
+            lineWidths.push(w);
+            if (w > maxLineWidth) maxLineWidth = w;
+        }
+    }
+
+    const maxLineUtilization = maxLineWidth / Math.max(1, maxAllowedWidth);
+    const estHeight = lines.length * (finalFontSize * (block.style.lineHeight || 1.15));
+    const heightUtilization = estHeight / Math.max(1, maxAllowedHeight);
+    const textAspect = maxLineWidth / Math.max(1, estHeight);
+    const baseFontSize = block.style.baseFontSize || 16;
+
+    // 1. Width under-utilization: the widest line uses less than MIN_LINE_UTILIZATION (0.55) of available width
+    if (maxLineUtilization < DIAMOND_REFLOW_THRESHOLDS.MIN_LINE_UTILIZATION) {
+        return true;
+    }
+
+    // 2. Height under-utilization in tall boxes (aspect < 0.75) where text was squeezed into too few lines
+    if (boxAspect < 0.75 && heightUtilization < 0.45 && words.length >= 6) {
+        return true;
+    }
+
+    // 3. Severe font shrinkage while having plenty of vertical headroom
+    if (finalFontSize < baseFontSize * 0.75 && heightUtilization < 0.55 && words.length >= 6) {
+        return true;
+    }
+
+    // 4. Aspect ratio mismatch: wide text in tall box OR tall text in wide box
+    if (boxAspect < 0.60 && textAspect > 1.15 && words.length >= 6) {
+        return true;
+    }
+    if (boxAspect > 1.40 && textAspect < 0.65 && words.length >= 6) {
+        return true;
+    }
+
+    return false;
+}
+
+export function autoFitBlock(
+    block: MangaBlock,
+    customImgElement: HTMLImageElement | null = null,
+    _forceExportScale: number = 1,
+    targetPage: MangaPage | null = null,
+    allowDiamondReflow: boolean = true
+): void {
     if (!block || !block.box || !block.style) return;
     if (!isBlockAutoFit(block)) return;
 
@@ -57,20 +192,37 @@ export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageEleme
     const aspect = naturalH / Math.max(1, naturalW);
     const displayHeight = displayWidth * aspect;
 
+    const baseFontSize = block.style.baseFontSize || block.style.fontSize || 16;
+    if (!block.style.baseFontSize) {
+        block.style.baseFontSize = baseFontSize;
+    }
+
+    const fontStyle = block.style.fontFamily || globalState.defaultFont || 'font-manga';
+    const isDiamondWrap = !!block.style.diamondWrap;
+    const isVertical = !!block.style.vertical;
+    const isBold = !!block.style.bold;
+    const isItalic = !!block.style.italic;
+    const isUnderline = !!block.style.underline;
     const maskShape = block.style.maskShape || 'bubble-fit';
     const strokeWidth = block.style.strokeWidth || 0;
     const strokeWidth2 = block.style.strokeWidth2 || 0;
     const lineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : 1.15;
     const letterSpacing = block.style.letterSpacing || 0;
     const textTransform = block.style.textTransform || 'none';
-    const isItalic = !!block.style.italic;
-    const isUnderline = !!block.style.underline;
+    const align = block.style.align || 'center';
+    const arcAngle = block.style.arcAngle || 0;
+    const skewX = block.style.skewX || 0;
+    const skewY = block.style.skewY || 0;
+    const warpWave = block.style.warpWave || 0;
+    const warpBulge = block.style.warpBulge || 0;
 
     const quantWidth = Math.round(displayWidth / 2) * 2;
     const quantHeight = Math.round(displayHeight / 2) * 2;
-    const cacheKey = `${block.translated}_${block.box.w}_${block.box.h}_${block.style.fontFamily}_${block.style.padding}_${strokeWidth}_${strokeWidth2}_${block.style.vertical}_${block.style.bold}_${isItalic}_${isUnderline}_${lineHeight}_${letterSpacing}_${textTransform}_${block.style.align}_${maskShape}_${quantWidth}_${quantHeight}`;
+    const cacheKey = `${block.translated}_${block.box.w}_${block.box.h}_${fontStyle}_${baseFontSize}_${isDiamondWrap}_${block.style.padding}_${strokeWidth}_${strokeWidth2}_${isVertical}_${isBold}_${isItalic}_${isUnderline}_${lineHeight}_${letterSpacing}_${textTransform}_${align}_${maskShape}_${arcAngle}_${skewX}_${skewY}_${warpWave}_${warpBulge}_${quantWidth}_${quantHeight}`;
+
     if (block.autoFitCache && block.autoFitCache.key === cacheKey) {
         block.style.fontSize = block.autoFitCache.fontSize;
+        block.style.baseFontSize = block.autoFitCache.baseFontSize || baseFontSize;
         block.textWidth = block.autoFitCache.textWidth;
         block.textHeight = block.autoFitCache.textHeight;
         return;
@@ -82,7 +234,6 @@ export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageEleme
         return;
     }
 
-    const fontStyle = block.style.fontFamily || globalState.defaultFont || 'font-manga';
     const isBuiltInFont = ['font-sans', 'font-manga', 'font-comic', 'font-comicneue', 'font-impact', 'font-marker', 'font-bungee', 'font-caveat', 'font-tech', 'font-condensed', 'font-vietnamese'].includes(fontStyle);
     if (isBuiltInFont) {
         ruler.className = fontStyle;
@@ -104,7 +255,7 @@ export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageEleme
     } else {
         ruler.style.padding = '4px';
     }
-    ruler.style.textAlign = block.style.align || 'center';
+    ruler.style.textAlign = align;
     ruler.style.letterSpacing = `${letterSpacing}px`;
     ruler.style.lineHeight = `${lineHeight}`;
     ruler.style.fontKerning = 'normal';
@@ -114,7 +265,7 @@ export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageEleme
     ruler.style.hyphens = 'none';
     ruler.style.boxSizing = 'border-box';
 
-    if (block.style.bold) {
+    if (isBold) {
         ruler.style.fontWeight = 'bold';
     } else {
         ruler.style.fontWeight = 'normal';
@@ -132,7 +283,7 @@ export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageEleme
         ruler.style.textDecoration = 'none';
     }
 
-    if (block.style.vertical) {
+    if (isVertical) {
         ruler.classList.add('text-vertical');
         ruler.style.writingMode = 'vertical-rl';
         ruler.style.textOrientation = 'upright';
@@ -151,7 +302,7 @@ export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageEleme
     const maxAllowedWidth = Math.max(10, (targetWidth * fitMargin) - totalExtraBorder);
     const maxAllowedHeight = Math.max(10, (targetHeight * fitMargin) - totalExtraBorder);
 
-    if (block.style.vertical) {
+    if (isVertical) {
         ruler.style.height = `${maxAllowedHeight}px`;
         ruler.style.maxHeight = `${maxAllowedHeight}px`;
         ruler.style.width = 'auto';
@@ -164,11 +315,11 @@ export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageEleme
     }
 
     const warpOpts = {
-        arcAngle: block.style.arcAngle || 0,
-        skewX: block.style.skewX || 0,
-        skewY: block.style.skewY || 0,
-        warpWave: block.style.warpWave || 0,
-        warpBulge: block.style.warpBulge || 0,
+        arcAngle: arcAngle,
+        skewX: skewX,
+        skewY: skewY,
+        warpWave: warpWave,
+        warpBulge: warpBulge,
         textTransform: textTransform,
         letterSpacing: letterSpacing,
         underline: isUnderline
@@ -198,6 +349,26 @@ export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageEleme
 
     block.style.fontSize = optimalSize;
 
+    // Coordination: If Diamond is active and layout needs reflow at optimal font size, perform single reflow
+    if (allowDiamondReflow && isDiamondWrap && !isVertical && block.type !== 'sfx') {
+        const needReflow = shouldReflowDiamond(block, optimalSize, maxAllowedWidth, maxAllowedHeight, targetWidth, targetHeight);
+        if (needReflow) {
+            const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
+            const reflowed = balanceTextToDiamond(cleanText, targetWidth, targetHeight, {
+                ...block.style,
+                fontSize: optimalSize,
+                baseFontSize: optimalSize
+            });
+            if (reflowed && reflowed !== block.translated) {
+                block.translated = reflowed;
+                block.autoFitCache = null;
+                // Single final AutoFit pass (allowDiamondReflow = false to strictly prevent any loops)
+                autoFitBlock(block, customImgElement, _forceExportScale, targetPage, false);
+                return;
+            }
+        }
+    }
+
     ruler.style.fontSize = `${optimalSize}px`;
     block.textWidth = ruler.scrollWidth;
     block.textHeight = ruler.scrollHeight;
@@ -205,6 +376,7 @@ export function autoFitBlock(block: MangaBlock, customImgElement: HTMLImageEleme
     block.autoFitCache = {
         key: cacheKey,
         fontSize: optimalSize,
+        baseFontSize: baseFontSize,
         textWidth: block.textWidth,
         textHeight: block.textHeight
     };
@@ -544,8 +716,30 @@ export function syncActiveBlockStyle(property: string, value: any): void {
         targetBlocks.forEach(b => {
             if (!b.style) b.style = {} as BlockStyle;
             (b.style as any)[property] = value;
+            if (property === 'fontSize') {
+                b.style.baseFontSize = value;
+            }
             b.maskCache = null;
             b.autoFitCache = null;
+
+            if (['fontFamily', 'bold', 'italic', 'letterSpacing', 'diamondWrap'].includes(property)) {
+                if (b.style?.diamondWrap && b.translated && !b.style?.vertical && b.type !== 'sfx') {
+                    const cleanText = b.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
+                    const imgEl = elements.mangaBgImage;
+                    const W = imgEl?.naturalWidth || 800;
+                    const H = imgEl?.naturalHeight || 1200;
+                    const pixelW = (b.box.w / 100) * W;
+                    const pixelH = (b.box.h / 100) * H;
+                    b.translated = balanceTextToDiamond(cleanText, pixelW, pixelH, b.style);
+                    if (elements.editTranslatedText && b.id === globalState.selectedBlockId) {
+                        elements.editTranslatedText.value = b.translated;
+                    }
+                }
+            }
+
+            if (isBlockAutoFit(b)) {
+                autoFitBlock(b);
+            }
         });
 
         if (property === 'fontSize') {

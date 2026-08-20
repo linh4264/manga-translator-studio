@@ -621,12 +621,29 @@ export function getMeasureContext(): CanvasRenderingContext2D | null {
     return measureCtx;
 }
 
+export const BUILTIN_FONT_MAP: Record<string, string> = {
+    'font-comic': "'Patrick Hand', 'Pangolin', cursive",
+    'font-manga': "'Nunito', sans-serif",
+    'font-vietnamese': "'Be Vietnam Pro', 'Inter', sans-serif",
+    'font-comicneue': "'Comic Neue', cursive",
+    'font-impact': "'Bangers', cursive",
+    'font-marker': "'Permanent Marker', cursive",
+    'font-bungee': "'Bungee', cursive",
+    'font-caveat': "'Caveat', cursive",
+    'font-tech': "'Chakra Petch', sans-serif",
+    'font-condensed': "'Saira Condensed', sans-serif",
+    'font-sans': 'sans-serif'
+};
+
 export function buildFontString(style: any = {}, baseFontSize: number = 16, baseFontFamily: string = 'sans-serif'): string {
     const fontStyle = style.italic ? 'italic ' : 'normal ';
     const fontWeight = style.bold ? 'bold ' : 'normal ';
     const sizeRatio = typeof style.sizeRatio === 'number' ? style.sizeRatio : 1.0;
     const fontSize = Math.max(1, Math.round((style.fontSize || baseFontSize) * sizeRatio));
-    const fontFam = style.font || style.fontFamily || baseFontFamily || 'sans-serif';
+    let fontFam = style.font || style.fontFamily || baseFontFamily || 'sans-serif';
+    if (BUILTIN_FONT_MAP[fontFam]) {
+        fontFam = BUILTIN_FONT_MAP[fontFam];
+    }
     return `${fontStyle}${fontWeight}${fontSize}px ${fontFam}`.trim();
 }
 
@@ -671,7 +688,7 @@ export function measureWordTokens(
     if (tokens.length === 0) return [];
 
     const ctx = customCtx || getMeasureContext();
-    const baseFontSize = baseStyle.fontSize || 16;
+    const baseFontSize = baseStyle.baseFontSize || baseStyle.fontSize || 16;
     const baseFontFamily = baseStyle.fontFamily || 'sans-serif';
     const baseLetterSpacing = typeof baseStyle.letterSpacing === 'number' ? baseStyle.letterSpacing : 0;
 
@@ -1135,7 +1152,7 @@ export function balanceSingleParagraphToDiamond(
     const totalTextWidth = totalWordsWidth + (wordCount - 1) * avgSpaceWidth;
     const totalCleanChars = words.reduce((sum, w) => sum + w.text.length, 0) + (wordCount - 1);
 
-    const baseFontSize = styleOptions.fontSize || 16;
+    const baseFontSize = styleOptions.baseFontSize || styleOptions.fontSize || 16;
     const lineHeight = (styleOptions.lineHeight !== undefined ? styleOptions.lineHeight : 1.18) * baseFontSize;
 
     // ==========================================
@@ -1184,19 +1201,34 @@ export function balanceSingleParagraphToDiamond(
     // ==========================================
     // TIER 3: Trung bình & Dài (>= 7 từ)
     // ==========================================
-    // - Áp dụng cân đối Oval / Diamond tự nhiên, tránh băm nát 1-2 từ/dòng
     let minLines = 3;
     let maxAllowedLines = 4;
 
-    if (wordCount >= 14 && wordCount < 22) {
+    if (boxAspect < 0.55) {
+        // Very tall box (vertical/narrow bubble): allow more lines with fewer words per line
+        minLines = Math.min(wordCount, Math.max(3, Math.ceil(wordCount / 3)));
+        maxAllowedLines = Math.min(wordCount, Math.max(minLines, Math.ceil(wordCount / 1.7)));
+    } else if (boxAspect < 0.70) {
+        // Moderate vertical bubble
         minLines = 3;
-        maxAllowedLines = 5;
-    } else if (wordCount >= 22) {
-        minLines = 4;
-        maxAllowedLines = Math.min(wordCount, Math.max(5, Math.ceil(wordCount / 3)));
+        maxAllowedLines = Math.min(wordCount, Math.max(4, Math.ceil(wordCount / 2.2)));
+    } else if (boxAspect > 1.4) {
+        // Wide horizontal bubble: prefer fewer wider lines
+        minLines = 2;
+        maxAllowedLines = Math.min(wordCount, Math.max(3, Math.ceil(wordCount / 3.5)));
+    } else {
+        // Standard bubble (0.70 - 1.4)
+        if (wordCount >= 14 && wordCount < 22) {
+            minLines = 3;
+            maxAllowedLines = 5;
+        } else if (wordCount >= 22) {
+            minLines = 4;
+            maxAllowedLines = Math.min(wordCount, Math.max(5, Math.ceil(wordCount / 3)));
+        }
     }
 
     let bestNumLines = minLines;
+    let bestScore = Infinity;
 
     for (let k = minLines; k <= maxAllowedLines; k++) {
         const candidateLines = partitionWordsToDiamondLines(words, k, boxAspect, avgSpaceWidth);
@@ -1211,18 +1243,28 @@ export function balanceSingleParagraphToDiamond(
         });
 
         const estHeight = k * lineHeight;
-        bestNumLines = k;
-        if (estHeight >= maxLineWidth * 0.7) {
-            break;
-        }
-    }
+        const candidateTextAspect = maxLineWidth / Math.max(1, estHeight);
 
-    if (boxW && boxH && boxH > 0) {
-        if (boxAspect < 0.55) {
-            const candidateLines = Math.min(Math.ceil(wordCount / 2), Math.max(bestNumLines, Math.ceil(bestNumLines * (0.8 / Math.max(0.2, boxAspect)))));
-            bestNumLines = candidateLines;
-        } else if (boxAspect > 1.5 && bestNumLines > 2) {
-            bestNumLines = Math.max(2, bestNumLines - 1);
+        let score = 0;
+        const aspectDiff = (candidateTextAspect - boxAspect) / boxAspect;
+        score += aspectDiff * aspectDiff * 100;
+
+        if (boxW && boxH && boxH > 0) {
+            const availableW = boxW * 0.9;
+            const availableH = boxH * 0.9;
+            const widthFill = maxLineWidth / Math.max(1, availableW);
+            const heightFill = estHeight / Math.max(1, availableH);
+
+            if (widthFill > 1.0) {
+                score += (widthFill - 1.0) * 150;
+            }
+            const fillImbalance = Math.abs(widthFill - heightFill);
+            score += fillImbalance * 80;
+        }
+
+        if (score < bestScore) {
+            bestScore = score;
+            bestNumLines = k;
         }
     }
 
@@ -1259,7 +1301,12 @@ export function balanceBlockDiamond(block: MangaBlock): void {
     if (!block.style) block.style = {} as any;
     block.style.diamondWrap = true;
     const cleanText = (block.translated || '').replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-    const formatted = balanceTextToDiamond(cleanText, block.box ? block.box.w : null, block.box ? block.box.h : null, block.style);
+    const imgEl = typeof document !== 'undefined' ? (elements.mangaBgImage || document.querySelector('#manga-bg-image')) as HTMLImageElement | null : null;
+    const naturalW = (imgEl && imgEl.naturalWidth > 0) ? imgEl.naturalWidth : 800;
+    const naturalH = (imgEl && imgEl.naturalHeight > 0) ? imgEl.naturalHeight : 1200;
+    const pixelW = block.box ? (block.box.w / 100) * naturalW : 200;
+    const pixelH = block.box ? (block.box.h / 100) * naturalH : 200;
+    const formatted = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
     block.translated = formatted;
     block.autoFitCache = null;
     block.maskCache = null;
@@ -1273,7 +1320,12 @@ export function applyDiamondFormat(): void {
         if (!block.style) block.style = {} as any;
         block.style.diamondWrap = true;
         const cleanText = (block.translated || '').replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-        const formatted = balanceTextToDiamond(cleanText, block.box ? block.box.w : null, block.box ? block.box.h : null, block.style);
+        const imgEl = typeof document !== 'undefined' ? (elements.mangaBgImage || document.querySelector('#manga-bg-image')) as HTMLImageElement | null : null;
+        const naturalW = (imgEl && imgEl.naturalWidth > 0) ? imgEl.naturalWidth : 800;
+        const naturalH = (imgEl && imgEl.naturalHeight > 0) ? imgEl.naturalHeight : 1200;
+        const pixelW = block.box ? (block.box.w / 100) * naturalW : 200;
+        const pixelH = block.box ? (block.box.h / 100) * naturalH : 200;
+        const formatted = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
         block.translated = formatted;
         if (elements.editTranslatedText) {
             elements.editTranslatedText.value = formatted;
@@ -1296,13 +1348,19 @@ export function batchDiamondBalanceAllPages(): void {
     pushStateToHistory();
     let totalBalanced = 0;
 
+    const imgEl = typeof document !== 'undefined' ? (elements.mangaBgImage || document.querySelector('#manga-bg-image')) as HTMLImageElement | null : null;
+    const naturalW = (imgEl && imgEl.naturalWidth > 0) ? imgEl.naturalWidth : 800;
+    const naturalH = (imgEl && imgEl.naturalHeight > 0) ? imgEl.naturalHeight : 1200;
+
     globalState.pages.forEach(page => {
         (page.blocks || []).forEach(block => {
             if (block.translated && block.type !== 'sfx' && !block.style?.vertical) {
                 if (!block.style) block.style = {} as any;
                 block.style.diamondWrap = true;
                 const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-                const balanced = balanceTextToDiamond(cleanText, block.box?.w || null, block.box?.h || null, block.style);
+                const pixelW = block.box ? (block.box.w / 100) * naturalW : null;
+                const pixelH = block.box ? (block.box.h / 100) * naturalH : null;
+                const balanced = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
                 if (balanced && balanced !== block.translated) {
                     block.translated = balanced;
                     block.autoFitCache = null;

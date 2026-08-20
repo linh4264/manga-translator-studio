@@ -12,6 +12,7 @@ export interface BoundingBox {
 export interface BlockStyle {
     fontFamily: string;
     fontSize: number;
+    baseFontSize?: number;
     lineHeight?: number;
     letterSpacing?: number;
     textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
