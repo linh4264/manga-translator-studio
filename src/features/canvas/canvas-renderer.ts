@@ -701,16 +701,16 @@ export function measureWordTokens(
 
             let tagPrefix = '';
             let tagSuffix = '';
-            if (tok.bold) { tagPrefix += '[b]'; tagSuffix = '[/b]' + tagSuffix; }
-            if (tok.italic) { tagPrefix += '[i]'; tagSuffix = '[/i]' + tagSuffix; }
-            if (tok.underline) { tagPrefix += '[u]'; tagSuffix = '[/u]' + tagSuffix; }
-            if (tok.strikethrough) { tagPrefix += '[s]'; tagSuffix = '[/s]' + tagSuffix; }
-            if (tok.color) { tagPrefix += `[color=${tok.color}]`; tagSuffix = '[/color]' + tagSuffix; }
-            if (tok.sizeRatio && tok.sizeRatio !== 1) {
+            if (tok.bold && !baseStyle.bold) { tagPrefix += '[b]'; tagSuffix = '[/b]' + tagSuffix; }
+            if (tok.italic && !baseStyle.italic) { tagPrefix += '[i]'; tagSuffix = '[/i]' + tagSuffix; }
+            if (tok.underline && !baseStyle.underline) { tagPrefix += '[u]'; tagSuffix = '[/u]' + tagSuffix; }
+            if (tok.strikethrough && !baseStyle.strikethrough) { tagPrefix += '[s]'; tagSuffix = '[/s]' + tagSuffix; }
+            if (tok.color && tok.color !== baseStyle.color && tok.color !== baseStyle.textColor) { tagPrefix += `[color=${tok.color}]`; tagSuffix = '[/color]' + tagSuffix; }
+            if (tok.sizeRatio && tok.sizeRatio !== 1 && tok.sizeRatio !== baseStyle.sizeRatio) {
                 tagPrefix += `[size=${Math.round(tok.sizeRatio * 100)}%]`;
                 tagSuffix = '[/size]' + tagSuffix;
             }
-            if (tok.font) { tagPrefix += `[font=${tok.font}]`; tagSuffix = '[/font]' + tagSuffix; }
+            if (tok.font && tok.font !== baseStyle.font && tok.font !== baseStyle.fontFamily) { tagPrefix += `[font=${tok.font}]`; tagSuffix = '[/font]' + tagSuffix; }
 
             const sizeRatio = tok.sizeRatio || 1.0;
             const wordStyle = {

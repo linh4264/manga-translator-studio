@@ -283,3 +283,27 @@ test('CASE J — Pure Rendering: Export does not mutate block properties', async
     assert.deepStrictEqual(block.box, originalBlockSnapshot.box, 'Export must not mutate block.box');
     assert.deepStrictEqual(block.autoFitCache, originalBlockSnapshot.autoFitCache, 'Export must not mutate block.autoFitCache');
 });
+
+test('CASE K — Clean Text: Diamond balance on italic / thought block does not inject [i] tags', () => {
+    const rawThought = 'Vì lúc đó ngượng lắm mà...!';
+    const thoughtBlock = {
+        id: 'b_thought_clean',
+        type: 'thought',
+        translated: rawThought,
+        box: { x: 20, y: 20, w: 25, h: 25 },
+        style: {
+            fontSize: 18,
+            fontFamily: 'font-comicneue',
+            italic: true,
+            bold: false,
+            diamondWrap: true,
+            maskShape: 'bubble-fit'
+        }
+    };
+
+    balanceBlockDiamond(thoughtBlock);
+
+    assert.ok(!thoughtBlock.translated.includes('[i]'), 'Translated text must not contain [i] tags');
+    assert.ok(!thoughtBlock.translated.includes('[/i]'), 'Translated text must not contain [/i] tags');
+    assert.ok(thoughtBlock.translated.includes('Vì lúc đó') || thoughtBlock.translated.includes('ngượng'), 'Content must be preserved');
+});
