@@ -1,4 +1,5 @@
-import { test, expect, assert } from 'vitest';
+import { test, expect } from 'vitest';
+import assert from 'node:assert';
 import '../../setup/browser-env.js';
 
 // Manga Reading Order sorting utility (Top-to-Bottom, Right-to-Left for Manga)

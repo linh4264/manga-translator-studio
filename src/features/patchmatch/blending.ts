@@ -1,6 +1,15 @@
 /**
- * blending.js - Seamless Boundary Blending & Distance Transform Alpha Feathering
+ * blending.ts - Seamless Boundary Blending & Distance Transform Alpha Feathering
  */
+
+export function computeAdaptiveBlendRadius(patchRadius: number = 5, patternType: string = 'unknown'): number {
+    if (patternType === 'screentone' || patternType === 'horizontal' || patternType === 'vertical') {
+        // Crisp periodic pattern: very light feathering (1.5 - 2.5px) to prevent blurring dots/stripes
+        return Math.max(1.5, Math.min(2.5, patchRadius * 0.35));
+    }
+    // Organic texture: moderate feathering (2.0 - 8.0px)
+    return Math.max(2.0, Math.min(8.0, patchRadius * 0.5));
+}
 
 export function computeDistanceToBoundary(mask: Uint8Array, width: number, height: number): Float32Array {
     const total = width * height;
@@ -71,17 +80,19 @@ export function applySeamlessBoundaryBlending(
                 result[p + 2] = reconstructedRgba[p + 2];
                 result[p + 3] = reconstructedRgba[p + 3];
             } else {
-                const t = d / bRad;
+                const t = Math.min(1.0, Math.max(0.0, d / bRad));
+                // Smooth Cosine S-Curve (0 to 1)
                 const alpha = 0.5 * (1.0 - Math.cos(Math.PI * t));
                 const invAlpha = 1.0 - alpha;
 
-                result[p] = Math.round(originalRgba[p] * invAlpha + reconstructedRgba[p] * alpha);
-                result[p + 1] = Math.round(originalRgba[p + 1] * invAlpha + reconstructedRgba[p + 1] * alpha);
-                result[p + 2] = Math.round(originalRgba[p + 2] * invAlpha + reconstructedRgba[p + 2] * alpha);
-                result[p + 3] = Math.round(originalRgba[p + 3] * invAlpha + reconstructedRgba[p + 3] * alpha);
+                result[p] = Math.min(255, Math.max(0, Math.round(originalRgba[p] * invAlpha + reconstructedRgba[p] * alpha)));
+                result[p + 1] = Math.min(255, Math.max(0, Math.round(originalRgba[p + 1] * invAlpha + reconstructedRgba[p + 1] * alpha)));
+                result[p + 2] = Math.min(255, Math.max(0, Math.round(originalRgba[p + 2] * invAlpha + reconstructedRgba[p + 2] * alpha)));
+                result[p + 3] = Math.min(255, Math.max(0, Math.round(originalRgba[p + 3] * invAlpha + reconstructedRgba[p + 3] * alpha)));
             }
         }
     }
 
     return result;
 }
+

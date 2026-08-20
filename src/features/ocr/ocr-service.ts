@@ -156,6 +156,7 @@ export function computeTextMaskDilatedRoi(rawBox: any, imageData: ImageData | nu
     const visited = new Uint8Array(sw * sh);
     const cleanTextMask = new Uint8Array(sw * sh);
     let validGlyphCount = 0;
+    const glyphSizes: number[] = [];
 
     for (let ly = 0; ly < sh; ly++) {
         for (let lx = 0; lx < sw; lx++) {
@@ -209,6 +210,7 @@ export function computeTextMaskDilatedRoi(rawBox: any, imageData: ImageData | nu
                         cleanTextMask[compPixels[i]] = 1;
                     }
                     validGlyphCount++;
+                    glyphSizes.push(Math.max(compW, compH));
                 }
             }
         }
@@ -218,8 +220,20 @@ export function computeTextMaskDilatedRoi(rawBox: any, imageData: ImageData | nu
         return normalized;
     }
 
-    const radX = options.dilationRadiusX || 6;
-    const radY = options.dilationRadiusY || 3;
+    // Adaptive dilation: scale with median glyph size
+    let medianGlyphSize = 16;
+    if (glyphSizes.length > 0) {
+        glyphSizes.sort((a, b) => a - b);
+        medianGlyphSize = glyphSizes[Math.floor(glyphSizes.length / 2)];
+    } else {
+        medianGlyphSize = Math.min(sw, sh) * 0.25;
+    }
+
+    const adaptiveRadX = Math.max(2, Math.min(8, Math.round(medianGlyphSize * 0.15)));
+    const adaptiveRadY = Math.max(1, Math.min(6, Math.round(medianGlyphSize * 0.10)));
+
+    const radX = options.dilationRadiusX !== undefined ? options.dilationRadiusX : (options.dilationRadius !== undefined ? options.dilationRadius : adaptiveRadX);
+    const radY = options.dilationRadiusY !== undefined ? options.dilationRadiusY : (options.dilationRadius !== undefined ? options.dilationRadius : adaptiveRadY);
     const radXSq = radX * radX;
     const radYSq = radY * radY;
 

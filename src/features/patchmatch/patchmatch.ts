@@ -67,6 +67,8 @@ function getOrCreateWorker(): Worker | null {
                             outputRgba,
                             roi: data.roi,
                             patternInfo: data.patternInfo,
+                            confidence: data.confidence !== undefined ? data.confidence : 1.0,
+                            confidenceLevel: data.confidenceLevel || 'high',
                             stats: data.stats
                         });
                     }
@@ -119,6 +121,8 @@ export async function patchMatchInpaintImageData({
     outputRgba: Uint8Array;
     roi: any;
     patternInfo: any;
+    confidence: number;
+    confidenceLevel: 'high' | 'medium' | 'low';
     stats: any;
 }> {
     const mergedOpts = { ...PATCHMATCH_PRESETS.BALANCED, ...options };
@@ -182,6 +186,8 @@ export async function patchMatchInpaintImageData({
             outputRgba: result.outputRgba,
             roi: result.roi,
             patternInfo: result.patternInfo,
+            confidence: result.confidence,
+            confidenceLevel: result.confidenceLevel,
             stats: result.stats
         };
     }

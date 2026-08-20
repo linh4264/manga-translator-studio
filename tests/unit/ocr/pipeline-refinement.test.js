@@ -1,4 +1,5 @@
-import { test, assert } from 'vitest';
+import { test } from 'vitest';
+import assert from 'node:assert';
 import { extractTextAnchor, refineAiBlockBox, detectSpeechBubbleAtPoint, mergeOverlappingAiBlocks } from '../../../src/features/ocr/ocr-service.ts';
 import { balanceTextToDiamond, measureWordTokens } from '../../../src/features/canvas/canvas-renderer.ts';
 import { autoMatchBlockStyle } from '../../../src/features/canvas/canvas-styling.ts';

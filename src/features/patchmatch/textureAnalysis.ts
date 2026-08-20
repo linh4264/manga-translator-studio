@@ -67,6 +67,10 @@ export function analyzeMangaTexture(
 
     let bestYPitch: number | null = null;
     let bestYCorr = Infinity;
+    let secondBestYCorr = Infinity;
+    let sumYCorr = 0;
+    let validYPitchCount = 0;
+
     for (const P of candidatePitches) {
         let diffSum = 0;
         let count = 0;
@@ -79,15 +83,24 @@ export function analyzeMangaTexture(
         }
         if (count > 20) {
             const score = diffSum / count;
+            sumYCorr += score;
+            validYPitchCount++;
             if (score < bestYCorr) {
+                secondBestYCorr = bestYCorr;
                 bestYCorr = score;
                 bestYPitch = P;
+            } else if (score < secondBestYCorr) {
+                secondBestYCorr = score;
             }
         }
     }
 
     let bestXPitch: number | null = null;
     let bestXCorr = Infinity;
+    let secondBestXCorr = Infinity;
+    let sumXCorr = 0;
+    let validXPitchCount = 0;
+
     for (const P of candidatePitches) {
         let diffSum = 0;
         let count = 0;
@@ -100,15 +113,21 @@ export function analyzeMangaTexture(
         }
         if (count > 20) {
             const score = diffSum / count;
+            sumXCorr += score;
+            validXPitchCount++;
             if (score < bestXCorr) {
+                secondBestXCorr = bestXCorr;
                 bestXCorr = score;
                 bestXPitch = P;
+            } else if (score < secondBestXCorr) {
+                secondBestXCorr = score;
             }
         }
     }
 
     let bestDiagPitch: number | null = null;
     let bestDiagVariance = Infinity;
+    let secondDiagVariance = Infinity;
 
     for (const P of candidatePitches) {
         const sumVal = new Float32Array(P * P);
@@ -141,53 +160,89 @@ export function analyzeMangaTexture(
         if (validBins >= 2) {
             const avgVariance = totalVariance / validBins;
             if (avgVariance < bestDiagVariance) {
+                secondDiagVariance = bestDiagVariance;
                 bestDiagVariance = avgVariance;
                 bestDiagPitch = P;
+            } else if (avgVariance < secondDiagVariance) {
+                secondDiagVariance = avgVariance;
             }
         }
     }
 
-    if (varY > 8 && (varX <= 8 || varX <= varY * 0.55) && bestYCorr < 35 && bestYPitch !== null) {
-        const conf = Math.min(1.0, Math.max(0.7, (varY - varX) / (varY + 1)));
-        return {
-            type: "horizontal",
-            orientation: 0,
-            periodX: null,
-            periodY: bestYPitch,
-            confidence: conf
-        };
+    const sampleQuality = Math.min(1.0, Math.max(0.6, samples.length / 80));
+
+    // 1. Check Horizontal stripe pattern
+    if (varY > 8 && (varX <= 8 || varX <= varY * 0.50) && bestYCorr < 30 && bestYPitch !== null) {
+        const varRatio = (varY - varX) / (varY + varX + 0.001);
+        const corrScore = Math.max(0, 1.0 - (bestYCorr / 30.0));
+        const avgYCorr = validYPitchCount > 0 ? sumYCorr / validYPitchCount : bestYCorr;
+        const pitchSeparation = avgYCorr > 0 ? Math.min(1.0, (avgYCorr - bestYCorr) / (avgYCorr + 0.001) * 2.0) : 0.5;
+
+        const conf = Math.min(1.0, Math.max(0.5, (varRatio * 0.45 + corrScore * 0.35 + pitchSeparation * 0.10 + sampleQuality * 0.10)));
+
+        if (conf >= 0.75) {
+            return {
+                type: "horizontal",
+                orientation: 0,
+                periodX: null,
+                periodY: bestYPitch,
+                confidence: conf
+            };
+        }
     }
 
-    if (varX > 8 && (varY <= 8 || varY <= varX * 0.55) && bestXCorr < 35 && bestXPitch !== null) {
-        const conf = Math.min(1.0, Math.max(0.7, (varX - varY) / (varX + 1)));
-        return {
-            type: "vertical",
-            orientation: 90,
-            periodX: bestXPitch,
-            periodY: null,
-            confidence: conf
-        };
+    // 2. Check Vertical stripe pattern
+    if (varX > 8 && (varY <= 8 || varY <= varX * 0.50) && bestXCorr < 30 && bestXPitch !== null) {
+        const varRatio = (varX - varY) / (varX + varY + 0.001);
+        const corrScore = Math.max(0, 1.0 - (bestXCorr / 30.0));
+        const avgXCorr = validXPitchCount > 0 ? sumXCorr / validXPitchCount : bestXCorr;
+        const pitchSeparation = avgXCorr > 0 ? Math.min(1.0, (avgXCorr - bestXCorr) / (avgXCorr + 0.001) * 2.0) : 0.5;
+
+        const conf = Math.min(1.0, Math.max(0.5, (varRatio * 0.45 + corrScore * 0.35 + pitchSeparation * 0.10 + sampleQuality * 0.10)));
+
+        if (conf >= 0.75) {
+            return {
+                type: "vertical",
+                orientation: 90,
+                periodX: bestXPitch,
+                periodY: null,
+                confidence: conf
+            };
+        }
     }
 
-    if (varX > 6 && varY > 6 && bestDiagVariance < 45 && bestDiagPitch !== null) {
-        const conf = Math.min(1.0, Math.max(0.7, (50 - bestDiagVariance) / 50));
-        return {
-            type: "screentone",
-            orientation: 45,
-            periodX: bestDiagPitch,
-            periodY: bestDiagPitch,
-            confidence: conf
-        };
+    // 3. Check Screentone (45° Halftone dots)
+    if (varX > 6 && varY > 6 && bestDiagVariance < 40 && bestDiagPitch !== null) {
+        const varScore = Math.max(0, 1.0 - (bestDiagVariance / 40.0));
+        const separationScore = (secondDiagVariance < Infinity && secondDiagVariance > bestDiagVariance)
+            ? Math.min(1.0, (secondDiagVariance - bestDiagVariance) / 20.0)
+            : 0.5;
+
+        const conf = Math.min(1.0, Math.max(0.5, (varScore * 0.60 + separationScore * 0.25 + sampleQuality * 0.15)));
+
+        if (conf >= 0.75) {
+            return {
+                type: "screentone",
+                orientation: 45,
+                periodX: bestDiagPitch,
+                periodY: bestDiagPitch,
+                confidence: conf
+            };
+        }
     }
 
-    if (varX > 10 && varY > 10 && bestXCorr < 18 && bestYCorr < 18 && bestXPitch && bestYPitch) {
-        return {
-            type: "crosshatch",
-            orientation: 0,
-            periodX: bestXPitch,
-            periodY: bestYPitch,
-            confidence: 0.75
-        };
+    // 4. Check Crosshatch - strict requirement
+    if (varX > 12 && varY > 12 && bestXCorr < 15 && bestYCorr < 15 && bestXPitch && bestYPitch) {
+        const conf = Math.min(1.0, Math.max(0.6, (1.0 - (bestXCorr + bestYCorr) / 30.0) * 0.8 + sampleQuality * 0.2));
+        if (conf >= 0.80) {
+            return {
+                type: "crosshatch",
+                orientation: 0,
+                periodX: bestXPitch,
+                periodY: bestYPitch,
+                confidence: conf
+            };
+        }
     }
 
     return {

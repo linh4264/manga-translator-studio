@@ -1,4 +1,5 @@
-import { test, expect, assert } from 'vitest';
+import { test, expect } from 'vitest';
+import assert from 'node:assert';
 import '../../setup/browser-env.js';
 import '../../setup/canvas-mock.js';
 import '../../setup/indexeddb-mock.js';

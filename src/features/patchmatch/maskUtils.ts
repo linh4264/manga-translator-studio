@@ -11,9 +11,45 @@ export interface MaskROI {
     height: number;
 }
 
-export function dilateMask(mask: Uint8Array, width: number, height: number, radius: number = 2): Uint8Array {
-    if (radius <= 0) return new Uint8Array(mask);
-    const rad = Math.min(8, Math.max(1, Math.round(radius)));
+export function computeAdaptiveDilationRadius(mask: Uint8Array, width: number, height: number): number {
+    let maskCount = 0;
+    let minX = width, minY = height, maxX = -1, maxY = -1;
+
+    for (let y = 0; y < height; y++) {
+        const row = y * width;
+        for (let x = 0; x < width; x++) {
+            if (mask[row + x] === 1) {
+                maskCount++;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+        }
+    }
+
+    if (maskCount === 0 || maxX === -1) return 2;
+
+    const spanW = maxX - minX + 1;
+    const spanH = maxY - minY + 1;
+    const minDim = Math.min(spanW, spanH);
+
+    // Adaptive radius: 1px for very thin/small marks, up to 5px for large SFX
+    const estimatedGlyphSize = Math.max(8, Math.min(60, minDim));
+    const adaptive = Math.round(estimatedGlyphSize * 0.10);
+    return Math.max(1, Math.min(6, adaptive));
+}
+
+export function dilateMask(mask: Uint8Array, width: number, height: number, radius: number | 'auto' = 2): Uint8Array {
+    let radNum: number;
+    if (radius === 'auto' || radius < 0) {
+        radNum = computeAdaptiveDilationRadius(mask, width, height);
+    } else {
+        radNum = radius;
+    }
+
+    if (radNum <= 0) return new Uint8Array(mask);
+    const rad = Math.min(8, Math.max(1, Math.round(radNum)));
     const outMask = new Uint8Array(mask.length);
     const rSq = rad * rad;
 
