@@ -12,3 +12,4 @@ models/
 .agents
 dist/
 .vscode
+review_state.json
