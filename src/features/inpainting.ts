@@ -6,6 +6,7 @@ import { closeMobileMenus } from '../ui/layout-ui';
 import { MangaBlock, MangaPage } from '../types/index';
 import { computeBubbleMask } from './ocr/ocr-service';
 import { requestOverlayRender } from './canvas/canvas-renderer';
+import { runPatchMatchPipeline } from './patchmatch/patchmatch.worker';
 
 let activeLassoPoints: { x: number; y: number }[] | null = null;
 let lassoOriginalImageData: ImageData | null = null;
@@ -1434,206 +1435,21 @@ export function restorePageEraserDrawing(page: MangaPage): Promise<void> {
 
 export function cleanMangaBackgroundArtWithMask(ctx: CanvasRenderingContext2D, width: number, height: number, maskBytes: Uint8Array): void {
     const imgData = ctx.getImageData(0, 0, width, height);
-    const data = imgData.data;
-
-    const MASK_RADIUS = 2;
-
-    const targetMask = new Uint8Array(width * height);
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-            const idx = y * width + x;
-            if (maskBytes[idx]) {
-                for (let dy = -MASK_RADIUS; dy <= MASK_RADIUS; dy++) {
-                    const ny = y + dy;
-                    if (ny < 0 || ny >= height) continue;
-                    for (let dx = -MASK_RADIUS; dx <= MASK_RADIUS; dx++) {
-                        const nx = x + dx;
-                        if (nx < 0 || nx >= width) continue;
-                        targetMask[ny * width + nx] = 1;
-                    }
-                }
-            }
+    const { outputRgba } = runPatchMatchPipeline(
+        new Uint8Array(imgData.data),
+        maskBytes,
+        width,
+        height,
+        {
+            patchRadius: 4,
+            maskDilate: 0,
+            enablePatternDetection: true,
+            enableSeamBlending: true
         }
-    }
-
-    let minMaskX = width, maxMaskX = 0, minMaskY = height, maxMaskY = 0;
-    let maskedRowCount = 0;
-    let horizontalMatchCount = 0;
-
-    for (let y = 0; y < height; y++) {
-        let rowHasMask = false;
-        let leftValid = -1, rightValid = -1;
-
-        for (let x = 0; x < width; x++) {
-            if (targetMask[y * width + x]) {
-                rowHasMask = true;
-                minMaskX = Math.min(minMaskX, x);
-                maxMaskX = Math.max(maxMaskX, x);
-                minMaskY = Math.min(minMaskY, y);
-                maxMaskY = Math.max(maxMaskY, y);
-            } else {
-                if (leftValid === -1 && !rowHasMask) leftValid = x;
-                if (rowHasMask) rightValid = x;
-            }
-        }
-
-        if (rowHasMask && leftValid !== -1 && rightValid !== -1) {
-            maskedRowCount++;
-            const pL = (y * width + leftValid) * 4;
-            const pR = (y * width + rightValid) * 4;
-            const diff = Math.abs(data[pL] - data[pR]) + Math.abs(data[pL + 1] - data[pR + 1]) + Math.abs(data[pL + 2] - data[pR + 2]);
-            if (diff < 45) {
-                horizontalMatchCount++;
-            }
-        }
-    }
-
-    if (maskedRowCount > 4 && (horizontalMatchCount / maskedRowCount) > 0.65) {
-        for (let y = minMaskY; y <= maxMaskY; y++) {
-            let srcP = -1;
-            for (let x = 0; x < width; x++) {
-                if (!targetMask[y * width + x]) {
-                    srcP = (y * width + x) * 4;
-                    break;
-                }
-            }
-            if (srcP !== -1) {
-                for (let x = 0; x < width; x++) {
-                    const idx = y * width + x;
-                    if (targetMask[idx]) {
-                        const p = idx * 4;
-                        data[p] = data[srcP];
-                        data[p + 1] = data[srcP + 1];
-                        data[p + 2] = data[srcP + 2];
-                        data[p + 3] = 255;
-                    }
-                }
-            }
-        }
-        ctx.putImageData(imgData, 0, 0);
-        return;
-    }
-
-    const cleanPixels: Array<{ x: number; y: number; p: number }> = [];
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-            if (!targetMask[y * width + x]) {
-                cleanPixels.push({ x, y, p: (y * width + x) * 4 });
-            }
-        }
-    }
-
-    if (cleanPixels.length === 0) return;
-
-    const testPitches = [3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16];
-    let bestPitch = 6;
-    let bestCorrelation = Infinity;
-    let isDiagonal = true;
-
-    for (const P of testPitches) {
-        let diagDiff = 0, diagCount = 0;
-        for (let i = 0; i < Math.min(250, cleanPixels.length); i += 2) {
-            const cp = cleanPixels[i];
-            const nx = cp.x + P;
-            const ny = cp.y + P;
-            if (nx < width && ny < height && !targetMask[ny * width + nx]) {
-                const p2 = (ny * width + nx) * 4;
-                diagDiff += Math.abs(data[cp.p] - data[p2]) + Math.abs(data[cp.p + 1] - data[p2 + 1]) + Math.abs(data[cp.p + 2] - data[p2 + 2]);
-                diagCount++;
-            }
-        }
-        if (diagCount > 10) {
-            const score = diagDiff / diagCount;
-            if (score < bestCorrelation) {
-                bestCorrelation = score;
-                bestPitch = P;
-                isDiagonal = true;
-            }
-        }
-
-        let axisDiff = 0, axisCount = 0;
-        for (let i = 0; i < Math.min(250, cleanPixels.length); i += 2) {
-            const cp = cleanPixels[i];
-            const nx = cp.x + P;
-            const ny = cp.y;
-            if (nx < width && !targetMask[cp.y * width + nx]) {
-                const p2 = (cp.y * width + nx) * 4;
-                axisDiff += Math.abs(data[cp.p] - data[p2]) + Math.abs(data[cp.p + 1] - data[p2 + 1]) + Math.abs(data[cp.p + 2] - data[p2 + 2]);
-                axisCount++;
-            }
-        }
-        if (axisCount > 10) {
-            const score = axisDiff / axisCount;
-            if (score < bestCorrelation) {
-                bestCorrelation = score;
-                bestPitch = P;
-                isDiagonal = false;
-            }
-        }
-    }
-
-    const phaseSums = Array.from({ length: bestPitch }, () => Array.from({ length: bestPitch }, () => ({ r: 0, g: 0, b: 0, count: 0 })));
-
-    for (let i = 0; i < cleanPixels.length; i++) {
-        const cp = cleanPixels[i];
-        let u: number, v: number;
-        if (isDiagonal) {
-            u = (((cp.x + cp.y) % bestPitch) + bestPitch) % bestPitch;
-            v = (((cp.x - cp.y) % bestPitch) + bestPitch) % bestPitch;
-        } else {
-            u = ((cp.x % bestPitch) + bestPitch) % bestPitch;
-            v = ((cp.y % bestPitch) + bestPitch) % bestPitch;
-        }
-        phaseSums[u][v].r += data[cp.p];
-        phaseSums[u][v].g += data[cp.p + 1];
-        phaseSums[u][v].b += data[cp.p + 2];
-        phaseSums[u][v].count++;
-    }
-
-    const phaseMap: Array<Array<{ r: number; g: number; b: number } | null>> = Array.from({ length: bestPitch }, () => Array.from({ length: bestPitch }, () => null));
-    for (let u = 0; u < bestPitch; u++) {
-        for (let v = 0; v < bestPitch; v++) {
-            if (phaseSums[u][v].count > 0) {
-                phaseMap[u][v] = {
-                    r: Math.round(phaseSums[u][v].r / phaseSums[u][v].count),
-                    g: Math.round(phaseSums[u][v].g / phaseSums[u][v].count),
-                    b: Math.round(phaseSums[u][v].b / phaseSums[u][v].count)
-                };
-            }
-        }
-    }
-
-    for (let u = 0; u < bestPitch; u++) {
-        for (let v = 0; v < bestPitch; v++) {
-            if (!phaseMap[u][v]) {
-                phaseMap[u][v] = cleanPixels[0] ? { r: data[cleanPixels[0].p], g: data[cleanPixels[0].p + 1], b: data[cleanPixels[0].p + 2] } : { r: 255, g: 255, b: 255 };
-            }
-        }
-    }
-
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-            const idx = y * width + x;
-            if (targetMask[idx]) {
-                let u: number, v: number;
-                if (isDiagonal) {
-                    u = (((x + y) % bestPitch) + bestPitch) % bestPitch;
-                    v = (((x - y) % bestPitch) + bestPitch) % bestPitch;
-                } else {
-                    u = ((x % bestPitch) + bestPitch) % bestPitch;
-                    v = ((y % bestPitch) + bestPitch) % bestPitch;
-                }
-                const sample = phaseMap[u][v]!;
-                const p = idx * 4;
-                data[p] = sample.r;
-                data[p + 1] = sample.g;
-                data[p + 2] = sample.b;
-                data[p + 3] = 255;
-            }
-        }
-    }
-
-    ctx.putImageData(imgData, 0, 0);
+    );
+    const outImgData = ctx.createImageData(width, height);
+    outImgData.data.set(outputRgba);
+    ctx.putImageData(outImgData, 0, 0);
 }
 
 export async function cleanMangaBackgroundArtText(ctx: CanvasRenderingContext2D, width: number, height: number): Promise<void> {

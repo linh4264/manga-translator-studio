@@ -27,37 +27,31 @@ export function analyzeMangaTexture(
     width: number,
     height: number
 ): MangaTexturePattern {
-    const samples: Array<{ x: number; y: number; idx: number }> = [];
-    const step = Math.max(1, Math.floor(Math.sqrt((width * height) / 800)));
-
-    for (let y = 4; y < height - 4; y += step) {
-        const rowOff = y * width;
-        for (let x = 4; x < width - 4; x += step) {
-            if (mask[rowOff + x] === 0) {
-                samples.push({ x, y, idx: rowOff + x });
-            }
-        }
-    }
-
-    if (samples.length < 30) {
-        return { type: "unknown", orientation: 0, periodX: null, periodY: null, confidence: 0.0 };
-    }
-
     let varX = 0, varY = 0;
     let countX = 0, countY = 0;
+    let unmaskedCount = 0;
 
-    for (let i = 0; i < samples.length; i++) {
-        const s = samples[i];
-        for (let d = 1; d <= 2; d++) {
-            if (s.x + d < width && mask[s.idx + d] === 0) {
-                varX += Math.abs(gray[s.idx] - gray[s.idx + d]);
-                countX++;
-            }
-            if (s.y + d < height && mask[s.idx + d * width] === 0) {
-                varY += Math.abs(gray[s.idx] - gray[s.idx + d * width]);
-                countY++;
+    for (let y = 1; y < height - 1; y++) {
+        const row = y * width;
+        for (let x = 1; x < width - 1; x++) {
+            const idx = row + x;
+            if (mask[idx] === 0) {
+                unmaskedCount++;
+                const val = gray[idx];
+                if (mask[idx + 1] === 0) {
+                    varX += Math.abs(val - gray[idx + 1]);
+                    countX++;
+                }
+                if (mask[idx + width] === 0) {
+                    varY += Math.abs(val - gray[idx + width]);
+                    countY++;
+                }
             }
         }
+    }
+
+    if (unmaskedCount < 30) {
+        return { type: "unknown", orientation: 0, periodX: null, periodY: null, confidence: 0.0 };
     }
 
     if (countX > 0) varX /= countX;
@@ -65,184 +59,170 @@ export function analyzeMangaTexture(
 
     const candidatePitches = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16];
 
+    // A. 1D Horizontal Autocorrelation (along Y columns)
     let bestYPitch: number | null = null;
     let bestYCorr = Infinity;
-    let secondBestYCorr = Infinity;
-    let sumYCorr = 0;
-    let validYPitchCount = 0;
-
     for (const P of candidatePitches) {
-        let diffSum = 0;
-        let count = 0;
-        for (let i = 0; i < samples.length; i++) {
-            const s = samples[i];
-            if (s.y + P < height && mask[s.idx + P * width] === 0) {
-                diffSum += Math.abs(gray[s.idx] - gray[s.idx + P * width]);
-                count++;
+        let diffSum = 0, count = 0;
+        for (let y = 0; y < height - P; y++) {
+            const row1 = y * width;
+            const row2 = (y + P) * width;
+            for (let x = 0; x < width; x++) {
+                if (mask[row1 + x] === 0 && mask[row2 + x] === 0) {
+                    diffSum += Math.abs(gray[row1 + x] - gray[row2 + x]);
+                    count++;
+                }
             }
         }
-        if (count > 20) {
+        if (count > 40) {
             const score = diffSum / count;
-            sumYCorr += score;
-            validYPitchCount++;
             if (score < bestYCorr) {
-                secondBestYCorr = bestYCorr;
                 bestYCorr = score;
                 bestYPitch = P;
-            } else if (score < secondBestYCorr) {
-                secondBestYCorr = score;
             }
         }
     }
 
+    // B. 1D Vertical Autocorrelation (along X rows)
     let bestXPitch: number | null = null;
     let bestXCorr = Infinity;
-    let secondBestXCorr = Infinity;
-    let sumXCorr = 0;
-    let validXPitchCount = 0;
-
     for (const P of candidatePitches) {
-        let diffSum = 0;
-        let count = 0;
-        for (let i = 0; i < samples.length; i++) {
-            const s = samples[i];
-            if (s.x + P < width && mask[s.idx + P] === 0) {
-                diffSum += Math.abs(gray[s.idx] - gray[s.idx + P]);
-                count++;
+        let diffSum = 0, count = 0;
+        for (let y = 0; y < height; y++) {
+            const row = y * width;
+            for (let x = 0; x < width - P; x++) {
+                if (mask[row + x] === 0 && mask[row + x + P] === 0) {
+                    diffSum += Math.abs(gray[row + x] - gray[row + x + P]);
+                    count++;
+                }
             }
         }
-        if (count > 20) {
+        if (count > 40) {
             const score = diffSum / count;
-            sumXCorr += score;
-            validXPitchCount++;
             if (score < bestXCorr) {
-                secondBestXCorr = bestXCorr;
                 bestXCorr = score;
                 bestXPitch = P;
-            } else if (score < secondBestXCorr) {
-                secondBestXCorr = score;
             }
         }
     }
 
+    // C. 2D 45° Screentone Lattice Phase Profile & Contrast Detection
     let bestDiagPitch: number | null = null;
-    let bestDiagVariance = Infinity;
-    let secondDiagVariance = Infinity;
+    let bestDiagMae = Infinity;
+    let bestDiagContrast = 0;
 
     for (const P of candidatePitches) {
-        const sumVal = new Float32Array(P * P);
-        const sumSqVal = new Float32Array(P * P);
-        const binCount = new Int32Array(P * P);
+        const binValues: number[][] = Array.from({ length: P * P }, () => []);
 
-        for (let i = 0; i < samples.length; i++) {
-            const s = samples[i];
-            const u = (((s.x + s.y) % P) + P) % P;
-            const v = (((s.x - s.y) % P) + P) % P;
-            const binIdx = u * P + v;
-            const val = gray[s.idx];
-            sumVal[binIdx] += val;
-            sumSqVal[binIdx] += val * val;
-            binCount[binIdx]++;
+        for (let y = 0; y < height; y++) {
+            const row = y * width;
+            for (let x = 0; x < width; x++) {
+                const idx = row + x;
+                if (mask[idx] === 0) {
+                    const u = (((x + y) % P) + P) % P;
+                    const v = (((x - y) % P) + P) % P;
+                    binValues[u * P + v].push(gray[idx]);
+                }
+            }
         }
 
-        let totalVariance = 0;
+        const medians = new Float32Array(P * P);
+        let minMed = 255, maxMed = 0;
         let validBins = 0;
+
         for (let b = 0; b < P * P; b++) {
-            const cnt = binCount[b];
-            if (cnt >= 2) {
-                const mean = sumVal[b] / cnt;
-                const variance = (sumSqVal[b] / cnt) - (mean * mean);
-                totalVariance += Math.max(0, variance);
+            const vals = binValues[b];
+            if (vals.length >= 2) {
+                vals.sort((a, b) => a - b);
+                const med = vals[Math.floor(vals.length / 2)];
+                medians[b] = med;
+                if (med < minMed) minMed = med;
+                if (med > maxMed) maxMed = med;
                 validBins++;
+            } else {
+                medians[b] = -1;
             }
         }
 
-        if (validBins >= 2) {
-            const avgVariance = totalVariance / validBins;
-            if (avgVariance < bestDiagVariance) {
-                secondDiagVariance = bestDiagVariance;
-                bestDiagVariance = avgVariance;
-                bestDiagPitch = P;
-            } else if (avgVariance < secondDiagVariance) {
-                secondDiagVariance = avgVariance;
+        if (validBins >= P) {
+            let absErrSum = 0, count = 0;
+            for (let y = 0; y < height; y++) {
+                const row = y * width;
+                for (let x = 0; x < width; x++) {
+                    const idx = row + x;
+                    if (mask[idx] === 0) {
+                        const u = (((x + y) % P) + P) % P;
+                        const v = (((x - y) % P) + P) % P;
+                        const med = medians[u * P + v];
+                        if (med >= 0) {
+                            absErrSum += Math.abs(gray[idx] - med);
+                            count++;
+                        }
+                    }
+                }
+            }
+
+            if (count > 40) {
+                const mae = absErrSum / count;
+                const contrast = maxMed - minMed;
+                if (contrast > 20 && (mae < bestDiagMae || (contrast > bestDiagContrast * 1.3 && mae < bestDiagMae + 5))) {
+                    bestDiagMae = mae;
+                    bestDiagPitch = P;
+                    bestDiagContrast = contrast;
+                }
             }
         }
     }
 
-    const sampleQuality = Math.min(1.0, Math.max(0.6, samples.length / 80));
+    // =========================================================================
+    // PATTERN CLASSIFICATION LOGIC
+    // =========================================================================
 
-    // 1. Check Horizontal stripe pattern
-    if (varY > 8 && (varX <= 8 || varX <= varY * 0.50) && bestYCorr < 30 && bestYPitch !== null) {
-        const varRatio = (varY - varX) / (varY + varX + 0.001);
-        const corrScore = Math.max(0, 1.0 - (bestYCorr / 30.0));
-        const avgYCorr = validYPitchCount > 0 ? sumYCorr / validYPitchCount : bestYCorr;
-        const pitchSeparation = avgYCorr > 0 ? Math.min(1.0, (avgYCorr - bestYCorr) / (avgYCorr + 0.001) * 2.0) : 0.5;
-
-        const conf = Math.min(1.0, Math.max(0.5, (varRatio * 0.45 + corrScore * 0.35 + pitchSeparation * 0.10 + sampleQuality * 0.10)));
-
-        if (conf >= 0.75) {
-            return {
-                type: "horizontal",
-                orientation: 0,
-                periodX: null,
-                periodY: bestYPitch,
-                confidence: conf
-            };
-        }
+    // 1. Check 1D Horizontal Stripes (varY dominates varX by at least 1.6x, or varX <= 8 while varY is active)
+    if (varY > 10 && (varX <= 8 || varY >= varX * 1.6) && bestYCorr < 35 && bestYPitch !== null) {
+        const conf = Math.min(1.0, Math.max(0.75, (varY - varX) / (varY + varX + 0.001) * 0.5 + 0.5));
+        return {
+            type: "horizontal",
+            orientation: 0,
+            periodX: null,
+            periodY: bestYPitch,
+            confidence: conf
+        };
     }
 
-    // 2. Check Vertical stripe pattern
-    if (varX > 8 && (varY <= 8 || varY <= varX * 0.50) && bestXCorr < 30 && bestXPitch !== null) {
-        const varRatio = (varX - varY) / (varX + varY + 0.001);
-        const corrScore = Math.max(0, 1.0 - (bestXCorr / 30.0));
-        const avgXCorr = validXPitchCount > 0 ? sumXCorr / validXPitchCount : bestXCorr;
-        const pitchSeparation = avgXCorr > 0 ? Math.min(1.0, (avgXCorr - bestXCorr) / (avgXCorr + 0.001) * 2.0) : 0.5;
-
-        const conf = Math.min(1.0, Math.max(0.5, (varRatio * 0.45 + corrScore * 0.35 + pitchSeparation * 0.10 + sampleQuality * 0.10)));
-
-        if (conf >= 0.75) {
-            return {
-                type: "vertical",
-                orientation: 90,
-                periodX: bestXPitch,
-                periodY: null,
-                confidence: conf
-            };
-        }
+    // 2. Check 1D Vertical Stripes (varX dominates varY by at least 1.6x, or varY <= 8 while varX is active)
+    if (varX > 10 && (varY <= 8 || varX >= varY * 1.6) && bestXCorr < 35 && bestXPitch !== null) {
+        const conf = Math.min(1.0, Math.max(0.75, (varX - varY) / (varX + varY + 0.001) * 0.5 + 0.5));
+        return {
+            type: "vertical",
+            orientation: 90,
+            periodX: bestXPitch,
+            periodY: null,
+            confidence: conf
+        };
     }
 
-    // 3. Check Screentone (45° Halftone dots)
-    if (varX > 6 && varY > 6 && bestDiagVariance < 40 && bestDiagPitch !== null) {
-        const varScore = Math.max(0, 1.0 - (bestDiagVariance / 40.0));
-        const separationScore = (secondDiagVariance < Infinity && secondDiagVariance > bestDiagVariance)
-            ? Math.min(1.0, (secondDiagVariance - bestDiagVariance) / 20.0)
-            : 0.5;
-
-        const conf = Math.min(1.0, Math.max(0.5, (varScore * 0.60 + separationScore * 0.25 + sampleQuality * 0.15)));
-
-        if (conf >= 0.75) {
-            return {
-                type: "screentone",
-                orientation: 45,
-                periodX: bestDiagPitch,
-                periodY: bestDiagPitch,
-                confidence: conf
-            };
-        }
+    // 3. Check 2D 45° Screentone (Halftone Dot Matrix: both X and Y active, strong phase contrast with low residual phase MAE)
+    if (varX > 4 && varY > 4 && bestDiagPitch !== null && bestDiagContrast >= 30 && bestDiagMae < 25 && bestDiagContrast >= bestDiagMae * 1.5) {
+        const conf = Math.min(1.0, Math.max(0.75, Math.min(1.0, (bestDiagContrast - bestDiagMae) / 100.0) * 0.5 + 0.5));
+        return {
+            type: "screentone",
+            orientation: 45,
+            periodX: bestDiagPitch,
+            periodY: bestDiagPitch,
+            confidence: conf
+        };
     }
 
     // 4. Check Crosshatch - strict requirement
-    if (varX > 12 && varY > 12 && bestXCorr < 15 && bestYCorr < 15 && bestXPitch && bestYPitch) {
-        const conf = Math.min(1.0, Math.max(0.6, (1.0 - (bestXCorr + bestYCorr) / 30.0) * 0.8 + sampleQuality * 0.2));
-        if (conf >= 0.80) {
-            return {
-                type: "crosshatch",
-                orientation: 0,
-                periodX: bestXPitch,
-                periodY: bestYPitch,
-                confidence: conf
-            };
-        }
+    if (varX > 10 && varY > 10 && bestXCorr < 20 && bestYCorr < 20 && bestXPitch && bestYPitch) {
+        return {
+            type: "crosshatch",
+            orientation: 0,
+            periodX: bestXPitch,
+            periodY: bestYPitch,
+            confidence: 0.75
+        };
     }
 
     return {

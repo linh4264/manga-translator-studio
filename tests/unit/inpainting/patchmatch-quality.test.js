@@ -440,3 +440,178 @@ test('Criteria I: Iterations and Random Search Radius Actively Drive NNF Converg
     assert.ok(res8.avgCost <= res1.avgCost,
         `8 iterations avgCost (${res8.avgCost.toFixed(2)}) should be <= 1 iteration avgCost (${res1.avgCost.toFixed(2)})`);
 });
+
+// ---------------------------------------------------------------------------
+// TEST J: Real-World Manga Speech Bubble with Horizontal Screentone & Border Ink
+// ---------------------------------------------------------------------------
+test('Criteria J: Real-World Manga Speech Bubble with Horizontal Screentone & Border Ink', () => {
+    const W = 120, H = 100;
+    const rgba = new Uint8Array(W * H * 4);
+    const mask = new Uint8Array(W * H);
+
+    for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+            const p = (y * W + x) * 4;
+            const dx = (x - W / 2) / (W * 0.45);
+            const dy = (y - H / 2) / (H * 0.45);
+            const dist = dx * dx + dy * dy;
+
+            if (dist <= 1.0) {
+                // Inside bubble: horizontal screentone (Py = 4)
+                const isLine = (y % 4) === 0;
+                const val = isLine ? 30 : 230;
+                rgba[p] = val;
+                rgba[p + 1] = val;
+                rgba[p + 2] = val;
+                rgba[p + 3] = 255;
+            } else if (dist <= 1.1) {
+                // Curved oval speech bubble ink outline
+                rgba[p] = 10;
+                rgba[p + 1] = 10;
+                rgba[p + 2] = 10;
+                rgba[p + 3] = 255;
+            } else {
+                // Background outside bubble
+                rgba[p] = 255;
+                rgba[p + 1] = 255;
+                rgba[p + 2] = 255;
+                rgba[p + 3] = 255;
+            }
+        }
+    }
+
+    // Text mask in center of bubble [45..75] x [25..75]
+    for (let y = 25; y <= 75; y++) {
+        for (let x = 45; x <= 75; x++) {
+            mask[y * W + x] = 1;
+            const p = (y * W + x) * 4;
+            rgba[p] = 0; // Black text
+            rgba[p + 1] = 0;
+            rgba[p + 2] = 0;
+        }
+    }
+
+    const { outputRgba, patternInfo, confidence } = runPatchMatchPipeline(rgba, mask, W, H, {
+        patchRadius: 3,
+        maskDilate: 2
+    });
+
+    assert.strictEqual(patternInfo.type, 'horizontal');
+    assert.strictEqual(patternInfo.periodY, 4);
+    assert.ok(patternInfo.confidence >= 0.60, `Pattern confidence (${patternInfo.confidence}) should be >= 0.60`);
+    assert.ok(confidence >= 0.60, `Inpaint confidence (${confidence}) should be >= 0.60`);
+
+    // Verify seamless horizontal stripe reconstruction inside erased text region (0% blocky noise)
+    let lineErrors = 0;
+    let totalChecked = 0;
+    for (let y = 30; y <= 70; y++) {
+        const expectedLine = (y % 4) === 0;
+        for (let x = 48; x <= 72; x++) {
+            const p = (y * W + x) * 4;
+            const isDark = outputRgba[p] < 100;
+            if (isDark !== expectedLine) {
+                lineErrors++;
+            }
+            totalChecked++;
+        }
+    }
+    assert.strictEqual(lineErrors, 0, `All horizontal lines inside speech bubble must be reconstructed with 0 errors! Got ${lineErrors}/${totalChecked}`);
+});
+
+// ---------------------------------------------------------------------------
+// TEST K: Analysis-to-Worker Dispatch Alignment for Detected Periodic Patterns
+// ---------------------------------------------------------------------------
+test('Criteria K: Analysis-to-Worker Dispatch Alignment for Periodic Patterns', () => {
+    const W = 60, H = 60;
+    const rgba = new Uint8Array(W * H * 4);
+    const mask = new Uint8Array(W * H);
+
+    // Vertical stripe pattern (Px = 4)
+    for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+            const isLine = (x % 4) === 0;
+            const col = isLine ? 20 : 230;
+            const p = (y * W + x) * 4;
+            rgba[p] = col;
+            rgba[p + 1] = col;
+            rgba[p + 2] = col;
+            rgba[p + 3] = 255;
+        }
+    }
+
+    // Mask center
+    for (let y = 20; y <= 40; y++) {
+        for (let x = 20; x <= 40; x++) {
+            mask[y * W + x] = 1;
+        }
+    }
+
+    const { outputRgba, patternInfo, confidence } = runPatchMatchPipeline(rgba, mask, W, H, {
+        patchRadius: 3,
+        maskDilate: 0
+    });
+
+    assert.strictEqual(patternInfo.type, 'vertical');
+    assert.strictEqual(patternInfo.periodX, 4);
+    assert.ok(patternInfo.confidence >= 0.60);
+
+    // Verify vertical stripe continuity
+    for (let y = 22; y <= 38; y++) {
+        for (let x = 22; x <= 38; x++) {
+            const expectedLine = (x % 4) === 0;
+            const isDark = outputRgba[(y * W + x) * 4] < 100;
+            assert.strictEqual(isDark, expectedLine, `Vertical stripe at (${x}, ${y}) must match expected structure`);
+        }
+    }
+});
+
+// ---------------------------------------------------------------------------
+// TEST L: Imperfect / Antialiased Screentone Pattern Robustness
+// ---------------------------------------------------------------------------
+test('Criteria L: Imperfect / Antialiased Screentone with Illumination Gradient', () => {
+    const W = 80, H = 80;
+    const rgba = new Uint8Array(W * H * 4);
+    const mask = new Uint8Array(W * H);
+
+    for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+            const phase = (y % 5);
+            let val = 220;
+            if (phase === 0) val = 40;
+            else if (phase === 1 || phase === 4) val = 130; // antialiasing transition
+
+            // Subtle scan lighting gradient
+            val = Math.max(0, Math.min(255, val + Math.round((x / W) * 20 - 10)));
+            const p = (y * W + x) * 4;
+            rgba[p] = val;
+            rgba[p + 1] = val;
+            rgba[p + 2] = val;
+            rgba[p + 3] = 255;
+        }
+    }
+
+    // Mask center
+    for (let y = 25; y <= 55; y++) {
+        for (let x = 25; x <= 55; x++) {
+            mask[y * W + x] = 1;
+            const p = (y * W + x) * 4;
+            rgba[p] = 255;
+            rgba[p + 1] = 0;
+            rgba[p + 2] = 0;
+        }
+    }
+
+    const { outputRgba, patternInfo } = runPatchMatchPipeline(rgba, mask, W, H, {
+        patchRadius: 3,
+        maskDilate: 0
+    });
+
+    assert.strictEqual(patternInfo.type, 'horizontal');
+    assert.strictEqual(patternInfo.periodY, 5);
+
+    // Deep center dark line at y=40 (since 40 % 5 === 0) should be dark (< 100)
+    assert.ok(outputRgba[(40 * W + 40) * 4] < 100);
+    // Deep center light line at y=42 (since 42 % 5 === 2) should be bright (> 170)
+    assert.ok(outputRgba[(42 * W + 40) * 4] > 170);
+});
+
