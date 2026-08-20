@@ -17,7 +17,7 @@ import {
 } from '../../config/constants';
 import { elements } from '../../core/elements';
 import { showToast } from '../../core/utils/dom';
-import { refineAiBlockBox, mergeOverlappingAiBlocks } from '../ocr/ocr-service';
+import { refineAiBlockBox, mergeOverlappingAiBlocks, extractTextAnchor } from '../ocr/ocr-service';
 import { requestOverlayRender, autoMatchBlockStyle } from '../canvas/canvas-service';
 import { autoFitBlock, isBlockAutoFit } from '../canvas/canvas-styling';
 import { balanceTextToDiamond } from '../canvas/canvas-renderer';
@@ -363,6 +363,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
 
         page.blocks = (finalBlocks || []).map((b, idx) => {
             const blockType = b.type || 'dialogue';
+            const textAnchor = b.textAnchor || extractTextAnchor(b.box);
             const normalisedBox = b.positionKnown === false
                 ? { ...DEFAULT_AI_BLOCK_BOX }
                 : refineAiBlockBox(b.box, pageImageData, globalState.selectedModel, blockType);
@@ -372,10 +373,10 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 ? (typeof b.vertical === 'boolean' ? b.vertical : ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true))
                 : false;
 
-            const chosenFont = getDefaultFontForBlockType(blockType);
-            let maskShape = globalState.globalStyle.maskShape;
-            let italic = false;
-            const bold = globalState.globalStyle.bold;
+            const chosenFont = b.style?.fontFamily || getDefaultFontForBlockType(blockType);
+            let maskShape = b.style?.maskShape || globalState.globalStyle.maskShape;
+            let italic = typeof b.style?.italic === 'boolean' ? b.style.italic : false;
+            const bold = typeof b.style?.bold === 'boolean' ? b.style.bold : globalState.globalStyle.bold;
 
             if (blockType === 'narration') {
                 maskShape = 'rect';
@@ -388,47 +389,35 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
 
             const blockStyle = {
                 fontFamily: chosenFont,
-                fontSize: globalState.globalStyle.fontSize,
-                textColor: '#000000',
-                bgColor: '#ffffff',
-                bgOpacity: 100,
-                padding: globalState.globalStyle.padding,
-                rotate: 0,
+                fontSize: b.style?.fontSize || globalState.globalStyle.fontSize,
+                textColor: b.style?.textColor || '#000000',
+                bgColor: b.style?.bgColor || '#ffffff',
+                bgOpacity: b.style?.bgOpacity !== undefined ? b.style.bgOpacity : 100,
+                padding: b.style?.padding !== undefined ? b.style.padding : globalState.globalStyle.padding,
+                rotate: b.style?.rotate || 0,
                 vertical: blockVertical,
                 bold: bold,
                 italic: italic,
-                align: globalState.globalStyle.align,
+                align: b.style?.align || globalState.globalStyle.align,
                 maskShape: maskShape,
-                maskSize: globalState.globalStyle.maskSize,
-                strokeColor: '#ffffff',
-                strokeWidth: 0,
-                shadowColor: '#000000',
-                shadowBlur: 0,
+                maskSize: b.style?.maskSize || globalState.globalStyle.maskSize,
+                strokeColor: b.style?.strokeColor || '#ffffff',
+                strokeWidth: b.style?.strokeWidth !== undefined ? b.style.strokeWidth : 0,
+                shadowColor: b.style?.shadowColor || '#000000',
+                shadowBlur: b.style?.shadowBlur !== undefined ? b.style.shadowBlur : 0,
                 diamondWrap: shouldDiamondWrap
             };
 
             const rawTrans = (b.translated || '').trim();
-            let finalTranslated = '';
-            if (rawTrans) {
-                const cleanTrans = rawTrans.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-                if (shouldDiamondWrap) {
-                    const pixelW = (normalisedBox.w / 100) * imgW;
-                    const pixelH = (normalisedBox.h / 100) * imgH;
-                    finalTranslated = balanceTextToDiamond(cleanTrans, pixelW, pixelH, blockStyle);
-                } else if (!blockVertical) {
-                    finalTranslated = cleanTrans;
-                } else {
-                    finalTranslated = rawTrans;
-                }
-            }
 
             return {
                 id: b.id || `block_${Date.now()}_${idx}`,
                 type: blockType,
                 original: b.original || '',
-                translated: finalTranslated,
+                translated: rawTrans,
                 box: normalisedBox,
-                style: blockStyle
+                style: blockStyle,
+                ...(textAnchor ? { textAnchor } : {})
             };
         });
 
@@ -439,6 +428,26 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
         }
 
         page.blocks.forEach(b => {
+            const rawTrans = (b.translated || '').trim();
+            if (rawTrans) {
+                const cleanTrans = rawTrans.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
+                const shouldDiamondWrap = !b.style?.vertical && b.type !== 'sfx';
+                if (b.style) {
+                    b.style.diamondWrap = shouldDiamondWrap;
+                }
+                if (shouldDiamondWrap) {
+                    const pixelW = (b.box.w / 100) * imgW;
+                    const pixelH = (b.box.h / 100) * imgH;
+                    b.translated = balanceTextToDiamond(cleanTrans, pixelW, pixelH, b.style);
+                } else if (!b.style?.vertical) {
+                    b.translated = cleanTrans;
+                } else {
+                    b.translated = rawTrans;
+                }
+            } else {
+                b.translated = '';
+            }
+
             b.autoFitCache = null;
             if (isBlockAutoFit(b)) {
                 autoFitBlock(b);
@@ -616,6 +625,7 @@ export async function runBatchTranslation(): Promise<void> {
                         const isVerticalTarget = ['ja', 'zh', 'ko'].includes(targetLang);
                         page.blocks = (detectedRawBlocks || []).map((b, bIdx) => {
                             const blockType = b.type || 'dialogue';
+                            const textAnchor = b.textAnchor || extractTextAnchor(b.box);
                             const normalisedBox = b.positionKnown === false
                                 ? { ...DEFAULT_AI_BLOCK_BOX }
                                 : refineAiBlockBox(b.box, pageImageData, aiConfig.selectedModel, blockType);
@@ -624,10 +634,10 @@ export async function runBatchTranslation(): Promise<void> {
                                 ? (typeof b.vertical === 'boolean' ? b.vertical : ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true))
                                 : false;
 
-                            const chosenFont = getDefaultFontForBlockType(blockType);
-                            let maskShape = globalState.globalStyle.maskShape;
-                            let italic = false;
-                            const bold = globalState.globalStyle.bold;
+                            const chosenFont = b.style?.fontFamily || getDefaultFontForBlockType(blockType);
+                            let maskShape = b.style?.maskShape || globalState.globalStyle.maskShape;
+                            let italic = typeof b.style?.italic === 'boolean' ? b.style.italic : false;
+                            const bold = typeof b.style?.bold === 'boolean' ? b.style.bold : globalState.globalStyle.bold;
 
                             if (blockType === 'narration') {
                                 maskShape = 'rect';
@@ -646,24 +656,25 @@ export async function runBatchTranslation(): Promise<void> {
                                 box: normalisedBox,
                                 style: {
                                     fontFamily: chosenFont,
-                                    fontSize: globalState.globalStyle.fontSize,
-                                    textColor: '#000000',
-                                    bgColor: '#ffffff',
-                                    bgOpacity: 100,
-                                    padding: globalState.globalStyle.padding,
-                                    rotate: 0,
+                                    fontSize: b.style?.fontSize || globalState.globalStyle.fontSize,
+                                    textColor: b.style?.textColor || '#000000',
+                                    bgColor: b.style?.bgColor || '#ffffff',
+                                    bgOpacity: b.style?.bgOpacity !== undefined ? b.style.bgOpacity : 100,
+                                    padding: b.style?.padding !== undefined ? b.style.padding : globalState.globalStyle.padding,
+                                    rotate: b.style?.rotate || 0,
                                     vertical: blockVertical,
                                     bold: bold,
                                     italic: italic,
-                                    align: globalState.globalStyle.align,
+                                    align: b.style?.align || globalState.globalStyle.align,
                                     maskShape: maskShape,
-                                    maskSize: globalState.globalStyle.maskSize,
-                                    strokeColor: '#ffffff',
-                                    strokeWidth: 0,
-                                    shadowColor: '#000000',
-                                    shadowBlur: 0,
+                                    maskSize: b.style?.maskSize || globalState.globalStyle.maskSize,
+                                    strokeColor: b.style?.strokeColor || '#ffffff',
+                                    strokeWidth: b.style?.strokeWidth !== undefined ? b.style.strokeWidth : 0,
+                                    shadowColor: b.style?.shadowColor || '#000000',
+                                    shadowBlur: b.style?.shadowBlur !== undefined ? b.style.shadowBlur : 0,
                                     diamondWrap: shouldDiamondWrap
-                                }
+                                },
+                                ...(textAnchor ? { textAnchor } : {})
                             };
                         });
 
@@ -758,7 +769,17 @@ export async function runBatchTranslation(): Promise<void> {
                                         lookupMap.get(expectedId) ||
                                         lookupMap.get(expectedId.toLowerCase()) ||
                                         b.translated || '';
+                                    b.translated = rawTrans;
+                                });
 
+                                if (imgEl && imgEl.naturalWidth && i === globalState.activePageIndex) {
+                                    try {
+                                        p.blocks.forEach(b => autoMatchBlockStyle(b, imgEl));
+                                    } catch (e) { }
+                                }
+
+                                p.blocks.forEach((b) => {
+                                    const rawTrans = (b.translated || '').trim();
                                     const shouldDiamond = !b.style?.vertical && b.type !== 'sfx';
                                     if (b.style) {
                                         b.style.diamondWrap = shouldDiamond;
@@ -784,12 +805,6 @@ export async function runBatchTranslation(): Promise<void> {
                                         autoFitBlock(b);
                                     }
                                 });
-
-                                if (imgEl && imgEl.naturalWidth && i === globalState.activePageIndex) {
-                                    try {
-                                        p.blocks.forEach(b => autoMatchBlockStyle(b, imgEl));
-                                    } catch (e) { }
-                                }
 
                                 p.status = 'done';
                                 recordPageToStoryMemory(i, p.blocks);

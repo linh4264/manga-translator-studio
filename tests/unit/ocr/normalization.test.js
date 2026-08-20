@@ -97,12 +97,12 @@ test('OCR Normalization - Merge Overlapping Stacked AI Blocks (Eliminates Piles)
         { id: 'b1', original: 'Bóng thoại 1', box: [300, 300] },
         { id: 'b2', original: 'Bóng thoại 2', box: [380, 360] }, // ~100px away on 1000px scale
         { id: 'b3', original: 'Bóng thoại 3', box: [650, 200] },
-        { id: 'b4', original: 'Trùng lặp với 1', box: [305, 302] } // Duplicate of b1 (<1% distance)
+        { id: 'b4', original: 'Bóng thoại 1', box: [305, 302] } // Duplicate of b1 (<1% distance)
     ];
 
     const mergedPoints = mergeOverlappingAiBlocks(pointAnchorBlocks);
     assert.strictEqual(mergedPoints.length, 3, 'Must keep 3 distinct speech bubbles and only merge the near-identical duplicate');
-    assert.strictEqual(mergedPoints[0].original, 'Bóng thoại 1 Trùng lặp với 1');
+    assert.strictEqual(mergedPoints[0].original, 'Bóng thoại 1');
     assert.strictEqual(mergedPoints[1].original, 'Bóng thoại 2');
     assert.strictEqual(mergedPoints[2].original, 'Bóng thoại 3');
 });

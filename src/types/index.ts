@@ -68,6 +68,10 @@ export interface MangaBlock {
     translated: string;
     box: BoundingBox;
     style: BlockStyle;
+    textAnchor?: {
+        x: number;
+        y: number;
+    };
     speaker?: string;
     target?: string;
     textWidth?: number;

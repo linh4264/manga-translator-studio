@@ -288,21 +288,30 @@ export function detectSpeechBubbleAtPoint(imageData: ImageData, clickPixelX: num
     let startX = Math.max(0, Math.min(imgW - 1, Math.round(clickPixelX)));
     let startY = Math.max(0, Math.min(imgH - 1, Math.round(clickPixelY)));
 
+    const probeRadius = Math.max(45, Math.min(120, Math.round(Math.min(imgW, imgH) * 0.06)));
+    const lambda = 0.25;
+
     let bestSeedX = startX;
     let bestSeedY = startY;
-    let maxSeedBrightness = brightnessMap[startY * imgW + startX];
+    const initialBrightness = brightnessMap[startY * imgW + startX];
+    let bestSeedScore = initialBrightness / 255;
 
-    const probeRadius = Math.max(45, Math.min(120, Math.round(Math.min(imgW, imgH) * 0.06)));
     for (let dy = -probeRadius; dy <= probeRadius; dy += 2) {
         for (let dx = -probeRadius; dx <= probeRadius; dx += 2) {
             const px = startX + dx;
             const py = startY + dy;
             if (px >= 0 && px < imgW && py >= 0 && py < imgH) {
-                const b = brightnessMap[py * imgW + px];
-                if (b > maxSeedBrightness) {
-                    maxSeedBrightness = b;
-                    bestSeedX = px;
-                    bestSeedY = py;
+                const dist = Math.hypot(dx, dy);
+                if (dist <= probeRadius) {
+                    const b = brightnessMap[py * imgW + px];
+                    const normBrightness = b / 255;
+                    const normDist = dist / probeRadius;
+                    const score = normBrightness - (lambda * normDist);
+                    if (score > bestSeedScore) {
+                        bestSeedScore = score;
+                        bestSeedX = px;
+                        bestSeedY = py;
+                    }
                 }
             }
         }
@@ -825,6 +834,93 @@ export function calculateBoxIntersectionRatio(box1: any, box2: any): number {
     return intersectionArea / unionArea;
 }
 
+export function extractTextAnchor(rawBox: any): { x: number; y: number } | undefined {
+    if (!rawBox) return undefined;
+
+    if (Array.isArray(rawBox)) {
+        if (rawBox.length === 2) {
+            const x = Number(rawBox[0]) > 100 ? Number(rawBox[0]) / 10 : Number(rawBox[0]);
+            const y = Number(rawBox[1]) > 100 ? Number(rawBox[1]) / 10 : Number(rawBox[1]);
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return undefined;
+            return {
+                x: Math.max(0, Math.min(100, Math.round(x * 100) / 100)),
+                y: Math.max(0, Math.min(100, Math.round(y * 100) / 100))
+            };
+        } else if (rawBox.length >= 4) {
+            const x = Number(rawBox[0]) > 100 ? Number(rawBox[0]) / 10 : Number(rawBox[0]);
+            const y = Number(rawBox[1]) > 100 ? Number(rawBox[1]) / 10 : Number(rawBox[1]);
+            const w = Number(rawBox[2]) > 100 ? Number(rawBox[2]) / 10 : Number(rawBox[2]);
+            const h = Number(rawBox[3]) > 100 ? Number(rawBox[3]) / 10 : Number(rawBox[3]);
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return undefined;
+            const cx = x + (Number.isFinite(w) ? w / 2 : 0);
+            const cy = y + (Number.isFinite(h) ? h / 2 : 0);
+            return {
+                x: Math.max(0, Math.min(100, Math.round(cx * 100) / 100)),
+                y: Math.max(0, Math.min(100, Math.round(cy * 100) / 100))
+            };
+        }
+        return undefined;
+    }
+
+    if (typeof rawBox === 'object') {
+        if (rawBox.textAnchor && typeof rawBox.textAnchor.x === 'number' && typeof rawBox.textAnchor.y === 'number') {
+            return {
+                x: Math.max(0, Math.min(100, Math.round(rawBox.textAnchor.x * 100) / 100)),
+                y: Math.max(0, Math.min(100, Math.round(rawBox.textAnchor.y * 100) / 100))
+            };
+        }
+        if (rawBox.x !== undefined || rawBox.left !== undefined) {
+            const rawX = rawBox.x !== undefined ? rawBox.x : rawBox.left;
+            const rawY = rawBox.y !== undefined ? rawBox.y : rawBox.top;
+            const rawW = rawBox.w !== undefined ? rawBox.w : rawBox.width;
+            const rawH = rawBox.h !== undefined ? rawBox.h : rawBox.height;
+
+            const x = Number(rawX) > 100 ? Number(rawX) / 10 : Number(rawX);
+            const y = Number(rawY) > 100 ? Number(rawY) / 10 : Number(rawY);
+            const w = rawW !== undefined ? (Number(rawW) > 100 ? Number(rawW) / 10 : Number(rawW)) : 0;
+            const h = rawH !== undefined ? (Number(rawH) > 100 ? Number(rawH) / 10 : Number(rawH)) : 0;
+
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return undefined;
+            const cx = x + (Number.isFinite(w) ? w / 2 : 0);
+            const cy = y + (Number.isFinite(h) ? h / 2 : 0);
+            return {
+                x: Math.max(0, Math.min(100, Math.round(cx * 100) / 100)),
+                y: Math.max(0, Math.min(100, Math.round(cy * 100) / 100))
+            };
+        }
+    }
+
+    return undefined;
+}
+
+function isTextDuplicateOrSimilar(t1: string, t2: string): boolean {
+    const s1 = (t1 || '').trim().toLowerCase().replace(/[.,!?:;'"~`\s]/g, '');
+    const s2 = (t2 || '').trim().toLowerCase().replace(/[.,!?:;'"~`\s]/g, '');
+    if (!s1 || !s2) return false;
+    if (s1 === s2) return true;
+    if (s1.includes(s2) || s2.includes(s1)) return true;
+
+    const lenMax = Math.max(s1.length, s2.length);
+    if (lenMax === 0) return true;
+
+    const track: number[][] = Array(s2.length + 1).fill(null).map(() => Array(s1.length + 1).fill(0));
+    for (let i = 0; i <= s1.length; i += 1) track[0][i] = i;
+    for (let j = 0; j <= s2.length; j += 1) track[j][0] = j;
+    for (let j = 1; j <= s2.length; j += 1) {
+        for (let i = 1; i <= s1.length; i += 1) {
+            const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
+            track[j][i] = Math.min(
+                track[j][i - 1] + 1,
+                track[j - 1][i] + 1,
+                track[j - 1][i - 1] + indicator
+            );
+        }
+    }
+    const dist = track[s2.length][s1.length];
+    const similarity = 1 - (dist / lenMax);
+    return similarity >= 0.7;
+}
+
 export function mergeOverlappingAiBlocks(blocks: any[], overlapThreshold: number = 0.70): any[] {
     if (!Array.isArray(blocks) || blocks.length <= 1) return blocks || [];
 
@@ -851,10 +947,27 @@ export function mergeOverlappingAiBlocks(blocks: any[], overlapThreshold: number
 
             const centerDist = Math.hypot(c1X - c2X, c1Y - c2Y);
 
+            const type1 = (current.type || 'dialogue').toLowerCase();
+            const type2 = (other.type || 'dialogue').toLowerCase();
+            const sameType = type1 === type2;
+
+            const orig1 = (current.original || '').trim();
+            const orig2 = (other.original || '').trim();
+            const trans1 = (current.translated || '').trim();
+            const trans2 = (other.translated || '').trim();
+
+            const hasTextDuplicateEvidence = isTextDuplicateOrSimilar(orig1, orig2) ||
+                isTextDuplicateOrSimilar(trans1, trans2) ||
+                (!orig1 && !orig2 && !trans1 && !trans2);
+
             let isDuplicate = false;
 
             if (isPointAnchor1 || isPointAnchor2) {
-                isDuplicate = (centerDist <= 3.5);
+                // Point-anchor candidate: must be near enough (<= 1.8%), same type,
+                // and have duplicate evidence (identical/similar text or both empty).
+                // Distinct texts at neighboring points must NOT be merged.
+                const isNearPoint = centerDist <= 1.8;
+                isDuplicate = isNearPoint && sameType && hasTextDuplicateEvidence;
             } else {
                 const overlapRatio = calculateBoxIntersectionRatio(currentBox, otherBox);
                 isDuplicate = (overlapRatio >= overlapThreshold && centerDist <= 6.0);
@@ -863,16 +976,16 @@ export function mergeOverlappingAiBlocks(blocks: any[], overlapThreshold: number
             if (isDuplicate) {
                 merged[j] = true;
 
-                const orig1 = (current.original || '').trim();
-                const orig2 = (other.original || '').trim();
-                if (orig2 && !orig1.includes(orig2)) {
-                    current.original = orig1 ? `${orig1} ${orig2}` : orig2;
+                const o1 = (current.original || '').trim();
+                const o2 = (other.original || '').trim();
+                if (o2 && !o1.includes(o2)) {
+                    current.original = o1 ? `${o1} ${o2}` : o2;
                 }
 
-                const trans1 = (current.translated || '').trim();
-                const trans2 = (other.translated || '').trim();
-                if (trans2 && !trans1.includes(trans2)) {
-                    current.translated = trans1 ? `${trans1} ${trans2}` : trans2;
+                const t1 = (current.translated || '').trim();
+                const t2 = (other.translated || '').trim();
+                if (t2 && !t1.includes(t2)) {
+                    current.translated = t1 ? `${t1} ${t2}` : t2;
                 }
 
                 if (!isPointAnchor1 && !isPointAnchor2) {

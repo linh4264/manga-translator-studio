@@ -1,7 +1,7 @@
 import { globalState, pushStateToHistory, savePageToDB, debounceSavePage, uiUpdateActiveBlockEditor, markPageAutoFitDirty, PRO_STYLE_PRESETS } from '../../core/state';
 import { elements } from '../../core/elements';
 import { showToast, setMultilineText, cleanMangaPunctuation } from '../../core/utils';
-import { requestOverlayRender } from './canvas-renderer';
+import { requestOverlayRender, balanceTextToDiamond } from './canvas-renderer';
 import { updateFloatingToolbarPosition } from './canvas-interactions';
 import { MangaBlock, MangaPage, BlockStyle } from '../../types/index';
 
@@ -307,7 +307,9 @@ export function autoMatchBlockStyle(block: MangaBlock, imgElement: HTMLImageElem
     const avgRimLum = rimCount > 0 ? (rimLumSum / rimCount) : 255;
     const avgCenterLum = centerCount > 0 ? (centerLumSum / centerCount) : 128;
 
-    block.style.fontFamily = globalState.defaultFont || 'font-manga';
+    if (!block.style.fontFamily) {
+        block.style.fontFamily = globalState.defaultFont || 'font-manga';
+    }
     block.style.align = 'center';
 
     if (avgRimLum < 140) {
@@ -349,7 +351,21 @@ export function autoMatchActiveBlockStyle(): void {
     if (block && imgElement) {
         pushStateToHistory();
         autoMatchBlockStyle(block, imgElement);
+        if (block.style?.diamondWrap && block.translated && !block.style?.vertical && block.type !== 'sfx') {
+            const W = imgElement.naturalWidth || 800;
+            const H = imgElement.naturalHeight || 1200;
+            const pixelW = block.box ? (block.box.w / 100) * W : 200;
+            const pixelH = block.box ? (block.box.h / 100) * H : 200;
+            const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
+            block.translated = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
+            if (elements.editTranslatedText) {
+                elements.editTranslatedText.value = block.translated;
+            }
+        }
         markPageAutoFitDirty(page);
+        if (isBlockAutoFit(block)) {
+            autoFitBlock(block, imgElement);
+        }
         requestOverlayRender();
         uiUpdateActiveBlockEditor();
         savePageToDB(page);
