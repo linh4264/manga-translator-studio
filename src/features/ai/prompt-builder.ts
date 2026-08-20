@@ -31,55 +31,97 @@ export function getTranslationGuidancePrompt(
     const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
 
     guidanceParts.push(
-        `- ROLE: You are a Master Scanlation Localizer and Manga Publication Editor. Translate meaning, subtext, tone, and character emotions—NEVER translate word-for-word or produce rigid, literal machine translations.`
+        `- ROLE: You are a Master Scanlation Localizer and Manga Publication Editor. Translate meaning, subtext, tone, and character emotions—NEVER translate word-for-word or produce rigid, literal machine translations.`,
+        `- PRIORITY ORDER (THỨ TỰ ƯU TIÊN):`,
+        `  1. Preserve source meaning.`,
+        `  2. Preserve speaker intent and emotional nuance.`,
+        `  3. Preserve scene/context/character relationship.`,
+        `  4. Produce natural ${targetLangName}.`,
+        `  5. Maintain character voice and pronoun consistency.`,
+        `  6. Keep terminology/names consistent.`,
+        `  7. Keep dialogue compact for manga bubbles.`,
+        `  8. Apply genre/tone/style flavor.`,
+        `  9. Use slang/particles only when contextually justified.`,
+        `- OVERRIDE RULES:`,
+        `  * Higher-priority rules always override lower-priority stylistic preferences.`,
+        `  * Compactness must NEVER remove important meaning.`,
+        `  * Genre/tone must NEVER override source meaning or invent emotion.`,
+        `- SOURCE FIDELITY / NO HALLUCINATION (BẢO TOÀN NGHĨA GỐC - CHỐNG TỰ DIỄN TẬP / BỊA NGHĨA):`,
+        `  1. Không thêm thắt thông tin, sự kiện hoặc chi tiết không có trong câu gốc hoặc context.`,
+        `  2. Không tự giải thích một câu mơ hồ. Khi bản gốc cố ý mơ hồ, giữ lại mức độ mơ hồ đó trong bản dịch ("When the source is ambiguous, preserve the ambiguity unless the surrounding context strongly resolves it.").`,
+        `  3. Không tự suy ra speaker intent nếu bằng chứng không đủ.`,
+        `  4. Không thêm chủ ngữ, cảm xúc, quan hệ, lý do, hành động hoặc thông tin nền nếu nguồn không hỗ trợ.`,
+        `  5. Context chỉ được dùng để disambiguate khi có bằng chứng rõ ràng, không được dùng để bịa thêm nội dung.`
     );
 
+    const srcLang = ctx.sourceLanguage || 'ja';
+
     if (targetLang === 'vi') {
+        const fewShotExamples: string[] = [];
+        if (srcLang === 'ja' || !['zh', 'ko', 'en'].includes(srcLang)) {
+            fewShotExamples.push(
+                `     - [JA] "私には無理だよ" ➔ Dịch dở: "Cái đó là không thể đối với tôi." | Dịch chuẩn Manga: "Quá sức tôi rồi!" / "Làm sao mà làm nổi!"`,
+                `     - [JA] "嘘だろ…！？" ➔ Dịch dở: "Nó là một sự dối trá đúng không?" | Dịch chuẩn Manga: "Đùa nhau à...?" / "Không thể nào...!"`,
+                `     - [JA] "そんな顔するなよ" ➔ Dịch dở: "Đừng làm khuôn mặt như vậy." | Dịch chuẩn Manga: "Làm cái mặt gì đấy?" / "Bớt bày vẻ mặt đó đi."`,
+                `     - [JA] "何してるんだ？" ➔ Dịch dở: "Bạn đang làm gì vậy?" | Dịch chuẩn Manga: "Làm gì đấy?" / "Tính làm trò gì hả?"`,
+                `     - [JA] "しょうがないな…" ➔ Dịch dở: "Nó không thể giúp được." | Dịch chuẩn Manga: "Đành chịu thôi..." / "Biết sao giờ..."`
+            );
+        } else if (srcLang === 'zh') {
+            fewShotExamples.push(
+                `     - [ZH] "你找死吗？" ➔ Dịch dở: "Ngươi đây là tìm chết sao?" | Dịch chuẩn Manhua: "Chán sống rồi à?" / "Muốn chết hả mày?"`,
+                `     - [ZH] "这是怎么回事？" ➔ Dịch dở: "Chuyện này là thế nào?" | Dịch chuẩn Manhua: "Chuyện quái gì thế này?" / "Rốt cuộc là sao?"`,
+                `     - [ZH] "算了，由他去吧。" ➔ Dịch dở: "Tính toán thôi, để hắn đi đi." | Dịch chuẩn Manhua: "Thôi bỏ đi, mặc kệ nó."`
+            );
+        } else if (srcLang === 'ko') {
+            fewShotExamples.push(
+                `     - [KO] "미쳤어?" ➔ Dịch dở: "Bạn có bị điên không?" | Dịch chuẩn Manhwa: "Điên à?" / "Khùng hả?"`,
+                `     - [KO] "어쩌라고?" ➔ Dịch dở: "Tôi nên làm cái gì?" | Dịch chuẩn Manhwa: "Thế tính sao?" / "Thì đã làm sao?"`,
+                `     - [KO] "어쩔 수 없지." ➔ Dịch dở: "Không có cách nào khác." | Dịch chuẩn Manhwa: "Đành chịu thôi." / "Biết làm sao được."`
+            );
+        } else if (srcLang === 'en') {
+            fewShotExamples.push(
+                `     - [EN] "What are you doing?" ➔ Dịch dở: "Bạn đang làm gì?" | Dịch chuẩn Manga: "Làm gì đấy?" / "Tính làm trò gì hả?"`,
+                `     - [EN] "It can't be helped." ➔ Dịch dở: "Nó không thể giúp được." | Dịch chuẩn Manga: "Đành chịu thôi." / "Biết sao giờ."`,
+                `     - [EN] "No way!" ➔ Dịch dở: "Không có đường!" | Dịch chuẩn Manga: "Làm gì có!" / "Không đời nào!"`
+            );
+        }
+
         guidanceParts.push(
             `- MANGA LOCALIZATION RULES (QUY TẮC BẢN DỊCH TIẾNG VIỆT CHUẨN XUẤT BẢN - CHỐNG DỊCH THÔ LỦNG CỦNG):`,
-            `  1. VĂN NÓI / KHẨU NGỮ TỰ NHIÊN (SPEAKABILITY & SPOKEN FLOW):`,
+            `  1. VĂN NÓI / KHẨU NGỮ TỰ NHIÊN (SPEAKABILITY & NATURAL SPOKEN FLOW):`,
             `     - Câu thoại truyện tranh phải đọc to lên nghe êm tai, nhịp điệu dứt khoát, tự nhiên như lời ăn tiếng nói ngoài đời thực.`,
-            `     - Tận dụng tối đa từ đệm ngữ khí và thán từ phù hợp cảm xúc nhân vật: "hả, đấy, chứ, nha, nhé, cơ, sao, đâu, thiệt luôn, chứ lị, mất thôi, cơ mà, vãi thật, ôi trời, thôi xong...".`,
-            `  2. TRIỆT TIÊU VĂN MÁY MÓC & DỊCH THÔ (ANTI-MACHINE TRANSLATION & ANTI-LITERAL):`,
+            `     - NGUYÊN TẮC: NATURAL ≠ ALWAYS SLANGY. Chỉ dùng khẩu ngữ, slang, particle (từ đệm ngữ khí) và thán từ khi chúng được hỗ trợ bởi ngữ cảnh, cảm xúc, persona và câu gốc.`,
+            `     - Không tự thêm particle chỉ để làm câu nghe "Việt" hơn. Không dùng slang mạnh nếu câu gốc trung tính. Không biến mọi câu thành kiểu nói suồng sã.`,
+            `  2. TRIỆT TIÊU VĂN MÁY MÓC & DỊCH THÔ (ANTI-MACHINE TRANSLATION & PRO-DROP):`,
             `     - 🚫 CẤM dịch bám trật tự từ nguyên gốc (nhất là cấu trúc câu SOV tiếng Nhật/Hàn hoặc Hán thô tiếng Trung). Hãy sắp xếp lại hoàn toàn theo trật tự tự nhiên của tiếng Việt.`,
             `     - 🚫 CẤM lạm dụng đại từ "tôi/bạn", "hắn/cô ấy" sượng sùng. BẮT BUỘC TỈNH LƯỢC CHỦ NGỮ TỰ NHIÊN (Pro-drop) khi đối thoại trực tiếp (VD: "Ăn chưa?" thay vì "Bạn đã ăn cơm chưa?", "Đi đâu đấy?" thay vì "Anh đang đi đâu vậy?").`,
             `     - 🚫 CẤM dùng câu bị động giả tạo ("bị/được... bởi..."). Chuyển thành câu chủ động mượt mà (VD: "Tôi bị đánh bại bởi hắn" ➔ "Tôi thua nó rồi" / "Bị nó hạ gục rồi").`,
             `     - 🚫 CẤM các từ nối sách vở rườm rà ("Bởi vì...", "Mặc dù...", "Tuy nhiên...", "Sau đó thì...", "Có lẽ là...").`,
-            `  3. XƯNG HÔ NĂNG ĐỘNG & ĐỒNG BỘ PHÂN CẢNH (PRONOUN DYNAMICS & DIALOGUE COHERENCE):`,
+            `  3. XƯNG HÔ LINH HOẠT THEO BỐI CẢNH & CẢM XÚC (CONTEXTUAL & EMOTIONAL PRONOUN DYNAMICS):`,
             `     - Đọc toàn bộ các câu thoại trong trang như một hoạt cảnh kịch liên tục để hiểu rõ quan hệ, tuổi tác, bối cảnh và tâm lý.`,
-            `     - Tự động chọn cặp xưng hô sống động: bạn bè thân (mày-tao, cậu-tớ, ông-tôi), tình cảm (anh-em), gia đình (bố-con, mẹ-con), thứ bậc (sếp-em, tiền bối-em, chú-cháu), đối địch/tức giận (mày-tao, thằng ranh, tên khốn).`,
-            `     - TUYỆT ĐỐI GIỮ THỐNG NHẤT 100% cặp xưng hô xuyên suốt trang đối thoại, không nhảy lung tung giữa các ô thoại.`,
+            `     - Duy trì một cặp xưng hô mặc định ổn định dựa trên quan hệ nhân vật và phân cảnh: bạn bè thân (mày-tao, cậu-tớ, ông-tôi), tình cảm (anh-em), gia đình (bố-con, mẹ-con), thứ bậc (sếp-em, tiền bối-em, chú-cháu).`,
+            `     - Cho phép thay đổi xưng hô hoặc speech style khi phân cảnh cho thấy rõ cảm xúc, khoảng cách quan hệ, địa vị hoặc thái độ đã chuyển biến (VD: bình thường xưng "anh-em" hoặc "cậu-tớ", lúc nổi giận/xung đột có thể chuyển sang "mày-tao" nếu ngữ cảnh thực sự hỗ trợ).`,
+            `     - Không tự ý đổi xưng hô chỉ vì muốn làm câu nghe mạnh hơn khi không có biến chuyển cảm xúc tương ứng.`,
+            `     - Japanese pronouns are clues about persona, NOT fixed Vietnamese mappings.`,
             `  4. CHUYỂN ĐỔI TỪ CẢM THÁN & TỪ LÓNG (SLANG/IDIOMS/EXCLAMATIONS):`,
-            `     - Dịch thoát ý linh hoạt từ lóng, quán ngữ và từ cảm thán sang khẩu ngữ tiếng Việt tương đương, giữ trọn năng lượng và thần thái của nhân vật.`,
+            `     - Dịch thoát ý linh hoạt từ lóng, quán ngữ và từ cảm thán sang khẩu ngữ tiếng Việt tương đương, giữ trọn năng lượng và thần thái của nhân vật khi được ngữ cảnh hỗ trợ.`,
             `  5. SÚC TÍCH, ĐẮM THÉP & VỪA KHUNG BÓNG THOẠI (COMPACT MANGA BUBBLE FIT):`,
             `     - Ô thoại truyện tranh có không gian giới hạn. Ưu tiên câu thoại ngắn, súc tích, ngắt nhịp đúng chỗ, giàu sức biểu đạt, tránh dài dòng giải thích.`,
+            `     - Độ ngắn gọn KHÔNG ĐƯỢC làm mất nghĩa quan trọng của câu gốc (Compactness must NEVER remove important meaning).`,
             `  6. NGUYÊN TẮC CÂU HOÀN CHỈNH & KHÔNG CHÈN XUỐNG DÒNG (SINGLE CONTINUOUS LINE MANDATE):`,
             `     - 🚫 TUYỆT ĐỐI KHÔNG chèn ký tự xuống dòng (\\n) ở giữa câu thoại trong trường "translated".`,
             `     - Mỗi câu thoại phải là một câu hoàn chỉnh, liền mạch trên 1 dòng duy nhất. Bộ máy typesetting sẽ tự động tính toán căn ngắt dòng hình thoi/elip phù hợp với bóng thoại.`,
-            `  7. VÍ DỤ CHUẨN MẪU ĐA NGÔN NGỮ (FEW-SHOT CALIBRATION EXAMPLES):`,
-            `     - [EN] "What are you doing?" ➔ Dịch dở: "Bạn đang làm gì?" | Dịch chuẩn Manga: "Làm gì đấy?" / "Tính làm trò gì hả?"`,
-            `     - [EN] "I see..." ➔ Dịch dở: "Tôi hiểu rồi." | Dịch chuẩn Manga: "Ra thế..." / "Thế à..."`,
-            `     - [EN] "It can't be helped." ➔ Dịch dở: "Nó không thể giúp được." | Dịch chuẩn Manga: "Đành chịu thôi." / "Biết sao giờ."`,
-            `     - [EN] "Really?" ➔ Dịch dở: "Thật sao?" | Dịch chuẩn Manga: "Thật luôn?" / "Thiệt hả?"`,
-            `     - [EN] "Unbelievable!" ➔ Dịch dở: "Không thể tin được!" | Dịch chuẩn Manga: "Ảo thật đấy!" / "Vô lý!"`,
-            `     - [EN] "Holy crap!" ➔ Dịch dở: "Thánh phân!" | Dịch chuẩn Manga: "Vãi thật!" / "Trời đất ơi!"`,
-            `     - [EN] "No way!" ➔ Dịch dở: "Không có đường!" | Dịch chuẩn Manga: "Làm gì có!" / "Không đời nào!"`,
-            `     - [JA] "私には無理だよ" ➔ Dịch dở: "Cái đó là không thể đối với tôi." | Dịch chuẩn Manga: "Quá sức tôi rồi!" / "Làm sao mà làm nổi!"`,
-            `     - [JA] "嘘だろ…！？" ➔ Dịch dở: "Nó là một sự dối trá đúng không?" | Dịch chuẩn Manga: "Đùa nhau à...?" / "Xạo hả...?"`,
-            `     - [JA] "そんな顔するなよ" ➔ Dịch dở: "Đừng làm khuôn mặt như vậy." | Dịch chuẩn Manga: "Làm cái mặt gì đấy?" / "Bớt bày cái vẻ mặt đó ra đi."`,
-            `     - [ZH] "你找死吗？" ➔ Dịch dở: "Ngươi đây là tìm chết sao?" | Dịch chuẩn Manhua: "Chán sống rồi à?" / "Muốn chết hả mày?"`,
-            `     - [ZH] "这是怎么回事？" ➔ Dịch dở: "Chuyện này là thế nào?" | Dịch chuẩn Manhua: "Chuyện quái gì thế này?" / "Rốt cuộc là sao?"`,
-            `     - [KO] "미쳤어?" ➔ Dịch dở: "Bạn có bị điên không?" | Dịch chuẩn Manhwa: "Điên à?" / "Khùng hả?"`,
-            `     - [KO] "어쩌라고?" ➔ Dịch dở: "Tôi nên làm cái gì?" | Dịch chuẩn Manhwa: "Thế tính sao?" / "Thì đã làm sao?"`
+            `  7. VÍ DỤ ĐỊNH HƯỚNG TIÊU BIỂU (CALIBRATION EXAMPLES):`,
+            ...fewShotExamples
         );
     }
 
-    const srcLang = ctx.sourceLanguage || 'ja';
     if (srcLang === 'ja') {
         if (targetLang === 'vi') {
             guidanceParts.push(
                 `- JAPANESE TO VIETNAMESE MANGA TRANSLATION MASTER SPECIFICATION:`,
                 `  1. XƯNG HÔ ĐA DẠNG & SẮC THÁI NHÂN VẬT (PRONOUNS & PERSONA):`,
+                `     - Japanese pronouns are clues about persona, NOT fixed Vietnamese mappings. Adapt flexibly based on relationship, social hierarchy, and scene dynamics:`,
                 `     - 私 (Watashi) -> Trọng thị/Lịch sự: "Tôi/Em/Cháu"; Nữ thân mật: "Tớ/Em"; Bình thản: "Tôi".`,
                 `     - 僕 (Boku) -> Nam dịu dàng, khiêm tốn, con trai trẻ: "Tớ - Cậu", "Anh - Em", "Em - Anh/Chị".`,
                 `     - 俺 (Ore) -> Nam tính, mạnh mẽ, năng động, bốc đồng: "Tao - Mày", "Anh - Em", "Tôi".`,
@@ -90,6 +132,7 @@ export function getTranslationGuidancePrompt(
                 `     - 貴様 (Kisama) / 手前 (Teme) -> Tức giận, thù địch: "Thằng ranh", "Mày", "Tên kia", "Thằng nhãi".`,
                 `     - 君 (Kimi) -> Người trên/bằng vai gọi nhẹ nhàng: "Cậu", "Em".`,
                 `  2. TỪ ĐỆM & NGỮ ĐIỆU CUỐI CÂU (終助詞 - SENTENCE-ENDING PARTICLES):`,
+                `     - Gợi ý sắc thái (chỉ dùng từ đệm tiếng Việt tương ứng khi cảm xúc và ngữ cảnh thực sự phù hợp):`,
                 `     - ね (ne) -> "nhé", "nha", "đúng không", "nhỉ".`,
                 `     - よ (yo) -> "đấy", "đó nha", "này".`,
                 `     - な (na) / ぞ (zo) -> "đấy", "chưa", "đó".`,
@@ -128,7 +171,7 @@ export function getTranslationGuidancePrompt(
                 `     - Thành ngữ 4 chữ Hán Việt: Nếu là cụm từ quen thuộc trong cổ phong/tiên hiệp/ngôn tình (VD: "Kinh thiên động địa", "Song hỷ lâm môn", "Khai sơn phá thạch", "Kinh hãi", "Khai thiên lập địa") -> GIỮ ÂM HÁN VIỆT mượt mà, thoát ý tự nhiên.`,
                 `     - Thành ngữ / Cụm từ khẩu ngữ Hán tối nghĩa: DỊCH THOÁT Ý sang thành ngữ/tục ngữ/khẩu ngữ tiếng Việt tương đương (VD: "Giang sơn dễ đổi, bản tính khó dời", "Không đánh mà khai"), TRÁNH dịch từng từ cứng nhắc.`,
                 `  3. TRỢ TỪ NGỮ KHÍ & KHẨU NGỮ TIẾNG TRUNG (MODAL PARTICLES & SPOKEN SLANG):`,
-                `     - Trợ từ cuối câu (语气词): 啊 (a), 吧 (ba), 呀 (ya), 嘛 (ma), 呗 (bei), 啦 (la) -> Chuyển thành từ đệm tiếng Việt tương ứng: "nhé", "nha", "đấy", "mà", "chứ", "sao", "thôi", "hả", "cơ".`,
+                `     - Trợ từ cuối câu (语气词): 啊 (a), 吧 (ba), 呀 (ya), 嘛 (ma), 呗 (bei), 啦 (la) -> Chuyển thành từ đệm tiếng Việt tương ứng khi phù hợp: "nhé", "nha", "đấy", "mà", "chứ", "sao", "thôi", "hả", "cơ".`,
                 `     - Từ cảm thán & Khẩu ngữ: 卧槽/靠 (Wòcáo/Kào) -> "Vãi!", "Má nó!", "Độc thật!"; 没门儿 (Méiménr) -> "Mơ đi!", "Không đời nào!"; 鬼知道 (Guǐ zhīdào) -> "Quỷ mới biết!"; 算了 (Suànle) -> "Bỏ đi", "Thôi dẹp đi"; 没事 (Méishì) -> "Chẳng sao đâu", "Không có gì".`,
                 `  4. THUẬT NGỮ CẢNH GIỚI, TU VI & HỆ THỐNG (CULTIVATION & SYSTEM TERMS):`,
                 `     - Thống nhất thuật ngữ chuẩn Hán Việt cho cảnh giới (Luyện Khí, Trúc Cơ, Kim Đan, Nguyên Anh, Hóa Thần, Động Hư, Đại Thừa, Độ Kiếp...) và game/hệ thống (Ký chủ, Bảng thuộc tính, Rút thưởng, Điểm kinh nghiệm).`,
@@ -143,7 +186,7 @@ export function getTranslationGuidancePrompt(
             guidanceParts.push(
                 `- KOREAN TO VIETNAMESE MANHWA TRANSLATION MASTER SPECIFICATION:`,
                 `  1. HỆ THỐNG KÍNH NGỮ & THÂN MẬT (존댓말 vs 반말):`,
-                `     - Kính ngữ (존댓말 - Jondaetmal): Bắt buộc dịch sang khẩu ngữ tôn kính trong tiếng Việt. Thêm từ đệm "dạ, vâng, ạ", đại từ xưng hô lịch thiệp ("Thưa sếp/ngài", "Tôi hiểu rồi ạ", "Xin chào tiền bối").`,
+                `     - Kính ngữ (존댓말 - Jondaetmal): Dịch sang khẩu ngữ tôn kính trong tiếng Việt. Thêm từ đệm "dạ, vâng, ạ", đại từ xưng hô lịch thiệp ("Thưa sếp/ngài", "Tôi hiểu rồi ạ", "Xin chào tiền bối").`,
                 `     - Nói trống / Suồng sã / Bằng vai (반말 - Banmal): Dùng các cặp xưng hô tự nhiên ("mày-tao", "cậu-tớ", "anh-em"), TRIỆT TIÊU hoàn toàn từ dạ/vâng/ạ.`,
                 `  2. DANH XƯNG & HẬU TỐ MANHWA (HONORIFICS & TITLES):`,
                 `     - 선배 (Sunbae) -> "Tiền bối", "Anh/Chị khóa trên", hoặc xưng "anh/chị".`,
@@ -164,7 +207,7 @@ export function getTranslationGuidancePrompt(
         if (targetLang === 'vi') {
             guidanceParts.push(
                 `- ENGLISH TO VIETNAMESE COMIC TRANSLATION MASTER SPECIFICATION:`,
-                `  1. PHÁ BỎ ĐẠI TỪ I/YOU TRUNG TÍNH: Tự động suy luận đại từ tiếng Việt sống động.`,
+                `  1. PHÁ BỎ ĐẠI TỪ I/YOU TRUNG TÍNH: Tự động suy luận đại từ tiếng Việt sống động dựa trên vai vế và mối quan hệ.`,
                 `  2. THÀNH NGỮ, TỪ LÓNG & CẢM THÁN COMIC: Dịch thoát ý khẩu ngữ tự nhiên.`
             );
         } else {
@@ -221,7 +264,7 @@ export function getTranslationGuidancePrompt(
     const storyMem = getStoryMemoryState();
     if (storyMem.enableStoryMemory && storyMem.chapterStoryMemory.length > 0) {
         const memoryText = storyMem.chapterStoryMemory.map(m => `Trang ${m.pageIndex}: ${m.excerpt}`).join('; ');
-        guidanceParts.push(`- CHAPTER STORY MEMORY (PREVIOUS PAGES CONTEXT): Here is the recent dialogue history from earlier pages in this chapter: ${memoryText}. Reuse the exact same character ${pronounTerm}, names, and overall tone.`);
+        guidanceParts.push(`- CHAPTER STORY MEMORY (PREVIOUS PAGES CONTEXT): Here is the recent dialogue history from earlier pages in this chapter: ${memoryText}. Reuse the established character ${pronounTerm}, names, and overall tone.`);
     }
 
     const pronounPrompt = compilePronounMatrixPrompt();
@@ -230,14 +273,14 @@ export function getTranslationGuidancePrompt(
     }
 
     const dialogueRule = targetLang === 'vi'
-        ? '- DIALOGUE RULE: Choose Vietnamese xưng hô from the relationship and scene, not from the surface grammar. Keep xưng hô consistent across the page unless the relationship or mood changes.'
-        : `- DIALOGUE RULE: Choose ${targetLangName} pronouns and forms of address from the relationship and scene, not from the surface grammar.`;
+        ? '- DIALOGUE RULE: Choose Vietnamese xưng hô based on character relationship, social hierarchy, and scene dynamics. Maintain a stable default pronoun pair across the page, but allow natural shifts when emotions, distance, or tension change significantly.'
+        : `- DIALOGUE RULE: Choose ${targetLangName} pronouns and forms of address from the relationship and scene, not from the surface grammar. Maintain a stable default pronoun pair, allowing natural shifts when relationship or mood changes.`;
 
     guidanceParts.push(
-        `- TRANSLATION RULES: Keep ${targetLangName} natural and idiomatic. Prefer meaning over literal wording. Preserve character voice, emotions, jokes, pacing, and subtext.`,
+        `- TRANSLATION RULES: Keep ${targetLangName} natural and idiomatic while preserving source fidelity. Prefer natural meaning over literal wording. Preserve character voice, emotions, jokes, pacing, and subtext.`,
         dialogueRule,
-        '- CONTEXT RULE: Use neighboring bubbles to infer who is speaking and emotional tone.',
-        '- BUBBLE RULE: Keep manga-friendly phrasing short and punchy. Do not overexplain.'
+        '- CONTEXT RULE: Use neighboring bubbles to infer who is speaking and emotional tone. Disambiguate without inventing unsupported content.',
+        '- BUBBLE RULE: Keep manga-friendly phrasing short and punchy. Do not overexplain or drop core meaning.'
     );
 
     getModelTranslationProfile(currentModelId, targetLang).forEach((rule) => guidanceParts.push(rule));

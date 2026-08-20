@@ -56,26 +56,26 @@ export function getModelTranslationProfile(modelId?: string, targetLang?: string
     if (normalized === 'gemini-3.1-flash-lite') {
         return [
             '- MODEL PROFILE: Gemini 3.1 Flash-Lite.',
-            `- MODEL RULE: You must check the provided previous page dialogues context and strictly reuse the exact same ${pronounTerm} and tone for the same characters.`,
-            `- MODEL RULE: Keep the ${pronounSimple} simple, conversational, and highly consistent across all bubbles on the page.`,
-            `- MODEL RULE: Translate to natural, everyday ${targetLangName} manga speech. Avoid overly formal, literal, or robotic wording.`,
-            '- MODEL RULE: Keep translations short and compact so they fit inside speech bubbles easily.'
+            `- MODEL RULE: Check the provided previous page dialogues context and reuse established ${pronounTerm} and tone for the same characters.`,
+            `- MODEL RULE: Keep ${pronounSimple} stable and conversational across dialogue on the page, shifting naturally only when emotions or relations change.`,
+            `- MODEL RULE: Translate to natural, everyday ${targetLangName} manga speech without forcing slang. Avoid overly formal, literal, or robotic wording.`,
+            '- MODEL RULE: Keep translations short and compact so they fit inside speech bubbles easily without omitting core meaning.'
         ];
     }
 
     if (normalized.includes('flash-lite')) {
         return [
             '- MODEL PROFILE: Flash-Lite.',
-            `- MODEL RULE: Prioritize short, natural, high-confidence ${targetLangName}. Prefer simple pronouns and avoid ornate wording.`,
+            `- MODEL RULE: Prioritize short, natural, high-confidence ${targetLangName}. Prefer simple, stable pronouns and avoid ornate wording.`,
             `- MODEL RULE: If speaker relationship is unclear, use the safest neutral ${targetLangName} pronoun pair that still sounds natural in manga dialogue.`,
-            '- MODEL RULE: Preserve consistency across repeated lines, even if a later line is slightly more literal.'
+            '- MODEL RULE: Preserve consistency across repeated lines while respecting contextual nuance.'
         ];
     }
 
     if (normalized.includes('flash')) {
         return [
             '- MODEL PROFILE: Flash.',
-            `- MODEL RULE: Balance naturalness, brevity, and context. Keep tone faithful and pronouns consistent across nearby bubbles.`,
+            `- MODEL RULE: Balance naturalness, brevity, and fidelity. Keep tone faithful and maintain stable pronouns across nearby bubbles unless mood shifts.`,
             `- MODEL RULE: Prefer conversational ${targetLangName} that sounds like real manga dialogue instead of literal sentence-by-sentence translation.`
         ];
     }
@@ -83,15 +83,15 @@ export function getModelTranslationProfile(modelId?: string, targetLang?: string
     if (normalized.includes('pro')) {
         return [
             '- MODEL PROFILE: Pro.',
-            `- MODEL RULE: Use the deepest available context to infer relationships, subtext, emotional tone, and honorific intent.`,
+            `- MODEL RULE: Use the deepest available context to infer relationships, subtext, emotional tone, and honorific intent without hallucinating unsupported facts.`,
             `- MODEL RULE: Preserve nuanced pronouns, implied sarcasm, formality shifts, and character voice. Choose the most context-appropriate ${targetLangName} phrasing, not the most literal one.`,
-            '- MODEL RULE: When dialogue is ambiguous, keep the scene coherent and prioritize consistent character speech patterns over isolated word-level accuracy.'
+            '- MODEL RULE: When dialogue is ambiguous, preserve the ambiguity unless surrounding context strongly resolves it. Prioritize consistent character speech patterns.'
         ];
     }
 
     return [
         '- MODEL PROFILE: Balanced.',
-        `- MODEL RULE: Keep the translation natural, concise, and faithful to context. Use consistent pronouns and tone across the page.`
+        `- MODEL RULE: Keep the translation natural, concise, and faithful to source meaning. Maintain stable pronouns and tone across the page.`
     ];
 }
 

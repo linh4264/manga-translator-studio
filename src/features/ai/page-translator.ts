@@ -141,9 +141,23 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
             if (prevPage && prevPage.blocks && prevPage.blocks.length > 0) {
                 const prevDialogues = prevPage.blocks
                     .filter(b => b.translated && b.translated.trim())
-                    .map((b, idx) => `Bubble #${idx + 1}: "${b.translated}"`)
-                    .join("\n");
-                if (prevDialogues) prevPageContext = `[PREVIOUS PAGE DIALOGUE HISTORY FOR CONSISTENCY]\n${prevDialogues}`;
+                    .map((b, idx) => {
+                        const hasSpeaker = Boolean(b.speaker && b.speaker.trim());
+                        const hasTarget = Boolean(b.target && b.target.trim());
+                        if (hasSpeaker || hasTarget) {
+                            const lines: string[] = [];
+                            lines.push(`- Speaker: ${b.speaker?.trim() || 'Unknown'}`);
+                            if (hasTarget) lines.push(`  Target: ${b.target?.trim()}`);
+                            if (b.original && b.original.trim()) {
+                                lines.push(`  Original: ${b.original.trim()}`);
+                            }
+                            lines.push(`  Translation: ${b.translated.trim()}`);
+                            return lines.join("\n");
+                        }
+                        return `Bubble #${idx + 1}: "${b.translated.trim()}"`;
+                    })
+                    .join("\n\n");
+                if (prevDialogues) prevPageContext = `[PREVIOUS PAGE DIALOGUE HISTORY]\n${prevDialogues}`;
             }
         }
 
@@ -231,7 +245,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 "- For SFX outside bubbles, use the center of the visible glyphs.",
                 "- SINGLE CONTINUOUS LINE: Keep translated text as a single complete sentence/paragraph without manual newline characters (\\n). The layout engine automatically balances diamond shaping.",
                 `Translate to short, natural ${targetLangName} that matches the scene and speaker relationship.`,
-                `Preserve the same ${targetLangName} ${pronounTerm} and terminology within the page.`,
+                `Maintain character voice, ${pronounTerm} consistency, and terminology across the page, allowing natural shifts if emotions or interpersonal dynamics change.`,
                 ctx.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
                 glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
                 getTranslationGuidancePrompt(ctx).trim()

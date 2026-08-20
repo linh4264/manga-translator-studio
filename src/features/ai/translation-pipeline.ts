@@ -42,18 +42,23 @@ export async function executeTextTranslationStep({
     const transSystemInstruction = [
         `You are a master manga translator and publication editor specializing in translating Japanese/Korean/Chinese comic dialogues into natural, expressive, and fluent ${targetLangName}.`,
         `SEQUENTIAL DIALOGUE CONTEXT: The input dialogue blocks are arranged in sequential manga reading order (Top-Right to Bottom-Left). Treat them as continuous, interactive conversational turns between characters.`,
-        `COMPACT MANGA DIALOGUE: Speech bubble space is limited. Keep ${targetLangName} translations natural, crisp, punchy, and concise.`,
-        `Ensure ${pronounTerm} are consistent across the dialogue blocks and faithfully reflect character dynamics.`,
+        `COMPACT MANGA DIALOGUE: Speech bubble space is limited. Keep ${targetLangName} translations natural, crisp, punchy, and concise without sacrificing core meaning.`,
+        `Maintain stable default ${pronounTerm} pairs across dialogue blocks, allowing natural shifts when emotions or relationship dynamics change.`,
         ctx.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
         glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
         getTranslationGuidancePrompt(contextOptions).trim(),
         "Strict Rule: Maintain the exact same block IDs. Each translation must be a single complete sentence/paragraph without arbitrary newline characters (\\n). Return valid JSON only with schema: {\"blocks\": [{\"id\": \"...\", \"translated\": \"...\"}]}"
     ].filter(Boolean).join("\n\n");
 
-    const textPayloadList = blocksToTranslate.map(b => ({
-        id: b.id,
-        original: b.original || ''
-    }));
+    const textPayloadList = blocksToTranslate.map(b => {
+        const item: any = {
+            id: b.id,
+            original: b.original || ''
+        };
+        if (b.speaker && b.speaker.trim()) item.speaker = b.speaker.trim();
+        if (b.target && b.target.trim()) item.target = b.target.trim();
+        return item;
+    });
 
     let requestBody: string;
     let apiUrl: string;
@@ -160,8 +165,8 @@ export async function executeChapterChunkTranslationStep({
     const transSystemInstruction = [
         `You are a master manga translator and senior editor specializing in translating entire manga chapters with coherent storytelling, seamless conversational flow, and natural, expressive, publication-grade ${targetLangName} dialogue.`,
         `CHAPTER NARRATIVE CONTEXT: The input dialogues are grouped by page in chronological reading sequence. Maintain consistent character voices across the entire chapter.`,
-        `COMPACT MANGA DIALOGUE: Speech bubble space is limited. Keep ${targetLangName} translations natural, punchy, concise, and rhythmically flowing.`,
-        `Ensure ${pronounTerm} are 100% consistent across all pages.`,
+        `COMPACT MANGA DIALOGUE: Speech bubble space is limited. Keep ${targetLangName} translations natural, punchy, concise, and rhythmically flowing without sacrificing core meaning.`,
+        `Maintain stable default ${pronounTerm} pairs across pages, while allowing natural shifts when character emotions or relationships evolve.`,
         ctx.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
         glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
         getTranslationGuidancePrompt(contextOptions).trim(),
@@ -181,7 +186,10 @@ export async function executeChapterChunkTranslationStep({
             currentPage = b.pageIndex;
             pageItems = [];
         }
-        pageItems.push({ id: b.id, original: b.original || '' });
+        const item: any = { id: b.id, original: b.original || '' };
+        if (b.speaker && b.speaker.trim()) item.speaker = b.speaker.trim();
+        if (b.target && b.target.trim()) item.target = b.target.trim();
+        pageItems.push(item);
     });
     if (pageItems.length > 0) {
         groupedNarrative.push(`[--- TRANG / PAGE ${currentPage + 1} ---]\n` + JSON.stringify(pageItems, null, 2));
