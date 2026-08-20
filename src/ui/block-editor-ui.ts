@@ -152,7 +152,7 @@ export function setBlockType(type: 'dialogue' | 'narration' | 'thought' | 'sfx' 
         activeBlock.style.bold = false;
         if (elements.styleBold) elements.styleBold.checked = false;
     } else if (type === 'thought' && activeBlock.style) {
-        activeBlock.style.maskShape = 'ellipse';
+        activeBlock.style.maskShape = 'bubble-fit';
     }
 
     activeBlock.autoFitCache = null;

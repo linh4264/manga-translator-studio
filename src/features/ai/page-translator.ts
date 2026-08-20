@@ -381,7 +381,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
             if (blockType === 'narration') {
                 maskShape = 'rect';
             } else if (blockType === 'thought') {
-                maskShape = 'ellipse';
+                maskShape = 'bubble-fit';
                 italic = true;
             }
 
@@ -642,7 +642,7 @@ export async function runBatchTranslation(): Promise<void> {
                             if (blockType === 'narration') {
                                 maskShape = 'rect';
                             } else if (blockType === 'thought') {
-                                maskShape = 'ellipse';
+                                maskShape = 'bubble-fit';
                                 italic = true;
                             }
 

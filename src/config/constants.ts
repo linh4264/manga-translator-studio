@@ -360,7 +360,7 @@ export const PRO_STYLE_PRESETS: Record<string, any> = {
             shadowBlur: 0,
             shadowOffsetX: 0,
             shadowOffsetY: 0,
-            maskShape: 'ellipse',
+            maskShape: 'bubble-fit',
             align: 'center'
         }
     },
