@@ -1611,15 +1611,15 @@
                                     chữ</span>
                                 <label
                                     class="flex items-center gap-1 text-[10px] text-indigo-400 cursor-pointer select-none font-semibold">
-                                    <input type="checkbox" id="style-auto-fit" checked
+                                    <input type="checkbox" id="style-auto-fit"
                                         onchange="toggleBlockAutoFit(this.checked)"
                                         class="rounded border-slate-800 text-indigo-600 focus:ring-0 w-3.5 h-3.5">
                                     <span>Tự động (Auto-Fit)</span>
                                 </label>
                             </div>
-                            <span id="lbl-font-size" class="text-xs text-indigo-400 font-mono font-bold">13px</span>
+                            <span id="lbl-font-size" class="text-xs text-indigo-400 font-mono font-bold">17px</span>
                         </div>
-                        <input type="range" id="style-font-size" min="8" max="72" value="13"
+                        <input type="range" id="style-font-size" min="8" max="72" value="17"
                             oninput="syncActiveBlockStyle('fontSize', parseInt(this.value))"
                             class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500">
                     </div>
@@ -4314,7 +4314,7 @@
             <div class="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-0.5">
                 <button onclick="changeMobileActiveFontSize(-2)"
                     class="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-300 font-bold text-xs flex items-center justify-center active:scale-95 transition-all">A-</button>
-                <span id="mobile-quick-font-size-text" class="px-2 text-xs font-mono font-bold text-indigo-400">16px</span>
+                <span id="mobile-quick-font-size-text" class="px-2 text-xs font-mono font-bold text-indigo-400">17px</span>
                 <button onclick="changeMobileActiveFontSize(2)"
                     class="w-7 h-7 rounded-lg hover:bg-slate-800 text-slate-300 font-bold text-xs flex items-center justify-center active:scale-95 transition-all">A+</button>
             </div>

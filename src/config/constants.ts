@@ -277,7 +277,7 @@ export const DEFAULT_TYPE_FONTS: Record<string, string> = {
 
 export const DEFAULT_BLOCK_STYLE: BlockStyle = {
     fontFamily: 'font-manga',
-    fontSize: 13,
+    fontSize: 17,
     lineHeight: 1.15,
     letterSpacing: 0,
     textTransform: 'none',

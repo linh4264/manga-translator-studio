@@ -1,7 +1,7 @@
 import { globalState, pushStateToHistory, savePageToDB, uiUpdateActiveBlockEditor, uiUpdateSplitView } from '../../core/state';
 import { elements } from '../../core/elements';
 import { DEFAULT_VERTICAL_WRITING_MODE, DEFAULT_BLOCK_SIZE_PX } from '../../config/constants';
-import { requestOverlayRender, balanceTextToDiamond, balanceSingleParagraphToBox } from './canvas-renderer';
+import { requestOverlayRender, balanceTextToDiamond, balanceSingleParagraphToBox, balanceTextToBox } from './canvas-renderer';
 import { autoFitBlock, isBlockAutoFit, copiedStyle } from './canvas-styling';
 import { showToast, setMultilineText } from '../../core/utils';
 import { MangaBlock, BlockStyle } from '../../types/index';
@@ -239,11 +239,11 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
                 const pixelH = (block.box.h / 100) * H;
 
                 if (block.translated && !block.style?.vertical && block.type !== 'sfx') {
-                    const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
                     if (block.style?.diamondWrap) {
+                        const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
                         block.translated = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
                     } else {
-                        block.translated = balanceSingleParagraphToBox(cleanText, pixelW, pixelH, block.style);
+                        block.translated = balanceTextToBox(block.translated, pixelW, pixelH, block.style);
                     }
                 }
                 if (isBlockAutoFit(block)) {
@@ -251,10 +251,10 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
                     const zoomScale = (globalState.zoom || 100) / 100;
                     const maskElem = blockElem?.firstElementChild as HTMLElement | null;
                     if (maskElem) {
-                        maskElem.style.fontSize = `${(block.style.fontSize || 13) * zoomScale}px`;
+                        maskElem.style.fontSize = `${(block.style.fontSize || 17) * zoomScale}px`;
                     }
                     if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px (Auto)`;
-                    if (elements.styleFontSize) elements.styleFontSize.value = String(block.style.fontSize || 13);
+                    if (elements.styleFontSize) elements.styleFontSize.value = String(block.style.fontSize || 17);
                 }
                 const maskElem = blockElem?.firstElementChild as HTMLElement | null;
                 const textContainer = maskElem?.firstElementChild as HTMLElement | null;
@@ -290,7 +290,6 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
         block.maskCache = null;
         block.autoFitCache = null;
         if (block.translated && !block.style?.vertical && block.type !== 'sfx') {
-            const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
             const activePage = globalState.pages[globalState.activePageIndex];
             const imgEl = elements.mangaBgImage;
             const W = (activePage?.imageDataCache?.width) || (imgEl && imgEl.naturalWidth > 0 ? imgEl.naturalWidth : (elements.mangaCanvas?.width || 800));
@@ -298,9 +297,10 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
             const pixelW = (block.box.w / 100) * W;
             const pixelH = (block.box.h / 100) * H;
             if (block.style?.diamondWrap) {
+                const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
                 block.translated = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
             } else {
-                block.translated = balanceSingleParagraphToBox(cleanText, pixelW, pixelH, block.style);
+                block.translated = balanceTextToBox(block.translated, pixelW, pixelH, block.style);
             }
             if (elements.editTranslatedText && block.id === globalState.selectedBlockId) {
                 elements.editTranslatedText.value = block.translated;
@@ -809,7 +809,7 @@ export function initMarqueeSelection(): void {
                     },
                     style: {
                         fontFamily: globalState.defaultFont || 'font-manga',
-                        fontSize: 13,
+                        fontSize: 17,
                         lineHeight: 1.15,
                         letterSpacing: 0,
                         textTransform: 'none',

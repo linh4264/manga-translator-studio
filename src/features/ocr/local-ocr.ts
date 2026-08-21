@@ -1,5 +1,4 @@
 // Local Offline Speech Bubble & Text Region Detector (Zero-API Fallback Engine)
-import { normalizeAiBlockBox } from './ocr-service';
 import { BoundingBox } from '../../types/index';
 
 export function detectLocalTextRegions(imageData: ImageData): BoundingBox[] {
@@ -97,7 +96,12 @@ export function detectLocalTextRegions(imageData: ImageData): BoundingBox[] {
     // Filter final merged blocks (min 8 units on 0-1000 scale)
     const validBlocks = mergedBlocks.filter(b => b.w >= 8 && b.h >= 8 && b.w <= 750 && b.h <= 750);
 
-    return validBlocks.map(b => normalizeAiBlockBox(b));
+    return validBlocks.map(b => ({
+        x: Math.max(0, Math.min(100, Math.round((b.x / 10) * 100) / 100)),
+        y: Math.max(0, Math.min(100, Math.round((b.y / 10) * 100) / 100)),
+        w: Math.max(0.1, Math.min(100, Math.round((b.w / 10) * 100) / 100)),
+        h: Math.max(0.1, Math.min(100, Math.round((b.h / 10) * 100) / 100))
+    }));
 }
 
 function mergeAdjacentBoxes(boxes: Array<{ x: number; y: number; w: number; h: number }>, paddingPct: number): Array<{ x: number; y: number; w: number; h: number }> {

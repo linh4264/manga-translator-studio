@@ -442,7 +442,7 @@ export function openMobileQuickEditor(blockId?: string): void {
         }
     }
 
-    const curSize = activeBlock.style?.fontSize || 16;
+    const curSize = activeBlock.style?.fontSize || 17;
     if (fontSizeText) fontSizeText.innerText = `${curSize}px`;
     if (orientText) orientText.innerText = activeBlock.style?.vertical ? "Dọc" : "Ngang";
 
@@ -485,7 +485,7 @@ export function changeMobileActiveFontSize(delta: number): void {
     if (!block) return;
 
     if (!block.style) block.style = {} as any;
-    const curSize = block.style.fontSize || 13;
+    const curSize = block.style.fontSize || 17;
     const newSize = Math.max(8, Math.min(120, curSize + delta));
     block.style.fontSize = newSize;
     block.autoFitCache = null;

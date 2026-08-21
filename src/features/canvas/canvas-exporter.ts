@@ -107,6 +107,161 @@ function getSharedMeasureContext(): CanvasRenderingContext2D | null {
     return null;
 }
 
+export function wrapTokenLineToWidth(
+    measureCtx: CanvasRenderingContext2D | null,
+    lineToks: any[],
+    maxW: number,
+    getFontFn: (tok: any) => string,
+    letterSpacingPx: number = 0
+): any[][] {
+    if (!lineToks || lineToks.length === 0) return [[]];
+
+    let totalLineWidth = 0;
+    lineToks.forEach(tok => {
+        if (!tok.text) return;
+        if (measureCtx) {
+            const prevFont = measureCtx.font;
+            measureCtx.font = getFontFn(tok);
+            const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
+            let w = measureCtx.measureText(tok.text).width;
+            if (!('letterSpacing' in measureCtx) && effLetterSpacing > 0) {
+                const charCount = Array.from(tok.text).length;
+                w += Math.max(0, charCount - 1) * effLetterSpacing;
+            }
+            totalLineWidth += w;
+            measureCtx.font = prevFont;
+        } else {
+            const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
+            const charCount = Array.from(tok.text).length;
+            totalLineWidth += charCount * 10 + Math.max(0, charCount - 1) * effLetterSpacing;
+        }
+    });
+
+    if (totalLineWidth <= maxW + 2) {
+        return [lineToks];
+    }
+
+    const wordTokens: Array<{
+        text: string;
+        isSpace: boolean;
+        token: any;
+        width: number;
+    }> = [];
+
+    lineToks.forEach(tok => {
+        if (!tok.text) return;
+        const chunks = tok.text.split(/(\s+)/);
+        chunks.forEach((chunk: string) => {
+            if (!chunk) return;
+            const isSpace = /^\s+$/.test(chunk);
+            let w = 0;
+            if (measureCtx) {
+                const prevFont = measureCtx.font;
+                measureCtx.font = getFontFn(tok);
+                const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
+                w = measureCtx.measureText(chunk).width;
+                if (!('letterSpacing' in measureCtx) && effLetterSpacing > 0) {
+                    const charCount = Array.from(chunk).length;
+                    w += Math.max(0, charCount - 1) * effLetterSpacing;
+                }
+                measureCtx.font = prevFont;
+            } else {
+                const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
+                const charCount = Array.from(chunk).length;
+                w = charCount * 10 + Math.max(0, charCount - 1) * effLetterSpacing;
+            }
+
+            wordTokens.push({
+                text: chunk,
+                isSpace,
+                token: tok,
+                width: w
+            });
+        });
+    });
+
+    const mergedWords: typeof wordTokens = [];
+    for (let i = 0; i < wordTokens.length; i++) {
+        const wt = wordTokens[i];
+        const isPureTrailing = !wt.isSpace && /^[.,!?:;~～…\-)\]”’]+$/.test(wt.text);
+        if (isPureTrailing && mergedWords.length > 0 && !mergedWords[mergedWords.length - 1].isSpace) {
+            const prev = mergedWords[mergedWords.length - 1];
+            prev.text += wt.text;
+            prev.width += wt.width;
+            continue;
+        }
+        mergedWords.push(wt);
+    }
+
+    const subLines: any[][] = [];
+    let currentLineTokens: any[] = [];
+    let currentLineWidth = 0;
+    let pendingSpaceTok: typeof wordTokens[0] | null = null;
+
+    for (let i = 0; i < mergedWords.length; i++) {
+        const wt = mergedWords[i];
+        if (wt.isSpace) {
+            if (currentLineTokens.length > 0) {
+                pendingSpaceTok = wt;
+            }
+            continue;
+        }
+
+        const spaceW = pendingSpaceTok ? pendingSpaceTok.width : 0;
+        const testWidth = currentLineWidth + spaceW + wt.width;
+
+        if (currentLineTokens.length === 0) {
+            currentLineTokens.push({
+                ...wt.token,
+                text: wt.text
+            });
+            currentLineWidth = wt.width;
+            pendingSpaceTok = null;
+        } else if (testWidth <= maxW + 2) {
+            if (pendingSpaceTok) {
+                const prev = currentLineTokens[currentLineTokens.length - 1];
+                if (prev.bold === pendingSpaceTok.token.bold &&
+                    prev.italic === pendingSpaceTok.token.italic &&
+                    prev.color === pendingSpaceTok.token.color &&
+                    prev.sizeRatio === pendingSpaceTok.token.sizeRatio &&
+                    prev.font === pendingSpaceTok.token.font) {
+                    prev.text += pendingSpaceTok.text;
+                } else {
+                    currentLineTokens.push({ ...pendingSpaceTok.token, text: pendingSpaceTok.text });
+                }
+                currentLineWidth += spaceW;
+                pendingSpaceTok = null;
+            }
+
+            const prev = currentLineTokens[currentLineTokens.length - 1];
+            if (prev.bold === wt.token.bold &&
+                prev.italic === wt.token.italic &&
+                prev.color === wt.token.color &&
+                prev.sizeRatio === wt.token.sizeRatio &&
+                prev.font === wt.token.font) {
+                prev.text += wt.text;
+            } else {
+                currentLineTokens.push({ ...wt.token, text: wt.text });
+            }
+            currentLineWidth += wt.width;
+        } else {
+            subLines.push(currentLineTokens);
+            currentLineTokens = [{
+                ...wt.token,
+                text: wt.text
+            }];
+            currentLineWidth = wt.width;
+            pendingSpaceTok = null;
+        }
+    }
+
+    if (currentLineTokens.length > 0) {
+        subLines.push(currentLineTokens);
+    }
+
+    return subLines.length > 0 ? subLines : [lineToks];
+}
+
 /**
  * Shared canonical layout representation: Builds exact line tokens and measurements strictly adhering
  * to editor layout state (manual newlines, Diamond partition, rich text tokens) without re-partitioning words,
@@ -125,7 +280,7 @@ export function buildBlockTextLayout(
     const bh = (block.box.h / 100) * H;
 
     const fontName = getFontFamilyName(block.style.fontFamily);
-    const fontSizePx = (block.style.fontSize || 13) * scaleFactor;
+    const fontSizePx = (block.style.fontSize || 17) * scaleFactor;
     const currentLineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : 1.15;
     const lineHeightPx = fontSizePx * currentLineHeight;
     const letterSpacingPx = (block.style.letterSpacing || 0) * scaleFactor;
@@ -144,8 +299,8 @@ export function buildBlockTextLayout(
         padXPx = block.style.padding * scaleFactor;
         padYPx = block.style.padding * scaleFactor;
     } else {
-        padYPx = bh * 0.09;
-        padXPx = bw * 0.12;
+        padYPx = 4 * scaleFactor;
+        padXPx = 4 * scaleFactor;
     }
 
     const transformedText = transformCase(block.translated || '', block.style.textTransform || 'none');
@@ -266,7 +421,15 @@ export function buildBlockTextLayout(
         let maxLineWidth = 0;
         const lineMeasurements: Array<{ lineToks: any[]; lineWidth: number; rawChars?: Array<{ char: string; token: any }> }> = [];
 
+        const maxTextWidth = Math.max(10, bw - (padXPx * 2));
+
+        const effectiveLines: any[][] = [];
         tokenLines.forEach(lineToks => {
+            const wrappedSubLines = wrapTokenLineToWidth(measureCtx, lineToks, maxTextWidth, getFontFn, letterSpacingPx);
+            effectiveLines.push(...wrappedSubLines);
+        });
+
+        effectiveLines.forEach(lineToks => {
             let lineWidth = 0;
             const rawChars: Array<{ char: string; token: any }> = [];
 

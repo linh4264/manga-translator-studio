@@ -7,7 +7,7 @@ import { MangaBlock, MangaPage, BlockStyle } from '../../types/index';
 
 let isCurrentlySliding = false;
 export let copiedStyle: any = null;
-export const FONT_SIZE_STEPS = [8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72];
+export const FONT_SIZE_STEPS = [8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 20, 22, 24, 26, 28, 36, 48, 72];
 
 export function setCopiedStyle(val: any): void {
     copiedStyle = val;
@@ -48,10 +48,11 @@ export function shouldReflowDiamond(
     }
 
     const boxAspect = (targetWidth && targetHeight && targetHeight > 0) ? (targetWidth / targetHeight) : 0.85;
+    const baseFontSize = block.style.baseFontSize || 16;
 
     const lines = text.split('\n').filter(l => l.trim().length > 0);
     if (lines.length <= 1) {
-        if (words.length >= 4 && (boxAspect < 0.85 || finalFontSize < (block.style.baseFontSize || 16) * 0.85)) {
+        if (words.length >= 4 && (boxAspect < 0.85 || finalFontSize < baseFontSize * 0.85)) {
             return true;
         }
         return false;
@@ -126,7 +127,6 @@ export function shouldReflowDiamond(
     const estHeight = lines.length * (finalFontSize * (block.style.lineHeight || 1.15));
     const heightUtilization = estHeight / Math.max(1, maxAllowedHeight);
     const textAspect = maxLineWidth / Math.max(1, estHeight);
-    const baseFontSize = block.style.baseFontSize || 16;
 
     // 1. Width under-utilization: the widest line uses less than MIN_LINE_UTILIZATION (0.55) of available width
     if (maxLineUtilization < DIAMOND_REFLOW_THRESHOLDS.MIN_LINE_UTILIZATION) {
@@ -234,7 +234,7 @@ export function autoFitBlock(
 
     const ruler = elements.autoFitRuler || document.getElementById('auto-fit-ruler');
     if (!ruler) {
-        block.style.fontSize = 13;
+        block.style.fontSize = 17;
         return;
     }
 
@@ -263,9 +263,9 @@ export function autoFitBlock(
     ruler.style.letterSpacing = `${letterSpacing}px`;
     ruler.style.lineHeight = `${lineHeight}`;
     ruler.style.fontKerning = 'normal';
-    ruler.style.whiteSpace = 'pre';
+    ruler.style.whiteSpace = 'pre-wrap';
     ruler.style.wordBreak = 'keep-all';
-    ruler.style.overflowWrap = 'normal';
+    ruler.style.overflowWrap = 'break-word';
     ruler.style.hyphens = 'none';
     ruler.style.boxSizing = 'border-box';
 
@@ -821,11 +821,11 @@ export function syncActiveBlockTranslation(val: string): void {
                 const maskElem = overlayElem.firstElementChild as HTMLElement | null;
                 const zoomScale = (globalState.zoom || 100) / 100;
                 if (maskElem) {
-                    maskElem.style.fontSize = `${(block.style.fontSize || 13) * zoomScale}px`;
+                    maskElem.style.fontSize = `${(block.style.fontSize || 17) * zoomScale}px`;
                 }
                 const isAutoFit = isBlockAutoFit(block);
                 if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px${isAutoFit ? ' (Auto)' : ''}`;
-                if (elements.styleFontSize) elements.styleFontSize.value = String(block.style.fontSize || 13);
+                if (elements.styleFontSize) elements.styleFontSize.value = String(block.style.fontSize || 17);
             }
         }
 

@@ -11,23 +11,23 @@ import { balanceTextToBox } from '../../../src/features/canvas/canvas-renderer.t
 import { globalState } from '../../../src/core/state.ts';
 
 test('Canvas AutoFit - Toggle and Override Precedence', () => {
-    globalState.autoFitEnabled = true;
-
-    // 1. Block with no explicit style.autoFit should fallback to globalState.autoFitEnabled
-    const defaultBlock = { id: 'b1', style: { fontSize: 14 } };
-    assert.strictEqual(isBlockAutoFit(defaultBlock), true);
-
-    // 2. Block with style.autoFit = false must override global true
-    const manualBlock = { id: 'b2', style: { fontSize: 24, autoFit: false } };
-    assert.strictEqual(isBlockAutoFit(manualBlock), false);
-
-    // 3. Block with style.autoFit = true must override global false
     globalState.autoFitEnabled = false;
+
+    // 1. Block with no explicit style.autoFit should fallback to globalState.autoFitEnabled (false)
+    const defaultBlock = { id: 'b1', style: { fontSize: 14 } };
+    assert.strictEqual(isBlockAutoFit(defaultBlock), false);
+
+    // 2. Block with style.autoFit = true must override global false
     const explicitAutoBlock = { id: 'b3', style: { fontSize: 14, autoFit: true } };
     assert.strictEqual(isBlockAutoFit(explicitAutoBlock), true);
 
-    // Reset
+    // 3. Block with style.autoFit = false when global is true
     globalState.autoFitEnabled = true;
+    const manualBlock = { id: 'b2', style: { fontSize: 24, autoFit: false } };
+    assert.strictEqual(isBlockAutoFit(manualBlock), false);
+
+    // Reset
+    globalState.autoFitEnabled = false;
 });
 
 test('Canvas AutoFit - Strict Manual Font Preservation During Batch Auto-Fit', () => {
@@ -61,9 +61,10 @@ test('Canvas AutoFit - Strict Manual Font Preservation During Batch Auto-Fit', (
     assert.strictEqual(mockPage.blocks[1].style.autoFit, false);
 });
 
-test('Default Style - diamondWrap defaults to false', () => {
+test('Default Style - diamondWrap defaults to false and fontSize defaults to 17', () => {
     import('../../../src/config/constants.ts').then(({ DEFAULT_BLOCK_STYLE }) => {
         assert.strictEqual(DEFAULT_BLOCK_STYLE.diamondWrap, false, 'DEFAULT_BLOCK_STYLE.diamondWrap must be false');
+        assert.strictEqual(DEFAULT_BLOCK_STYLE.fontSize, 17, 'DEFAULT_BLOCK_STYLE.fontSize must be 17');
     });
 });
 

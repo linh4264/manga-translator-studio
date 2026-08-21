@@ -234,14 +234,16 @@ export function setMultilineText(target: HTMLElement | null, value: string, warp
             lineDiv.style.minHeight = 'auto';
         } else {
             lineDiv.style.width = '100%';
+            lineDiv.style.maxWidth = '100%';
+            lineDiv.style.boxSizing = 'border-box';
             lineDiv.style.height = 'auto';
             lineDiv.style.minHeight = '1em';
             lineDiv.style.minWidth = 'auto';
             lineDiv.style.display = 'block';
             lineDiv.style.textAlign = target.style.textAlign || 'center';
-            lineDiv.style.whiteSpace = 'pre';
+            lineDiv.style.whiteSpace = 'pre-wrap';
             lineDiv.style.wordBreak = 'keep-all';
-            lineDiv.style.overflowWrap = 'normal';
+            lineDiv.style.overflowWrap = 'break-word';
         }
         lineDiv.style.margin = '0';
         lineDiv.style.padding = '0';

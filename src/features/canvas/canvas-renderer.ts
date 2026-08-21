@@ -277,7 +277,7 @@ export function renderOverlays(
             }
 
             maskContent.style.wordBreak = 'keep-all';
-            maskContent.style.overflowWrap = 'normal';
+            maskContent.style.overflowWrap = 'break-word';
             maskContent.style.hyphens = 'none';
 
             maskContent.style.color = block.style.textColor || '#000000';
@@ -314,7 +314,7 @@ export function renderOverlays(
 
             maskContent.style.textAlign = block.style.align || 'center';
 
-            let displayFontSize = block.style.fontSize || 13;
+            let displayFontSize = block.style.fontSize || 17;
             if (forceExportScale !== 1) {
                 displayFontSize = displayFontSize * forceExportScale;
             } else {
@@ -697,80 +697,102 @@ export function measureWordTokens(
 
     const words: MeasuredWordToken[] = [];
 
+    const rawSegs: Array<{ seg: string; tok: any }> = [];
     tokens.forEach(tok => {
         const segs = tok.text.trim().split(/\s+/);
         segs.forEach((seg: string) => {
             if (!seg) return;
+            rawSegs.push({ seg, tok });
+        });
+    });
 
-            let tagPrefix = '';
-            let tagSuffix = '';
-            if (tok.bold && !baseStyle.bold) { tagPrefix += '[b]'; tagSuffix = '[/b]' + tagSuffix; }
-            if (tok.italic && !baseStyle.italic) { tagPrefix += '[i]'; tagSuffix = '[/i]' + tagSuffix; }
-            if (tok.underline && !baseStyle.underline) { tagPrefix += '[u]'; tagSuffix = '[/u]' + tagSuffix; }
-            if (tok.strikethrough && !baseStyle.strikethrough) { tagPrefix += '[s]'; tagSuffix = '[/s]' + tagSuffix; }
-            if (tok.color && tok.color !== baseStyle.color && tok.color !== baseStyle.textColor) { tagPrefix += `[color=${tok.color}]`; tagSuffix = '[/color]' + tagSuffix; }
-            if (tok.sizeRatio && tok.sizeRatio !== 1 && tok.sizeRatio !== baseStyle.sizeRatio) {
-                tagPrefix += `[size=${Math.round(tok.sizeRatio * 100)}%]`;
-                tagSuffix = '[/size]' + tagSuffix;
-            }
-            if (tok.font && tok.font !== baseStyle.font && tok.font !== baseStyle.fontFamily) { tagPrefix += `[font=${tok.font}]`; tagSuffix = '[/font]' + tagSuffix; }
+    const mergedSegs: Array<{ seg: string; tok: any }> = [];
+    for (let i = 0; i < rawSegs.length; i++) {
+        const item = rawSegs[i];
+        // If seg is purely trailing punctuation, merge it into the previous word token
+        const isPureTrailing = /^[.,!?:;~～…\-)\]”’]+$/.test(item.seg);
+        if (isPureTrailing && mergedSegs.length > 0) {
+            mergedSegs[mergedSegs.length - 1].seg += item.seg;
+            continue;
+        }
+        // If seg is purely opening punctuation and there is a next word, merge into next word
+        const isPureOpening = /^[(\[“‘]+$/.test(item.seg);
+        if (isPureOpening && i + 1 < rawSegs.length) {
+            rawSegs[i + 1].seg = item.seg + rawSegs[i + 1].seg;
+            continue;
+        }
+        mergedSegs.push({ seg: item.seg, tok: item.tok });
+    }
 
-            const sizeRatio = tok.sizeRatio || 1.0;
-            const wordStyle = {
-                bold: !!tok.bold || !!baseStyle.bold,
-                italic: !!tok.italic || !!baseStyle.italic,
-                underline: !!tok.underline || !!baseStyle.underline,
-                strikethrough: !!tok.strikethrough || !!baseStyle.strikethrough,
-                color: tok.color || null,
-                sizeRatio: sizeRatio,
-                font: tok.font || null,
-                fontFamily: tok.font || baseFontFamily,
-                fontSize: baseFontSize,
-                letterSpacing: baseLetterSpacing
-            };
+    mergedSegs.forEach(({ seg, tok }) => {
+        let tagPrefix = '';
+        let tagSuffix = '';
+        if (tok.bold && !baseStyle.bold) { tagPrefix += '[b]'; tagSuffix = '[/b]' + tagSuffix; }
+        if (tok.italic && !baseStyle.italic) { tagPrefix += '[i]'; tagSuffix = '[/i]' + tagSuffix; }
+        if (tok.underline && !baseStyle.underline) { tagPrefix += '[u]'; tagSuffix = '[/u]' + tagSuffix; }
+        if (tok.strikethrough && !baseStyle.strikethrough) { tagPrefix += '[s]'; tagSuffix = '[/s]' + tagSuffix; }
+        if (tok.color && tok.color !== baseStyle.color && tok.color !== baseStyle.textColor) { tagPrefix += `[color=${tok.color}]`; tagSuffix = '[/color]' + tagSuffix; }
+        if (tok.sizeRatio && tok.sizeRatio !== 1 && tok.sizeRatio !== baseStyle.sizeRatio) {
+            tagPrefix += `[size=${Math.round(tok.sizeRatio * 100)}%]`;
+            tagSuffix = '[/size]' + tagSuffix;
+        }
+        if (tok.font && tok.font !== baseStyle.font && tok.font !== baseStyle.fontFamily) { tagPrefix += `[font=${tok.font}]`; tagSuffix = '[/font]' + tagSuffix; }
 
-            const effLetterSpacing = baseLetterSpacing * sizeRatio;
-            const charCount = Array.from(seg).length;
-            const extraLetterSpacing = Math.max(0, charCount - 1) * effLetterSpacing;
+        const sizeRatio = tok.sizeRatio || 1.0;
+        const wordStyle = {
+            bold: !!tok.bold || !!baseStyle.bold,
+            italic: !!tok.italic || !!baseStyle.italic,
+            underline: !!tok.underline || !!baseStyle.underline,
+            strikethrough: !!tok.strikethrough || !!baseStyle.strikethrough,
+            color: tok.color || null,
+            sizeRatio: sizeRatio,
+            font: tok.font || null,
+            fontFamily: tok.font || baseFontFamily,
+            fontSize: baseFontSize,
+            letterSpacing: baseLetterSpacing
+        };
 
-            let width = 0;
-            let spaceWidth = 0;
+        const effLetterSpacing = baseLetterSpacing * sizeRatio;
+        const charCount = Array.from(seg).length;
+        const extraLetterSpacing = Math.max(0, charCount - 1) * effLetterSpacing;
 
-            if (ctx) {
-                const prevFont = ctx.font;
-                const fontStr = buildFontString(wordStyle, baseFontSize, baseFontFamily);
-                ctx.font = fontStr;
-                width = ctx.measureText(seg).width + extraLetterSpacing;
-                spaceWidth = ctx.measureText(' ').width + effLetterSpacing;
-                ctx.font = prevFont;
+        let width = 0;
+        let spaceWidth = 0;
+
+        if (ctx) {
+            const prevFont = ctx.font;
+            const fontStr = buildFontString(wordStyle, baseFontSize, baseFontFamily);
+            ctx.font = fontStr;
+            width = ctx.measureText(seg).width + extraLetterSpacing;
+            spaceWidth = ctx.measureText(' ').width + effLetterSpacing;
+            ctx.font = prevFont;
+        } else {
+            // Secondary engine: autoFitRuler DOM measurement (same engine as autoFitBlock)
+            const ruler = typeof document !== 'undefined' ? (elements.autoFitRuler || document.getElementById('auto-fit-ruler')) : null;
+            if (ruler) {
+                const prevFont = ruler.style.font;
+                const prevLetterSpacing = ruler.style.letterSpacing;
+                ruler.style.font = buildFontString(wordStyle, baseFontSize, baseFontFamily);
+                ruler.style.letterSpacing = `${effLetterSpacing}px`;
+                ruler.textContent = seg;
+                width = ruler.scrollWidth || ruler.getBoundingClientRect().width;
+                ruler.textContent = ' ';
+                spaceWidth = ruler.scrollWidth || ruler.getBoundingClientRect().width;
+                ruler.style.font = prevFont;
+                ruler.style.letterSpacing = prevLetterSpacing;
             } else {
-                // Secondary engine: autoFitRuler DOM measurement (same engine as autoFitBlock)
-                const ruler = typeof document !== 'undefined' ? (elements.autoFitRuler || document.getElementById('auto-fit-ruler')) : null;
-                if (ruler) {
-                    const prevFont = ruler.style.font;
-                    const prevLetterSpacing = ruler.style.letterSpacing;
-                    ruler.style.font = buildFontString(wordStyle, baseFontSize, baseFontFamily);
-                    ruler.style.letterSpacing = `${effLetterSpacing}px`;
-                    ruler.textContent = seg;
-                    width = ruler.scrollWidth || ruler.getBoundingClientRect().width;
-                    ruler.textContent = ' ';
-                    spaceWidth = ruler.scrollWidth || ruler.getBoundingClientRect().width;
-                    ruler.style.font = prevFont;
-                    ruler.style.letterSpacing = prevLetterSpacing;
-                } else {
-                    const effSize = baseFontSize * sizeRatio;
-                    width = Array.from(seg).length * (effSize * 0.6) + extraLetterSpacing;
-                    spaceWidth = effSize * 0.35 + effLetterSpacing;
-                }
+                const effSize = baseFontSize * sizeRatio;
+                width = Array.from(seg).length * (effSize * 0.6) + extraLetterSpacing;
+                spaceWidth = effSize * 0.35 + effLetterSpacing;
             }
+        }
 
-            words.push({
-                text: seg,
-                raw: `${tagPrefix}${seg}${tagSuffix}`,
-                width: Math.max(1, width),
-                style: wordStyle,
-                spaceWidth: Math.max(1, spaceWidth)
-            });
+        words.push({
+            text: seg,
+            raw: `${tagPrefix}${seg}${tagSuffix}`,
+            width: Math.max(1, width),
+            style: wordStyle,
+            spaceWidth: Math.max(1, spaceWidth)
         });
     });
 
@@ -1308,12 +1330,33 @@ export function balanceTextToBox(
     const normalized = text.replace(/\r\n/g, '\n');
     if (!normalized.trim()) return '';
 
+    const baseFontSize = styleOptions.baseFontSize || styleOptions.fontSize || 17;
+    const lineHeight = (styleOptions.lineHeight !== undefined ? styleOptions.lineHeight : 1.18) * baseFontSize;
+    const boxAspect = (boxW && boxH && boxH > 0) ? (boxW / boxH) : 0.85;
+
+    // If the box is wide / flat (aspect >= 2.2 or height cannot fit 2 lines),
+    // flatten all lines into a single row if it fits horizontally or to avoid vertical clipping
+    if (boxW && boxH && boxH > 0 && (boxAspect >= 2.2 || boxH < lineHeight * 1.85)) {
+        const cleanAll = normalized.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
+        const words = cleanAll.split(/\s+/);
+        const estTotalWidth = words.reduce((sum, w) => sum + Array.from(w).length * (baseFontSize * 0.55), 0) + (words.length - 1) * 6;
+        if (estTotalWidth <= boxW * 0.95 || boxH < lineHeight * 1.85) {
+            return cleanAll;
+        }
+    }
+
     if (normalized.includes('\n')) {
         const paragraphs = normalized.split('\n');
         const balancedParagraphs = paragraphs.map(p => {
             const trimmed = p.trim();
             if (!trimmed) return '';
             const words = trimmed.split(/\s+/);
+            if (words.length >= 2 && boxW && boxW > 0) {
+                const estWidth = words.reduce((sum, w) => sum + Array.from(w).length * (baseFontSize * 0.55), 0) + (words.length - 1) * 6;
+                if (estWidth > boxW * 0.88) {
+                    return balanceSingleParagraphToBox(trimmed, boxW, boxH, styleOptions);
+                }
+            }
             if (words.length >= 7) {
                 return balanceSingleParagraphToBox(trimmed, boxW, boxH, styleOptions);
             }

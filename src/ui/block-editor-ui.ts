@@ -245,9 +245,9 @@ function syncBlockStyleInputs(block: MangaBlock): void {
     const isAutoFit = isBlockAutoFit(block);
     if (elements.styleAutoFit) elements.styleAutoFit.checked = isAutoFit;
     if (elements.styleFont) elements.styleFont.value = block.style.fontFamily || globalState.defaultFont || 'font-manga';
-    if (elements.styleFontSize) elements.styleFontSize.value = String(block.style.fontSize || 13);
+    if (elements.styleFontSize) elements.styleFontSize.value = String(block.style.fontSize || 17);
     const fontSizeLbl = document.getElementById('lbl-font-size') || elements.lblFontSize;
-    if (fontSizeLbl) fontSizeLbl.innerText = `${block.style.fontSize || 13}px${isAutoFit ? ' (Auto)' : ''}`;
+    if (fontSizeLbl) fontSizeLbl.innerText = `${block.style.fontSize || 17}px${isAutoFit ? ' (Auto)' : ''}`;
     if (elements.styleAlign) elements.styleAlign.value = block.style.align || 'center';
     if (elements.styleBold) elements.styleBold.checked = !!block.style.bold;
 

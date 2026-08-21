@@ -20,8 +20,10 @@ test('Core State - Initialization and Defaults', () => {
     assert.strictEqual(globalState.translationPipelineMode, DEFAULT_PIPELINE_MODE, 'Pipeline mode should match default');
     assert.strictEqual(globalState.ocrModel, DEFAULT_OCR_MODEL, 'OCR model should match default');
     assert.strictEqual(globalState.translationModel, DEFAULT_TRANSLATION_MODEL, 'Translation model should match default');
+    assert.strictEqual(globalState.autoFitEnabled, false, 'autoFitEnabled must be false by default');
     assert.strictEqual(typeof globalState.globalStyle, 'object', 'globalStyle must be an object');
     assert.strictEqual(typeof globalState.globalStyle.fontFamily, 'string');
+    assert.strictEqual(globalState.globalStyle.fontSize, 17, 'Default global font size must be 17');
 });
 
 test('Core State - Storage Synchronization', () => {
