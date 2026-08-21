@@ -13,7 +13,9 @@ import {
     balanceTextToDiamond,
     balanceBlockDiamond,
     measureWordTokens,
-    getDiamondWidthProfile
+    getDiamondWidthProfile,
+    balanceSingleParagraphToBox,
+    balanceTextToBox
 } from '../../../src/features/canvas/canvas-renderer.ts';
 import { globalState } from '../../../src/core/state.ts';
 
@@ -324,7 +326,6 @@ test('Test I: User Scenario - Tall narrow bubble with moderate text distributes 
 });
 
 test('Test J: Standard Box Resize (diamondWrap: false) dynamically reflows lines to match new width/height', () => {
-    const { balanceSingleParagraphToBox } = require('../../../src/features/canvas/canvas-renderer.ts');
     const text = 'Thế này thì còn ý nghĩa gì nữa chứ.';
 
     // 1. In a moderately wide box (300px x 150px, aspect 2.0): fits in 2 lines
@@ -341,7 +342,6 @@ test('Test J: Standard Box Resize (diamondWrap: false) dynamically reflows lines
 });
 
 test('Test K: Extreme Box Resize - Extreme vertical becomes 1 column, extreme horizontal becomes 1 line', () => {
-    const { balanceSingleParagraphToBox } = require('../../../src/features/canvas/canvas-renderer.ts');
     const text = 'Đừng để chị ấy làm gì cả';
     const words = text.split(' ');
 

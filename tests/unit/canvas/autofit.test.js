@@ -7,6 +7,7 @@ import {
     autoFitBlock,
     autoFitAllBlocksOnPage
 } from '../../../src/features/canvas/canvas-styling.ts';
+import { balanceTextToBox } from '../../../src/features/canvas/canvas-renderer.ts';
 import { globalState } from '../../../src/core/state.ts';
 
 test('Canvas AutoFit - Toggle and Override Precedence', () => {
@@ -98,8 +99,6 @@ test('Canvas AutoFit & Manual Line Breaks - Multi-line manual breaks scale font 
 });
 
 test('Standard Balanced Line Wrap - balanceTextToBox breaks unbroken sentences into balanced lines for box aspect', () => {
-    const { balanceTextToBox } = require('../../../src/features/canvas/canvas-renderer.ts');
-
     // Tall bubble aspect (150px x 280px) with 8 words sentence
     const text = 'Thế này thì còn ý nghĩa gì nữa chứ.';
     const balanced = balanceTextToBox(text, 150, 280, { fontFamily: 'font-manga', fontSize: 16 });
