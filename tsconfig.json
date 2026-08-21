@@ -24,6 +24,7 @@
   },
   "include": [
     "src/**/*",
+    "cong-cu-huu-ich/**/*",
     "tests/**/*",
     "vite.config.ts"
   ]
