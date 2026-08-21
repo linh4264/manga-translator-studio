@@ -48,7 +48,7 @@ export function renderOverlays(
     }
 
     let activeImageData = page.imageDataCache || null;
-    const hasBubbleFit = page.blocks.some(block => (block.style.maskShape || 'bubble-fit') === 'bubble-fit');
+    const hasBubbleFit = page.blocks.some(block => (block.style?.maskShape || 'bubble-fit') === 'bubble-fit');
 
     if (hasBubbleFit && !activeImageData && imgElement && imgElement.naturalWidth > 0 && imgElement.naturalHeight > 0) {
         try {
@@ -88,6 +88,9 @@ export function renderOverlays(
     textsLayer.style.zIndex = '2';
 
     page.blocks.forEach((block) => {
+        if (!block || !block.box) return;
+        if (!block.style) block.style = {} as any;
+
         const coverEl = document.createElement('div');
         coverEl.id = isMirror ? `mirror-cover-${block.id}` : `cover-${block.id}`;
         coverEl.setAttribute('data-darkreader-ignore', 'true');
@@ -1108,6 +1111,27 @@ export function partitionWordsToTargetWidths(
     return resultLines;
 }
 
+export function partitionWordsToStandardLines(
+    words: MeasuredWordToken[],
+    k: number,
+    avgSpaceWidth: number = 6
+): string[] {
+    const n = words.length;
+    if (k <= 1 || n <= 1) {
+        return [words.map(w => w.raw).join(' ')];
+    }
+    if (k >= n) {
+        return words.map(w => w.raw);
+    }
+
+    const totalWordsWidth = words.reduce((sum, w) => sum + w.width, 0);
+    const totalTextWidth = totalWordsWidth + (n - 1) * avgSpaceWidth;
+    const targetWidth = totalTextWidth / k;
+    const targetWidths = Array(k).fill(targetWidth);
+
+    return partitionWordsToTargetWidths(words, targetWidths, avgSpaceWidth);
+}
+
 export function partitionWordsToDiamondLines(
     words: MeasuredWordToken[],
     k: number,
@@ -1130,6 +1154,175 @@ export function partitionWordsToDiamondLines(
     const targetWidths = profile.map(w => (w / totalWeight) * totalTextWidth);
 
     return partitionWordsToTargetWidths(words, targetWidths, avgSpaceWidth);
+}
+
+export function balanceSingleParagraphToBox(
+    text: string,
+    boxW: number | null = null,
+    boxH: number | null = null,
+    styleOptions: any = {}
+): string {
+    if (!text) return '';
+    const cleanText = text.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!cleanText) return '';
+
+    const words = measureWordTokens(cleanText, styleOptions);
+    const wordCount = words.length;
+    if (wordCount <= 1) return words.map(w => w.raw).join(' ');
+
+    const boxAspect = (boxW && boxH && boxH > 0) ? (boxW / boxH) : 0.85;
+    const avgSpaceWidth = words.reduce((acc, w) => acc + w.spaceWidth, 0) / wordCount;
+    const totalWordsWidth = words.reduce((acc, w) => acc + w.width, 0);
+    const totalTextWidth = totalWordsWidth + (wordCount - 1) * avgSpaceWidth;
+    const totalCleanChars = words.reduce((sum, w) => sum + w.text.length, 0) + (wordCount - 1);
+
+    const baseFontSize = styleOptions.baseFontSize || styleOptions.fontSize || 16;
+    const lineHeight = (styleOptions.lineHeight !== undefined ? styleOptions.lineHeight : 1.18) * baseFontSize;
+
+    // ==========================================
+    // EXTREME CASES:
+    // 1. Extreme Tall / Narrow (boxAspect <= 0.28): 1 word per line (1 vertical column)
+    // 2. Extreme Wide (boxAspect >= 2.4 or boxAspect >= 1.8 with short-medium text): 1 single horizontal row
+    // ==========================================
+    if (boxAspect <= 0.28 && wordCount >= 2) {
+        return words.map(w => w.raw).join('\n');
+    }
+    if ((boxAspect >= 2.4 || (boxAspect >= 1.8 && wordCount <= 8)) && wordCount >= 2) {
+        return words.map(w => w.raw).join(' ');
+    }
+
+    // ==========================================
+    // TIER 1: Ultra Short (2 - 3 words)
+    // ==========================================
+    if (wordCount <= 3) {
+        if (wordCount === 2) {
+            if (boxAspect < 0.6) {
+                return `${words[0].raw}\n${words[1].raw}`;
+            }
+            return words.map(w => w.raw).join(' ');
+        }
+        if (wordCount === 3) {
+            if (boxAspect < 0.4) {
+                return `${words[0].raw}\n${words[1].raw}\n${words[2].raw}`;
+            }
+            if (boxAspect >= 1.1 || (totalCleanChars <= 12 && boxAspect >= 0.85)) {
+                return words.map(w => w.raw).join(' ');
+            }
+            const len1 = words[0].width + words[1].width;
+            const len2 = words[1].width + words[2].width;
+            if (len1 <= len2) {
+                return `${words[0].raw} ${words[1].raw}\n${words[2].raw}`;
+            } else {
+                return `${words[0].raw}\n${words[1].raw} ${words[2].raw}`;
+            }
+        }
+    }
+
+    // ==========================================
+    // TIER 2 & 3: Multi-word text (>= 4 words)
+    // Determine candidate line range [minLines, maxAllowedLines] based on boxAspect
+    // ==========================================
+    let minLines = 2;
+    let maxAllowedLines = 3;
+
+    if (boxAspect < 0.38) {
+        // Very tall narrow box -> allow up to 1 word per line
+        minLines = Math.min(wordCount, Math.max(3, Math.ceil(wordCount / 2.0)));
+        maxAllowedLines = wordCount;
+    } else if (boxAspect < 0.75) {
+        // Moderate vertical box (e.g. standard tall manga oval bubble)
+        minLines = Math.min(wordCount, Math.max(2, Math.ceil(wordCount / 3.5)));
+        maxAllowedLines = Math.min(wordCount, Math.max(minLines, Math.ceil(wordCount / 2.4)));
+    } else if (boxAspect < 1.40) {
+        // Standard balanced box
+        minLines = Math.min(wordCount, Math.max(2, Math.ceil(wordCount / 4.5)));
+        maxAllowedLines = Math.min(wordCount, Math.max(minLines, Math.ceil(wordCount / 3.0)));
+    } else if (boxAspect < 2.40) {
+        // Wide box
+        minLines = 1;
+        maxAllowedLines = Math.min(wordCount, Math.max(1, Math.ceil(wordCount / 4.5)));
+    } else {
+        // Very wide box
+        minLines = 1;
+        maxAllowedLines = 1;
+    }
+
+    minLines = Math.max(1, Math.min(minLines, wordCount));
+    maxAllowedLines = Math.max(minLines, Math.min(maxAllowedLines, wordCount));
+
+    let bestNumLines = minLines;
+    let bestScore = Infinity;
+
+    for (let k = minLines; k <= maxAllowedLines; k++) {
+        const candidateLines = partitionWordsToStandardLines(words, k, avgSpaceWidth);
+        let maxLineWidth = 0;
+        let wordIdx = 0;
+        candidateLines.forEach(lineStr => {
+            const segs = lineStr.split(' ');
+            const lineTokens = words.slice(wordIdx, wordIdx + segs.length);
+            const lineW = lineTokens.reduce((sum, t) => sum + t.width, 0) + (lineTokens.length - 1) * avgSpaceWidth;
+            if (lineW > maxLineWidth) maxLineWidth = lineW;
+            wordIdx += segs.length;
+        });
+
+        const estHeight = k * lineHeight;
+        const candidateTextAspect = maxLineWidth / Math.max(1, estHeight);
+
+        let score = 0;
+        const aspectDiff = (candidateTextAspect - boxAspect) / Math.max(0.2, boxAspect);
+        score += aspectDiff * aspectDiff * 25;
+
+        if (boxW && boxH && boxH > 0) {
+            const availableW = boxW * 0.9;
+            const availableH = boxH * 0.9;
+            const widthFill = maxLineWidth / Math.max(1, availableW);
+            const heightFill = estHeight / Math.max(1, availableH);
+
+            if (widthFill > 1.0) {
+                score += (widthFill - 1.0) * 350;
+            }
+            if (heightFill > 1.0) {
+                score += (heightFill - 1.0) * 350;
+            }
+            const fillImbalance = Math.abs(widthFill - heightFill);
+            score += fillImbalance * 20;
+        }
+
+        if (score < bestScore) {
+            bestScore = score;
+            bestNumLines = k;
+        }
+    }
+
+    const finalLines = partitionWordsToStandardLines(words, bestNumLines, avgSpaceWidth);
+    return finalLines.join('\n');
+}
+
+export function balanceTextToBox(
+    text: string,
+    boxW: number | null = null,
+    boxH: number | null = null,
+    styleOptions: any = {}
+): string {
+    if (!text) return '';
+    const normalized = text.replace(/\r\n/g, '\n');
+    if (!normalized.trim()) return '';
+
+    if (normalized.includes('\n')) {
+        const paragraphs = normalized.split('\n');
+        const balancedParagraphs = paragraphs.map(p => {
+            const trimmed = p.trim();
+            if (!trimmed) return '';
+            const words = trimmed.split(/\s+/);
+            if (words.length >= 7) {
+                return balanceSingleParagraphToBox(trimmed, boxW, boxH, styleOptions);
+            }
+            return trimmed;
+        });
+        return balancedParagraphs.join('\n');
+    }
+
+    return balanceSingleParagraphToBox(normalized.trim(), boxW, boxH, styleOptions);
 }
 
 export function balanceSingleParagraphToDiamond(

@@ -16,11 +16,10 @@ import {
     TARGET_LANG_MAP
 } from '../../config/constants';
 import { elements } from '../../core/elements';
-import { showToast } from '../../core/utils/dom';
+import { showToast } from '../../core/utils';
 import { refineAiBlockBox, mergeOverlappingAiBlocks, extractTextAnchor } from '../ocr/ocr-service';
-import { requestOverlayRender, autoMatchBlockStyle } from '../canvas/canvas-service';
-import { autoFitBlock, isBlockAutoFit } from '../canvas/canvas-styling';
-import { balanceTextToDiamond } from '../canvas/canvas-renderer';
+import { requestOverlayRender, autoMatchBlockStyle, autoFitBlock, isBlockAutoFit } from '../canvas/canvas-service';
+import { balanceTextToDiamond, balanceTextToBox } from '../canvas/canvas-renderer';
 import { getConfiguredApiEndpoint, getGeminiGenerateContentUrl } from './ai-config';
 import {
     cancelTranslationFlag,
@@ -385,8 +384,6 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 italic = true;
             }
 
-            const shouldDiamondWrap = !blockVertical && blockType !== 'sfx';
-
             const blockStyle = {
                 fontFamily: chosenFont,
                 fontSize: b.style?.fontSize || globalState.globalStyle.fontSize,
@@ -405,7 +402,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 strokeWidth: b.style?.strokeWidth !== undefined ? b.style.strokeWidth : 0,
                 shadowColor: b.style?.shadowColor || '#000000',
                 shadowBlur: b.style?.shadowBlur !== undefined ? b.style.shadowBlur : 0,
-                diamondWrap: shouldDiamondWrap
+                diamondWrap: b.style?.diamondWrap || false
             };
 
             const rawTrans = (b.translated || '').trim();
@@ -430,17 +427,13 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
         page.blocks.forEach(b => {
             const rawTrans = (b.translated || '').trim();
             if (rawTrans) {
-                const cleanTrans = rawTrans.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-                const shouldDiamondWrap = !b.style?.vertical && b.type !== 'sfx';
-                if (b.style) {
-                    b.style.diamondWrap = shouldDiamondWrap;
-                }
-                if (shouldDiamondWrap) {
-                    const pixelW = (b.box.w / 100) * imgW;
-                    const pixelH = (b.box.h / 100) * imgH;
+                const pixelW = (b.box.w / 100) * imgW;
+                const pixelH = (b.box.h / 100) * imgH;
+                if (b.style?.diamondWrap && !b.style?.vertical && b.type !== 'sfx') {
+                    const cleanTrans = rawTrans.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
                     b.translated = balanceTextToDiamond(cleanTrans, pixelW, pixelH, b.style);
-                } else if (!b.style?.vertical) {
-                    b.translated = cleanTrans;
+                } else if (!b.style?.vertical && b.type !== 'sfx') {
+                    b.translated = balanceTextToBox(rawTrans, pixelW, pixelH, b.style);
                 } else {
                     b.translated = rawTrans;
                 }
@@ -646,8 +639,6 @@ export async function runBatchTranslation(): Promise<void> {
                                 italic = true;
                             }
 
-                            const shouldDiamondWrap = !blockVertical && blockType !== 'sfx';
-
                             return {
                                 id: `p${pageIndex + 1}_b${bIdx + 1}`,
                                 type: blockType,
@@ -672,7 +663,7 @@ export async function runBatchTranslation(): Promise<void> {
                                     strokeWidth: b.style?.strokeWidth !== undefined ? b.style.strokeWidth : 0,
                                     shadowColor: b.style?.shadowColor || '#000000',
                                     shadowBlur: b.style?.shadowBlur !== undefined ? b.style.shadowBlur : 0,
-                                    diamondWrap: shouldDiamondWrap
+                                    diamondWrap: b.style?.diamondWrap || false
                                 },
                                 ...(textAnchor ? { textAnchor } : {})
                             };
@@ -780,19 +771,14 @@ export async function runBatchTranslation(): Promise<void> {
 
                                 p.blocks.forEach((b) => {
                                     const rawTrans = (b.translated || '').trim();
-                                    const shouldDiamond = !b.style?.vertical && b.type !== 'sfx';
-                                    if (b.style) {
-                                        b.style.diamondWrap = shouldDiamond;
-                                    }
-
                                     if (rawTrans) {
-                                        const cleanTrans = rawTrans.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-                                        if (shouldDiamond) {
-                                            const pixelW = b.box ? (b.box.w / 100) * imgW : 200;
-                                            const pixelH = b.box ? (b.box.h / 100) * imgH : 200;
+                                        const pixelW = b.box ? (b.box.w / 100) * imgW : 200;
+                                        const pixelH = b.box ? (b.box.h / 100) * imgH : 200;
+                                        if (b.style?.diamondWrap && !b.style?.vertical && b.type !== 'sfx') {
+                                            const cleanTrans = rawTrans.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
                                             b.translated = balanceTextToDiamond(cleanTrans, pixelW, pixelH, b.style);
-                                        } else if (!b.style?.vertical) {
-                                            b.translated = cleanTrans;
+                                        } else if (!b.style?.vertical && b.type !== 'sfx') {
+                                            b.translated = balanceTextToBox(rawTrans, pixelW, pixelH, b.style);
                                         } else {
                                             b.translated = rawTrans;
                                         }

@@ -310,7 +310,8 @@ export const DEFAULT_BLOCK_STYLE: BlockStyle = {
     skewX: 0,
     skewY: 0,
     warpWave: 0,
-    warpBulge: 0
+    warpBulge: 0,
+    diamondWrap: false
 };
 
 export const PRO_STYLE_PRESETS: Record<string, any> = {

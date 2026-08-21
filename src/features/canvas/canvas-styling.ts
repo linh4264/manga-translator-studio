@@ -1,7 +1,7 @@
 import { globalState, pushStateToHistory, savePageToDB, debounceSavePage, uiUpdateActiveBlockEditor, markPageAutoFitDirty, PRO_STYLE_PRESETS } from '../../core/state';
 import { elements } from '../../core/elements';
 import { showToast, setMultilineText, cleanMangaPunctuation } from '../../core/utils';
-import { requestOverlayRender, balanceTextToDiamond } from './canvas-renderer';
+import { requestOverlayRender, balanceTextToDiamond, balanceSingleParagraphToBox } from './canvas-renderer';
 import { updateFloatingToolbarPosition } from './canvas-interactions';
 import { MangaBlock, MangaPage, BlockStyle } from '../../types/index';
 
@@ -47,14 +47,18 @@ export function shouldReflowDiamond(
         return false;
     }
 
+    const boxAspect = (targetWidth && targetHeight && targetHeight > 0) ? (targetWidth / targetHeight) : 0.85;
+
     const lines = text.split('\n').filter(l => l.trim().length > 0);
     if (lines.length <= 1) {
+        if (words.length >= 4 && (boxAspect < 0.85 || finalFontSize < (block.style.baseFontSize || 16) * 0.85)) {
+            return true;
+        }
         return false;
     }
 
     // Measure line widths at finalFontSize
     const ruler = elements.autoFitRuler || (typeof document !== 'undefined' ? document.getElementById('auto-fit-ruler') : null);
-    const boxAspect = (targetWidth && targetHeight && targetHeight > 0) ? (targetWidth / targetHeight) : 0.85;
 
     let maxLineWidth = 0;
     const lineWidths: number[] = [];
@@ -130,20 +134,20 @@ export function shouldReflowDiamond(
     }
 
     // 2. Height under-utilization in tall boxes (aspect < 0.75) where text was squeezed into too few lines
-    if (boxAspect < 0.75 && heightUtilization < 0.45 && words.length >= 6) {
+    if (boxAspect < 0.75 && heightUtilization < 0.45 && words.length >= 4) {
         return true;
     }
 
     // 3. Severe font shrinkage while having plenty of vertical headroom
-    if (finalFontSize < baseFontSize * 0.75 && heightUtilization < 0.55 && words.length >= 6) {
+    if (finalFontSize < baseFontSize * 0.75 && heightUtilization < 0.55 && words.length >= 4) {
         return true;
     }
 
     // 4. Aspect ratio mismatch: wide text in tall box OR tall text in wide box
-    if (boxAspect < 0.60 && textAspect > 1.15 && words.length >= 6) {
+    if (boxAspect < 0.60 && textAspect > 1.15 && words.length >= 4) {
         return true;
     }
-    if (boxAspect > 1.40 && textAspect < 0.65 && words.length >= 6) {
+    if (boxAspect > 1.40 && textAspect < 0.65 && words.length >= 4) {
         return true;
     }
 
@@ -349,16 +353,14 @@ export function autoFitBlock(
 
     block.style.fontSize = optimalSize;
 
-    // Coordination: If Diamond is active and layout needs reflow at optimal font size, perform single reflow
-    if (allowDiamondReflow && isDiamondWrap && !isVertical && block.type !== 'sfx') {
+    // Coordination: Auto-reflow line breaks if layout is suboptimal or text is unbroken
+    if (allowDiamondReflow && !isVertical && block.type !== 'sfx') {
         const needReflow = shouldReflowDiamond(block, optimalSize, maxAllowedWidth, maxAllowedHeight, targetWidth, targetHeight);
         if (needReflow) {
             const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-            const reflowed = balanceTextToDiamond(cleanText, targetWidth, targetHeight, {
-                ...block.style,
-                fontSize: optimalSize,
-                baseFontSize: optimalSize
-            });
+            const reflowed = isDiamondWrap
+                ? balanceTextToDiamond(cleanText, targetWidth, targetHeight, { ...block.style, fontSize: optimalSize, baseFontSize: optimalSize })
+                : balanceSingleParagraphToBox(cleanText, targetWidth, targetHeight, { ...block.style, fontSize: optimalSize, baseFontSize: optimalSize });
             if (reflowed && reflowed !== block.translated) {
                 block.translated = reflowed;
                 block.autoFitCache = null;

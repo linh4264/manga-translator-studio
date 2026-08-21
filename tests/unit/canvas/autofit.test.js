@@ -59,3 +59,69 @@ test('Canvas AutoFit - Strict Manual Font Preservation During Batch Auto-Fit', (
     assert.strictEqual(mockPage.blocks[1].style.fontSize, 36, 'Manual block font size must be strictly preserved');
     assert.strictEqual(mockPage.blocks[1].style.autoFit, false);
 });
+
+test('Default Style - diamondWrap defaults to false', () => {
+    import('../../../src/config/constants.ts').then(({ DEFAULT_BLOCK_STYLE }) => {
+        assert.strictEqual(DEFAULT_BLOCK_STYLE.diamondWrap, false, 'DEFAULT_BLOCK_STYLE.diamondWrap must be false');
+    });
+});
+
+test('Canvas AutoFit & Manual Line Breaks - Multi-line manual breaks scale font size appropriately', () => {
+    globalState.autoFitEnabled = true;
+
+    // Single long line block vs 3-line manually broken block in a square speech bubble (20% x 20%)
+    const singleLineBlock = {
+        id: 'b_single',
+        type: 'dialogue',
+        translated: 'Đây là một câu thoại dài cần được hiển thị',
+        box: { x: 30, y: 30, w: 20, h: 20 },
+        style: { fontFamily: 'font-manga', fontSize: 14 }
+    };
+
+    const multiLineBlock = {
+        id: 'b_multi',
+        type: 'dialogue',
+        translated: 'Đây là một\ncâu thoại dài\ncần được hiển thị',
+        box: { x: 30, y: 30, w: 20, h: 20 },
+        style: { fontFamily: 'font-manga', fontSize: 14 }
+    };
+
+    autoFitBlock(singleLineBlock);
+    autoFitBlock(multiLineBlock);
+
+    // Multi-line block has shorter individual line widths, so AutoFit can fit larger font size in the same box
+    assert.ok(multiLineBlock.style.fontSize >= singleLineBlock.style.fontSize,
+        `Multi-line block font size (${multiLineBlock.style.fontSize}px) should be >= single-line block font size (${singleLineBlock.style.fontSize}px)`);
+
+    // Ensure manual breaks are preserved without being flattened
+    assert.strictEqual(multiLineBlock.translated, 'Đây là một\ncâu thoại dài\ncần được hiển thị', 'Manual line breaks must be strictly preserved');
+});
+
+test('Standard Balanced Line Wrap - balanceTextToBox breaks unbroken sentences into balanced lines for box aspect', () => {
+    const { balanceTextToBox } = require('../../../src/features/canvas/canvas-renderer.ts');
+
+    // Tall bubble aspect (150px x 280px) with 8 words sentence
+    const text = 'Thế này thì còn ý nghĩa gì nữa chứ.';
+    const balanced = balanceTextToBox(text, 150, 280, { fontFamily: 'font-manga', fontSize: 16 });
+
+    assert.ok(balanced.includes('\n'), 'Sentence must be broken into multiple lines');
+    const lines = balanced.split('\n');
+    assert.ok(lines.length >= 2 && lines.length <= 4, `Should be broken into 2-4 lines, got ${lines.length}`);
+
+    // Verify all original words are preserved
+    const wordsInLines = lines.flatMap(l => l.split(' '));
+    assert.strictEqual(wordsInLines.join(' '), text);
+
+    // AutoFit on balanced text produces a readable font size (> 12px) instead of collapsing
+    const block = {
+        id: 'b_user_case',
+        type: 'dialogue',
+        translated: balanced,
+        box: { x: 20, y: 20, w: 20, h: 40 },
+        style: { fontFamily: 'font-manga', fontSize: 14 }
+    };
+    autoFitBlock(block);
+    assert.ok(block.style.fontSize >= 12, `Font size should be readable (>=12px), got ${block.style.fontSize}px`);
+});
+
+

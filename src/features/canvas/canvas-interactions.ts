@@ -1,9 +1,9 @@
 import { globalState, pushStateToHistory, savePageToDB, uiUpdateActiveBlockEditor, uiUpdateSplitView } from '../../core/state';
 import { elements } from '../../core/elements';
 import { DEFAULT_VERTICAL_WRITING_MODE, DEFAULT_BLOCK_SIZE_PX } from '../../config/constants';
-import { requestOverlayRender, balanceTextToDiamond } from './canvas-renderer';
+import { requestOverlayRender, balanceTextToDiamond, balanceSingleParagraphToBox } from './canvas-renderer';
 import { autoFitBlock, isBlockAutoFit, copiedStyle } from './canvas-styling';
-import { showToast } from '../../core/utils';
+import { showToast, setMultilineText } from '../../core/utils';
 import { MangaBlock, BlockStyle } from '../../types/index';
 
 let spacePanActive = false;
@@ -231,17 +231,23 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
             resizeRafId = requestAnimationFrame(() => {
                 resizeRafId = null;
                 block.autoFitCache = null;
-                if (block.style?.diamondWrap && block.translated && !block.style?.vertical && block.type !== 'sfx') {
+                const activePage = globalState.pages[globalState.activePageIndex];
+                const imgEl = elements.mangaBgImage;
+                const W = (activePage?.imageDataCache?.width) || (imgEl && imgEl.naturalWidth > 0 ? imgEl.naturalWidth : (elements.mangaCanvas?.width || 800));
+                const H = (activePage?.imageDataCache?.height) || (imgEl && imgEl.naturalHeight > 0 ? imgEl.naturalHeight : (elements.mangaCanvas?.height || 1200));
+                const pixelW = (block.box.w / 100) * W;
+                const pixelH = (block.box.h / 100) * H;
+
+                if (block.translated && !block.style?.vertical && block.type !== 'sfx') {
                     const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-                    const imgEl = elements.mangaBgImage;
-                    const W = imgEl?.naturalWidth || 800;
-                    const H = imgEl?.naturalHeight || 1200;
-                    const pixelW = (block.box.w / 100) * W;
-                    const pixelH = (block.box.h / 100) * H;
-                    block.translated = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
+                    if (block.style?.diamondWrap) {
+                        block.translated = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
+                    } else {
+                        block.translated = balanceSingleParagraphToBox(cleanText, pixelW, pixelH, block.style);
+                    }
                 }
                 if (isBlockAutoFit(block)) {
-                    autoFitBlock(block);
+                    autoFitBlock(block, null, 1, null, false);
                     const zoomScale = (globalState.zoom || 100) / 100;
                     const maskElem = blockElem?.firstElementChild as HTMLElement | null;
                     if (maskElem) {
@@ -249,6 +255,22 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
                     }
                     if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px (Auto)`;
                     if (elements.styleFontSize) elements.styleFontSize.value = String(block.style.fontSize || 13);
+                }
+                const maskElem = blockElem?.firstElementChild as HTMLElement | null;
+                const textContainer = maskElem?.firstElementChild as HTMLElement | null;
+                if (textContainer) {
+                    const zoomScale = (globalState.zoom || 100) / 100;
+                    const warpOpts = {
+                        arcAngle: block.style?.arcAngle || 0,
+                        skewX: block.style?.skewX || 0,
+                        skewY: block.style?.skewY || 0,
+                        warpWave: block.style?.warpWave || 0,
+                        warpBulge: block.style?.warpBulge || 0,
+                        textTransform: block.style?.textTransform || 'none',
+                        letterSpacing: (block.style?.letterSpacing || 0) * zoomScale,
+                        underline: !!block.style?.underline
+                    };
+                    setMultilineText(textContainer, block.translated, warpOpts);
                 }
             });
         }
@@ -267,14 +289,19 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
 
         block.maskCache = null;
         block.autoFitCache = null;
-        if (block.style?.diamondWrap && block.translated && !block.style?.vertical && block.type !== 'sfx') {
+        if (block.translated && !block.style?.vertical && block.type !== 'sfx') {
             const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
+            const activePage = globalState.pages[globalState.activePageIndex];
             const imgEl = elements.mangaBgImage;
-            const W = imgEl?.naturalWidth || 800;
-            const H = imgEl?.naturalHeight || 1200;
+            const W = (activePage?.imageDataCache?.width) || (imgEl && imgEl.naturalWidth > 0 ? imgEl.naturalWidth : (elements.mangaCanvas?.width || 800));
+            const H = (activePage?.imageDataCache?.height) || (imgEl && imgEl.naturalHeight > 0 ? imgEl.naturalHeight : (elements.mangaCanvas?.height || 1200));
             const pixelW = (block.box.w / 100) * W;
             const pixelH = (block.box.h / 100) * H;
-            block.translated = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
+            if (block.style?.diamondWrap) {
+                block.translated = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
+            } else {
+                block.translated = balanceSingleParagraphToBox(cleanText, pixelW, pixelH, block.style);
+            }
             if (elements.editTranslatedText && block.id === globalState.selectedBlockId) {
                 elements.editTranslatedText.value = block.translated;
             }

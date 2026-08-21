@@ -322,3 +322,40 @@ test('Test I: User Scenario - Tall narrow bubble with moderate text distributes 
     // Font size should remain readable (>= 12px) rather than collapsing to tiny 8px
     assert.ok(mockBlock.style.fontSize >= 12, `Font size should remain >= 12px in tall box, got ${mockBlock.style.fontSize}px`);
 });
+
+test('Test J: Standard Box Resize (diamondWrap: false) dynamically reflows lines to match new width/height', () => {
+    const { balanceSingleParagraphToBox } = require('../../../src/features/canvas/canvas-renderer.ts');
+    const text = 'Thế này thì còn ý nghĩa gì nữa chứ.';
+
+    // 1. In a moderately wide box (300px x 150px, aspect 2.0): fits in 2 lines
+    const wideLines = balanceSingleParagraphToBox(text, 300, 150, { fontSize: 16 }).split('\n');
+    assert.ok(wideLines.length <= 2, 'Moderately wide box should break into 1-2 lines');
+
+    // 2. Dragging box to be taller and narrower (140px x 280px, aspect ~0.5): automatically reflows to 3-4 lines
+    const tallLines = balanceSingleParagraphToBox(text, 140, 280, { fontSize: 16 }).split('\n');
+    assert.ok(tallLines.length >= 3 && tallLines.length <= 4, `Tall narrow box should break into 3-4 lines, got ${tallLines.length}`);
+
+    // 3. Verify text content integrity
+    assert.strictEqual(wideLines.join(' '), text);
+    assert.strictEqual(tallLines.join(' '), text);
+});
+
+test('Test K: Extreme Box Resize - Extreme vertical becomes 1 column, extreme horizontal becomes 1 line', () => {
+    const { balanceSingleParagraphToBox } = require('../../../src/features/canvas/canvas-renderer.ts');
+    const text = 'Đừng để chị ấy làm gì cả';
+    const words = text.split(' ');
+
+    // 1. Extreme vertical squeeze (80px x 400px, aspect = 0.20): becomes 1 vertical column (1 word per line)
+    const columnText = balanceSingleParagraphToBox(text, 80, 400, { fontSize: 16 });
+    const columnLines = columnText.split('\n');
+    assert.strictEqual(columnLines.length, words.length, `Extreme vertical should be 1 word per line (${words.length} lines), got ${columnLines.length}`);
+    assert.deepStrictEqual(columnLines, words);
+
+    // 2. Extreme horizontal stretch (600px x 100px, aspect = 6.0): becomes 1 single horizontal row
+    const rowText = balanceSingleParagraphToBox(text, 600, 100, { fontSize: 16 });
+    const rowLines = rowText.split('\n');
+    assert.strictEqual(rowLines.length, 1, 'Extreme horizontal should be 1 single line');
+    assert.strictEqual(rowText, text);
+});
+
+
