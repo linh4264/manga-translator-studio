@@ -511,27 +511,141 @@
 
             <!-- Sub-Navigation Pills -->
             <div class="flex items-center justify-between flex-wrap gap-3 pb-2 border-b border-slate-800">
-                <div class="flex items-center p-1 bg-slate-900 border border-slate-800 rounded-xl gap-1">
-                    <button type="button" id="btn-subtab-fontmatch-analyze" onclick="switchFontMatchSubTab('analyze')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white shadow flex items-center gap-1.5">
-                        <i class="fa-solid fa-wand-magic-sparkles"></i> Phân Tích & Gợi Ý Font
+                <div class="flex items-center p-1 bg-slate-900 border border-slate-800 rounded-xl gap-1 flex-wrap">
+                    <button type="button" id="btn-subtab-fontmatch-set" onclick="switchFontMatchSubTab('set')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white shadow flex items-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-layer-group"></i> Gợi Ý Font Set Theo Thể Loại
                     </button>
-                    <button type="button" id="btn-subtab-fontmatch-custom" onclick="switchFontMatchSubTab('custom')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+                    <button type="button" id="btn-subtab-fontmatch-analyze" onclick="switchFontMatchSubTab('analyze')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-bullseye"></i> So Khớp Theo Ảnh Đơn
+                    </button>
+                    <button type="button" id="btn-subtab-fontmatch-custom" onclick="switchFontMatchSubTab('custom')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5 cursor-pointer">
                         <i class="fa-solid fa-folder-plus"></i> Kho Font Của Bạn <span id="fontmatch-custom-badge" class="px-1.5 py-0.2 rounded-full bg-slate-800 text-[10px] font-mono text-indigo-400">0</span>
                     </button>
-                    <button type="button" id="btn-subtab-fontmatch-guide" onclick="switchFontMatchSubTab('guide')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+                    <button type="button" id="btn-subtab-fontmatch-guide" onclick="switchFontMatchSubTab('guide')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5 cursor-pointer">
                         <i class="fa-solid fa-book-open"></i> Quy Chuẩn Font Manga
                     </button>
                 </div>
 
                 <div class="flex items-center gap-2">
                     <span class="text-[11px] px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 font-semibold flex items-center gap-1">
-                        <i class="fa-solid fa-bolt-lightning text-amber-400"></i> Hỗ trợ Gemini Flash-Lite & Offline
+                        <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> GENRE → STYLE PROFILE → FONT SET
                     </span>
                 </div>
             </div>
 
+            <!-- ================= SUB-PANEL 0: GENRE FONT SET RECOMMENDER (PRIMARY) ================= -->
+            <div id="fontmatch-panel-set" class="flex flex-col gap-6">
+                <!-- Top Control & Preset Selection Card -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4 shadow-xl">
+                    <div class="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-800">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+                                Thiết Lập Bộ Phông Chữ Toàn Dự Án (Project Font Set)
+                            </h3>
+                            <p class="text-xs text-slate-400 mt-0.5">Tự động cấu hình 6 role typography manga nhất quán dựa trên thể loại hoặc phân tích ảnh mẫu bằng AI.</p>
+                        </div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button type="button" onclick="copyFontSetSummary()" class="px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs font-bold border border-slate-800 transition-colors flex items-center gap-1.5 cursor-pointer" title="Sao chép tên phông chữ các role">
+                                <i class="fa-solid fa-copy"></i> Sao Chép Tóm Tắt
+                            </button>
+                            <button type="button" onclick="copyFontSetJson()" class="px-3 py-1.5 rounded-xl bg-slate-950 hover:bg-slate-800 text-slate-300 text-xs font-bold border border-slate-800 transition-colors flex items-center gap-1.5 cursor-pointer" title="Sao chép JSON cấu hình">
+                                <i class="fa-solid fa-code"></i> Sao Chép JSON
+                            </button>
+                            <button type="button" onclick="generateAndDisplayFontSet()" class="px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 text-xs font-bold border border-indigo-500/30 transition-colors flex items-center gap-1.5 cursor-pointer" title="Khôi phục gợi ý tối ưu ban đầu">
+                                <i class="fa-solid fa-rotate-left"></i> Đặt Lại Gợi Ý
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                        <!-- Select Genre Preset (Fast) -->
+                        <div class="lg:col-span-5 flex flex-col gap-3">
+                            <label class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                                <i class="fa-solid fa-tags text-indigo-400"></i> 1. Chọn Thể Loại / Phong Cách Manga
+                            </label>
+                            <select id="fontset-genre-select" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-indigo-300 font-bold focus:outline-none focus:border-indigo-500">
+                                <option value="romance" selected>🌸 Soft Romance (Lãng Mạn / Shoujo / Cảm Xúc Dịu Dàng)</option>
+                                <option value="comedy">🤣 Cute / Comedy (Hài Hước / Đời Thường / Nhí Nhố / Vui Vẻ)</option>
+                                <option value="modern">🏙️ Clean Modern (Hiện Đại / Học Đường / Webtoon / Tối Giản)</option>
+                                <option value="action">💥 Action / Impact (Hành Động / Shounen / Võ Thuật / Bùng Nổ)</option>
+                                <option value="dark">🦇 Dark / Gothic (Kinh Dị / Huyền Bí / Tâm Lý / Seinen U Tối)</option>
+                                <option value="fantasy">👑 Fantasy / Elegant (Kỳ Ảo / Hoàng Cung / Cổ Trang / Quý Tộc)</option>
+                            </select>
+                            <p class="text-[11px] text-slate-400">Hệ thống sẽ đối chiếu với kho font cá nhân của bạn để chọn ra bộ 6 font hài hòa nhất.</p>
+                        </div>
+
+                        <!-- Upload Sample Pages for AI Vision Analysis (Optional) -->
+                        <div class="lg:col-span-7 flex flex-col gap-2.5">
+                            <label class="text-xs font-bold text-slate-300 flex items-center justify-between">
+                                <span class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-wand-magic-sparkles text-purple-400"></i> 2. Hoặc Phân Tích 1-3 Trang Mẫu Qua AI Vision
+                                </span>
+                                <span class="text-[10px] text-slate-400 font-normal">Tự động nhận diện Genre & Style Profile</span>
+                            </label>
+
+                            <div class="flex items-center gap-3">
+                                <!-- Dropzone -->
+                                <div id="genre-sample-dropzone" onclick="document.getElementById('genre-sample-files-input').click()" class="flex-1 border border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-950/60 hover:bg-slate-950/90 rounded-xl p-3 text-center flex items-center justify-center gap-2 cursor-pointer transition-all">
+                                    <input type="file" id="genre-sample-files-input" accept="image/*" multiple class="hidden">
+                                    <i class="fa-solid fa-cloud-arrow-up text-indigo-400 text-sm"></i>
+                                    <span class="text-xs text-slate-300 font-medium">Tải 1-3 trang manga mẫu</span>
+                                </div>
+
+                                <!-- Thumbs Preview Box (Hidden initially) -->
+                                <div id="genre-sample-preview-box" class="hidden flex-1 flex items-center justify-between p-2 bg-slate-950 border border-slate-800 rounded-xl">
+                                    <div id="genre-sample-thumbs-container" class="flex items-center gap-1.5 overflow-hidden">
+                                        <!-- Thumbs rendered dynamically -->
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span id="genre-sample-count" class="text-[10px] text-slate-400 font-mono">0 trang</span>
+                                        <button type="button" onclick="resetGenreSampleImages()" class="text-slate-400 hover:text-red-400 text-xs p-1" title="Xóa ảnh mẫu">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Run AI Button -->
+                                <button type="button" id="btn-run-genre-ai" onclick="runAiGenreAnalysis()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer">
+                                    <i class="fa-solid fa-wand-magic-sparkles"></i> Phân Tích & Sinh Font Set
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Font Set Overview & 6 Roles Grid -->
+                <div class="flex flex-col gap-4">
+                    <!-- Preset Header Badge Card -->
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-3 shadow-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-lg">
+                                <i class="fa-solid fa-book-bookmark"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <h3 id="fontset-title" class="text-sm font-bold text-slate-100">Soft Romance</h3>
+                                    <span id="fontset-tone-badge" class="px-2 py-0.5 rounded-lg bg-indigo-500/15 text-indigo-300 text-[10px] font-semibold border border-indigo-500/30">Dịu dàng, cảm xúc, mềm mại</span>
+                                </div>
+                                <p id="fontset-visual-desc" class="text-[11px] text-slate-400 mt-0.5">Nét chữ tròn mềm, thanh thoát, xen lẫn chữ viết tay nhẹ nhàng.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="fontset-core-count" class="px-3 py-1 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-emerald-400 font-bold">
+                                Sử dụng 3 phông chữ chủ đạo
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 6 Role Cards Grid -->
+                    <div id="fontset-roles-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Rendered dynamically by renderFontSetUI -->
+                    </div>
+                </div>
+            </div>
+
             <!-- ================= SUB-PANEL 1: ANALYZE & FONT MATCHER ================= -->
-            <div id="fontmatch-panel-analyze" class="flex flex-col gap-6">
+            <div id="fontmatch-panel-analyze" class="hidden flex flex-col gap-6">
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
                     <!-- LEFT COLUMN: IMAGE UPLOAD & CONTROLS -->
@@ -888,6 +1002,80 @@
                         </div>
                     </div>
 
+                    <!-- Typography Morphology 4-Dimensional Filter Bar -->
+                    <div class="bg-slate-950/80 p-3.5 rounded-2xl border border-slate-800 flex flex-col gap-3 shadow-inner">
+                        <div class="flex items-center justify-between flex-wrap gap-2">
+                            <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                <i class="fa-solid fa-layer-group text-indigo-400"></i>
+                                Phân Loại Hình Thái Học (Morphology Filter)
+                            </span>
+                            <button type="button" onclick="resetCustomFontFilters()" class="text-[11px] text-slate-400 hover:text-red-400 font-bold flex items-center gap-1 transition-colors cursor-pointer" title="Đặt lại tất cả thuộc tính lọc">
+                                <i class="fa-solid fa-arrows-rotate text-[10px]"></i> Đặt lại lọc
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                            <!-- 1. Weight Filter -->
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[10.5px] font-bold text-slate-300 flex items-center gap-1">
+                                    <i class="fa-solid fa-bold text-indigo-400 text-[10px]"></i> Weight (Độ Đậm)
+                                </label>
+                                <select id="fontmatch-filter-weight" onchange="onCustomFontFilterChange()" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
+                                    <option value="all">Mọi độ đậm (Tất cả)</option>
+                                    <option value="Thin">Thin (Rất Mảnh)</option>
+                                    <option value="Light">Light (Nét Thanh)</option>
+                                    <option value="Regular">Regular (Chuẩn Đều)</option>
+                                    <option value="Medium">Medium (Đậm Vừa)</option>
+                                    <option value="SemiBold">SemiBold (Bán Đậm)</option>
+                                    <option value="Bold">Bold (Đậm Nổi)</option>
+                                    <option value="Black">Black (Cực Đậm / Khối)</option>
+                                </select>
+                            </div>
+
+                            <!-- 2. Width Filter -->
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[10.5px] font-bold text-slate-300 flex items-center gap-1">
+                                    <i class="fa-solid fa-arrows-left-right text-fuchsia-400 text-[10px]"></i> Width (Chiều Ngang)
+                                </label>
+                                <select id="fontmatch-filter-width" onchange="onCustomFontFilterChange()" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
+                                    <option value="all">Mọi chiều ngang (Tất cả)</option>
+                                    <option value="Condensed">Condensed (Chữ Hẹp)</option>
+                                    <option value="Normal">Normal (Chuẩn)</option>
+                                    <option value="Wide">Wide (Chữ Rộng)</option>
+                                </select>
+                            </div>
+
+                            <!-- 3. Slant Filter -->
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[10.5px] font-bold text-slate-300 flex items-center gap-1">
+                                    <i class="fa-solid fa-italic text-emerald-400 text-[10px]"></i> Slant (Dáng Nghiêng)
+                                </label>
+                                <select id="fontmatch-filter-slant" onchange="onCustomFontFilterChange()" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
+                                    <option value="all">Mọi dáng nghiêng (Tất cả)</option>
+                                    <option value="Upright">Upright (Đứng Thẳng)</option>
+                                    <option value="Italic">Italic (Nghiêng Mềm)</option>
+                                    <option value="Oblique">Oblique (Nghiêng Xiên)</option>
+                                </select>
+                            </div>
+
+                            <!-- 4. Case Filter -->
+                            <div class="flex flex-col gap-1">
+                                <label class="text-[10.5px] font-bold text-slate-300 flex items-center gap-1">
+                                    <i class="fa-solid fa-font text-orange-400 text-[10px]"></i> Case (Kiểu Chữ)
+                                </label>
+                                <select id="fontmatch-filter-case" onchange="onCustomFontFilterChange()" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
+                                    <option value="all">Mọi kiểu chữ (Tất cả)</option>
+                                    <option value="Mixed Case">Mixed Case (Hoa & Thường)</option>
+                                    <option value="All Caps">All Caps (Toàn Bộ In Hoa)</option>
+                                    <option value="Small Caps">Small Caps (In Hoa Nhỏ)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Active Filter Chips Box (Hidden if no filters active) -->
+                        <div id="fontmatch-active-filters-box" class="hidden pt-1.5 border-t border-slate-900"></div>
+                    </div>
+
                     <!-- Custom Fonts Cards Grid -->
                     <div id="fontmatch-custom-fonts-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[160px]">
                         <!-- Rendered dynamically with pagination -->
@@ -1009,6 +1197,55 @@
         <div class="relative max-w-5xl max-h-[90vh] flex flex-col items-center" onclick="event.stopPropagation()">
             <button onclick="closePreviewModal()" class="absolute -top-10 right-0 text-slate-400 hover:text-white text-xl"><i class="fa-solid fa-xmark"></i></button>
             <img id="modal-img" src="" class="max-h-[85vh] max-w-full object-contain rounded-xl border border-slate-800 shadow-2xl" alt="Preview">
+        </div>
+    </div>
+
+    <!-- FONT MORPHOLOGY INSPECTOR MODAL -->
+    <div id="font-morphology-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4" onclick="closeFontMorphologyModal()">
+        <div class="relative w-full max-w-3xl max-h-[90vh] bg-slate-950 border border-slate-800 rounded-3xl p-6 shadow-2xl overflow-y-auto flex flex-col gap-5 custom-scrollbar" onclick="event.stopPropagation()">
+            <!-- Modal Header -->
+            <div class="flex items-start justify-between pb-3 border-b border-slate-800">
+                <div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h3 id="morphology-modal-font-name" class="text-base font-bold text-slate-100">Font Name</h3>
+                        <span id="morphology-modal-meta" class="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-mono">Dialogue • 120 KB</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Cây phân loại cấu trúc hình thái học typography 4 chiều (Local Font Morphology Tree)</p>
+                </div>
+                <button type="button" onclick="closeFontMorphologyModal()" class="w-8 h-8 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm transition-colors cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- 4-Branch Morphology Tree Cards Grid -->
+            <div id="morphology-modal-tree-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Dynamically populated with Weight, Width, Slant, Case trees -->
+            </div>
+
+            <!-- Interactive Live Font Preview Box -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col gap-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-eye text-indigo-400"></i> Mẫu Chữ Trực Tiếp (Live Typography Preview)
+                    </span>
+                    <span class="text-[10px] text-slate-500 font-mono">72px / 24px sample</span>
+                </div>
+                <div class="p-4 bg-slate-950 rounded-xl border border-slate-855 overflow-hidden">
+                    <p id="morphology-modal-preview-text" class="text-lg text-slate-100 font-medium leading-relaxed">
+                        Manga Translator Studio: Việt Hóa Truyện Tranh Đỉnh Cao! (0123456789)
+                    </p>
+                </div>
+            </div>
+
+            <!-- Modal Action Footer -->
+            <div class="flex items-center justify-between pt-2 border-t border-slate-900">
+                <button type="button" id="btn-morphology-modal-filter-similar" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center gap-2 cursor-pointer">
+                    <i class="fa-solid fa-filter"></i> Lọc toàn bộ font có hình thái tương tự
+                </button>
+                <button type="button" onclick="closeFontMorphologyModal()" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-bold transition-colors cursor-pointer">
+                    Đóng
+                </button>
+            </div>
         </div>
     </div>
 

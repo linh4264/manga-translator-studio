@@ -109,6 +109,11 @@ import {
     setLiveTestText,
     copyFontName,
     downloadFontSampleImage,
+    determineWeightGrade,
+    determineWidthGrade,
+    determineSlantGrade,
+    determineCaseGrade,
+    analyzeFontMorphology,
     profileFontGlyph,
     loadAndRegisterCustomFontsFromDB,
     handleCustomFontUpload,
@@ -116,11 +121,38 @@ import {
     clearAllCustomFonts,
     deleteCustomFont,
     setCustomFontCategoryFilter,
+    setCustomFontWeightFilter,
+    setCustomFontWidthFilter,
+    setCustomFontSlantFilter,
+    setCustomFontCaseFilter,
+    resetCustomFontFilters,
+    openFontMorphologyModal,
+    closeFontMorphologyModal,
     onCustomFontFilterChange,
     loadMoreCustomFonts,
     renderCustomFontsUI,
     refreshCustomFontsUI,
-    initFontMatcherModule
+    initFontMatcherModule,
+    // Genre -> Style Profile -> Font Set Exports
+    GENRE_PRESETS,
+    calculateRoleSimilarity,
+    rankFontsForRole,
+    generateFontSetFromPreset,
+    generateFontSetFromCustomProfile,
+    callGeminiVisionForGenreStyle,
+    analyzeGenreWithCanvasHeuristics,
+    generateAndDisplayFontSet,
+    onFontSetRoleChange,
+    onFontSetSampleTextChange,
+    renderFontSetUI,
+    renderRolePreviewCanvas,
+    updateAllFontSetCanvases,
+    copyFontSetSummary,
+    copyFontSetJson,
+    downloadFontSetSampleImage,
+    handleGenreSampleImageSelect,
+    resetGenreSampleImages,
+    runAiGenreAnalysis
 } from './font-matcher';
 
 // Bind all necessary public functions to global window for inline HTML onclick/onchange/oninput bindings
@@ -182,8 +214,10 @@ Object.assign(globalScope, {
     // OCR
     runOcrExtraction,
     copyOcrText,
+    handleOcrFile,
 
-    // Font Matcher
+    // Font Matcher & Set Recommender
+    getCategoryLabel,
     switchFontMatchSubTab,
     fetchFontMatchModels,
     onFontMatchModelChange,
@@ -195,14 +229,37 @@ Object.assign(globalScope, {
     setLiveTestText,
     copyFontName,
     downloadFontSampleImage,
+    determineWeightGrade,
+    determineWidthGrade,
+    determineSlantGrade,
+    determineCaseGrade,
+    analyzeFontMorphology,
     reprofileAllCustomFonts,
     clearAllCustomFonts,
     deleteCustomFont,
     setCustomFontCategoryFilter,
+    setCustomFontWeightFilter,
+    setCustomFontWidthFilter,
+    setCustomFontSlantFilter,
+    setCustomFontCaseFilter,
+    resetCustomFontFilters,
+    openFontMorphologyModal,
+    closeFontMorphologyModal,
     onCustomFontFilterChange,
     loadMoreCustomFonts,
     refreshCustomFontsUI,
-    updateAllFontCanvases
+    updateAllFontCanvases,
+
+    // Font Set Specific Actions
+    generateAndDisplayFontSet,
+    onFontSetRoleChange,
+    onFontSetSampleTextChange,
+    copyFontSetSummary,
+    copyFontSetJson,
+    downloadFontSetSampleImage,
+    handleGenreSampleImageSelect,
+    resetGenreSampleImages,
+    runAiGenreAnalysis
 });
 
 if (typeof document !== 'undefined') {

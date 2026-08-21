@@ -3,7 +3,25 @@
  */
 
 import { formatFileSize, openPreviewModal } from './common';
-import type { FontCategory, FontProfile, CustomFontItem, AnalysisResult } from './types';
+import type {
+    FontCategory,
+    FontWeightGrade,
+    FontWidthGrade,
+    FontSlantGrade,
+    FontCaseGrade,
+    FontMorphologyResult,
+    FontProfile,
+    CustomFontItem,
+    AnalysisResult,
+    FontRole,
+    GenrePresetId,
+    StyleProfile,
+    RoleConfig,
+    GenrePreset,
+    FontRoleAssignment,
+    GeneratedFontSet,
+    AiGenreAnalysisResult
+} from './types';
 
 export const BUILTIN_MANGA_FONTS: CustomFontItem[] = [];
 
@@ -12,6 +30,408 @@ let fontMatchImgDataUrl = '';
 let currentTop3Matches: CustomFontItem[] = [];
 let customFontsList: CustomFontItem[] = [];
 let liveUpdateDebounceTimer: any = null;
+
+export function getEffectiveFontLibrary(): CustomFontItem[] {
+    return customFontsList;
+}
+
+// Font Set Recommender State
+export let currentGeneratedFontSet: GeneratedFontSet | null = null;
+let genreSampleLoadedImgs: HTMLImageElement[] = [];
+let genreSampleDataUrls: string[] = [];
+
+export const GENRE_PRESETS: Record<GenrePresetId, GenrePreset> = {
+    romance: {
+        id: 'romance',
+        name: 'Soft Romance',
+        description: 'Phù hợp cho Shoujo, Ngôn Tình, Tình Cảm Học Đường, Lãng Mạn Dịu Dàng.',
+        icon: '🌸',
+        tone: 'Dịu dàng, cảm xúc, mềm mại, sâu lắng',
+        visualStyle: 'Nét chữ tròn mềm, thanh thoát, xen lẫn chữ viết tay nhẹ nhàng',
+        baseProfile: {
+            roundness: 0.85,
+            weight: 0.40,
+            formality: 0.35,
+            handwritten: 0.30,
+            intensity: 0.25
+        },
+        roles: {
+            dialogue: {
+                role: 'dialogue',
+                label: 'Hội thoại chính (Dialogue)',
+                description: 'Nét tròn, mềm mại, dễ đọc, truyền tải sự dịu dàng.',
+                sampleText: 'Em không muốn anh đi...',
+                targetProfile: { roundness: 0.85, weight: 0.40, formality: 0.35, handwritten: 0.25, intensity: 0.25 },
+                preferredCategories: ['dialogue', 'cute', 'whisper']
+            },
+            innerThought: {
+                role: 'innerThought',
+                label: 'Suy nghĩ nội tâm (Inner Thought)',
+                description: 'Chữ viết tay nét mảnh hoặc nghiêng nhẹ, tạo cảm giác tâm tư sâu kín.',
+                sampleText: 'Ước gì thời gian có thể dừng lại...',
+                targetProfile: { roundness: 0.75, weight: 0.30, formality: 0.20, handwritten: 0.80, intensity: 0.20 },
+                preferredCategories: ['whisper', 'cute', 'dialogue']
+            },
+            narration: {
+                role: 'narration',
+                label: 'Dẫn chuyện / Bối cảnh (Narration)',
+                description: 'Nét chữ chỉn chu, thanh lịch, trang nhã.',
+                sampleText: 'Ngày hôm đó, mọi thứ đã thay đổi.',
+                targetProfile: { roundness: 0.50, weight: 0.40, formality: 0.80, handwritten: 0.10, intensity: 0.20 },
+                preferredCategories: ['narration', 'dialogue']
+            },
+            shout: {
+                role: 'shout',
+                label: 'Cảm xúc mạnh / Thổ lộ (Emotional Shout)',
+                description: 'Nét đậm tròn nổi bật, thể hiện cảm xúc cao trào nhưng không thô bạo.',
+                sampleText: 'ĐỪNG ĐI MÀ!',
+                targetProfile: { roundness: 0.70, weight: 0.75, formality: 0.30, handwritten: 0.20, intensity: 0.75 },
+                preferredCategories: ['shout', 'cute', 'dialogue']
+            },
+            sfx: {
+                role: 'sfx',
+                label: 'Hiệu ứng âm thanh (Soft SFX)',
+                description: 'Nét vẽ tay mềm mại, biểu thị nhịp tim hoặc tiếng động nhẹ nhàng.',
+                sampleText: 'Thình thịch...',
+                targetProfile: { roundness: 0.80, weight: 0.60, formality: 0.15, handwritten: 0.70, intensity: 0.50 },
+                preferredCategories: ['sfx', 'cute', 'whisper']
+            },
+            smallText: {
+                role: 'smallText',
+                label: 'Chú thích / Lời thì thầm (Small Text)',
+                description: 'Nét thanh gọn gàng, đọc rõ ở kích thước nhỏ.',
+                sampleText: '(ngượng ngùng quay mặt đi)',
+                targetProfile: { roundness: 0.60, weight: 0.35, formality: 0.50, handwritten: 0.20, intensity: 0.15 },
+                preferredCategories: ['whisper', 'dialogue', 'cute']
+            }
+        }
+    },
+    comedy: {
+        id: 'comedy',
+        name: 'Cute / Comedy',
+        description: 'Phù hợp cho Hài Hước, Đời Thường (Slice of Life), Trẻ Con, Tấu Hài Siêu Nhí Nhố.',
+        icon: '🤣',
+        tone: 'Vui tươi, tinh nghịch, lầy lội, tràn ngập năng lượng tích cực',
+        visualStyle: 'Nét chữ bong bóng tròn trĩnh, ngộ nghĩnh, viết tay hoạt hình',
+        baseProfile: {
+            roundness: 0.90,
+            weight: 0.50,
+            formality: 0.15,
+            handwritten: 0.45,
+            intensity: 0.50
+        },
+        roles: {
+            dialogue: {
+                role: 'dialogue',
+                label: 'Hội thoại tấu hài (Comedy Dialogue)',
+                description: 'Nét chữ tròn xoe, vui nhộn, thoải mái như truyện tranh hoạt hình.',
+                sampleText: 'Ủa alo, ai cho phép làm vậy hả?!',
+                targetProfile: { roundness: 0.90, weight: 0.48, formality: 0.20, handwritten: 0.40, intensity: 0.40 },
+                preferredCategories: ['cute', 'dialogue', 'shout']
+            },
+            innerThought: {
+                role: 'innerThought',
+                label: 'Độc thoại lầy lội (Inner Monologue)',
+                description: 'Chữ viết tay ngộ nghĩnh, biểu cảm hoảng loạn hoặc toan tính hài.',
+                sampleText: 'Chuyến này tiêu đời mình thật rồi...',
+                targetProfile: { roundness: 0.80, weight: 0.35, formality: 0.15, handwritten: 0.85, intensity: 0.30 },
+                preferredCategories: ['cute', 'whisper', 'dialogue']
+            },
+            narration: {
+                role: 'narration',
+                label: 'Dẫn chuyện dí dỏm (Funny Narration)',
+                description: 'Chỉn chu vừa phải, giữ nét tròn thân thiện.',
+                sampleText: 'Và thế là kế hoạch đổ bể trong một nốt nhạc.',
+                targetProfile: { roundness: 0.70, weight: 0.45, formality: 0.60, handwritten: 0.20, intensity: 0.30 },
+                preferredCategories: ['dialogue', 'narration', 'cute']
+            },
+            shout: {
+                role: 'shout',
+                label: 'La hét ngã ngửa (Crazy Shout)',
+                description: 'Chữ khối to phồng, nhí nhảnh, năng lượng bùng phát.',
+                sampleText: 'TRỜI ƠI LÀ TRỜI!!!',
+                targetProfile: { roundness: 0.75, weight: 0.85, formality: 0.15, handwritten: 0.35, intensity: 0.85 },
+                preferredCategories: ['shout', 'cute', 'sfx']
+            },
+            sfx: {
+                role: 'sfx',
+                label: 'Hiệu ứng hoạt hình (Cartoon SFX)',
+                description: 'Nét vẽ vui nhộn, mô phỏng cú đánh bẹp dí hay tiếng cười té ghế.',
+                sampleText: 'BỐP! CHÍU CHÍU!',
+                targetProfile: { roundness: 0.85, weight: 0.75, formality: 0.10, handwritten: 0.65, intensity: 0.75 },
+                preferredCategories: ['sfx', 'cute', 'shout']
+            },
+            smallText: {
+                role: 'smallText',
+                label: 'Lảm nhảm bên lề (Quirky Side-text)',
+                description: 'Chữ viết tay nhỏ nhắn nguệch ngoạc hài hước.',
+                sampleText: '(tiếng cười khúc khích bên cạnh)',
+                targetProfile: { roundness: 0.70, weight: 0.35, formality: 0.30, handwritten: 0.50, intensity: 0.20 },
+                preferredCategories: ['cute', 'whisper', 'dialogue']
+            }
+        }
+    },
+    modern: {
+        id: 'modern',
+        name: 'Clean Modern',
+        description: 'Phù hợp cho Webtoon Hiện Đại, Học Đường, Công Sở, Trinh Thám Đô Thị.',
+        icon: '🏙️',
+        tone: 'Hiện đại, tối giản, rõ ràng, dễ theo dõi mạch truyện',
+        visualStyle: 'Chữ Sans-Serif cân đối, hình học hiện đại, nét sắc sảo, tính quy chuẩn cao',
+        baseProfile: {
+            roundness: 0.45,
+            weight: 0.45,
+            formality: 0.70,
+            handwritten: 0.10,
+            intensity: 0.35
+        },
+        roles: {
+            dialogue: {
+                role: 'dialogue',
+                label: 'Hội thoại chuẩn mực (Modern Dialogue)',
+                description: 'Không chân (Sans-Serif) trung tính, rõ nét trên mọi kích thước màn hình.',
+                sampleText: 'Hôm nay chúng ta sẽ bắt đầu dự án mới.',
+                targetProfile: { roundness: 0.50, weight: 0.45, formality: 0.60, handwritten: 0.10, intensity: 0.30 },
+                preferredCategories: ['dialogue', 'narration', 'tech']
+            },
+            innerThought: {
+                role: 'innerThought',
+                label: 'Nghĩ thầm sắc nét (Logical Thought)',
+                description: 'Nét mảnh, tinh gọn, mang tính tư duy phân tích.',
+                sampleText: 'Có điều gì đó không bình thường ở đây.',
+                targetProfile: { roundness: 0.45, weight: 0.35, formality: 0.50, handwritten: 0.30, intensity: 0.25 },
+                preferredCategories: ['whisper', 'dialogue', 'tech']
+            },
+            narration: {
+                role: 'narration',
+                label: 'Tường thuật thời gian / địa điểm (Clean Caption)',
+                description: 'Khung chữ nhật hiện đại, phông chữ trang trọng, kỷ luật.',
+                sampleText: 'Chương 12: Bước ngoặt định mệnh.',
+                targetProfile: { roundness: 0.40, weight: 0.45, formality: 0.85, handwritten: 0.05, intensity: 0.30 },
+                preferredCategories: ['narration', 'tech', 'dialogue']
+            },
+            shout: {
+                role: 'shout',
+                label: 'Quát mắng / Cảnh báo (Urban Shout)',
+                description: 'In hoa nét dày dặn, góc cạnh dứt khoát.',
+                sampleText: 'TẤT CẢ TRẬT TỰ!',
+                targetProfile: { roundness: 0.35, weight: 0.85, formality: 0.50, handwritten: 0.05, intensity: 0.80 },
+                preferredCategories: ['shout', 'tech', 'dialogue']
+            },
+            sfx: {
+                role: 'sfx',
+                label: 'Tiếng động đô thị (Urban SFX)',
+                description: 'Hiệu ứng cơ khí, tiếng bước chân, chuông điện thoại, máy móc.',
+                sampleText: 'TÁCH! TÍT TÍT!',
+                targetProfile: { roundness: 0.40, weight: 0.80, formality: 0.30, handwritten: 0.20, intensity: 0.70 },
+                preferredCategories: ['sfx', 'tech', 'shout']
+            },
+            smallText: {
+                role: 'smallText',
+                label: 'Chú thích giao diện / Chữ nhỏ (UI & Notes)',
+                description: 'Gọn gàng, mô phỏng tin nhắn hoặc thông báo hệ thống.',
+                sampleText: '(thông báo từ hệ thống di động)',
+                targetProfile: { roundness: 0.45, weight: 0.35, formality: 0.65, handwritten: 0.10, intensity: 0.15 },
+                preferredCategories: ['tech', 'dialogue', 'whisper']
+            }
+        }
+    },
+    action: {
+        id: 'action',
+        name: 'Action / Impact',
+        description: 'Phù hợp cho Shounen, Võ Thuật, Siêu Nhiên, Chiến Đấu Bùng Nổ, Kịch Tính Cao.',
+        icon: '💥',
+        tone: 'Kịch tính, uy lực, sắc bén, tốc độ và tương phản cực mạnh',
+        visualStyle: 'Chữ in hoa góc cạnh, nét cọ giật mạnh, độ dày nét vượt trội',
+        baseProfile: {
+            roundness: 0.25,
+            weight: 0.80,
+            formality: 0.30,
+            handwritten: 0.20,
+            intensity: 0.90
+        },
+        roles: {
+            dialogue: {
+                role: 'dialogue',
+                label: 'Thoại chiến binh (Action Dialogue)',
+                description: 'Nét dày dặn, in hoa hoặc bán in hoa, đanh thép và quyết đoán.',
+                sampleText: 'Ngươi nghĩ mình có thể đánh bại ta sao?!',
+                targetProfile: { roundness: 0.30, weight: 0.65, formality: 0.35, handwritten: 0.15, intensity: 0.70 },
+                preferredCategories: ['dialogue', 'shout', 'tech']
+            },
+            innerThought: {
+                role: 'innerThought',
+                label: 'Suy tính trong trận đấu (Tactical Mind)',
+                description: 'Nét chữ cô đọng, sắc bén, nhịp điệu nhanh.',
+                sampleText: 'Đòn vừa rồi... lực đánh quá kinh khủng.',
+                targetProfile: { roundness: 0.30, weight: 0.45, formality: 0.45, handwritten: 0.25, intensity: 0.50 },
+                preferredCategories: ['whisper', 'dialogue', 'tech']
+            },
+            narration: {
+                role: 'narration',
+                label: 'Dẫn giải chiêu thức (Battle Narration)',
+                description: 'Đậm đặc, đầm chắc, tạo sức nặng của lời dẫn.',
+                sampleText: 'Trận quyết chiến đỉnh cao chính thức bắt đầu.',
+                targetProfile: { roundness: 0.25, weight: 0.55, formality: 0.75, handwritten: 0.05, intensity: 0.60 },
+                preferredCategories: ['narration', 'shout', 'dialogue']
+            },
+            shout: {
+                role: 'shout',
+                label: 'Hét tuyệt chiêu (Ultimate Shout)',
+                description: 'Chữ khối cực đại, nét gãy rực lửa, thể hiện năng lượng tối thượng.',
+                sampleText: 'ĐỠ LẤY ĐÒN NÀY ĐI!!!',
+                targetProfile: { roundness: 0.20, weight: 0.95, formality: 0.25, handwritten: 0.10, intensity: 0.98 },
+                preferredCategories: ['shout', 'sfx', 'tech']
+            },
+            sfx: {
+                role: 'sfx',
+                label: 'Va chạm & Nổ (Heavy Impact SFX)',
+                description: 'Nét cọ xước rách vỡ, uy lực chấn động đất trời.',
+                sampleText: 'ẦM ẦM ẦM!!! RẮC!',
+                targetProfile: { roundness: 0.15, weight: 0.95, formality: 0.05, handwritten: 0.75, intensity: 0.98 },
+                preferredCategories: ['sfx', 'shout']
+            },
+            smallText: {
+                role: 'smallText',
+                label: 'Thì thào / Tiếng thở (Tense Murmur)',
+                description: 'Chữ nhỏ đanh gọn, biểu đạt sự căng thẳng nghẹt thở.',
+                sampleText: '(tiếng nắm đấm siết chặt)',
+                targetProfile: { roundness: 0.30, weight: 0.45, formality: 0.55, handwritten: 0.15, intensity: 0.35 },
+                preferredCategories: ['dialogue', 'whisper', 'tech']
+            }
+        }
+    },
+    dark: {
+        id: 'dark',
+        name: 'Dark / Gothic',
+        description: 'Phù hợp cho Kinh Dị, Huyền Bí, Trinh Thám Tâm Lý, Seinen U Tối, Huyết Ma.',
+        icon: '🦇',
+        tone: 'U ám, rùng rợn, bất an, gai góc và ma mị',
+        visualStyle: 'Nét chữ nham nhở, rách xước, font cổ điển Gothic hoặc nét cào cấu méo mó',
+        baseProfile: {
+            roundness: 0.15,
+            weight: 0.60,
+            formality: 0.35,
+            handwritten: 0.60,
+            intensity: 0.75
+        },
+        roles: {
+            dialogue: {
+                role: 'dialogue',
+                label: 'Thoại ma quái (Eerie Dialogue)',
+                description: 'Nét chữ hơi gãy hoặc mang vẻ bất an, cổ quái.',
+                sampleText: 'Ngươi... đã nhìn thấy nó rồi phải không?',
+                targetProfile: { roundness: 0.20, weight: 0.55, formality: 0.40, handwritten: 0.30, intensity: 0.60 },
+                preferredCategories: ['dialogue', 'whisper', 'sfx']
+            },
+            innerThought: {
+                role: 'innerThought',
+                label: 'Nỗi sợ trong tâm trí (Psychological Dread)',
+                description: 'Chữ viết tay run rẩy, bất định, hoảng loạn.',
+                sampleText: 'Có ai đó đang đứng ngay sau lưng mình...',
+                targetProfile: { roundness: 0.25, weight: 0.35, formality: 0.15, handwritten: 0.85, intensity: 0.55 },
+                preferredCategories: ['whisper', 'sfx', 'cute']
+            },
+            narration: {
+                role: 'narration',
+                label: 'Bản thảo u tối (Dark Chronicle)',
+                description: 'Serif cổ điển hoặc Gothic trang trọng rùng mình.',
+                sampleText: 'Kể từ đêm định mệnh đó, không ai còn thấy bóng người.',
+                targetProfile: { roundness: 0.30, weight: 0.50, formality: 0.90, handwritten: 0.10, intensity: 0.45 },
+                preferredCategories: ['narration', 'dialogue']
+            },
+            shout: {
+                role: 'shout',
+                label: 'Gào thét hoảng loạn (Horror Scream)',
+                description: 'Nét rách xước gai góc, tiếng thét kinh hoàng tột độ.',
+                sampleText: 'CỨU TA VỚI!!!',
+                targetProfile: { roundness: 0.10, weight: 0.90, formality: 0.15, handwritten: 0.50, intensity: 0.95 },
+                preferredCategories: ['shout', 'sfx']
+            },
+            sfx: {
+                role: 'sfx',
+                label: 'Tiếng cào cấu ghê rợn (Creepy SFX)',
+                description: 'Nét cọ sần sùi bẩn bựa, mô phỏng tiếng cào móng, tiếng xương vỡ.',
+                sampleText: 'RỘT RẠC... CÀO CẤU...',
+                targetProfile: { roundness: 0.10, weight: 0.85, formality: 0.05, handwritten: 0.90, intensity: 0.95 },
+                preferredCategories: ['sfx', 'shout']
+            },
+            smallText: {
+                role: 'smallText',
+                label: 'Tiếng thở gấp (Spooky Whisper)',
+                description: 'Mảnh khảnh ma quái, như tiếng thì thầm bên tai.',
+                sampleText: '(tiếng thở gấp gáp trong bóng tối)',
+                targetProfile: { roundness: 0.25, weight: 0.30, formality: 0.30, handwritten: 0.60, intensity: 0.30 },
+                preferredCategories: ['whisper', 'sfx']
+            }
+        }
+    },
+    fantasy: {
+        id: 'fantasy',
+        name: 'Fantasy / Elegant',
+        description: 'Phù hợp cho Kỳ Ảo, Hoàng Cung, Cổ Trang, Manhwa Tái Sinh, Quý Tộc.',
+        icon: '👑',
+        tone: 'Trang trọng, quý phái, thanh lịch, mang màu sắc sử thi và phép thuật',
+        visualStyle: 'Chữ Serif có chân tinh tế, đường nét uốn lượn thư pháp quý tộc',
+        baseProfile: {
+            roundness: 0.55,
+            weight: 0.45,
+            formality: 0.80,
+            handwritten: 0.25,
+            intensity: 0.40
+        },
+        roles: {
+            dialogue: {
+                role: 'dialogue',
+                label: 'Đối thoại quý tộc (Royal Dialogue)',
+                description: 'Nét chữ thanh nhã, quý phái, câu chữ mang tính cung đình.',
+                sampleText: 'Xin thứ lỗi vì sự đường đột của thần, thưa bệ hạ.',
+                targetProfile: { roundness: 0.60, weight: 0.45, formality: 0.75, handwritten: 0.20, intensity: 0.35 },
+                preferredCategories: ['dialogue', 'narration', 'cute']
+            },
+            innerThought: {
+                role: 'innerThought',
+                label: 'Tâm tư cổ kính (Poetic Reflection)',
+                description: 'Thư pháp nhẹ nhàng hoặc nét nghiêng mềm mại.',
+                sampleText: 'Ánh mắt ấy... mang theo bí mật từ ngàn năm trước.',
+                targetProfile: { roundness: 0.65, weight: 0.35, formality: 0.60, handwritten: 0.65, intensity: 0.30 },
+                preferredCategories: ['whisper', 'dialogue', 'narration']
+            },
+            narration: {
+                role: 'narration',
+                label: 'Sử thi / Huyền sử (Epic Narration)',
+                description: 'Serif cổ điển sang trọng, tạo cảm giác đọc sách cổ ma thuật.',
+                sampleText: 'Vào kỷ nguyên của rồng thiêng và ma thuật cổ đại.',
+                targetProfile: { roundness: 0.40, weight: 0.50, formality: 0.95, handwritten: 0.05, intensity: 0.35 },
+                preferredCategories: ['narration', 'dialogue']
+            },
+            shout: {
+                role: 'shout',
+                label: 'Hiệu lệnh vương giả (Majestic Shout)',
+                description: 'Đậm nét uy nghiêm, hùng tráng như tiếng hô của bậc đế vương.',
+                sampleText: 'HỠI SỨC MẠNH CỦA ÁNH SÁNG!',
+                targetProfile: { roundness: 0.40, weight: 0.85, formality: 0.65, handwritten: 0.15, intensity: 0.85 },
+                preferredCategories: ['shout', 'narration', 'sfx']
+            },
+            sfx: {
+                role: 'sfx',
+                label: 'Phép thuật lấp lánh (Magic SFX)',
+                description: 'Nét uốn lượn bay bổng, mô phỏng luồng sáng, đòn niệm chú ma thuật.',
+                sampleText: 'VÚT! LẤP LÁNH!',
+                targetProfile: { roundness: 0.70, weight: 0.65, formality: 0.30, handwritten: 0.55, intensity: 0.70 },
+                preferredCategories: ['sfx', 'cute', 'shout']
+            },
+            smallText: {
+                role: 'smallText',
+                label: 'Ghi chú cung đình (Court Notes)',
+                description: 'Nét chữ nhỏ quý phái, chỉn chu.',
+                sampleText: '(tiếng váy dạ hội sột soạt)',
+                targetProfile: { roundness: 0.50, weight: 0.35, formality: 0.80, handwritten: 0.15, intensity: 0.20 },
+                preferredCategories: ['narration', 'dialogue', 'whisper']
+            }
+        }
+    }
+};
 
 export function getCategoryLabel(cat: string): string {
     switch (cat) {
@@ -28,7 +448,7 @@ export function getCategoryLabel(cat: string): string {
 
 // Sub-tabs switcher
 export function switchFontMatchSubTab(subTabId: string): void {
-    const tabs = ['analyze', 'custom', 'guide'];
+    const tabs = ['set', 'analyze', 'custom', 'guide'];
     tabs.forEach(t => {
         const btn = document.getElementById(`btn-subtab-fontmatch-${t}`);
         const panel = document.getElementById(`fontmatch-panel-${t}`);
@@ -47,6 +467,969 @@ export function switchFontMatchSubTab(subTabId: string): void {
             }
         }
     });
+
+    if (subTabId === 'set' && !currentGeneratedFontSet) {
+        generateAndDisplayFontSet('romance');
+    }
+}
+
+// =========================================================================
+// --- GENRE -> STYLE PROFILE -> FONT SET RECOMMENDER ENGINE ---
+// =========================================================================
+
+export function calculateRoleSimilarity(
+    font: CustomFontItem,
+    targetProfile: StyleProfile,
+    preferredCategories: FontCategory[]
+): number {
+    const fw = font.weightScore ?? 0.5;
+    const fr = font.roundnessScore ?? (1.0 - (font.roughnessScore ?? 0.2) * 0.5);
+    const ff = font.formalityScore ?? 0.4;
+    const fh = font.handwrittenScore ?? ((font.roughnessScore ?? 0.2) * 0.65 + (1.0 - (font.formalityScore ?? 0.4)) * 0.35);
+    const fi = font.energyScore ?? 0.5;
+
+    const tw = targetProfile.weight;
+    const tr = targetProfile.roundness;
+    const tf = targetProfile.formality;
+    const th = targetProfile.handwritten;
+    const ti = targetProfile.intensity;
+
+    const dist = Math.sqrt(
+        Math.pow(tw - fw, 2) * 0.30 +
+        Math.pow(tr - fr, 2) * 0.25 +
+        Math.pow(tf - ff, 2) * 0.20 +
+        Math.pow(th - fh, 2) * 0.15 +
+        Math.pow(ti - fi, 2) * 0.10
+    );
+
+    const morphSim = Math.max(0, 1.0 - dist);
+
+    let catBonus = 0.35;
+    if (preferredCategories && preferredCategories.includes(font.category)) {
+        const idx = preferredCategories.indexOf(font.category);
+        catBonus = idx === 0 ? 1.0 : idx === 1 ? 0.75 : 0.55;
+    }
+
+    const finalScore = morphSim * 0.85 + catBonus * 0.15;
+    return Math.max(0.1, Math.min(1.0, finalScore));
+}
+
+export function rankFontsForRole(
+    fontList: CustomFontItem[],
+    roleConfig: RoleConfig,
+    preferredFontName?: string
+): { font: CustomFontItem, score: number }[] {
+    if (!fontList || fontList.length === 0) return [];
+
+    const scored = fontList.map(font => {
+        let score = calculateRoleSimilarity(font, roleConfig.targetProfile, roleConfig.preferredCategories);
+        if (preferredFontName && font.name === preferredFontName) {
+            score = Math.min(0.99, score + 0.04);
+        }
+        return {
+            font,
+            score
+        };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored;
+}
+
+export function generateFontSetFromPreset(fontList: CustomFontItem[], presetId: GenrePresetId): GeneratedFontSet {
+    const preset = GENRE_PRESETS[presetId] || GENRE_PRESETS.romance;
+    const roles: FontRole[] = ['dialogue', 'innerThought', 'narration', 'shout', 'sfx', 'smallText'];
+    const assignments: Partial<Record<FontRole, FontRoleAssignment>> = {};
+    const usedFonts = new Set<string>();
+
+    if (!fontList || fontList.length === 0) {
+        roles.forEach(role => {
+            const roleCfg = preset.roles[role];
+            assignments[role] = {
+                role,
+                roleLabel: roleCfg.label,
+                fontName: 'Chưa có font (Tải lên font .ttf/.otf)',
+                fontFamily: 'sans-serif',
+                fontItem: null,
+                score: 0,
+                isStrongMatch: false,
+                sampleText: roleCfg.sampleText,
+                desc: roleCfg.description
+            };
+        });
+
+        return {
+            presetId,
+            presetName: preset.name,
+            tone: preset.tone,
+            visualStyle: preset.visualStyle,
+            roles: assignments as Record<FontRole, FontRoleAssignment>,
+            coreFontCount: 0
+        };
+    }
+
+    // 1. Assign primary dialogue font
+    const dialogueRanked = rankFontsForRole(fontList, preset.roles.dialogue);
+    const dialogueBest = dialogueRanked[0];
+    const dialogueFontName = dialogueBest?.font.name || fontList[0].name;
+
+    // 2. Assign remaining roles
+    roles.forEach(role => {
+        const roleCfg = preset.roles[role];
+        const isReadingGroup = ['dialogue', 'innerThought', 'narration', 'smallText'].includes(role);
+        const preferredName = isReadingGroup ? dialogueFontName : undefined;
+        const ranked = rankFontsForRole(fontList, roleCfg, preferredName);
+        const best = ranked[0] || { font: fontList[0], score: 0.5 };
+
+        const matchPercent = Math.min(99, Math.max(10, Math.round(best.score * 100)));
+        assignments[role] = {
+            role,
+            roleLabel: roleCfg.label,
+            fontName: best.font.name,
+            fontFamily: best.font.family,
+            fontItem: best.font,
+            score: matchPercent,
+            isStrongMatch: matchPercent >= 60,
+            sampleText: roleCfg.sampleText,
+            desc: roleCfg.description
+        };
+
+        if (best.font) {
+            usedFonts.add(best.font.name);
+        }
+    });
+
+    return {
+        presetId,
+        presetName: preset.name,
+        tone: preset.tone,
+        visualStyle: preset.visualStyle,
+        roles: assignments as Record<FontRole, FontRoleAssignment>,
+        coreFontCount: usedFonts.size
+    };
+}
+
+export function generateFontSetFromCustomProfile(
+    fontList: CustomFontItem[],
+    customProfile: StyleProfile,
+    name: string = 'Tùy Chỉnh Theo AI',
+    tone: string = 'Phân tích tự động từ ảnh mẫu',
+    visualStyle: string = 'Đặc trưng thị giác trích xuất từ trang manga'
+): GeneratedFontSet {
+    let closestPresetId: GenrePresetId = 'romance';
+    let minPresetDist = Infinity;
+    (Object.keys(GENRE_PRESETS) as GenrePresetId[]).forEach(id => {
+        const p = GENRE_PRESETS[id].baseProfile;
+        const dist = Math.sqrt(
+            Math.pow(customProfile.weight - p.weight, 2) +
+            Math.pow(customProfile.roundness - p.roundness, 2) +
+            Math.pow(customProfile.formality - p.formality, 2) +
+            Math.pow(customProfile.handwritten - p.handwritten, 2) +
+            Math.pow(customProfile.intensity - p.intensity, 2)
+        );
+        if (dist < minPresetDist) {
+            minPresetDist = dist;
+            closestPresetId = id;
+        }
+    });
+
+    const basePreset = GENRE_PRESETS[closestPresetId];
+    const roles: FontRole[] = ['dialogue', 'innerThought', 'narration', 'shout', 'sfx', 'smallText'];
+    const assignments: Partial<Record<FontRole, FontRoleAssignment>> = {};
+    const usedFonts = new Set<string>();
+
+    if (!fontList || fontList.length === 0) {
+        roles.forEach(role => {
+            const roleCfg = basePreset.roles[role];
+            assignments[role] = {
+                role,
+                roleLabel: roleCfg.label,
+                fontName: 'Chưa có font (Tải lên font .ttf/.otf)',
+                fontFamily: 'sans-serif',
+                fontItem: null,
+                score: 0,
+                isStrongMatch: false,
+                sampleText: roleCfg.sampleText,
+                desc: roleCfg.description
+            };
+        });
+
+        return {
+            presetId: 'ai_detected',
+            presetName: name,
+            tone,
+            visualStyle,
+            roles: assignments as Record<FontRole, FontRoleAssignment>,
+            coreFontCount: 0,
+            isAiAnalyzed: true,
+            rawAiProfile: customProfile
+        };
+    }
+
+    roles.forEach(role => {
+        const roleCfg = basePreset.roles[role];
+        const adaptedProfile: StyleProfile = {
+            weight: Math.max(0.1, Math.min(1.0, roleCfg.targetProfile.weight * 0.6 + customProfile.weight * 0.4)),
+            roundness: Math.max(0.1, Math.min(1.0, roleCfg.targetProfile.roundness * 0.6 + customProfile.roundness * 0.4)),
+            formality: Math.max(0.1, Math.min(1.0, roleCfg.targetProfile.formality * 0.6 + customProfile.formality * 0.4)),
+            handwritten: Math.max(0.1, Math.min(1.0, roleCfg.targetProfile.handwritten * 0.6 + customProfile.handwritten * 0.4)),
+            intensity: Math.max(0.1, Math.min(1.0, roleCfg.targetProfile.intensity * 0.6 + customProfile.intensity * 0.4))
+        };
+
+        const adaptedRoleCfg: RoleConfig = {
+            ...roleCfg,
+            targetProfile: adaptedProfile
+        };
+
+        const ranked = rankFontsForRole(fontList, adaptedRoleCfg);
+        const best = ranked[0] || { font: fontList[0], score: 0.5 };
+        const matchPercent = Math.min(99, Math.max(10, Math.round(best.score * 100)));
+
+        assignments[role] = {
+            role,
+            roleLabel: roleCfg.label,
+            fontName: best.font.name,
+            fontFamily: best.font.family,
+            fontItem: best.font,
+            score: matchPercent,
+            isStrongMatch: matchPercent >= 60,
+            sampleText: roleCfg.sampleText,
+            desc: roleCfg.description
+        };
+
+        if (best.font) {
+            usedFonts.add(best.font.name);
+        }
+    });
+
+    return {
+        presetId: 'ai_detected',
+        presetName: name,
+        tone,
+        visualStyle,
+        roles: assignments as Record<FontRole, FontRoleAssignment>,
+        coreFontCount: usedFonts.size,
+        isAiAnalyzed: true,
+        rawAiProfile: customProfile
+    };
+}
+
+export async function callGeminiVisionForGenreStyle(
+    modelId: string,
+    apiKey: string,
+    dataUrls: string[]
+): Promise<AiGenreAnalysisResult> {
+    if (!dataUrls || dataUrls.length === 0) {
+        throw new Error("Vui lòng tải lên ít nhất 1 ảnh trang manga mẫu để AI phân tích phong cách!");
+    }
+
+    const parts: any[] = [];
+    const prompt = `Bạn là một Giám đốc Nghệ thuật Typography và Trưởng ban Typesetting Manga/Comic chuyên nghiệp.
+Nhiệm vụ của bạn: Phân tích 1 đến 3 trang manga mẫu để xác định THỂ LOẠI (GENRE), TONE CẢM XÚC, và BỘ CHỈ SỐ HÌNH THÁI HỌC TYPOGRAPHY (Style Profile) phù hợp nhất cho việc Việt hóa toàn bộ bộ truyện.
+
+YÊU CẦU ĐÁNH GIÁ:
+1. genre: Tên thể loại chính của truyện (ví dụ: "Soft Romance", "Cute / Comedy", "Clean Modern", "Action / Impact", "Dark / Gothic", "Fantasy / Elegant").
+2. tone: Tóm tắt 1 câu về không khí và cảm xúc chủ đạo của tác phẩm (ví dụ: "Hành động kịch tính, nghẹt thở", "Lãng mạn nhẹ nhàng, sâu lắng").
+3. visualStyle: Mô tả phong cách vẽ và bố cục thị giác của tác phẩm.
+4. typographyStyle: Mô tả phong cách nét chữ phù hợp để Việt hóa.
+5. intensity: Chỉ số năng lượng/kịch tính từ 0.0 (rất êm dịu, trầm lắng) đến 1.0 (bùng nổ, khốc liệt, dồn dập).
+6. roundness: Chỉ số độ tròn mềm nét chữ từ 0.0 (sắc nhọn, góc cạnh, gãy khúc) đến 1.0 (tròn trịa, uốn lượn, mềm mại).
+7. weight: Chỉ số độ đậm nét chữ chủ đạo từ 0.0 (thanh mảnh, tinh tế) đến 1.0 (cực đậm, chữ khối, tương phản cao).
+8. formality: Chỉ số tính quy chuẩn/trang trọng từ 0.0 (viết tay tự do, nhí nhố) đến 1.0 (chuẩn mực, serif, nghiêm túc).
+9. handwritten: Chỉ số phong cách viết tay/cọ vẽ từ 0.0 (hình học, font máy tính) đến 1.0 (bút lông, chữ viết tay nghệ thuật).
+10. detectedPresetId: Chọn đúng 1 trong 6 mã preset chuẩn: ["romance", "comedy", "modern", "action", "dark", "fantasy"].
+11. reasoning: 1-2 câu tiếng Việt giải thích lý do chọn phong cách typography này.
+
+QUY TẮC BẮT BUỘC:
+- KHÔNG đoán hoặc bịa tên phông chữ cụ thể (hệ thống sẽ tự động xếp hạng trên kho font sẵn có của người dùng).
+- CHỈ phân tích hình thái học, cảm xúc và thể loại theo cấu trúc JSON.
+
+Trả về DUY NHẤT định dạng JSON tuân thủ cấu trúc sau:
+{
+  "genre": "Action / Impact",
+  "tone": "Kịch tính, tốc độ cao, chiến đấu nghẹt thở",
+  "visualStyle": "Nét vẽ sắc nhọn, tương phản đen trắng mạnh, khung thoại biến dạng",
+  "typographyStyle": "Nét dày đậm, in hoa góc cạnh, viền dày nổi khối",
+  "intensity": 0.90,
+  "roundness": 0.25,
+  "weight": 0.85,
+  "formality": 0.30,
+  "handwritten": 0.20,
+  "detectedPresetId": "action",
+  "reasoning": "Truyện có nhịp độ chiến đấu nhanh và nhiều khung thoại la hét, phù hợp với bộ font Action / Impact."
+}`;
+
+    parts.push({ text: prompt });
+
+    const sampleLimit = Math.min(3, dataUrls.length);
+    for (let i = 0; i < sampleLimit; i++) {
+        const dataUrl = dataUrls[i];
+        const base64Data = dataUrl.split(',')[1];
+        const mimeType = dataUrl.split(';')[0].split(':')[1] || 'image/png';
+        parts.push({
+            inlineData: {
+                mimeType,
+                data: base64Data
+            }
+        });
+    }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelId)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    const payload = {
+        contents: [{ parts }],
+        generationConfig: {
+            temperature: 0.2,
+            responseMimeType: "application/json"
+        }
+    };
+
+    const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) {
+        const errText = await resp.text();
+        throw new Error(`Gemini API Error ${resp.status}: ${errText}`);
+    }
+
+    const data = await resp.json();
+    const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!textContent) throw new Error("Không nhận được dữ liệu phản hồi từ AI");
+
+    const cleanJson = textContent.replace(/```json/g, '').replace(/```/g, '').trim();
+    let parsed: any;
+    try {
+        parsed = JSON.parse(cleanJson);
+    } catch (parseErr) {
+        throw new Error(`Phản hồi AI không đúng định dạng JSON: ${cleanJson}`);
+    }
+
+    const clamp = (val: any, def: number): number => {
+        const num = typeof val === 'number' ? val : parseFloat(val);
+        if (isNaN(num)) return def;
+        return Math.max(0.0, Math.min(1.0, num));
+    };
+
+    const validPresets: GenrePresetId[] = ['romance', 'comedy', 'modern', 'action', 'dark', 'fantasy'];
+    const detectedPresetId: GenrePresetId = validPresets.includes(parsed.detectedPresetId)
+        ? parsed.detectedPresetId
+        : 'romance';
+
+    return {
+        genre: typeof parsed.genre === 'string' && parsed.genre.trim() ? parsed.genre.trim() : 'Manga Style',
+        tone: typeof parsed.tone === 'string' && parsed.tone.trim() ? parsed.tone.trim() : 'Tự nhiên, cân bằng',
+        visualStyle: typeof parsed.visualStyle === 'string' && parsed.visualStyle.trim() ? parsed.visualStyle.trim() : 'Phong cách manga chuẩn',
+        typographyStyle: typeof parsed.typographyStyle === 'string' && parsed.typographyStyle.trim() ? parsed.typographyStyle.trim() : 'Typography cân đối',
+        intensity: Number(clamp(parsed.intensity, 0.5).toFixed(2)),
+        roundness: Number(clamp(parsed.roundness, 0.5).toFixed(2)),
+        weight: Number(clamp(parsed.weight, 0.5).toFixed(2)),
+        formality: Number(clamp(parsed.formality, 0.5).toFixed(2)),
+        handwritten: Number(clamp(parsed.handwritten, 0.2).toFixed(2)),
+        detectedPresetId,
+        reasoning: typeof parsed.reasoning === 'string' ? parsed.reasoning.trim() : ''
+    };
+}
+
+export function analyzeGenreWithCanvasHeuristics(imgs: HTMLImageElement[]): AiGenreAnalysisResult {
+    if (typeof document === 'undefined' || !imgs || imgs.length === 0) {
+        return {
+            genre: 'Soft Romance',
+            tone: 'Dịu dàng, cảm xúc, mềm mại',
+            visualStyle: 'Nét chữ tròn mềm mại',
+            typographyStyle: 'Chữ thanh thoát, uyển chuyển',
+            intensity: 0.35,
+            roundness: 0.80,
+            weight: 0.40,
+            formality: 0.40,
+            handwritten: 0.30,
+            detectedPresetId: 'romance',
+            reasoning: 'Phân tích heuristic ngoại tuyến mặc định cho thể loại phổ biến.'
+        };
+    }
+
+    let totalDarkRatio = 0;
+    let totalTransitionDensity = 0;
+    let validImgCount = 0;
+
+    imgs.forEach(img => {
+        const naturalW = img.naturalWidth || img.width || 200;
+        const naturalH = img.naturalHeight || img.height || 200;
+        const w = Math.max(20, Math.min(naturalW, 200));
+        const h = Math.max(20, Math.min(naturalH, 200));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, w, h);
+        const data = ctx.getImageData(0, 0, w, h).data;
+
+        let dark = 0;
+        let trans = 0;
+        for (let y = 0; y < h; y++) {
+            let prevDark = false;
+            for (let x = 0; x < w; x++) {
+                const idx = (y * w + x) * 4;
+                const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+                const isDark = lum < 115;
+                if (isDark) dark++;
+                if (isDark !== prevDark) {
+                    trans++;
+                    prevDark = isDark;
+                }
+            }
+        }
+
+        totalDarkRatio += (dark / Math.max(1, w * h));
+        totalTransitionDensity += (trans / Math.max(1, w * h));
+        validImgCount++;
+    });
+
+    const avgDark = validImgCount > 0 ? (totalDarkRatio / validImgCount) : 0.20;
+    const avgTrans = validImgCount > 0 ? (totalTransitionDensity / validImgCount) : 0.08;
+
+    let detectedPreset: GenrePresetId = 'romance';
+    let intensity = 0.35;
+    let roundness = 0.75;
+    let weight = 0.40;
+    let formality = 0.40;
+    let handwritten = 0.25;
+
+    if (avgDark > 0.35 && avgTrans > 0.15) {
+        detectedPreset = 'action';
+        intensity = 0.90;
+        roundness = 0.25;
+        weight = 0.85;
+        formality = 0.30;
+        handwritten = 0.15;
+    } else if (avgDark > 0.30 && avgTrans < 0.10) {
+        detectedPreset = 'dark';
+        intensity = 0.75;
+        roundness = 0.20;
+        weight = 0.65;
+        formality = 0.35;
+        handwritten = 0.60;
+    } else if (avgTrans > 0.12 && avgDark < 0.25) {
+        detectedPreset = 'comedy';
+        intensity = 0.55;
+        roundness = 0.90;
+        weight = 0.50;
+        formality = 0.15;
+        handwritten = 0.50;
+    } else if (avgDark < 0.18 && avgTrans < 0.08) {
+        detectedPreset = 'romance';
+        intensity = 0.25;
+        roundness = 0.85;
+        weight = 0.40;
+        formality = 0.35;
+        handwritten = 0.30;
+    } else {
+        detectedPreset = 'modern';
+        intensity = 0.40;
+        roundness = 0.50;
+        weight = 0.45;
+        formality = 0.70;
+        handwritten = 0.10;
+    }
+
+    const presetInfo = GENRE_PRESETS[detectedPreset];
+    return {
+        genre: presetInfo.name,
+        tone: presetInfo.tone,
+        visualStyle: presetInfo.visualStyle,
+        typographyStyle: 'Phân tích heuristic cục bộ từ mật độ điểm ảnh và nét vẽ trang truyện',
+        intensity,
+        roundness,
+        weight,
+        formality,
+        handwritten,
+        detectedPresetId: detectedPreset,
+        reasoning: `Phân tích mật độ mực (${(avgDark * 100).toFixed(0)}%) và biến thiên nét (${(avgTrans * 100).toFixed(0)}%) khớp với phong cách ${presetInfo.name}.`
+    };
+}
+
+// UI State & Display Handlers for Font Set
+export function generateAndDisplayFontSet(presetId?: GenrePresetId): void {
+    const activePresetId = presetId || ((document.getElementById('fontset-genre-select') as HTMLSelectElement)?.value as GenrePresetId) || 'romance';
+    currentGeneratedFontSet = generateFontSetFromPreset(getEffectiveFontLibrary(), activePresetId);
+    renderFontSetUI(currentGeneratedFontSet);
+    updateAllFontSetCanvases();
+}
+
+export function onFontSetRoleChange(role: FontRole, selectedFontName: string): void {
+    if (!currentGeneratedFontSet) return;
+    const fontLib = getEffectiveFontLibrary();
+    const fontObj = fontLib.find(f => f.name === selectedFontName) || null;
+    const assignment = currentGeneratedFontSet.roles[role];
+    if (assignment) {
+        assignment.fontName = selectedFontName;
+        assignment.fontFamily = fontObj ? fontObj.family : `'${selectedFontName}', sans-serif`;
+        assignment.fontItem = fontObj;
+        if (fontObj) {
+            const preset = GENRE_PRESETS[currentGeneratedFontSet.presetId as GenrePresetId] || GENRE_PRESETS.romance;
+            const roleCfg = preset.roles[role];
+            const sim = calculateRoleSimilarity(fontObj, roleCfg.targetProfile, roleCfg.preferredCategories);
+            assignment.score = Math.min(99, Math.max(10, Math.round(sim * 100)));
+            assignment.isStrongMatch = assignment.score >= 60;
+        }
+
+        // Recalculate unique core fonts count
+        const fontNames = new Set(Object.values(currentGeneratedFontSet.roles).map(r => r.fontName).filter(Boolean));
+        currentGeneratedFontSet.coreFontCount = fontNames.size;
+
+        renderFontSetUI(currentGeneratedFontSet);
+        updateAllFontSetCanvases();
+    }
+}
+
+export function onFontSetSampleTextChange(role: FontRole, newText: string): void {
+    if (!currentGeneratedFontSet) return;
+    const assignment = currentGeneratedFontSet.roles[role];
+    if (assignment) {
+        assignment.sampleText = newText;
+        renderRolePreviewCanvas(role, currentGeneratedFontSet);
+    }
+}
+
+export function renderFontSetUI(fontSet: GeneratedFontSet): void {
+    const container = document.getElementById('fontset-roles-grid');
+    if (!container) return;
+
+    // Header updates
+    const titleEl = document.getElementById('fontset-title');
+    const toneEl = document.getElementById('fontset-tone-badge');
+    const coreCountEl = document.getElementById('fontset-core-count');
+    const visualEl = document.getElementById('fontset-visual-desc');
+
+    if (titleEl) titleEl.innerText = fontSet.presetName;
+    if (toneEl) toneEl.innerText = fontSet.tone;
+    if (coreCountEl) coreCountEl.innerText = `Sử dụng ${fontSet.coreFontCount} phông chữ chủ đạo`;
+    if (visualEl) visualEl.innerText = fontSet.visualStyle;
+
+    const rolesOrder: FontRole[] = ['dialogue', 'innerThought', 'narration', 'shout', 'sfx', 'smallText'];
+    const fontLib = getEffectiveFontLibrary();
+
+    container.innerHTML = '';
+    rolesOrder.forEach(role => {
+        const item = fontSet.roles[role];
+        if (!item) return;
+
+        const isStrong = item.isStrongMatch;
+        const score = item.score;
+        let scoreBadge = isStrong
+            ? `<span class="px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold">${score}% Tương đồng</span>`
+            : `<span class="px-2 py-0.5 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold">⚠️ ${score}% (Chưa khớp tốt)</span>`;
+
+        // Role Icon & Title
+        let roleIcon = '💬';
+        if (role === 'innerThought') roleIcon = '💭';
+        else if (role === 'narration') roleIcon = '📜';
+        else if (role === 'shout') roleIcon = '🗯️';
+        else if (role === 'sfx') roleIcon = '💥';
+        else if (role === 'smallText') roleIcon = '📝';
+
+        // Options for Font Select dropdown
+        let fontOptions = '';
+        if (fontLib.length === 0) {
+            fontOptions = `<option value="">Kho font trống - Vui lòng nạp font</option>`;
+        } else {
+            fontLib.forEach(f => {
+                const selected = f.name === item.fontName ? 'selected' : '';
+                const typeTag = f.type === 'custom' ? '✨ ' : '🔤 ';
+                fontOptions += `<option value="${f.name}" ${selected}>${typeTag}${f.name} (${getCategoryLabel(f.category)})</option>`;
+            });
+        }
+
+        const card = document.createElement('div');
+        card.className = "bg-slate-950 border border-slate-855 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-md hover:border-slate-700 transition-all";
+        card.innerHTML = `
+            <div class="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-850">
+                <div class="flex items-center gap-2">
+                    <span class="text-base">${roleIcon}</span>
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-100">${item.roleLabel}</h4>
+                        <p class="text-[10px] text-slate-400 max-w-xs mt-0.5 truncate" title="${item.desc}">${item.desc}</p>
+                    </div>
+                </div>
+                <div>
+                    ${scoreBadge}
+                </div>
+            </div>
+
+            <!-- Role Live Canvas Render -->
+            <div class="relative group flex justify-center p-2 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden shadow-inner">
+                <canvas id="fontset-canvas-${role}" class="w-full max-w-full h-auto rounded-lg shadow cursor-pointer transition-transform group-hover:scale-[1.01]"></canvas>
+                <div class="absolute bottom-2.5 right-2.5 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button type="button" data-action="download-role-sample" class="px-2 py-1 rounded-lg bg-slate-900/90 hover:bg-indigo-600 border border-slate-700 text-white text-[10px] font-bold shadow-lg transition-colors flex items-center gap-1">
+                        <i class="fa-solid fa-download"></i> Tải ảnh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Assigned Font Selector & Editable Sample Text -->
+            <div class="flex flex-col gap-2 pt-1 text-xs">
+                <div class="flex items-center justify-between gap-2">
+                    <label class="text-[10px] font-bold text-slate-400 shrink-0">Phông chữ gán:</label>
+                    <select data-role="${role}" class="fontset-role-select flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-indigo-300 font-bold focus:outline-none focus:border-indigo-500 truncate">
+                        ${fontOptions}
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between gap-2">
+                    <label class="text-[10px] font-bold text-slate-400 shrink-0">Mẫu câu thử:</label>
+                    <input type="text" data-sample-role="${role}" value="${item.sampleText}" class="fontset-sample-input flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
+                </div>
+            </div>
+        `;
+
+        const selectEl = card.querySelector('.fontset-role-select') as HTMLSelectElement | null;
+        if (selectEl) {
+            selectEl.addEventListener('change', (e: Event) => {
+                const target = e.target as HTMLSelectElement;
+                onFontSetRoleChange(role, target.value);
+            });
+        }
+
+        const inputEl = card.querySelector('.fontset-sample-input') as HTMLInputElement | null;
+        if (inputEl) {
+            inputEl.addEventListener('input', (e: Event) => {
+                const target = e.target as HTMLInputElement;
+                onFontSetSampleTextChange(role, target.value);
+            });
+        }
+
+        const btnDownload = card.querySelector('[data-action="download-role-sample"]');
+        if (btnDownload) {
+            btnDownload.addEventListener('click', () => downloadFontSetSampleImage(role));
+        }
+
+        const canvasEl = card.querySelector(`#fontset-canvas-${role}`) as HTMLCanvasElement | null;
+        if (canvasEl) {
+            canvasEl.addEventListener('click', () => openPreviewModal(canvasEl.toDataURL()));
+        }
+
+        container.appendChild(card);
+    });
+}
+
+export async function renderRolePreviewCanvas(role: FontRole, fontSet: GeneratedFontSet): Promise<void> {
+    const canvas = document.getElementById(`fontset-canvas-${role}`) as HTMLCanvasElement | null;
+    if (!canvas || !fontSet) return;
+    const assignment = fontSet.roles[role];
+    if (!assignment) return;
+
+    const fontName = assignment.fontName;
+    const cleanFontName = fontName.replace(/['"]/g, '');
+    const text = assignment.sampleText || 'Manga Translator Studio';
+
+    const dpr = 2;
+    const displayW = 460;
+    const displayH = 130;
+
+    canvas.width = displayW * dpr;
+    canvas.height = displayH * dpr;
+    canvas.style.width = displayW + 'px';
+    canvas.style.height = displayH + 'px';
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(dpr, dpr);
+
+    // Font styles based on role
+    let isBold = true;
+    let isItalic = false;
+    let fontSize = 22;
+    let strokeWidth = 2.5;
+    let textColor = '#ffffff';
+    let strokeColor = '#000000';
+
+    if (role === 'innerThought') {
+        isItalic = true;
+        isBold = false;
+        fontSize = 20;
+        strokeWidth = 1.5;
+        textColor = '#e0e7ff';
+    } else if (role === 'narration') {
+        isBold = false;
+        fontSize = 19;
+        strokeWidth = 1.5;
+        textColor = '#f8fafc';
+    } else if (role === 'shout') {
+        isBold = true;
+        fontSize = 26;
+        strokeWidth = 4.0;
+        textColor = '#ffffff';
+        strokeColor = '#000000';
+    } else if (role === 'sfx') {
+        isBold = true;
+        isItalic = true;
+        fontSize = 30;
+        strokeWidth = 4.5;
+        textColor = '#fef08a';
+        strokeColor = '#000000';
+    } else if (role === 'smallText') {
+        isBold = false;
+        fontSize = 16;
+        strokeWidth = 1.0;
+        textColor = '#cbd5e1';
+    }
+
+    const fallbackFamily = (assignment.fontItem?.family && assignment.fontItem.family.includes('cursive')) ? 'cursive' : 'sans-serif';
+    const fontSpec = `${isBold ? 'bold ' : ''}${isItalic ? 'italic ' : ''}${fontSize}px "${cleanFontName}"`;
+    const fontStyleStr = `${isBold ? 'bold ' : ''}${isItalic ? 'italic ' : ''}${fontSize}px "${cleanFontName}", ${fallbackFamily}`;
+
+    try {
+        await Promise.race([
+            (document as any).fonts.load(fontSpec, text),
+            new Promise(resolve => setTimeout(resolve, 250))
+        ]);
+        await Promise.race([
+            (document as any).fonts.ready,
+            new Promise(resolve => setTimeout(resolve, 250))
+        ]);
+    } catch (e) { }
+
+    // Background gradient
+    const bgGrad = ctx.createLinearGradient(0, 0, displayW, displayH);
+    bgGrad.addColorStop(0, '#0b0f19');
+    bgGrad.addColorStop(1, '#111827');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, displayW, displayH);
+
+    // Inner glow
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.strokeRect(6, 6, displayW - 12, displayH - 12);
+
+    // Header label
+    ctx.font = '600 10px sans-serif';
+    ctx.fillStyle = '#64748b';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`FONT: ${cleanFontName.toUpperCase()}`, 14, 12);
+
+    // Render Text
+    ctx.font = fontStyleStr;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const maxWidth = displayW - 50;
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (let i = 0; i < words.length; i++) {
+        const testLine = currentLine ? (currentLine + ' ' + words[i]) : words[i];
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = words[i];
+        } else {
+            currentLine = testLine;
+        }
+    }
+    if (currentLine) lines.push(currentLine);
+
+    const lineHeight = fontSize * 1.3;
+    const startY = (displayH / 2 + 6) - ((lines.length - 1) * lineHeight / 2);
+
+    lines.forEach((line, lIdx) => {
+        const y = startY + lIdx * lineHeight;
+        const x = displayW / 2;
+
+        if (strokeWidth > 0) {
+            ctx.save();
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+            ctx.shadowBlur = 4;
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = strokeWidth * 2;
+            ctx.lineJoin = 'round';
+            ctx.miterLimit = 2;
+            ctx.strokeText(line, x, y);
+            ctx.restore();
+        }
+
+        ctx.fillStyle = textColor;
+        ctx.fillText(line, x, y);
+    });
+}
+
+export async function updateAllFontSetCanvases(): Promise<void> {
+    if (!currentGeneratedFontSet) return;
+    const roles: FontRole[] = ['dialogue', 'innerThought', 'narration', 'shout', 'sfx', 'smallText'];
+    for (const role of roles) {
+        await renderRolePreviewCanvas(role, currentGeneratedFontSet);
+    }
+}
+
+export function copyFontSetSummary(): void {
+    if (!currentGeneratedFontSet) return;
+    let summary = `[Manga Font Set: ${currentGeneratedFontSet.presetName}]\n`;
+    summary += `Thể loại: ${currentGeneratedFontSet.tone}\n\n`;
+    const roles: FontRole[] = ['dialogue', 'innerThought', 'narration', 'shout', 'sfx', 'smallText'];
+    roles.forEach(r => {
+        const item = currentGeneratedFontSet!.roles[r];
+        summary += `• ${item.roleLabel}: ${item.fontName} (${item.score}% match)\n`;
+    });
+    navigator.clipboard.writeText(summary);
+    alert("Đã sao chép cấu hình Font Set vào khay nhớ tạm!");
+}
+
+export function copyFontSetJson(): void {
+    if (!currentGeneratedFontSet) return;
+    const jsonStr = JSON.stringify(currentGeneratedFontSet, null, 2);
+    navigator.clipboard.writeText(jsonStr);
+    alert("Đã sao chép cấu trúc dữ liệu Font Set JSON!");
+}
+
+export function downloadFontSetSampleImage(role: FontRole): void {
+    const canvas = document.getElementById(`fontset-canvas-${role}`) as HTMLCanvasElement | null;
+    if (!canvas || !currentGeneratedFontSet) return;
+    const fontName = currentGeneratedFontSet.roles[role]?.fontName || 'font';
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `FontSet_${currentGeneratedFontSet.presetName}_${role}_${fontName.replace(/\s+/g, '_')}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+export function handleGenreSampleImageSelect(files: File[]): void {
+    if (!files || files.length === 0) return;
+    const limitFiles = files.slice(0, 3);
+    genreSampleLoadedImgs = [];
+    genreSampleDataUrls = [];
+
+    const container = document.getElementById('genre-sample-thumbs-container');
+    if (container) container.innerHTML = '';
+
+    let loadedCount = 0;
+    limitFiles.forEach((file, idx) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const dataUrl = e.target?.result as string;
+            const img = new Image();
+            img.onload = () => {
+                genreSampleLoadedImgs.push(img);
+                genreSampleDataUrls.push(dataUrl);
+                loadedCount++;
+
+                if (container) {
+                    const thumb = document.createElement('img');
+                    thumb.src = dataUrl;
+                    thumb.className = "w-14 h-14 object-cover rounded-lg border border-slate-700 bg-slate-900";
+                    container.appendChild(thumb);
+                }
+
+                const countEl = document.getElementById('genre-sample-count');
+                if (countEl) countEl.innerText = `Đã chọn ${loadedCount} trang mẫu`;
+            };
+            img.src = dataUrl;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    const dropzone = document.getElementById('genre-sample-dropzone');
+    const previewBox = document.getElementById('genre-sample-preview-box');
+    if (dropzone) dropzone.classList.add('hidden');
+    if (previewBox) previewBox.classList.remove('hidden');
+}
+
+export function resetGenreSampleImages(): void {
+    genreSampleLoadedImgs = [];
+    genreSampleDataUrls = [];
+    const container = document.getElementById('genre-sample-thumbs-container');
+    if (container) container.innerHTML = '';
+    const dropzone = document.getElementById('genre-sample-dropzone');
+    const previewBox = document.getElementById('genre-sample-preview-box');
+    if (previewBox) previewBox.classList.add('hidden');
+    if (dropzone) dropzone.classList.remove('hidden');
+    const fileInput = document.getElementById('genre-sample-files-input') as HTMLInputElement | null;
+    if (fileInput) fileInput.value = '';
+}
+
+export async function runAiGenreAnalysis(): Promise<void> {
+    if (genreSampleDataUrls.length === 0 && genreSampleLoadedImgs.length === 0) {
+        alert("Vui lòng tải lên từ 1 đến 3 ảnh trang manga mẫu trước!");
+        return;
+    }
+
+    const effectiveFonts = getEffectiveFontLibrary();
+
+    const model = getEffectiveFontMatchModel();
+    const apiKeyInput = document.getElementById('fontmatch-api-key') as HTMLInputElement | null;
+    let apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+    if (!apiKey) {
+        apiKey = localStorage.getItem('gemini_manga_api_key') ||
+            localStorage.getItem('gemini_api_key') ||
+            localStorage.getItem('manga_gemini_key') || '';
+    }
+
+    const loadingBtn = document.getElementById('btn-run-genre-ai');
+    if (loadingBtn) loadingBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Đang phân tích phong cách...';
+
+    try {
+        let result: AiGenreAnalysisResult;
+        if (model !== 'offline-heuristic' && apiKey && genreSampleDataUrls.length > 0) {
+            result = await callGeminiVisionForGenreStyle(model, apiKey, genreSampleDataUrls);
+        } else {
+            await new Promise(r => setTimeout(r, 450));
+            result = analyzeGenreWithCanvasHeuristics(genreSampleLoadedImgs);
+        }
+
+        const customProfile: StyleProfile = {
+            weight: result.weight,
+            roundness: result.roundness,
+            formality: result.formality,
+            handwritten: result.handwritten,
+            intensity: result.intensity
+        };
+
+        currentGeneratedFontSet = generateFontSetFromCustomProfile(
+            effectiveFonts,
+            customProfile,
+            result.genre,
+            result.tone,
+            result.visualStyle
+        );
+
+        renderFontSetUI(currentGeneratedFontSet);
+        await updateAllFontSetCanvases();
+
+        // Update active dropdown preset if matched
+        const select = document.getElementById('fontset-genre-select') as HTMLSelectElement | null;
+        if (select && result.detectedPresetId) {
+            select.value = result.detectedPresetId;
+        }
+
+        alert(`🎉 AI đã phân tích xong phong cách: "${result.genre}"!\n\nĐã đề xuất bộ Font Set tối ưu cho dự án.`);
+    } catch (err: any) {
+        console.warn("AI Genre analysis failed, falling back to local heuristic:", err);
+        const fallbackResult = analyzeGenreWithCanvasHeuristics(genreSampleLoadedImgs);
+        const fallbackProfile: StyleProfile = {
+            weight: fallbackResult.weight,
+            roundness: fallbackResult.roundness,
+            formality: fallbackResult.formality,
+            handwritten: fallbackResult.handwritten,
+            intensity: fallbackResult.intensity
+        };
+
+        currentGeneratedFontSet = generateFontSetFromCustomProfile(
+            effectiveFonts,
+            fallbackProfile,
+            fallbackResult.genre,
+            fallbackResult.tone,
+            fallbackResult.visualStyle
+        );
+
+        renderFontSetUI(currentGeneratedFontSet);
+        await updateAllFontSetCanvases();
+        alert(`Đã hoàn tất phân tích phong cách (Chế độ Heuristic cục bộ): "${fallbackResult.genre}".`);
+    } finally {
+        if (loadingBtn) loadingBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i> Phân Tích & Sinh Font Set';
+    }
 }
 
 // --- MODEL MANAGEMENT ENGINE (SYNCED WITH STUDIO SETTINGS) ---
@@ -480,11 +1863,7 @@ export async function runFontMatchAnalysis(): Promise<void> {
         return;
     }
 
-    if (!customFontsList || customFontsList.length === 0) {
-        alert("Kho font cá nhân của bạn hiện đang trống (0 font)!\n\nHệ thống chỉ phân tích và so khớp trên bộ font bạn tải lên. Vui lòng chuyển sang Tab 'Kho Font Của Bạn' để tải lên các tệp font (.ttf, .otf, .woff, .woff2) trước khi phân tích.");
-        switchFontMatchSubTab('custom');
-        return;
-    }
+    const effectiveFonts = getEffectiveFontLibrary();
 
     const model = getEffectiveFontMatchModel();
     const contextTag = (document.getElementById('fontmatch-context-select') as HTMLSelectElement)?.value || 'auto';
@@ -517,7 +1896,8 @@ export async function runFontMatchAnalysis(): Promise<void> {
     const loadingTitle = document.getElementById('fontmatch-loading-title');
     const loadingDesc = document.getElementById('fontmatch-loading-desc');
     if (loadingTitle) loadingTitle.innerText = "Đang quét đặc trưng hình thái & thần thái chữ...";
-    if (loadingDesc) loadingDesc.innerText = `Đang so khớp với ${customFontsList.length} font cá nhân đã tải lên...`;
+    const fontLibLabel = (customFontsList && customFontsList.length > 0) ? `${customFontsList.length} font cá nhân đã tải lên` : `${effectiveFonts.length} font mẫu chuẩn`;
+    if (loadingDesc) loadingDesc.innerText = `Đang so khớp với ${fontLibLabel}...`;
 
     let analysisResult: AnalysisResult;
 
@@ -535,14 +1915,14 @@ export async function runFontMatchAnalysis(): Promise<void> {
         analysisResult = analyzeImageWithCanvasHeuristics(fontMatchLoadedImg, contextTag);
     }
 
-    const rankedFonts = rankFontsAgainstAnalysis(customFontsList, analysisResult, contextTag);
+    const rankedFonts = rankFontsAgainstAnalysis(effectiveFonts, analysisResult, contextTag);
     currentTop3Matches = rankedFonts.slice(0, Math.min(3, rankedFonts.length));
 
     if (loadingBox) loadingBox.classList.add('hidden');
     if (resultsContainer) resultsContainer.classList.remove('hidden');
 
     const badgeEl = document.getElementById('fontmatch-engine-badge');
-    if (badgeEl) badgeEl.innerText = (model !== 'offline-heuristic' && apiKey && analysisResult.isAi) ? 'AI Vision Flash-Lite' : 'Heuristic Offline 100%';
+    if (badgeEl) badgeEl.innerText = (model !== 'offline-heuristic' && apiKey && analysisResult.isAi) ? `AI Vision (${model})` : 'Heuristic Offline 100%';
     const catEl = document.getElementById('fontmatch-res-category');
     if (catEl) catEl.innerText = getCategoryLabel(analysisResult.category);
     const weightEl = document.getElementById('fontmatch-res-weight');
@@ -552,7 +1932,8 @@ export async function runFontMatchAnalysis(): Promise<void> {
     const strokeEl = document.getElementById('fontmatch-res-stroke');
     if (strokeEl) strokeEl.innerText = analysisResult.recommendedStroke || '3px (Viền tương phản)';
     const reasonEl = document.getElementById('fontmatch-res-reasoning');
-    if (reasonEl) reasonEl.innerText = analysisResult.reasoning || `Đã phân tích và so khớp với kho ${customFontsList.length} font cá nhân của bạn.`;
+    const sourceDesc = (customFontsList && customFontsList.length > 0) ? `kho ${customFontsList.length} font cá nhân` : `kho ${effectiveFonts.length} font mẫu Manga`;
+    if (reasonEl) reasonEl.innerText = analysisResult.reasoning || `Đã phân tích và so khớp với ${sourceDesc}.`;
 
     renderTop3FontCards(currentTop3Matches);
     await updateAllFontCanvases();
@@ -567,22 +1948,26 @@ export async function callGeminiVisionForFontMatch(
     const base64Data = dataUrl.split(',')[1];
     const mimeType = dataUrl.split(';')[0].split(':')[1] || 'image/png';
 
-    const prompt = `You are an expert Manga & Comic Lettering Director and Typesetter.
-Analyze the Japanese/Asian lettering style inside the provided image patch.
-Context Hint from user: "${contextTag}".
+    const prompt = `Bạn là một chuyên gia chỉ đạo nghệ thuật Typography và Typesetting Manga/Comic.
+Nhiệm vụ: Phân tích phong cách typography của chữ trong ảnh để chọn font phù hợp nhất cho việc Việt hóa manga.
+Gợi ý ngữ cảnh từ người dùng: "${contextTag}".
 
-Evaluate:
-1. Category: One of ["dialogue", "shout", "narration", "whisper", "cute", "tech", "sfx"]
-2. Weight: score from 0.1 (very thin) to 1.0 (ultra heavy bold)
-3. Energy/Emotion: score from 0.1 (calm/peaceful) to 1.0 (explosive/screaming/action)
-4. Formality: score from 0.1 (handwritten/organic) to 1.0 (formal/serif/rigid)
-5. Roughness: score from 0.1 (clean geometric) to 1.0 (brush/distressed/sfx)
-6. Weight description in Vietnamese (e.g. "Nét thanh", "Nét đều chuẩn", "Nét dày đậm", "Chữ khối")
-7. Energy description in Vietnamese (e.g. "Bình tĩnh", "Kịch tính", "Hét lớn / Bùng nổ", "Thì thầm")
-8. Reasoning: 1-2 Vietnamese sentences explaining why this typography style was detected.
-9. Recommended stroke width: e.g. "2px" or "3.5px"
+ĐÁNH GIÁ CÁC ĐẶC TRƯNG HÌNH THÁI HỌC VÀ THẦN THÁI CHỮ:
+1. category: Chọn đúng 1 trong các giá trị sau: ["dialogue", "shout", "narration", "whisper", "cute", "tech", "sfx"]
+2. weightScore: Điểm độ đậm nét chữ từ 0.1 (rất mảnh/thanh) đến 1.0 (cực đậm/chữ khối/heavy black).
+3. energyScore: Điểm mức độ cảm xúc/năng lượng từ 0.1 (bình tĩnh, nhẹ nhàng) đến 1.0 (bùng nổ, la hét, kịch tính cao).
+4. formalityScore: Điểm độ nghiêm túc/quy chuẩn từ 0.1 (viết tay mộc mạc, tự do) đến 1.0 (nghiêm túc, trang trọng, serif/in hoa chuẩn).
+5. roughnessScore: Điểm độ nham nhở/gai góc từ 0.1 (nét mịn màng, tròn trịa) đến 1.0 (nét cọ xước, rách vỡ, SFX sần sùi).
+6. weightDesc: Mô tả ngắn gọn độ đậm bằng tiếng Việt (ví dụ: "Nét thanh mảnh", "Nét đều chuẩn", "Nét dày đậm", "Chữ khối").
+7. energyDesc: Mô tả ngắn gọn cảm xúc bằng tiếng Việt (ví dụ: "Bình tĩnh", "Tự nhiên", "Kịch tính cao", "La hét / Bùng nổ", "Thì thầm").
+8. reasoning: 1-2 câu tiếng Việt phân tích đặc trưng hình thái (độ dày nét, độ tròn/góc cạnh, cảm xúc, cảm giác manga) và định hướng phong cách font thay thế phù hợp khi typeset tiếng Việt.
+9. recommendedStroke: Độ dày viền chữ khuyến nghị (ví dụ: "2px", "3px", "3.5px").
 
-Respond STRICTLY in JSON format:
+QUY TẮC BẮT BUỘC:
+- KHÔNG đoán hoặc bịa tên phông chữ cụ thể (vì kết quả sẽ được dùng để xếp hạng kho font cá nhân có sẵn của người dùng).
+- CHỈ phân tích chính xác đặc trưng hình thái và phong cách thị giác theo đúng cấu trúc JSON yêu cầu.
+
+Trả về DUY NHẤT định dạng JSON tuân thủ schema sau:
 {
   "category": "shout",
   "weightScore": 0.85,
@@ -591,7 +1976,7 @@ Respond STRICTLY in JSON format:
   "roughnessScore": 0.7,
   "weightDesc": "Nét dày đậm (Bold / Heavy)",
   "energyDesc": "Cảm xúc bùng nổ / La hét (High Energy)",
-  "reasoning": "Chữ có nét đậm dày, nét cọ giật mạnh thể hiện cảm xúc giận dữ, thích hợp dùng font in hoa có độ tương phản cao.",
+  "reasoning": "Chữ có nét đậm dày, nét cọ giật mạnh thể hiện cảm xúc giận dữ, thích hợp dùng font in hoa có độ tương phản cao khi typeset tiếng Việt.",
   "recommendedStroke": "3.5px (Viền đen nổi khối)"
 }`;
 
@@ -631,15 +2016,63 @@ Respond STRICTLY in JSON format:
     if (!textContent) throw new Error("Không nhận được dữ liệu phản hồi từ AI");
 
     const cleanJson = textContent.replace(/```json/g, '').replace(/```/g, '').trim();
-    const parsed = JSON.parse(cleanJson);
-    parsed.isAi = true;
-    return parsed;
+    let parsed: any;
+    try {
+        parsed = JSON.parse(cleanJson);
+    } catch (parseErr) {
+        throw new Error(`Phản hồi AI không đúng định dạng JSON: ${cleanJson}`);
+    }
+
+    const validCategories: FontCategory[] = ['dialogue', 'shout', 'narration', 'whisper', 'cute', 'tech', 'sfx'];
+    const safeCategory: FontCategory = validCategories.includes(parsed.category) ? parsed.category : 'dialogue';
+
+    const clamp = (val: any, def: number): number => {
+        const num = typeof val === 'number' ? val : parseFloat(val);
+        if (isNaN(num)) return def;
+        return Math.max(0.1, Math.min(1.0, num));
+    };
+
+    return {
+        category: safeCategory,
+        weightScore: Number(clamp(parsed.weightScore, 0.5).toFixed(2)),
+        energyScore: Number(clamp(parsed.energyScore, 0.5).toFixed(2)),
+        formalityScore: Number(clamp(parsed.formalityScore, 0.4).toFixed(2)),
+        roughnessScore: Number(clamp(parsed.roughnessScore, 0.2).toFixed(2)),
+        weightDesc: typeof parsed.weightDesc === 'string' && parsed.weightDesc.trim() ? parsed.weightDesc.trim() : 'Nét vừa (Medium)',
+        energyDesc: typeof parsed.energyDesc === 'string' && parsed.energyDesc.trim() ? parsed.energyDesc.trim() : 'Tự nhiên (Medium)',
+        reasoning: typeof parsed.reasoning === 'string' && parsed.reasoning.trim() ? parsed.reasoning.trim() : 'Phân tích hình thái nét chữ phục vụ Việt hóa manga.',
+        recommendedStroke: typeof parsed.recommendedStroke === 'string' && parsed.recommendedStroke.trim() ? parsed.recommendedStroke.trim() : '2.5px (Viền tương phản)',
+        isAi: true
+    };
 }
 
 export function analyzeImageWithCanvasHeuristics(img: HTMLImageElement, contextTag: string): AnalysisResult {
+    if (typeof document === 'undefined') {
+        const fallbackCat: FontCategory = (contextTag && contextTag !== 'auto') ? (contextTag as FontCategory) : 'dialogue';
+        const fallbackWeightScore = fallbackCat === 'shout' || fallbackCat === 'sfx' ? 0.85 : 0.50;
+        return {
+            category: fallbackCat,
+            weightScore: fallbackWeightScore,
+            energyScore: fallbackCat === 'shout' || fallbackCat === 'sfx' ? 0.90 : 0.50,
+            formalityScore: fallbackCat === 'narration' || fallbackCat === 'tech' ? 0.85 : 0.40,
+            roughnessScore: fallbackCat === 'sfx' ? 0.80 : 0.20,
+            weightGrade: determineWeightGrade(fallbackWeightScore),
+            widthGrade: 'Normal',
+            slantGrade: 'Upright',
+            caseGrade: fallbackCat === 'shout' ? 'All Caps' : 'Mixed Case',
+            weightDesc: fallbackWeightScore > 0.7 ? 'Bold (Đậm dày)' : 'Regular (Chuẩn đều)',
+            energyDesc: 'Tự nhiên / Cân bằng (Medium)',
+            reasoning: `Phân tích heuristic cục bộ cho phong cách ${getCategoryLabel(fallbackCat)}.`,
+            recommendedStroke: '2.5px (Viền chuẩn)',
+            isAi: false
+        };
+    }
+
     const canvas = document.createElement('canvas');
-    const w = Math.min(img.naturalWidth || 200, 200);
-    const h = Math.min(img.naturalHeight || 200, 200);
+    const naturalW = img.naturalWidth || img.width || 200;
+    const naturalH = img.naturalHeight || img.height || 200;
+    const w = Math.max(20, Math.min(naturalW, 240));
+    const h = Math.max(20, Math.min(naturalH, 240));
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext('2d');
@@ -650,6 +2083,10 @@ export function analyzeImageWithCanvasHeuristics(img: HTMLImageElement, contextT
             energyScore: 0.5,
             formalityScore: 0.4,
             roughnessScore: 0.2,
+            weightGrade: 'Regular',
+            widthGrade: 'Normal',
+            slantGrade: 'Upright',
+            caseGrade: 'Mixed Case',
             isAi: false
         };
     }
@@ -660,37 +2097,54 @@ export function analyzeImageWithCanvasHeuristics(img: HTMLImageElement, contextT
 
     let darkPixels = 0;
     const totalPixels = w * h;
-    let edgeTransitions = 0;
+    let horizontalTransitions = 0;
+    let verticalTransitions = 0;
 
-    for (let i = 0; i < data.length; i += 4) {
-        const r = data[i], g = data[i + 1], b = data[i + 2];
-        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-        if (lum < 110) {
-            darkPixels++;
-        }
-        if (i > 4 && Math.abs(lum - (0.299 * data[i - 4] + 0.587 * data[i - 3] + 0.114 * data[i - 2])) > 80) {
-            edgeTransitions++;
+    for (let y = 0; y < h; y++) {
+        let prevDark = false;
+        for (let x = 0; x < w; x++) {
+            const idx = (y * w + x) * 4;
+            const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+            const isDark = lum < 115;
+            if (isDark) darkPixels++;
+            if (isDark !== prevDark) {
+                horizontalTransitions++;
+                prevDark = isDark;
+            }
         }
     }
 
-    const darkRatio = darkPixels / totalPixels;
-    const edgeDensity = edgeTransitions / totalPixels;
+    for (let x = 0; x < w; x++) {
+        let prevDark = false;
+        for (let y = 0; y < h; y++) {
+            const idx = (y * w + x) * 4;
+            const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+            const isDark = lum < 115;
+            if (isDark !== prevDark) {
+                verticalTransitions++;
+                prevDark = isDark;
+            }
+        }
+    }
+
+    const darkRatio = darkPixels / Math.max(1, totalPixels);
+    const transitionDensity = (horizontalTransitions + verticalTransitions) / Math.max(1, 2 * totalPixels);
     const aspectRatio = w / Math.max(h, 1);
 
     let detectedCategory: FontCategory = 'dialogue';
-    let weightScore = 0.5;
-    let energyScore = 0.5;
-    let formalityScore = 0.4;
-    let roughnessScore = 0.2;
+    let weightScore = Math.max(0.15, Math.min(0.95, (darkRatio - 0.08) / 0.38));
+    let roughnessScore = Math.max(0.10, Math.min(0.90, transitionDensity * 5.5));
+    let energyScore = Math.max(0.15, Math.min(0.95, weightScore * 0.5 + roughnessScore * 0.35));
+    let formalityScore = Math.max(0.15, Math.min(0.90, 1.0 - roughnessScore * 0.6));
 
     if (contextTag && contextTag !== 'auto') {
         detectedCategory = contextTag as FontCategory;
     } else {
-        if (darkRatio > 0.35 || edgeDensity > 0.18) {
+        if (roughnessScore > 0.60 || (darkRatio > 0.35 && transitionDensity > 0.12)) {
             detectedCategory = 'shout';
-        } else if (aspectRatio > 1.4 && darkRatio < 0.2) {
+        } else if (aspectRatio > 1.35 && darkRatio < 0.22) {
             detectedCategory = 'narration';
-        } else if (darkRatio < 0.12) {
+        } else if (darkRatio < 0.12 && transitionDensity < 0.07) {
             detectedCategory = 'whisper';
         } else {
             detectedCategory = 'dialogue';
@@ -698,39 +2152,71 @@ export function analyzeImageWithCanvasHeuristics(img: HTMLImageElement, contextT
     }
 
     if (detectedCategory === 'shout') {
-        weightScore = 0.85;
-        energyScore = 0.9;
-        roughnessScore = 0.7;
+        weightScore = Math.max(0.70, weightScore);
+        energyScore = Math.max(0.75, energyScore);
     } else if (detectedCategory === 'sfx') {
-        weightScore = 0.9;
-        energyScore = 0.95;
-        roughnessScore = 0.85;
+        weightScore = Math.max(0.80, weightScore);
+        roughnessScore = Math.max(0.75, roughnessScore);
+        energyScore = Math.max(0.85, energyScore);
     } else if (detectedCategory === 'narration') {
-        weightScore = 0.5;
-        energyScore = 0.3;
-        formalityScore = 0.9;
+        formalityScore = Math.max(0.70, formalityScore);
+        energyScore = Math.min(0.50, energyScore);
     } else if (detectedCategory === 'whisper') {
-        weightScore = 0.35;
-        energyScore = 0.35;
-        formalityScore = 0.2;
+        weightScore = Math.min(0.38, weightScore);
+        energyScore = Math.min(0.40, energyScore);
     } else if (detectedCategory === 'tech') {
-        weightScore = 0.65;
-        energyScore = 0.6;
-        formalityScore = 0.8;
+        formalityScore = Math.max(0.75, formalityScore);
     }
+
+    const weightGrade = determineWeightGrade(weightScore);
+    const widthGrade: FontWidthGrade = aspectRatio < 0.65 ? 'Condensed' : aspectRatio > 1.45 ? 'Wide' : 'Normal';
+    const slantGrade: FontSlantGrade = roughnessScore > 0.65 ? 'Oblique' : 'Upright';
+    const caseGrade: FontCaseGrade = (detectedCategory === 'shout' || detectedCategory === 'sfx') ? 'All Caps' : 'Mixed Case';
 
     return {
         category: detectedCategory,
-        weightScore,
-        energyScore,
-        formalityScore,
-        roughnessScore,
-        weightDesc: weightScore > 0.7 ? 'Nét dày đậm (Bold / Heavy)' : weightScore < 0.4 ? 'Nét mảnh (Light)' : 'Nét đều (Medium)',
-        energyDesc: energyScore > 0.7 ? 'Bùng nổ / La hét (High)' : energyScore < 0.4 ? 'Trầm lặng / Thì thầm (Low)' : 'Tự nhiên (Medium)',
-        reasoning: `Phân tích mật độ điểm ảnh tối (${(darkRatio * 100).toFixed(0)}%) và độ sắc cạnh viền (${(edgeDensity * 100).toFixed(0)}%) khớp với phong cách ${getCategoryLabel(detectedCategory)}.`,
-        recommendedStroke: weightScore > 0.7 ? '3.5px (Viền đậm)' : '2px (Viền chuẩn)',
+        weightScore: Number(weightScore.toFixed(2)),
+        energyScore: Number(energyScore.toFixed(2)),
+        formalityScore: Number(formalityScore.toFixed(2)),
+        roughnessScore: Number(roughnessScore.toFixed(2)),
+        weightGrade: weightGrade,
+        widthGrade: widthGrade,
+        slantGrade: slantGrade,
+        caseGrade: caseGrade,
+        weightDesc: `${weightGrade} (${weightScore > 0.7 ? 'Nét đậm' : weightScore < 0.4 ? 'Nét thanh' : 'Nét vừa'})`,
+        energyDesc: energyScore > 0.7 ? 'Bùng nổ / La hét (High Energy)' : energyScore < 0.4 ? 'Trầm lặng / Thì thầm (Low Energy)' : 'Tự nhiên / Cân bằng (Medium)',
+        reasoning: `Phân tích hình thái nét: ${weightGrade} • ${widthGrade} • ${slantGrade} • ${caseGrade} phù hợp phong cách ${getCategoryLabel(detectedCategory)}.`,
+        recommendedStroke: weightScore > 0.7 ? '3.5px (Viền đậm nổi khối)' : '2px (Viền chuẩn)',
         isAi: false
     };
+}
+
+export function calculateCategoryCompatibility(fontCat: string, targetCat: string): number {
+    if (fontCat === targetCat) return 1.0;
+
+    const highPairs = [
+        ['shout', 'sfx'], ['sfx', 'shout'],
+        ['dialogue', 'narration'], ['narration', 'dialogue'],
+        ['dialogue', 'cute'], ['cute', 'dialogue'],
+        ['whisper', 'cute'], ['cute', 'whisper']
+    ];
+    if (highPairs.some(([a, b]) => a === fontCat && b === targetCat)) return 0.70;
+
+    const medPairs = [
+        ['tech', 'narration'], ['narration', 'tech'],
+        ['tech', 'shout'], ['shout', 'tech'],
+        ['dialogue', 'whisper'], ['whisper', 'dialogue']
+    ];
+    if (medPairs.some(([a, b]) => a === fontCat && b === targetCat)) return 0.45;
+
+    const lowPairs = [
+        ['shout', 'whisper'], ['whisper', 'shout'],
+        ['sfx', 'whisper'], ['whisper', 'sfx'],
+        ['sfx', 'narration'], ['narration', 'sfx']
+    ];
+    if (lowPairs.some(([a, b]) => a === fontCat && b === targetCat)) return 0.15;
+
+    return 0.35;
 }
 
 export function rankFontsAgainstAnalysis(
@@ -738,53 +2224,49 @@ export function rankFontsAgainstAnalysis(
     analysis: AnalysisResult,
     userContext: string
 ): CustomFontItem[] {
+    if (!fontList || fontList.length === 0) return [];
+
     const targetCat = (userContext && userContext !== 'auto') ? userContext : analysis.category;
-    const tw = analysis.weightScore ?? 0.5;
-    const te = analysis.energyScore ?? 0.5;
-    const tf = analysis.formalityScore ?? 0.4;
-    const tr = analysis.roughnessScore ?? 0.2;
+    const tw = Math.min(1.0, Math.max(0.1, analysis.weightScore ?? 0.5));
+    const te = Math.min(1.0, Math.max(0.1, analysis.energyScore ?? 0.5));
+    const tf = Math.min(1.0, Math.max(0.1, analysis.formalityScore ?? 0.4));
+    const tr = Math.min(1.0, Math.max(0.1, analysis.roughnessScore ?? 0.2));
 
     const scored = fontList.map(font => {
-        const fw = font.weightScore ?? 0.5;
-        const fe = font.energyScore ?? 0.5;
-        const ff = font.formalityScore ?? 0.4;
-        const fr = font.roughnessScore ?? 0.2;
+        const fw = Math.min(1.0, Math.max(0.1, font.weightScore ?? 0.5));
+        const fe = Math.min(1.0, Math.max(0.1, font.energyScore ?? 0.5));
+        const ff = Math.min(1.0, Math.max(0.1, font.formalityScore ?? 0.4));
+        const fr = Math.min(1.0, Math.max(0.1, font.roughnessScore ?? 0.2));
 
-        let catBonus = 0;
-        if (font.category === targetCat) {
-            catBonus = 0.45;
-        } else if ((font.category === 'dialogue' && targetCat === 'narration') || (font.category === 'shout' && targetCat === 'sfx')) {
-            catBonus = 0.25;
-        }
-
-        const dist = Math.sqrt(
+        // 1. Weighted morphological Euclidean distance
+        const morphDist = Math.sqrt(
             Math.pow(tw - fw, 2) * 0.35 +
-            Math.pow(te - fe, 2) * 0.35 +
-            Math.pow(tf - ff, 2) * 0.15 +
-            Math.pow(tr - fr, 2) * 0.15
+            Math.pow(te - fe, 2) * 0.25 +
+            Math.pow(tf - ff, 2) * 0.20 +
+            Math.pow(tr - fr, 2) * 0.20
         );
 
-        const similarity = Math.max(0.1, 1 - dist) * 0.55 + catBonus;
+        // Morphological similarity in [0, 1]
+        const morphSim = Math.max(0, 1.0 - morphDist);
+
+        // 2. Soft Category compatibility in [0.15, 1.0]
+        const catSim = calculateCategoryCompatibility(font.category, targetCat);
+
+        // 3. Composite score: 80% morphological similarity + 20% category compatibility
+        const compositeScore = morphSim * 0.80 + catSim * 0.20;
+
         return {
             font: font,
-            rawScore: similarity
+            rawScore: compositeScore
         };
     });
 
+    // Deterministic descending sort by composite score
     scored.sort((a, b) => b.rawScore - a.rawScore);
 
+    // Realistic match percentage (no rank inflation!)
     return scored.map((item, idx) => {
-        let matchPercent = 95;
-        if (idx === 0) {
-            matchPercent = Math.min(98, Math.max(92, Math.round(item.rawScore * 95 + 5)));
-        } else if (idx === 1) {
-            matchPercent = Math.min(89, Math.max(83, Math.round(item.rawScore * 85 + 4)));
-        } else if (idx === 2) {
-            matchPercent = Math.min(81, Math.max(74, Math.round(item.rawScore * 75 + 3)));
-        } else {
-            matchPercent = Math.max(50, Math.round(item.rawScore * 70));
-        }
-
+        const matchPercent = Math.min(99, Math.max(10, Math.round(item.rawScore * 100)));
         return {
             ...item.font,
             matchPercent: matchPercent,
@@ -798,20 +2280,78 @@ export function renderTop3FontCards(top3: CustomFontItem[]): void {
     if (!grid) return;
     grid.innerHTML = '';
 
+    if (!top3 || top3.length === 0) {
+        grid.innerHTML = `
+            <div class="p-6 bg-slate-900 border border-slate-800 rounded-2xl text-center text-slate-400 text-xs">
+                Không tìm thấy phông chữ phù hợp trong kho.
+            </div>
+        `;
+        return;
+    }
+
+    const top1Score = top3[0]?.matchPercent ?? 0;
+    const isLowMatch = top1Score < 65;
+
+    // Insert warning notice banner if closest font has low match score (<65%)
+    if (isLowMatch) {
+        const notice = document.createElement('div');
+        notice.className = "bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 text-xs text-amber-200/90 flex items-start gap-3 shadow-md";
+        notice.innerHTML = `
+            <div class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+            </div>
+            <div class="flex-1">
+                <div class="font-bold text-amber-300 flex items-center gap-1.5">
+                    <span>Thông Báo: Không Có Font Khớp Hoàn Hảo</span>
+                    <span class="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-mono">Độ khớp cao nhất: ${top1Score}%</span>
+                </div>
+                <p class="text-[11px] text-amber-200/80 mt-1 leading-relaxed">
+                    Kho font hiện tại của bạn chưa có font nào thực sự tương đồng cao với phong cách chữ trong ảnh. Danh sách dưới đây là những lựa chọn có hình thái <strong>gần nhất</strong> để bạn tham khảo.
+                </p>
+            </div>
+        `;
+        grid.appendChild(notice);
+    }
+
     top3.forEach((item, index) => {
         const rank = index + 1;
         const isTop1 = rank === 1;
-        const rankBadge = isTop1
-            ? `<span class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold font-mono flex items-center gap-1"><i class="fa-solid fa-crown text-amber-400"></i> TOP 1 KHỚP NHẤT</span>`
-            : rank === 2
-                ? `<span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold font-mono">🥈 TOP 2</span>`
-                : `<span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 text-xs font-bold font-mono">🥉 TOP 3</span>`;
+        const score = item.matchPercent ?? 50;
 
-        const typeBadge = `<span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-bold">✨ Font Cá Nhân</span>`;
-        const progressColor = isTop1 ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : rank === 2 ? 'bg-indigo-500' : 'bg-purple-500';
-        const cardBorder = isTop1
+        let scoreTextColor = 'text-slate-400';
+        let progressColor = 'bg-slate-600';
+        if (score >= 85) {
+            scoreTextColor = 'text-emerald-400';
+            progressColor = 'bg-gradient-to-r from-emerald-500 to-teal-400';
+        } else if (score >= 70) {
+            scoreTextColor = 'text-indigo-300';
+            progressColor = 'bg-indigo-500';
+        } else if (score >= 55) {
+            scoreTextColor = 'text-amber-400';
+            progressColor = 'bg-amber-500';
+        }
+
+        let rankBadge: string;
+        if (isTop1) {
+            if (isLowMatch) {
+                rankBadge = `<span class="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-bold font-mono flex items-center gap-1.5"><i class="fa-solid fa-compass text-amber-400"></i> LỰA CHỌN GẦN NHẤT</span>`;
+            } else {
+                rankBadge = `<span class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold font-mono flex items-center gap-1"><i class="fa-solid fa-crown text-amber-400"></i> TOP 1 KHỚP NHẤT</span>`;
+            }
+        } else if (rank === 2) {
+            rankBadge = `<span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold font-mono">🥈 TOP 2</span>`;
+        } else {
+            rankBadge = `<span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 text-xs font-bold font-mono">🥉 TOP 3</span>`;
+        }
+
+        const typeBadge = item.type === 'custom'
+            ? `<span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-bold">✨ Font Cá Nhân</span>`
+            : `<span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px] font-bold">🔤 Font Mẫu Chuẩn</span>`;
+        const cardBorder = (isTop1 && !isLowMatch)
             ? 'border-amber-500/40 bg-gradient-to-b from-amber-500/5 via-slate-900 to-slate-900 shadow-xl shadow-amber-500/5'
-            : 'border-slate-800 bg-slate-900';
+            : isTop1
+                ? 'border-amber-500/20 bg-slate-900 shadow-lg'
+                : 'border-slate-800 bg-slate-900';
 
         const card = document.createElement('div');
         card.className = `${cardBorder} border rounded-2xl p-4 flex flex-col gap-3.5 transition-all`;
@@ -829,9 +2369,9 @@ export function renderTop3FontCards(top3: CustomFontItem[]): void {
 
                 <div class="flex items-center gap-2">
                     <div class="flex flex-col items-end">
-                        <span class="text-xs font-mono font-bold ${isTop1 ? 'text-emerald-400' : 'text-indigo-300'}">${item.matchPercent}% Tương đồng</span>
+                        <span class="text-xs font-mono font-bold ${scoreTextColor}">${score}% Tương đồng</span>
                         <div class="w-24 bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800 mt-0.5">
-                            <div class="${progressColor} h-full" style="width: ${item.matchPercent}%"></div>
+                            <div class="${progressColor} h-full transition-all duration-300" style="width: ${score}%"></div>
                         </div>
                     </div>
                 </div>
@@ -910,8 +2450,14 @@ export async function renderFontVisualCanvas(canvasId: string, fontObj: CustomFo
     const fontStyleStr = `${isBold ? 'bold ' : ''}${isItalic ? 'italic ' : ''}${fontSize}px "${cleanFontName}", ${fallbackFamily}`;
 
     try {
-        await (document as any).fonts.load(fontSpec, text);
-        await (document as any).fonts.ready;
+        await Promise.race([
+            (document as any).fonts.load(fontSpec, text),
+            new Promise(resolve => setTimeout(resolve, 250))
+        ]);
+        await Promise.race([
+            (document as any).fonts.ready,
+            new Promise(resolve => setTimeout(resolve, 250))
+        ]);
     } catch (e) { }
 
     const bgGrad = ctx.createLinearGradient(0, 0, displayW, displayH);
@@ -1076,7 +2622,352 @@ export function openFontsDB(): Promise<IDBDatabase> {
     });
 }
 
+export function determineWeightGrade(weightScore: number): FontWeightGrade {
+    if (weightScore < 0.20) return 'Thin';
+    if (weightScore < 0.35) return 'Light';
+    if (weightScore < 0.50) return 'Regular';
+    if (weightScore < 0.65) return 'Medium';
+    if (weightScore < 0.78) return 'SemiBold';
+    if (weightScore < 0.89) return 'Bold';
+    return 'Black';
+}
+
+export function determineWidthGrade(aspectRatio: number, widthAdvanceRatio?: number): FontWidthGrade {
+    if (aspectRatio < 0.65 || (widthAdvanceRatio !== undefined && widthAdvanceRatio < 0.40)) return 'Condensed';
+    if (aspectRatio > 1.08 || (widthAdvanceRatio !== undefined && widthAdvanceRatio > 0.72)) return 'Wide';
+    return 'Normal';
+}
+
+export function determineSlantGrade(slantAngle: number, isItalicCursive = false): FontSlantGrade {
+    const absAngle = Math.abs(slantAngle);
+    if (absAngle < 3.5) return 'Upright';
+    if (isItalicCursive) return 'Italic';
+    return 'Oblique';
+}
+
+export function determineCaseGrade(isAllCaps: boolean, isSmallCaps: boolean): FontCaseGrade {
+    if (isAllCaps) return 'All Caps';
+    if (isSmallCaps) return 'Small Caps';
+    return 'Mixed Case';
+}
+
+export function analyzeFontMorphology(family: string): FontMorphologyResult {
+    const cleanFamily = (family || 'Sans').replace(/['",]/g, '').trim();
+    const lowerName = cleanFamily.toLowerCase();
+
+    // Fallback if headless / no DOM canvas
+    if (typeof document === 'undefined') {
+        let weight: FontWeightGrade = 'Regular';
+        let weightScore = 0.45;
+        if (lowerName.includes('thin') || lowerName.includes('hairline')) { weight = 'Thin'; weightScore = 0.15; }
+        else if (lowerName.includes('light')) { weight = 'Light'; weightScore = 0.28; }
+        else if (lowerName.includes('semibold') || lowerName.includes('demibold')) { weight = 'SemiBold'; weightScore = 0.72; }
+        else if (lowerName.includes('medium')) { weight = 'Medium'; weightScore = 0.58; }
+        else if (lowerName.includes('black') || lowerName.includes('heavy') || lowerName.includes('ultrabold') || lowerName.includes('extrabold')) { weight = 'Black'; weightScore = 0.92; }
+        else if (lowerName.includes('bold')) { weight = 'Bold'; weightScore = 0.82; }
+
+        let width: FontWidthGrade = 'Normal';
+        let widthScore = 0.82;
+        if (lowerName.includes('condensed') || lowerName.includes('narrow') || lowerName.includes('compress')) { width = 'Condensed'; widthScore = 0.62; }
+        else if (lowerName.includes('wide') || lowerName.includes('expanded') || lowerName.includes('extended')) { width = 'Wide'; widthScore = 1.08; }
+
+        let slant: FontSlantGrade = 'Upright';
+        let slantAngle = 0;
+        let isItalic = false;
+        if (lowerName.includes('italic') || lowerName.includes('script') || lowerName.includes('cursive') || lowerName.includes('handwriting')) {
+            slant = 'Italic'; slantAngle = 12.5; isItalic = true;
+        } else if (lowerName.includes('oblique') || lowerName.includes('slanted') || lowerName.includes('incline')) {
+            slant = 'Oblique'; slantAngle = 11.0;
+        }
+
+        let caseType: FontCaseGrade = 'Mixed Case';
+        let isAllCaps = false;
+        let isSmallCaps = false;
+        if (lowerName.includes('allcaps') || lowerName.includes('all-caps') || lowerName.includes('caps') || lowerName.includes('headline')) {
+            caseType = 'All Caps'; isAllCaps = true;
+        } else if (lowerName.includes('smallcaps') || lowerName.includes('small-caps')) {
+            caseType = 'Small Caps'; isSmallCaps = true;
+        }
+
+        return {
+            weight,
+            width,
+            slant,
+            caseType,
+            weightScore,
+            widthScore,
+            slantAngle,
+            caseRatio: isAllCaps ? 1.0 : isSmallCaps ? 0.75 : 0.68,
+            inkDensity: 0.32,
+            isAllCaps,
+            isSmallCaps,
+            isItalic
+        };
+    }
+
+    try {
+        const canvas = document.createElement('canvas');
+        const size = 120;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (!ctx) throw new Error("Canvas context 2D not available");
+
+        // 1. Measure Weight & Width over multi-glyph set
+        const weightGlyphs = ['M', 'H', 'A', 'O', 'E', 'x', 'o', 'n', 'a'];
+        let totalInkDensity = 0;
+        let validGlyphs = 0;
+        const aspectRatios: number[] = [];
+
+        for (const glyph of weightGlyphs) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, size, size);
+            ctx.fillStyle = '#000000';
+            ctx.font = `72px "${cleanFamily}", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(glyph, size / 2, size / 2);
+
+            const imgData = ctx.getImageData(0, 0, size, size).data;
+            let darkCount = 0;
+            let minX = size, maxX = 0, minY = size, maxY = 0;
+
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const idx = (y * size + x) * 4;
+                    const lum = 0.299 * imgData[idx] + 0.587 * imgData[idx + 1] + 0.114 * imgData[idx + 2];
+                    if (lum < 128) {
+                        darkCount++;
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                    }
+                }
+            }
+
+            if (darkCount > 15 && maxX >= minX && maxY >= minY) {
+                const bw = Math.max(1, maxX - minX + 1);
+                const bh = Math.max(1, maxY - minY + 1);
+                const density = darkCount / (bw * bh);
+                totalInkDensity += density;
+                aspectRatios.push(bw / bh);
+                validGlyphs++;
+            }
+        }
+
+        const avgInkDensity = validGlyphs > 0 ? (totalInkDensity / validGlyphs) : 0.32;
+        const avgAspectRatio = aspectRatios.length > 0 ? (aspectRatios.reduce((a, b) => a + b, 0) / aspectRatios.length) : 0.82;
+
+        let advanceRatio: number | undefined = undefined;
+        if (validGlyphs > 0) {
+            try {
+                ctx.font = `72px "${cleanFamily}", sans-serif`;
+                const textMetrics = ctx.measureText('Manga Studio');
+                if (textMetrics && typeof textMetrics.width === 'number' && textMetrics.width > 0) {
+                    advanceRatio = textMetrics.width / (72 * 12);
+                }
+            } catch (e) { }
+        }
+
+        let calculatedWeightScore = validGlyphs > 0 ? Math.max(0.05, Math.min(1.00, (avgInkDensity - 0.14) / 0.44)) : 0.48;
+        if (lowerName.includes('thin') || lowerName.includes('hairline')) calculatedWeightScore = Math.min(calculatedWeightScore, 0.18);
+        else if (lowerName.includes('light') && !lowerName.includes('semibold')) calculatedWeightScore = Math.min(Math.max(0.20, calculatedWeightScore), 0.34);
+        else if (lowerName.includes('medium')) calculatedWeightScore = 0.58;
+        else if (lowerName.includes('semibold') || lowerName.includes('demibold')) calculatedWeightScore = Math.max(0.65, Math.min(0.77, calculatedWeightScore));
+        else if (lowerName.includes('black') || lowerName.includes('heavy') || lowerName.includes('ultrabold') || lowerName.includes('extrabold')) calculatedWeightScore = Math.max(0.89, calculatedWeightScore);
+        else if (lowerName.includes('bold') && !lowerName.includes('semibold')) calculatedWeightScore = Math.max(0.78, Math.min(0.88, calculatedWeightScore));
+
+        const weightGrade = determineWeightGrade(calculatedWeightScore);
+        let widthGrade = determineWidthGrade(avgAspectRatio, advanceRatio);
+        if (lowerName.includes('condensed') || lowerName.includes('narrow') || lowerName.includes('compress')) widthGrade = 'Condensed';
+        else if (lowerName.includes('wide') || lowerName.includes('expanded') || lowerName.includes('extended')) widthGrade = 'Wide';
+        else if (validGlyphs === 0) widthGrade = 'Normal';
+
+        // 2. Measure Slant Angle by scanning vertical stem center-of-mass
+        const stemGlyphs = ['I', 'l', '|', 'H', 'T'];
+        const slantAngles: number[] = [];
+
+        for (const stem of stemGlyphs) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, size, size);
+            ctx.fillStyle = '#000000';
+            ctx.font = `72px "${cleanFamily}", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(stem, size / 2, size / 2);
+
+            const imgData = ctx.getImageData(0, 0, size, size).data;
+            const points: { x: number; y: number }[] = [];
+
+            for (let y = 15; y < size - 15; y++) {
+                let rowSumX = 0;
+                let rowCount = 0;
+                for (let x = 0; x < size; x++) {
+                    const idx = (y * size + x) * 4;
+                    const lum = 0.299 * imgData[idx] + 0.587 * imgData[idx + 1] + 0.114 * imgData[idx + 2];
+                    if (lum < 128) {
+                        rowSumX += x;
+                        rowCount++;
+                    }
+                }
+                if (rowCount > 2) {
+                    points.push({ x: rowSumX / rowCount, y: y });
+                }
+            }
+
+            if (points.length > 20) {
+                const n = points.length;
+                let sumY = 0, sumX = 0, sumY2 = 0, sumXY = 0;
+                for (const p of points) {
+                    sumY += p.y;
+                    sumX += p.x;
+                    sumY2 += p.y * p.y;
+                    sumXY += p.x * p.y;
+                }
+                const denom = (n * sumY2 - sumY * sumY);
+                if (Math.abs(denom) > 1e-4) {
+                    const slope = (n * sumXY - sumY * sumX) / denom;
+                    const angleDeg = Math.atan(slope) * (180 / Math.PI);
+                    if (Math.abs(angleDeg) < 45) {
+                        slantAngles.push(angleDeg);
+                    }
+                }
+            }
+        }
+
+        let avgSlantAngle = slantAngles.length > 0
+            ? Number((slantAngles.reduce((a, b) => a + b, 0) / slantAngles.length).toFixed(1))
+            : 0;
+
+        const isNameItalic = lowerName.includes('italic') || lowerName.includes('script') || lowerName.includes('cursive') || lowerName.includes('handwriting');
+        if (isNameItalic && Math.abs(avgSlantAngle) < 3.5) avgSlantAngle = 12.0;
+        if ((lowerName.includes('oblique') || lowerName.includes('slanted')) && Math.abs(avgSlantAngle) < 3.5) avgSlantAngle = 11.0;
+
+        const slantGrade = determineSlantGrade(avgSlantAngle, isNameItalic);
+
+        // 3. Measure Case (Mixed Case vs All Caps vs Small Caps)
+        const casePairs = [['a', 'A'], ['e', 'E'], ['g', 'G'], ['r', 'R'], ['h', 'H'], ['m', 'M']];
+        let fullCapMatches = 0;
+        let smallCapMatches = 0;
+        let totalHeightRatio = 0;
+
+        for (const [lowChar, upChar] of casePairs) {
+            // Lowercase glyph
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, size, size);
+            ctx.fillStyle = '#000000';
+            ctx.fillText(lowChar, size / 2, size / 2);
+            const lowData = ctx.getImageData(0, 0, size, size).data;
+            let lowDark = 0, lowMinY = size, lowMaxY = 0;
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const idx = (y * size + x) * 4;
+                    if (lowData[idx] < 128) {
+                        lowDark++;
+                        if (y < lowMinY) lowMinY = y;
+                        if (y > lowMaxY) lowMaxY = y;
+                    }
+                }
+            }
+
+            // Uppercase glyph
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, size, size);
+            ctx.fillStyle = '#000000';
+            ctx.fillText(upChar, size / 2, size / 2);
+            const upData = ctx.getImageData(0, 0, size, size).data;
+            let upDark = 0, upMinY = size, upMaxY = 0;
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const idx = (y * size + x) * 4;
+                    if (upData[idx] < 128) {
+                        upDark++;
+                        if (y < upMinY) upMinY = y;
+                        if (y > upMaxY) upMaxY = y;
+                    }
+                }
+            }
+
+            const lowH = Math.max(1, lowMaxY - lowMinY + 1);
+            const upH = Math.max(1, upMaxY - upMinY + 1);
+            const hRatio = lowH / upH;
+            const darkRatio = lowDark / Math.max(1, upDark);
+            totalHeightRatio += hRatio;
+
+            if (hRatio > 0.90 && Math.abs(darkRatio - 1.0) < 0.18 && upDark > 20) {
+                fullCapMatches++;
+            } else if (hRatio >= 0.60 && hRatio <= 0.85 && darkRatio >= 0.50 && darkRatio <= 0.85) {
+                if (['e', 'r', 'a'].includes(lowChar) && darkRatio > 0.55) {
+                    smallCapMatches++;
+                }
+            }
+        }
+
+        const avgCaseRatio = Number((totalHeightRatio / casePairs.length).toFixed(2));
+        const isAllCaps = fullCapMatches >= 3 || lowerName.includes('allcaps') || lowerName.includes('all-caps');
+        const isSmallCaps = !isAllCaps && (smallCapMatches >= 2 || lowerName.includes('smallcaps') || lowerName.includes('small-caps'));
+        const caseGrade = determineCaseGrade(isAllCaps, isSmallCaps);
+
+        return {
+            weight: weightGrade,
+            width: widthGrade,
+            slant: slantGrade,
+            caseType: caseGrade,
+            weightScore: Number(calculatedWeightScore.toFixed(2)),
+            widthScore: Number(avgAspectRatio.toFixed(2)),
+            slantAngle: avgSlantAngle,
+            caseRatio: avgCaseRatio,
+            inkDensity: Number(avgInkDensity.toFixed(2)),
+            isAllCaps,
+            isSmallCaps,
+            isItalic: slantGrade === 'Italic'
+        };
+    } catch (err) {
+        console.warn(`Lỗi phân tích morphology font "${family}":`, err);
+        return {
+            weight: 'Regular',
+            width: 'Normal',
+            slant: 'Upright',
+            caseType: 'Mixed Case',
+            weightScore: 0.45,
+            widthScore: 0.82,
+            slantAngle: 0,
+            caseRatio: 0.70,
+            inkDensity: 0.32,
+            isAllCaps: false,
+            isSmallCaps: false,
+            isItalic: false
+        };
+    }
+}
+
+const PROFILING_GLYPHS = ['M', 'A', 'H', 'O', 'a', 'e', 'g', 'q', '0', '8'];
+
 export function profileFontGlyph(family: string): FontProfile {
+    const morphology = analyzeFontMorphology(family);
+
+    if (typeof document === 'undefined') {
+        return {
+            weightScore: morphology.weightScore,
+            energyScore: morphology.weightScore > 0.75 ? 0.85 : 0.55,
+            formalityScore: morphology.caseType === 'All Caps' ? 0.65 : 0.45,
+            roughnessScore: 0.20,
+            roundnessScore: 0.50,
+            handwrittenScore: morphology.slant === 'Italic' ? 0.75 : 0.20,
+            category: morphology.weight === 'Black' || morphology.weight === 'Bold' ? 'shout' : 'dialogue',
+            isAllCaps: morphology.isAllCaps,
+            weightGrade: morphology.weight,
+            widthGrade: morphology.width,
+            slantGrade: morphology.slant,
+            caseGrade: morphology.caseType,
+            slantAngle: morphology.slantAngle,
+            widthRatio: morphology.widthScore,
+            caseRatio: morphology.caseRatio,
+            morphology: morphology
+        };
+    }
+
     try {
         const canvas = document.createElement('canvas');
         const size = 120;
@@ -1085,83 +2976,129 @@ export function profileFontGlyph(family: string): FontProfile {
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         if (!ctx) throw new Error("Canvas 2D context unavailable");
 
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, size, size);
-        ctx.fillStyle = '#000000';
-        ctx.font = `80px "${family}", sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('M', size / 2, size / 2);
+        let totalInkDensity = 0;
+        let totalTransitionDensity = 0;
+        let validGlyphCount = 0;
+        const aspectRatios: number[] = [];
+        let roundedGlyphDensities: number[] = [];
+        let angularGlyphDensities: number[] = [];
 
-        const imgData = ctx.getImageData(0, 0, size, size);
-        const data = imgData.data;
+        // 1. Multi-glyph analysis across representative character set
+        for (const glyph of PROFILING_GLYPHS) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, size, size);
+            ctx.fillStyle = '#000000';
+            ctx.font = `72px "${family}", sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(glyph, size / 2, size / 2);
 
-        let darkCount = 0;
-        let minX = size, maxX = 0, minY = size, maxY = 0;
-        let horizontalTransitions = 0;
+            const imgData = ctx.getImageData(0, 0, size, size);
+            const data = imgData.data;
 
-        for (let y = 0; y < size; y++) {
-            let prevDark = false;
-            for (let x = 0; x < size; x++) {
-                const idx = (y * size + x) * 4;
-                const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
-                const isDark = lum < 128;
-                if (isDark) {
-                    darkCount++;
-                    if (x < minX) minX = x;
-                    if (x > maxX) maxX = x;
-                    if (y < minY) minY = y;
-                    if (y > maxY) maxY = y;
+            let darkCount = 0;
+            let minX = size, maxX = 0, minY = size, maxY = 0;
+            let horizontalTransitions = 0;
+            let verticalTransitions = 0;
+
+            // Scan horizontal lines and find bounding box
+            for (let y = 0; y < size; y++) {
+                let prevDark = false;
+                for (let x = 0; x < size; x++) {
+                    const idx = (y * size + x) * 4;
+                    const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+                    const isDark = lum < 128;
+                    if (isDark) {
+                        darkCount++;
+                        if (x < minX) minX = x;
+                        if (x > maxX) maxX = x;
+                        if (y < minY) minY = y;
+                        if (y > maxY) maxY = y;
+                    }
+                    if (isDark !== prevDark) {
+                        horizontalTransitions++;
+                        prevDark = isDark;
+                    }
                 }
-                if (isDark !== prevDark) {
-                    horizontalTransitions++;
-                    prevDark = isDark;
+            }
+
+            // Scan vertical lines for vertical transitions
+            for (let x = 0; x < size; x++) {
+                let prevDark = false;
+                for (let y = 0; y < size; y++) {
+                    const idx = (y * size + x) * 4;
+                    const lum = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+                    const isDark = lum < 128;
+                    if (isDark !== prevDark) {
+                        verticalTransitions++;
+                        prevDark = isDark;
+                    }
+                }
+            }
+
+            if (darkCount > 15 && maxX >= minX && maxY >= minY) {
+                const bboxW = Math.max(1, maxX - minX + 1);
+                const bboxH = Math.max(1, maxY - minY + 1);
+                const bboxArea = bboxW * bboxH;
+                const inkDensity = darkCount / bboxArea;
+                const transitionDensity = (horizontalTransitions + verticalTransitions) / (2 * bboxArea);
+
+                totalInkDensity += inkDensity;
+                totalTransitionDensity += transitionDensity;
+                aspectRatios.push(bboxW / bboxH);
+                validGlyphCount++;
+
+                if (['O', '0', '8', 'e', 'o'].includes(glyph)) {
+                    roundedGlyphDensities.push(inkDensity);
+                } else if (['A', 'M', 'H', 'N', 'Z'].includes(glyph)) {
+                    angularGlyphDensities.push(inkDensity);
                 }
             }
         }
 
-        const bboxW = Math.max(1, maxX - minX);
-        const bboxH = Math.max(1, maxY - minY);
-        const bboxArea = bboxW * bboxH;
-        const inkDensity = bboxArea > 0 ? (darkCount / bboxArea) : 0.35;
-        const transitionDensity = bboxArea > 0 ? (horizontalTransitions / bboxArea) : 0.05;
+        const avgTransitionDensity = validGlyphCount > 0 ? (totalTransitionDensity / validGlyphCount) : 0.05;
+        const isAllCaps = morphology.isAllCaps;
+        const weightScore = morphology.weightScore;
 
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, size, size);
-        ctx.fillStyle = '#000000';
-        ctx.fillText('a', size / 2, size / 2);
-        const lowData = ctx.getImageData(0, 0, size, size).data;
-        let lowDark = 0;
-        for (let i = 0; i < lowData.length; i += 4) {
-            if (lowData[i] < 128) lowDark++;
+        // Dimension 2: Roughness score (transition frequency per pixel: smooth ~0.03-0.07, distressed/brush ~0.10-0.20+)
+        const roughnessScore = Math.max(0.05, Math.min(1.00, (avgTransitionDensity - 0.035) * 11));
+
+        // Dimension 3: Formality score (structural consistency across glyphs, penalizing high roughness and erratic ratios)
+        let ratioVariance = 0;
+        if (aspectRatios.length > 1) {
+            const meanRatio = aspectRatios.reduce((s, r) => s + r, 0) / aspectRatios.length;
+            ratioVariance = aspectRatios.reduce((s, r) => s + Math.pow(r - meanRatio, 2), 0) / aspectRatios.length;
+        }
+        const formalityScore = Math.max(0.10, Math.min(1.00, 1.0 - roughnessScore * 0.45 - Math.min(0.35, ratioVariance * 2.0) - (isAllCaps ? 0.1 : 0.0)));
+
+        // Dimension 4: Roundness score (curvature / loop smoothness vs sharp vertical/diagonal stems)
+        let roundnessScore = 0.50;
+        if (roundedGlyphDensities.length > 0 && angularGlyphDensities.length > 0) {
+            const avgRoundDensity = roundedGlyphDensities.reduce((s, v) => s + v, 0) / roundedGlyphDensities.length;
+            const avgAngularDensity = angularGlyphDensities.reduce((s, v) => s + v, 0) / angularGlyphDensities.length;
+            roundnessScore = Math.max(0.10, Math.min(1.00, 0.50 + (avgRoundDensity - avgAngularDensity) * 1.5 - roughnessScore * 0.2));
+        } else {
+            roundnessScore = Math.max(0.10, Math.min(1.00, 0.70 - roughnessScore * 0.5));
         }
 
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, size, size);
-        ctx.fillStyle = '#000000';
-        ctx.fillText('A', size / 2, size / 2);
-        const upData = ctx.getImageData(0, 0, size, size).data;
-        let upDark = 0;
-        for (let i = 0; i < upData.length; i += 4) {
-            if (upData[i] < 128) upDark++;
-        }
+        // Dimension 5: Handwritten / Organic score (irregularity, asymmetry, brush texture)
+        const handwrittenScore = Math.max(0.05, Math.min(1.00, roughnessScore * 0.65 + (1.0 - formalityScore) * 0.35 + (morphology.slant === 'Italic' ? 0.25 : 0.0)));
 
-        const isAllCaps = Math.abs(lowDark - upDark) < (Math.max(1, upDark) * 0.08) && upDark > 40;
+        // Energy / Intensity score: composite of weight, roughness, and all-caps presence
+        const energyScore = Math.max(0.10, Math.min(1.00, weightScore * 0.45 + roughnessScore * 0.35 + (isAllCaps ? 0.20 : 0.05)));
 
-        const weightScore = Math.max(0.1, Math.min(1.0, (inkDensity - 0.18) / 0.52));
-        const roughnessScore = Math.max(0.05, Math.min(1.0, transitionDensity * 11));
-        const energyScore = Math.max(0.1, Math.min(1.0, weightScore * 0.5 + roughnessScore * 0.3 + (isAllCaps ? 0.2 : 0.0)));
-        const formalityScore = Math.max(0.1, Math.min(1.0, 1.0 - roughnessScore * 0.6 - (isAllCaps ? 0.2 : 0.0)));
-
+        // 4. Soft-Boundary Category Heuristic
         let category: FontCategory = 'dialogue';
-        if (roughnessScore > 0.62 || (weightScore > 0.85 && roughnessScore > 0.35)) {
+        if (roughnessScore > 0.68 || (weightScore > 0.82 && roughnessScore > 0.42)) {
             category = 'sfx';
-        } else if (isAllCaps || weightScore > 0.72 || energyScore > 0.78) {
+        } else if ((isAllCaps && weightScore > 0.60) || (weightScore > 0.76 && energyScore > 0.72)) {
             category = 'shout';
-        } else if (weightScore < 0.34 || (roughnessScore > 0.45 && weightScore < 0.42)) {
+        } else if ((weightScore < 0.32 && energyScore < 0.42) || (formalityScore < 0.32 && weightScore < 0.45)) {
             category = 'whisper';
-        } else if (formalityScore > 0.75 && Math.abs((bboxW / bboxH) - 0.7) < 0.25) {
+        } else if (formalityScore > 0.72 && weightScore >= 0.35 && weightScore <= 0.65) {
             category = 'narration';
+        } else if (formalityScore < 0.45 && roughnessScore < 0.45 && weightScore >= 0.38) {
+            category = 'cute';
         } else {
             category = 'dialogue';
         }
@@ -1171,26 +3108,43 @@ export function profileFontGlyph(family: string): FontProfile {
             energyScore: Number(energyScore.toFixed(2)),
             formalityScore: Number(formalityScore.toFixed(2)),
             roughnessScore: Number(roughnessScore.toFixed(2)),
+            roundnessScore: Number(roundnessScore.toFixed(2)),
+            handwrittenScore: Number(handwrittenScore.toFixed(2)),
             category: category,
-            isAllCaps: isAllCaps
+            isAllCaps: isAllCaps,
+            weightGrade: morphology.weight,
+            widthGrade: morphology.width,
+            slantGrade: morphology.slant,
+            caseGrade: morphology.caseType,
+            slantAngle: morphology.slantAngle,
+            widthRatio: morphology.widthScore,
+            caseRatio: morphology.caseRatio,
+            morphology: morphology
         };
     } catch (err) {
         console.warn(`Lỗi profiling font "${family}":`, err);
         return {
-            weightScore: 0.55,
+            weightScore: morphology.weightScore,
             energyScore: 0.55,
             formalityScore: 0.45,
-            roughnessScore: 0.2,
+            roughnessScore: 0.20,
+            roundnessScore: 0.50,
+            handwrittenScore: 0.20,
             category: 'dialogue',
-            isAllCaps: false
+            isAllCaps: morphology.isAllCaps,
+            weightGrade: morphology.weight,
+            widthGrade: morphology.width,
+            slantGrade: morphology.slant,
+            caseGrade: morphology.caseType,
+            slantAngle: morphology.slantAngle,
+            widthRatio: morphology.widthScore,
+            caseRatio: morphology.caseRatio,
+            morphology: morphology
         };
     }
 }
 
 // --- CUSTOM FONT STATE & PAGINATION ---
-let customFontCurrentFilter = 'all';
-let customFontSearchQuery = '';
-let customFontSortOrder = 'date-desc';
 const customFontPageSize = 24;
 let customFontCurrentPage = 1;
 
@@ -1210,7 +3164,17 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
             req.onerror = (e: any) => rej(e.target.error);
         });
 
-        customFontsList = [];
+        if (!entries || entries.length === 0) {
+            customFontsList = [];
+            updateCustomFontsBadge();
+            renderCustomFontsUI();
+            return;
+        }
+
+        const newCustomList: CustomFontItem[] = [];
+        const itemsToUpdateDB: any[] = [];
+
+        // 1. Synchronously populate fontBlobUrlsMap and initial metadata for instant access
         for (const item of entries) {
             if (!item || !item.family || !item.blob) continue;
             try {
@@ -1218,24 +3182,50 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
                     fontBlobUrlsMap.set(item.family, URL.createObjectURL(item.blob));
                 }
 
-                const buffer = await item.blob.arrayBuffer();
-                const fontFace = new FontFace(item.family, buffer);
-                await fontFace.load();
-                (document as any).fonts.add(fontFace);
-
-                let profile: FontProfile = {
-                    weightScore: item.weightScore,
-                    energyScore: item.energyScore,
-                    formalityScore: item.formalityScore,
-                    roughnessScore: item.roughnessScore,
-                    category: item.category,
-                    isAllCaps: item.isAllCaps
-                };
-                if (!profile.weightScore || profile.weightScore === 0.6) {
+                let profile: FontProfile;
+                if (item.weightGrade && item.widthGrade && item.slantGrade && item.caseGrade) {
+                    profile = {
+                        weightScore: item.weightScore || 0.55,
+                        energyScore: item.energyScore || 0.55,
+                        formalityScore: item.formalityScore || 0.45,
+                        roughnessScore: item.roughnessScore || 0.20,
+                        roundnessScore: item.roundnessScore || 0.50,
+                        handwrittenScore: item.handwrittenScore || 0.20,
+                        category: item.category || 'dialogue',
+                        isAllCaps: !!item.isAllCaps,
+                        weightGrade: item.weightGrade,
+                        widthGrade: item.widthGrade,
+                        slantGrade: item.slantGrade,
+                        caseGrade: item.caseGrade,
+                        slantAngle: item.slantAngle || 0,
+                        widthRatio: item.widthRatio || 0.82,
+                        caseRatio: item.caseRatio || 0.70,
+                        morphology: item.morphology
+                    };
+                } else {
                     profile = profileFontGlyph(item.family);
+                    itemsToUpdateDB.push({
+                        ...item,
+                        weightScore: profile.weightScore,
+                        energyScore: profile.energyScore,
+                        formalityScore: profile.formalityScore,
+                        roughnessScore: profile.roughnessScore,
+                        roundnessScore: profile.roundnessScore,
+                        handwrittenScore: profile.handwrittenScore,
+                        category: profile.category,
+                        isAllCaps: profile.isAllCaps,
+                        weightGrade: profile.weightGrade,
+                        widthGrade: profile.widthGrade,
+                        slantGrade: profile.slantGrade,
+                        caseGrade: profile.caseGrade,
+                        slantAngle: profile.slantAngle,
+                        widthRatio: profile.widthRatio,
+                        caseRatio: profile.caseRatio,
+                        morphology: profile.morphology
+                    });
                 }
 
-                customFontsList.push({
+                newCustomList.push({
                     id: 'custom_' + item.family.toLowerCase().replace(/\s+/g, '_'),
                     name: item.family,
                     family: `'${item.family}', sans-serif`,
@@ -1246,20 +3236,64 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
                     energyScore: profile.energyScore || 0.55,
                     formalityScore: profile.formalityScore || 0.45,
                     roughnessScore: profile.roughnessScore || 0.2,
+                    roundnessScore: profile.roundnessScore || 0.5,
+                    handwrittenScore: profile.handwrittenScore || 0.2,
                     isAllCaps: !!profile.isAllCaps,
+                    weightGrade: profile.weightGrade || determineWeightGrade(profile.weightScore || 0.55),
+                    widthGrade: profile.widthGrade || 'Normal',
+                    slantGrade: profile.slantGrade || 'Upright',
+                    caseGrade: profile.caseGrade || (profile.isAllCaps ? 'All Caps' : 'Mixed Case'),
+                    slantAngle: profile.slantAngle || 0,
+                    widthRatio: profile.widthRatio || 0.82,
+                    caseRatio: profile.caseRatio || 0.70,
+                    morphology: profile.morphology,
                     blob: item.blob,
                     size: item.blob.size,
                     dateAdded: item.dateAdded || Date.now(),
-                    desc: `Font cá nhân (Độ đậm: ${((profile.weightScore || 0.55) * 100).toFixed(0)}% • Năng lượng: ${((profile.energyScore || 0.55) * 100).toFixed(0)}%).`,
+                    desc: `Font cá nhân (${profile.weightGrade || 'Regular'} • ${profile.widthGrade || 'Normal'} • ${profile.slantGrade || 'Upright'} • ${profile.caseGrade || 'Mixed Case'}).`,
                     recommendedStroke: (profile.weightScore || 0.55) > 0.7 ? '3.5px' : '2.5px'
                 });
             } catch (fontErr) {
-                console.warn(`Lỗi nạp font Face "${item.family}":`, fontErr);
+                console.warn(`Lỗi xử lý font item "${item.family}":`, fontErr);
             }
         }
+
+        customFontsList = newCustomList;
         updateDynamicFontFaceStyles();
         updateCustomFontsBadge();
+        updateCustomFontFilterCountsUI();
         renderCustomFontsUI();
+
+        // 2. Register FontFace objects into document.fonts in background chunks
+        (async () => {
+            for (const item of entries) {
+                if (!item || !item.family || !item.blob) continue;
+                try {
+                    const buffer = await item.blob.arrayBuffer();
+                    const fontFace = new FontFace(item.family, buffer);
+                    await fontFace.load();
+                    (document as any).fonts.add(fontFace);
+                } catch (e) { }
+            }
+            updateAllFontCanvases();
+            updateAllFontSetCanvases();
+        })();
+
+        // 3. Cache computed profiles back to IndexedDB asynchronously
+        if (itemsToUpdateDB.length > 0) {
+            try {
+                const writeTx = db.transaction(STORE_FONTS_NAME, 'readwrite');
+                const writeStore = writeTx.objectStore(STORE_FONTS_NAME);
+                itemsToUpdateDB.forEach(item => writeStore.put(item));
+            } catch (cacheErr) {
+                console.warn("Lỗi lưu cache profile font vào IndexedDB:", cacheErr);
+            }
+        }
+
+        // 4. Automatically generate initial Font Set if on Set tab
+        if (!currentGeneratedFontSet && customFontsList.length > 0) {
+            generateAndDisplayFontSet('romance');
+        }
     } catch (err) {
         console.warn("Lỗi đọc IndexedDB custom fonts:", err);
     }
@@ -1289,7 +3323,7 @@ export async function handleCustomFontUpload(files: File[]): Promise<void> {
             const cleanName = file.name.replace(/\.[^/.]+$/, '').trim();
             const family = cleanName.replace(/[^a-zA-Z0-9\s_-]/g, ' ').replace(/\s+/g, ' ').trim() || 'CustomFont';
 
-            if (progressSubtext) progressSubtext.innerText = `Đang phân tích hình thái glyph: ${family}...`;
+            if (progressSubtext) progressSubtext.innerText = `Đang phân tích hình thái học: ${family}...`;
 
             try {
                 fontBlobUrlsMap.set(family, URL.createObjectURL(file));
@@ -1313,6 +3347,14 @@ export async function handleCustomFontUpload(files: File[]): Promise<void> {
                         formalityScore: profile.formalityScore,
                         roughnessScore: profile.roughnessScore,
                         isAllCaps: profile.isAllCaps,
+                        weightGrade: profile.weightGrade,
+                        widthGrade: profile.widthGrade,
+                        slantGrade: profile.slantGrade,
+                        caseGrade: profile.caseGrade,
+                        slantAngle: profile.slantAngle,
+                        widthRatio: profile.widthRatio,
+                        caseRatio: profile.caseRatio,
+                        morphology: profile.morphology,
                         dateAdded: Date.now()
                     });
                     putReq.onsuccess = res;
@@ -1331,10 +3373,18 @@ export async function handleCustomFontUpload(files: File[]): Promise<void> {
                     formalityScore: profile.formalityScore,
                     roughnessScore: profile.roughnessScore,
                     isAllCaps: profile.isAllCaps,
+                    weightGrade: profile.weightGrade,
+                    widthGrade: profile.widthGrade,
+                    slantGrade: profile.slantGrade,
+                    caseGrade: profile.caseGrade,
+                    slantAngle: profile.slantAngle,
+                    widthRatio: profile.widthRatio,
+                    caseRatio: profile.caseRatio,
+                    morphology: profile.morphology,
                     blob: file,
                     size: file.size,
                     dateAdded: Date.now(),
-                    desc: `Font cá nhân (Độ đậm: ${(profile.weightScore * 100).toFixed(0)}% • Năng lượng: ${(profile.energyScore * 100).toFixed(0)}%).`,
+                    desc: `Font cá nhân (${profile.weightGrade || 'Regular'} • ${profile.widthGrade || 'Normal'} • ${profile.slantGrade || 'Upright'} • ${profile.caseGrade || 'Mixed Case'}).`,
                     recommendedStroke: profile.weightScore > 0.7 ? '3.5px' : '2.5px'
                 };
 
@@ -1364,8 +3414,9 @@ export async function handleCustomFontUpload(files: File[]): Promise<void> {
 
     updateDynamicFontFaceStyles();
     updateCustomFontsBadge();
+    updateCustomFontFilterCountsUI();
     renderCustomFontsUI();
-    alert(`🎉 Đã nạp & tự động phân tích hình thái học xong ${total} font! Bạn có thể bắt đầu so khớp ảnh.`);
+    alert(`🎉 Đã nạp & tự động phân loại hình thái (Weight, Width, Slant, Case) xong ${total} font!`);
 }
 
 export async function reprofileAllCustomFonts(): Promise<void> {
@@ -1394,7 +3445,15 @@ export async function reprofileAllCustomFonts(): Promise<void> {
         item.formalityScore = profile.formalityScore;
         item.roughnessScore = profile.roughnessScore;
         item.isAllCaps = profile.isAllCaps;
-        item.desc = `Font cá nhân (Độ đậm: ${(profile.weightScore * 100).toFixed(0)}% • Năng lượng: ${(profile.energyScore * 100).toFixed(0)}%).`;
+        item.weightGrade = profile.weightGrade;
+        item.widthGrade = profile.widthGrade;
+        item.slantGrade = profile.slantGrade;
+        item.caseGrade = profile.caseGrade;
+        item.slantAngle = profile.slantAngle;
+        item.widthRatio = profile.widthRatio;
+        item.caseRatio = profile.caseRatio;
+        item.morphology = profile.morphology;
+        item.desc = `Font cá nhân (${profile.weightGrade || 'Regular'} • ${profile.widthGrade || 'Normal'} • ${profile.slantGrade || 'Upright'} • ${profile.caseGrade || 'Mixed Case'}).`;
 
         const tx = db.transaction(STORE_FONTS_NAME, 'readwrite');
         const store = tx.objectStore(STORE_FONTS_NAME);
@@ -1407,6 +3466,14 @@ export async function reprofileAllCustomFonts(): Promise<void> {
             formalityScore: profile.formalityScore,
             roughnessScore: profile.roughnessScore,
             isAllCaps: profile.isAllCaps,
+            weightGrade: profile.weightGrade,
+            widthGrade: profile.widthGrade,
+            slantGrade: profile.slantGrade,
+            caseGrade: profile.caseGrade,
+            slantAngle: profile.slantAngle,
+            widthRatio: profile.widthRatio,
+            caseRatio: profile.caseRatio,
+            morphology: profile.morphology,
             dateAdded: item.dateAdded || Date.now()
         });
 
@@ -1421,8 +3488,9 @@ export async function reprofileAllCustomFonts(): Promise<void> {
         if (progressBox) progressBox.classList.add('hidden');
     }, 1200);
 
+    updateCustomFontFilterCountsUI();
     renderCustomFontsUI();
-    alert(`Đã hoàn tất phân tích lại hình thái ${total} font!`);
+    alert(`Đã hoàn tất phân loại hình thái toàn diện ${total} font!`);
 }
 
 export async function clearAllCustomFonts(): Promise<void> {
@@ -1446,6 +3514,7 @@ export async function clearAllCustomFonts(): Promise<void> {
 
         updateDynamicFontFaceStyles();
         updateCustomFontsBadge();
+        updateCustomFontFilterCountsUI();
         renderCustomFontsUI();
         alert("Đã xóa sạch toàn bộ kho font tùy chỉnh!");
     } catch (err) {
@@ -1473,14 +3542,24 @@ export async function deleteCustomFont(family: string): Promise<void> {
         customFontsList = customFontsList.filter(f => f.name !== family);
         updateDynamicFontFaceStyles();
         updateCustomFontsBadge();
+        updateCustomFontFilterCountsUI();
         renderCustomFontsUI();
     } catch (err) {
         console.error("Lỗi xóa font:", err);
     }
 }
 
+// --- CUSTOM FONT FILTER STATE ---
+let customFontCategoryFilter = 'all';
+let customFontWeightFilter = 'all';
+let customFontWidthFilter = 'all';
+let customFontSlantFilter = 'all';
+let customFontCaseFilter = 'all';
+let customFontSearchQuery = '';
+let customFontSortOrder = 'date-desc';
+
 export function setCustomFontCategoryFilter(cat: string): void {
-    customFontCurrentFilter = cat;
+    customFontCategoryFilter = cat;
     customFontCurrentPage = 1;
     document.querySelectorAll('.custom-cat-filter').forEach(btn => {
         btn.className = "custom-cat-filter px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap";
@@ -1489,21 +3568,232 @@ export function setCustomFontCategoryFilter(cat: string): void {
     if (activeBtn) {
         activeBtn.className = "custom-cat-filter px-2.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white transition-all whitespace-nowrap";
     }
+    updateActiveFilterTagsUI();
     renderCustomFontsUI();
+}
+
+export function setCustomFontWeightFilter(weight: string): void {
+    customFontWeightFilter = weight;
+    const select = document.getElementById('fontmatch-filter-weight') as HTMLSelectElement | null;
+    if (select) select.value = weight;
+    customFontCurrentPage = 1;
+    updateActiveFilterTagsUI();
+    renderCustomFontsUI();
+}
+
+export function setCustomFontWidthFilter(width: string): void {
+    customFontWidthFilter = width;
+    const select = document.getElementById('fontmatch-filter-width') as HTMLSelectElement | null;
+    if (select) select.value = width;
+    customFontCurrentPage = 1;
+    updateActiveFilterTagsUI();
+    renderCustomFontsUI();
+}
+
+export function setCustomFontSlantFilter(slant: string): void {
+    customFontSlantFilter = slant;
+    const select = document.getElementById('fontmatch-filter-slant') as HTMLSelectElement | null;
+    if (select) select.value = slant;
+    customFontCurrentPage = 1;
+    updateActiveFilterTagsUI();
+    renderCustomFontsUI();
+}
+
+export function setCustomFontCaseFilter(caseType: string): void {
+    customFontCaseFilter = caseType;
+    const select = document.getElementById('fontmatch-filter-case') as HTMLSelectElement | null;
+    if (select) select.value = caseType;
+    customFontCurrentPage = 1;
+    updateActiveFilterTagsUI();
+    renderCustomFontsUI();
+}
+
+export function resetCustomFontFilters(): void {
+    customFontCategoryFilter = 'all';
+    customFontWeightFilter = 'all';
+    customFontWidthFilter = 'all';
+    customFontSlantFilter = 'all';
+    customFontCaseFilter = 'all';
+    customFontSearchQuery = '';
+
+    const searchInput = document.getElementById('fontmatch-custom-search') as HTMLInputElement | null;
+    if (searchInput) searchInput.value = '';
+
+    const weightSelect = document.getElementById('fontmatch-filter-weight') as HTMLSelectElement | null;
+    if (weightSelect) weightSelect.value = 'all';
+
+    const widthSelect = document.getElementById('fontmatch-filter-width') as HTMLSelectElement | null;
+    if (widthSelect) widthSelect.value = 'all';
+
+    const slantSelect = document.getElementById('fontmatch-filter-slant') as HTMLSelectElement | null;
+    if (slantSelect) slantSelect.value = 'all';
+
+    const caseSelect = document.getElementById('fontmatch-filter-case') as HTMLSelectElement | null;
+    if (caseSelect) caseSelect.value = 'all';
+
+    document.querySelectorAll('.custom-cat-filter').forEach(btn => {
+        btn.className = "custom-cat-filter px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-400 hover:text-slate-200 transition-all whitespace-nowrap";
+    });
+    const allBtn = document.getElementById('btn-custom-filter-all');
+    if (allBtn) {
+        allBtn.className = "custom-cat-filter px-2.5 py-1.5 rounded-lg text-xs font-bold bg-indigo-600 text-white transition-all whitespace-nowrap";
+    }
+
+    customFontCurrentPage = 1;
+    updateActiveFilterTagsUI();
+    renderCustomFontsUI();
+}
+
+export function updateActiveFilterTagsUI(): void {
+    const container = document.getElementById('fontmatch-active-filters-box');
+    if (!container) return;
+
+    const activeChips: { label: string; onRemove: string }[] = [];
+    if (customFontCategoryFilter !== 'all') {
+        activeChips.push({ label: `Thể loại: ${getCategoryLabel(customFontCategoryFilter)}`, onRemove: `setCustomFontCategoryFilter('all')` });
+    }
+    if (customFontWeightFilter !== 'all') {
+        activeChips.push({ label: `Weight: ${customFontWeightFilter}`, onRemove: `setCustomFontWeightFilter('all')` });
+    }
+    if (customFontWidthFilter !== 'all') {
+        activeChips.push({ label: `Width: ${customFontWidthFilter}`, onRemove: `setCustomFontWidthFilter('all')` });
+    }
+    if (customFontSlantFilter !== 'all') {
+        activeChips.push({ label: `Slant: ${customFontSlantFilter}`, onRemove: `setCustomFontSlantFilter('all')` });
+    }
+    if (customFontCaseFilter !== 'all') {
+        activeChips.push({ label: `Case: ${customFontCaseFilter}`, onRemove: `setCustomFontCaseFilter('all')` });
+    }
+
+    if (activeChips.length === 0) {
+        container.classList.add('hidden');
+        container.innerHTML = '';
+        return;
+    }
+
+    container.classList.remove('hidden');
+    container.innerHTML = `
+        <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-[11px] text-slate-400 font-bold flex items-center gap-1">
+                <i class="fa-solid fa-filter text-indigo-400 text-[10px]"></i> Đang lọc (${activeChips.length}):
+            </span>
+            ${activeChips.map(c => `
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[10px] font-bold">
+                    ${c.label}
+                    <button type="button" onclick="${c.onRemove}" class="hover:text-white ml-0.5"><i class="fa-solid fa-xmark text-[9px]"></i></button>
+                </span>
+            `).join('')}
+            <button type="button" onclick="resetCustomFontFilters()" class="text-[10px] text-red-400 hover:text-red-300 font-bold ml-1 underline cursor-pointer">
+                Xóa tất cả lọc
+            </button>
+        </div>
+    `;
+}
+
+export function updateCustomFontFilterCountsUI(): void {
+    const weights: Record<string, number> = {};
+    const widths: Record<string, number> = {};
+    const slants: Record<string, number> = {};
+    const cases: Record<string, number> = {};
+
+    customFontsList.forEach(f => {
+        const w = f.weightGrade || 'Regular';
+        const wd = f.widthGrade || 'Normal';
+        const s = f.slantGrade || 'Upright';
+        const c = f.caseGrade || 'Mixed Case';
+
+        weights[w] = (weights[w] || 0) + 1;
+        widths[wd] = (widths[wd] || 0) + 1;
+        slants[s] = (slants[s] || 0) + 1;
+        cases[c] = (cases[c] || 0) + 1;
+    });
+
+    const updateSelectOptionCount = (selectId: string, countsMap: Record<string, number>) => {
+        const select = document.getElementById(selectId) as HTMLSelectElement | null;
+        if (!select) return;
+        Array.from(select.options).forEach(opt => {
+            const val = opt.value;
+            const originalText = opt.getAttribute('data-title') || opt.innerText.split(' (')[0];
+            opt.setAttribute('data-title', originalText);
+            if (val === 'all') {
+                opt.innerText = `${originalText} (${customFontsList.length})`;
+            } else {
+                const count = countsMap[val] || 0;
+                opt.innerText = `${originalText} (${count})`;
+            }
+        });
+    };
+
+    updateSelectOptionCount('fontmatch-filter-weight', weights);
+    updateSelectOptionCount('fontmatch-filter-width', widths);
+    updateSelectOptionCount('fontmatch-filter-slant', slants);
+    updateSelectOptionCount('fontmatch-filter-case', cases);
 }
 
 export function onCustomFontFilterChange(): void {
     const searchInput = document.getElementById('fontmatch-custom-search') as HTMLInputElement | null;
     customFontSearchQuery = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
     const sortSelect = document.getElementById('fontmatch-custom-sort') as HTMLSelectElement | null;
     customFontSortOrder = sortSelect ? sortSelect.value : 'date-desc';
+
+    const weightSelect = document.getElementById('fontmatch-filter-weight') as HTMLSelectElement | null;
+    if (weightSelect) customFontWeightFilter = weightSelect.value;
+
+    const widthSelect = document.getElementById('fontmatch-filter-width') as HTMLSelectElement | null;
+    if (widthSelect) customFontWidthFilter = widthSelect.value;
+
+    const slantSelect = document.getElementById('fontmatch-filter-slant') as HTMLSelectElement | null;
+    if (slantSelect) customFontSlantFilter = slantSelect.value;
+
+    const caseSelect = document.getElementById('fontmatch-filter-case') as HTMLSelectElement | null;
+    if (caseSelect) customFontCaseFilter = caseSelect.value;
+
     customFontCurrentPage = 1;
+    updateActiveFilterTagsUI();
     renderCustomFontsUI();
 }
 
 export function loadMoreCustomFonts(): void {
     customFontCurrentPage++;
     renderCustomFontsUI();
+}
+
+export function getWeightBadgeColor(grade?: string): string {
+    switch (grade) {
+        case 'Thin': return 'bg-sky-500/10 text-sky-400 border-sky-500/30';
+        case 'Light': return 'bg-teal-500/10 text-teal-300 border-teal-500/30';
+        case 'Regular': return 'bg-slate-800 text-slate-300 border-slate-700';
+        case 'Medium': return 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30';
+        case 'SemiBold': return 'bg-violet-500/15 text-violet-300 border-violet-500/40';
+        case 'Bold': return 'bg-amber-500/15 text-amber-300 border-amber-500/40';
+        case 'Black': return 'bg-rose-500/20 text-rose-300 border-rose-500/50';
+        default: return 'bg-slate-800 text-slate-300 border-slate-700';
+    }
+}
+
+export function getWidthBadgeColor(grade?: string): string {
+    switch (grade) {
+        case 'Condensed': return 'bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/30';
+        case 'Wide': return 'bg-cyan-500/10 text-cyan-300 border-cyan-500/30';
+        default: return 'bg-slate-800/80 text-slate-400 border-slate-700/60';
+    }
+}
+
+export function getSlantBadgeColor(grade?: string): string {
+    switch (grade) {
+        case 'Italic': return 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30';
+        case 'Oblique': return 'bg-blue-500/10 text-blue-300 border-blue-500/30';
+        default: return 'bg-slate-800/80 text-slate-400 border-slate-700/60';
+    }
+}
+
+export function getCaseBadgeColor(grade?: string): string {
+    switch (grade) {
+        case 'All Caps': return 'bg-orange-500/15 text-orange-300 border-orange-500/40 font-black';
+        case 'Small Caps': return 'bg-purple-500/15 text-purple-300 border-purple-500/40';
+        default: return 'bg-slate-800/80 text-slate-400 border-slate-700/60';
+    }
 }
 
 export function renderCustomFontsUI(): void {
@@ -1517,7 +3807,7 @@ export function renderCustomFontsUI(): void {
                     <i class="fa-solid fa-font text-3xl"></i>
                 </div>
                 <h4 class="text-sm font-bold text-slate-400">Chưa có font tùy chỉnh nào trong kho</h4>
-                <p class="text-xs text-slate-600 max-w-sm">Kéo thả toàn bộ thư mục hoặc nhiều file font (.ttf/.otf) vào khung tải lên bên trên để hệ thống tự động phân tích hình thái hàng loạt!</p>
+                <p class="text-xs text-slate-600 max-w-sm">Kéo thả toàn bộ thư mục hoặc nhiều file font (.ttf/.otf) vào khung tải lên bên trên để hệ thống tự động phân loại Weight, Width, Slant, Case!</p>
             </div>
         `;
         const loadMoreBox = document.getElementById('fontmatch-custom-load-more-box');
@@ -1526,9 +3816,13 @@ export function renderCustomFontsUI(): void {
     }
 
     const filtered = customFontsList.filter(f => {
-        const matchesCat = (customFontCurrentFilter === 'all') || (f.category === customFontCurrentFilter);
+        const matchesCat = (customFontCategoryFilter === 'all') || (f.category === customFontCategoryFilter);
+        const matchesWeight = (customFontWeightFilter === 'all') || (f.weightGrade === customFontWeightFilter);
+        const matchesWidth = (customFontWidthFilter === 'all') || (f.widthGrade === customFontWidthFilter);
+        const matchesSlant = (customFontSlantFilter === 'all') || (f.slantGrade === customFontSlantFilter);
+        const matchesCase = (customFontCaseFilter === 'all') || (f.caseGrade === customFontCaseFilter);
         const matchesSearch = !customFontSearchQuery || f.name.toLowerCase().includes(customFontSearchQuery);
-        return matchesCat && matchesSearch;
+        return matchesCat && matchesWeight && matchesWidth && matchesSlant && matchesCase && matchesSearch;
     });
 
     filtered.sort((a, b) => {
@@ -1550,9 +3844,12 @@ export function renderCustomFontsUI(): void {
 
     if (filtered.length === 0) {
         container.innerHTML = `
-            <div class="col-span-full py-8 text-center flex flex-col items-center justify-center gap-2 text-slate-500">
-                <i class="fa-solid fa-filter-circle-xmark text-2xl text-slate-600"></i>
-                <p class="text-xs">Không tìm thấy font nào phù hợp với bộ lọc "${customFontSearchQuery || customFontCurrentFilter}".</p>
+            <div class="col-span-full py-8 text-center flex flex-col items-center justify-center gap-3 text-slate-500">
+                <i class="fa-solid fa-filter-circle-xmark text-3xl text-slate-600"></i>
+                <p class="text-xs text-slate-400">Không tìm thấy font nào phù hợp với các tiêu chí lọc hiện tại.</p>
+                <button type="button" onclick="resetCustomFontFilters()" class="px-3.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-bold border border-indigo-500/30">
+                    <i class="fa-solid fa-arrows-rotate mr-1"></i> Xóa tất cả bộ lọc
+                </button>
             </div>
         `;
         const loadMoreBox = document.getElementById('fontmatch-custom-load-more-box');
@@ -1569,9 +3866,10 @@ export function renderCustomFontsUI(): void {
         card.className = "bg-slate-950 border border-slate-855 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-md hover:border-slate-700 transition-all";
 
         const safeName = font.name.replace(/'/g, "\\'");
-        const wPct = Math.round((font.weightScore || 0.5) * 100);
-        const ePct = Math.round((font.energyScore || 0.5) * 100);
-        const isAllCapsBadge = font.isAllCaps ? `<span class="px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 text-[9px] font-bold border border-amber-500/30">IN HOA</span>` : '';
+        const weightGrade = font.weightGrade || determineWeightGrade(font.weightScore || 0.5);
+        const widthGrade = font.widthGrade || 'Normal';
+        const slantGrade = font.slantGrade || 'Upright';
+        const caseGrade = font.caseGrade || (font.isAllCaps ? 'All Caps' : 'Mixed Case');
 
         card.innerHTML = `
             <div class="flex items-center justify-between pb-2 border-b border-slate-850">
@@ -1580,12 +3878,32 @@ export function renderCustomFontsUI(): void {
                     <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
                         <span class="text-[10px] text-indigo-300 font-semibold">${getCategoryLabel(font.category)}</span>
                         <span class="text-[9px] text-slate-500 font-mono">• ${formatFileSize(font.size)}</span>
-                        ${isAllCapsBadge}
                     </div>
                 </div>
-                <button type="button" data-action="delete-font" class="w-7 h-7 shrink-0 rounded-lg bg-slate-900 hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-slate-800 transition-colors flex items-center justify-center text-xs" title="Xóa font">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
+                <div class="flex items-center gap-1">
+                    <button type="button" data-action="inspect-font" class="w-7 h-7 shrink-0 rounded-lg bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-500/20 transition-colors flex items-center justify-center text-xs" title="Xem chi tiết phân tích hình thái 4 chiều">
+                        <i class="fa-solid fa-tree"></i>
+                    </button>
+                    <button type="button" data-action="delete-font" class="w-7 h-7 shrink-0 rounded-lg bg-slate-900 hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-slate-800 transition-colors flex items-center justify-center text-xs" title="Xóa font">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Typography 4-Dimensional Badges -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-center">
+                <span class="px-1.5 py-0.5 rounded-md text-[9.5px] font-bold border ${getWeightBadgeColor(weightGrade)}" title="Độ đậm: ${weightGrade}">
+                    ${weightGrade}
+                </span>
+                <span class="px-1.5 py-0.5 rounded-md text-[9.5px] font-bold border ${getWidthBadgeColor(widthGrade)}" title="Chiều ngang: ${widthGrade}">
+                    ${widthGrade}
+                </span>
+                <span class="px-1.5 py-0.5 rounded-md text-[9.5px] font-bold border ${getSlantBadgeColor(slantGrade)}" title="Dáng nghiêng: ${slantGrade}">
+                    ${slantGrade}
+                </span>
+                <span class="px-1.5 py-0.5 rounded-md text-[9.5px] font-bold border ${getCaseBadgeColor(caseGrade)}" title="Kiểu chữ: ${caseGrade}">
+                    ${caseGrade}
+                </span>
             </div>
 
             <div class="p-3.5 bg-slate-900 rounded-xl border border-slate-800/80 overflow-hidden">
@@ -1599,14 +3917,24 @@ export function renderCustomFontsUI(): void {
 
             <div class="flex items-center justify-between pt-1 text-[10.5px]">
                 <div class="flex items-center gap-2 text-slate-400 text-[10px] font-mono">
-                    <span title="Độ dày nét font (Weight)"><i class="fa-solid fa-bold text-slate-500"></i> ${wPct}%</span>
-                    <span title="Độ bùng nổ năng lượng (Energy)"><i class="fa-solid fa-bolt text-amber-500/80"></i> ${ePct}%</span>
+                    <span title="Độ dày nét font (Weight Score)"><i class="fa-solid fa-bold text-slate-500"></i> ${Math.round((font.weightScore || 0.5) * 100)}%</span>
+                    <span title="Góc nghiêng (Slant Angle)"><i class="fa-solid fa-italic text-slate-500"></i> ${font.slantAngle ? font.slantAngle + '°' : '0°'}</span>
                 </div>
-                <button type="button" data-action="copy-name" class="text-indigo-400 hover:underline font-bold flex items-center gap-1">
-                    <i class="fa-solid fa-copy text-[9px]"></i> Sao chép
-                </button>
+                <div class="flex items-center gap-2">
+                    <button type="button" data-action="inspect-font" class="text-indigo-400 hover:text-indigo-300 font-bold flex items-center gap-1 text-[11px]">
+                        <i class="fa-solid fa-magnifying-glass-chart text-[10px]"></i> Phân tích
+                    </button>
+                    <button type="button" data-action="copy-name" class="text-slate-400 hover:text-slate-200 font-bold flex items-center gap-1 text-[11px]">
+                        <i class="fa-solid fa-copy text-[10px]"></i> Sao chép
+                    </button>
+                </div>
             </div>
         `;
+
+        const btnInspects = card.querySelectorAll('[data-action="inspect-font"]');
+        btnInspects.forEach(btn => {
+            btn.addEventListener('click', () => openFontMorphologyModal(font.name));
+        });
 
         const btnDel = card.querySelector('[data-action="delete-font"]');
         if (btnDel) {
@@ -1634,6 +3962,156 @@ export function renderCustomFontsUI(): void {
     }
 }
 
+export function openFontMorphologyModal(fontName: string): void {
+    const modal = document.getElementById('font-morphology-modal');
+    if (!modal) return;
+
+    let fontItem = customFontsList.find(f => f.name === fontName);
+    const morphology = (fontItem && fontItem.morphology) ? fontItem.morphology : analyzeFontMorphology(fontName);
+
+    const safeName = fontName.replace(/'/g, "\\'");
+    const weightList: FontWeightGrade[] = ['Thin', 'Light', 'Regular', 'Medium', 'SemiBold', 'Bold', 'Black'];
+    const widthList: FontWidthGrade[] = ['Condensed', 'Normal', 'Wide'];
+    const slantList: FontSlantGrade[] = ['Upright', 'Italic', 'Oblique'];
+    const caseList: FontCaseGrade[] = ['Mixed Case', 'All Caps', 'Small Caps'];
+
+    const titleEl = document.getElementById('morphology-modal-font-name');
+    if (titleEl) titleEl.innerText = fontName;
+
+    const formatEl = document.getElementById('morphology-modal-meta');
+    if (formatEl && fontItem) {
+        formatEl.innerText = `${getCategoryLabel(fontItem.category)} • ${formatFileSize(fontItem.size)}`;
+    }
+
+    const treeContainer = document.getElementById('morphology-modal-tree-container');
+    if (treeContainer) {
+        treeContainer.innerHTML = `
+            <!-- 1. Weight Tree -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col gap-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                        <i class="fa-solid fa-bold text-indigo-400"></i> Weight (Độ Đậm)
+                    </span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${getWeightBadgeColor(morphology.weight)}">
+                        ${morphology.weight} (${Math.round((morphology.weightScore || 0.5) * 100)}%)
+                    </span>
+                </div>
+                <div class="font-mono text-xs text-slate-400 pl-1 leading-relaxed border-l-2 border-slate-800 ml-1 flex flex-col gap-1 mt-1">
+                    ${weightList.map((w, idx) => {
+                        const isLast = idx === weightList.length - 1;
+                        const isMatched = w === morphology.weight;
+                        const prefix = isLast ? '└──' : '├──';
+                        return `
+                            <div class="flex items-center justify-between ${isMatched ? 'text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/30' : 'hover:text-slate-200'}">
+                                <span>${prefix} ${w}</span>
+                                ${isMatched ? '<i class="fa-solid fa-check text-[10px]"></i>' : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+
+            <!-- 2. Width Tree -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col gap-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                        <i class="fa-solid fa-arrows-left-right text-fuchsia-400"></i> Width (Chiều Ngang)
+                    </span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${getWidthBadgeColor(morphology.width)}">
+                        ${morphology.width} (Tỷ lệ: ${morphology.widthScore || 0.82})
+                    </span>
+                </div>
+                <div class="font-mono text-xs text-slate-400 pl-1 leading-relaxed border-l-2 border-slate-800 ml-1 flex flex-col gap-1 mt-1">
+                    ${widthList.map((wd, idx) => {
+                        const isLast = idx === widthList.length - 1;
+                        const isMatched = wd === morphology.width;
+                        const prefix = isLast ? '└──' : '├──';
+                        return `
+                            <div class="flex items-center justify-between ${isMatched ? 'text-fuchsia-400 font-bold bg-fuchsia-500/10 px-2 py-0.5 rounded-md border border-fuchsia-500/30' : 'hover:text-slate-200'}">
+                                <span>${prefix} ${wd}</span>
+                                ${isMatched ? '<i class="fa-solid fa-check text-[10px]"></i>' : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+
+            <!-- 3. Slant Tree -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col gap-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                        <i class="fa-solid fa-italic text-emerald-400"></i> Slant (Dáng Nghiêng)
+                    </span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${getSlantBadgeColor(morphology.slant)}">
+                        ${morphology.slant} (${morphology.slantAngle || 0}°)
+                    </span>
+                </div>
+                <div class="font-mono text-xs text-slate-400 pl-1 leading-relaxed border-l-2 border-slate-800 ml-1 flex flex-col gap-1 mt-1">
+                    ${slantList.map((s, idx) => {
+                        const isLast = idx === slantList.length - 1;
+                        const isMatched = s === morphology.slant;
+                        const prefix = isLast ? '└──' : '├──';
+                        return `
+                            <div class="flex items-center justify-between ${isMatched ? 'text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/30' : 'hover:text-slate-200'}">
+                                <span>${prefix} ${s}</span>
+                                ${isMatched ? '<i class="fa-solid fa-check text-[10px]"></i>' : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+
+            <!-- 4. Case Tree -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col gap-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                        <i class="fa-solid fa-font text-orange-400"></i> Case (Kiểu Chữ)
+                    </span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${getCaseBadgeColor(morphology.caseType)}">
+                        ${morphology.caseType}
+                    </span>
+                </div>
+                <div class="font-mono text-xs text-slate-400 pl-1 leading-relaxed border-l-2 border-slate-800 ml-1 flex flex-col gap-1 mt-1">
+                    ${caseList.map((c, idx) => {
+                        const isLast = idx === caseList.length - 1;
+                        const isMatched = c === morphology.caseType;
+                        const prefix = isLast ? '└──' : '├──';
+                        return `
+                            <div class="flex items-center justify-between ${isMatched ? 'text-orange-400 font-bold bg-orange-500/10 px-2 py-0.5 rounded-md border border-orange-500/30' : 'hover:text-slate-200'}">
+                                <span>${prefix} ${c}</span>
+                                ${isMatched ? '<i class="fa-solid fa-check text-[10px]"></i>' : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    const previewBox = document.getElementById('morphology-modal-preview-text');
+    if (previewBox) {
+        previewBox.style.fontFamily = `'${safeName}', sans-serif`;
+    }
+
+    const filterBtn = document.getElementById('btn-morphology-modal-filter-similar');
+    if (filterBtn) {
+        filterBtn.onclick = () => {
+            setCustomFontWeightFilter(morphology.weight);
+            setCustomFontWidthFilter(morphology.width);
+            setCustomFontSlantFilter(morphology.slant);
+            setCustomFontCaseFilter(morphology.caseType);
+            closeFontMorphologyModal();
+        };
+    }
+
+    modal.classList.remove('hidden');
+}
+
+export function closeFontMorphologyModal(): void {
+    const modal = document.getElementById('font-morphology-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
 export function refreshCustomFontsUI(): void {
     loadAndRegisterCustomFontsFromDB();
 }
@@ -1642,10 +4120,13 @@ export function initFontMatcherModule(): void {
     try {
         (document as any).fonts.onloadingdone = () => {
             updateAllFontCanvases();
+            updateAllFontSetCanvases();
         };
     } catch (e) { }
 
-    loadAndRegisterCustomFontsFromDB();
+    loadAndRegisterCustomFontsFromDB().then(() => {
+        generateAndDisplayFontSet('romance');
+    });
 
     const savedKey = localStorage.getItem('gemini_manga_api_key') ||
         localStorage.getItem('gemini_api_key') ||
@@ -1673,6 +4154,54 @@ export function initFontMatcherModule(): void {
         });
     }
 
+    // Genre Presets Select Listener
+    const genreSelect = document.getElementById('fontset-genre-select') as HTMLSelectElement | null;
+    if (genreSelect) {
+        genreSelect.addEventListener('change', (e: Event) => {
+            const target = e.target as HTMLSelectElement;
+            generateAndDisplayFontSet(target.value as GenrePresetId);
+        });
+    }
+
+    // Genre Sample Files Upload
+    const genreSampleInput = document.getElementById('genre-sample-files-input') as HTMLInputElement | null;
+    if (genreSampleInput) {
+        genreSampleInput.addEventListener('change', (e: Event) => {
+            const target = e.target as HTMLInputElement;
+            if (target.files && target.files.length > 0) {
+                handleGenreSampleImageSelect(Array.from(target.files));
+            }
+        });
+    }
+
+    // Genre Sample Dropzone Drag & Drop
+    const genreDropzone = document.getElementById('genre-sample-dropzone');
+    if (genreDropzone) {
+        ['dragenter', 'dragover'].forEach(eventName => {
+            genreDropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                genreDropzone.classList.add('border-indigo-500', 'bg-indigo-500/10');
+            }, false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            genreDropzone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                genreDropzone.classList.remove('border-indigo-500', 'bg-indigo-500/10');
+            }, false);
+        });
+        genreDropzone.addEventListener('drop', (e) => {
+            const dt = (e as DragEvent).dataTransfer;
+            if (dt && dt.files && dt.files.length > 0) {
+                const imgFiles = Array.from(dt.files).filter(f => f.type.startsWith('image/'));
+                if (imgFiles.length > 0) {
+                    handleGenreSampleImageSelect(imgFiles);
+                }
+            }
+        });
+    }
+
     window.addEventListener('paste', (e: ClipboardEvent) => {
         const secFont = document.getElementById('sec-fontmatch');
         if (!secFont || secFont.classList.contains('hidden')) return;
@@ -1683,7 +4212,12 @@ export function initFontMatcherModule(): void {
             if (items[i].type.indexOf('image') !== -1) {
                 const blob = items[i].getAsFile();
                 if (blob) {
-                    handleFontMatchImageSelect(blob);
+                    const activeSubTab = document.querySelector('#fontmatch-panel-set:not(.hidden)');
+                    if (activeSubTab) {
+                        handleGenreSampleImageSelect([blob]);
+                    } else {
+                        handleFontMatchImageSelect(blob);
+                    }
                     break;
                 }
             }
