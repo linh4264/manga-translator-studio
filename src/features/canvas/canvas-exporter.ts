@@ -781,7 +781,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                         }
 
                         ctx.font = layout.getFontFn(tok);
-                        const charDrawY = (lineLayout.baselineY - lineLayout.centerY) * (tok.sizeRatio || 1.0);
+                        const charDrawY = (colLine.baselineY - colLine.centerY) * (tok.sizeRatio || 1.0);
 
                         if (strokeWidth2 > 0) {
                             ctx.save();
