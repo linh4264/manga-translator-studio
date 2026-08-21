@@ -307,3 +307,277 @@ test('CASE K — Clean Text: Diamond balance on italic / thought block does not 
     assert.ok(!thoughtBlock.translated.includes('[/i]'), 'Translated text must not contain [/i] tags');
     assert.ok(thoughtBlock.translated.includes('Vì lúc đó') || thoughtBlock.translated.includes('ngượng'), 'Content must be preserved');
 });
+
+test('CASE L — Vertical Alignment: Single line normal centered text glyph center matches editor logical center', () => {
+    const block = {
+        id: 'b_vert_single',
+        type: 'dialogue',
+        translated: 'Xin chào thế giới',
+        box: { x: 20, y: 30, w: 40, h: 20 },
+        style: {
+            fontSize: 16,
+            fontFamily: 'font-manga',
+            lineHeight: 1.15
+        }
+    };
+
+    const naturalW = 1000;
+    const naturalH = 1000;
+    const scaleFactor = 1.0;
+    const layout = buildBlockTextLayout(block, naturalW, naturalH, scaleFactor);
+
+    const bx = (block.box.x / 100) * naturalW; // 200
+    const by = (block.box.y / 100) * naturalH; // 300
+    const bh = (block.box.h / 100) * naturalH; // 200
+
+    const editorBlockCenterY = by + (bh / 2); // 400
+    const editorLogicalLineCenter = editorBlockCenterY;
+
+    assert.strictEqual(layout.lines.length, 1);
+    const line = layout.lines[0];
+
+    // Assert logical line center
+    assert.strictEqual(line.centerY, editorLogicalLineCenter, 'Line center must match editor vertical center');
+
+    // Assert computed glyph center from font metrics
+    const computedGlyphCenter = line.baselineY - ((line.ascent - line.descent) / 2);
+    assert.strictEqual(computedGlyphCenter, editorLogicalLineCenter, 'Exported glyph center must match editor text center');
+    assert.strictEqual(layout.textCenterY, editorBlockCenterY, 'Text block center must match speech bubble center');
+});
+
+test('CASE M — Vertical Alignment: Multiple lines (2, 4, 6 lines) centers match editor layout', () => {
+    const lineCounts = [2, 4, 6];
+
+    lineCounts.forEach(count => {
+        const textLines = Array.from({ length: count }, (_, i) => `Dòng số ${i + 1}`);
+        const block = {
+            id: `b_vert_multi_${count}`,
+            type: 'dialogue',
+            translated: textLines.join('\n'),
+            box: { x: 10, y: 10, w: 50, h: 60 },
+            style: {
+                fontSize: 18,
+                fontFamily: 'font-manga',
+                lineHeight: 1.2
+            }
+        };
+
+        const naturalW = 1600;
+        const naturalH = 2000;
+        const scaleFactor = 2.0;
+        const layout = buildBlockTextLayout(block, naturalW, naturalH, scaleFactor);
+
+        const by = (block.box.y / 100) * naturalH; // 200
+        const bh = (block.box.h / 100) * naturalH; // 1200
+        const editorBlockCenterY = by + (bh / 2); // 800
+
+        const fontSizePx = 18 * scaleFactor; // 36
+        const lineHeightPx = fontSizePx * 1.2; // 43.2
+        const totalHeight = count * lineHeightPx;
+        const editorTextTop = editorBlockCenterY - (totalHeight / 2);
+
+        assert.strictEqual(layout.lines.length, count);
+        expect(layout.textCenterY).toBeCloseTo(editorBlockCenterY, 4);
+
+        layout.lines.forEach((line, idx) => {
+            const expectedLineCenter = editorTextTop + (idx + 0.5) * lineHeightPx;
+            expect(line.centerY).toBeCloseTo(expectedLineCenter, 4);
+
+            const computedGlyphCenter = line.baselineY - ((line.ascent - line.descent) / 2);
+            expect(computedGlyphCenter).toBeCloseTo(expectedLineCenter, 4);
+        });
+    });
+});
+
+test('CASE N — Vertical Alignment: Different line heights (1.0, 1.15, 1.35, 1.6, 2.0)', () => {
+    const lineHeights = [1.0, 1.15, 1.35, 1.6, 2.0];
+
+    lineHeights.forEach(lh => {
+        const block = {
+            id: `b_vert_lh_${lh}`,
+            type: 'dialogue',
+            translated: 'Hàng trên\nHàng dưới',
+            box: { x: 20, y: 20, w: 40, h: 40 },
+            style: {
+                fontSize: 20,
+                fontFamily: 'font-manga',
+                lineHeight: lh
+            }
+        };
+
+        const W = 1000;
+        const H = 1000;
+        const layout = buildBlockTextLayout(block, W, H, 1.0);
+
+        const by = (block.box.y / 100) * H; // 200
+        const bh = (block.box.h / 100) * H; // 400
+        const blockCenterY = by + (bh / 2); // 400
+
+        const expectedLhPx = 20 * lh;
+        const expectedTotalH = 2 * expectedLhPx;
+        const expectedTop = blockCenterY - (expectedTotalH / 2);
+
+        expect(layout.lineHeightPx).toBeCloseTo(expectedLhPx, 4);
+        expect(layout.totalHeight).toBeCloseTo(expectedTotalH, 4);
+
+        layout.lines.forEach((line, idx) => {
+            const expectedCenter = expectedTop + (idx + 0.5) * expectedLhPx;
+            expect(line.centerY).toBeCloseTo(expectedCenter, 4);
+            const glyphCenter = line.baselineY - ((line.ascent - line.descent) / 2);
+            expect(glyphCenter).toBeCloseTo(expectedCenter, 4);
+        });
+    });
+});
+
+test('CASE O — Vertical Alignment: Small and large font sizes (9px, 14px, 24px, 48px, 72px)', () => {
+    const fontSizes = [9, 14, 24, 48, 72];
+
+    fontSizes.forEach(fs => {
+        const block = {
+            id: `b_vert_fs_${fs}`,
+            type: 'dialogue',
+            translated: 'Kích thước chữ mẫu',
+            box: { x: 10, y: 10, w: 80, h: 80 },
+            style: {
+                fontSize: fs,
+                fontFamily: 'font-manga',
+                lineHeight: 1.25
+            }
+        };
+
+        const W = 2000;
+        const H = 2000;
+        const scaleFactor = 1.5;
+        const layout = buildBlockTextLayout(block, W, H, scaleFactor);
+
+        const expectedFsPx = fs * scaleFactor;
+        const by = (block.box.y / 100) * H;
+        const bh = (block.box.h / 100) * H;
+        const blockCenterY = by + (bh / 2);
+
+        expect(layout.fontSizePx).toBeCloseTo(expectedFsPx, 4);
+        const line = layout.lines[0];
+        expect(line.centerY).toBeCloseTo(blockCenterY, 4);
+
+        const glyphCenter = line.baselineY - ((line.ascent - line.descent) / 2);
+        expect(glyphCenter).toBeCloseTo(blockCenterY, 4);
+    });
+});
+
+test('CASE P — Vertical Alignment: Fonts Nunito, Be Vietnam Pro, Patrick Hand, Bangers', () => {
+    const fonts = [
+        { key: 'font-manga', name: 'Nunito' },
+        { key: 'font-vietnamese', name: 'Be Vietnam Pro' },
+        { key: 'font-comic', name: 'Patrick Hand' },
+        { key: 'font-impact', name: 'Bangers' }
+    ];
+
+    fonts.forEach(({ key, name }) => {
+        const block = {
+            id: `b_vert_font_${key}`,
+            type: 'dialogue',
+            translated: `Font ${name} tiếng Việt có dấu sắc huyền hỏi ngã nặng`,
+            box: { x: 15, y: 15, w: 70, h: 30 },
+            style: {
+                fontSize: 22,
+                fontFamily: key,
+                lineHeight: 1.2
+            }
+        };
+
+        const layout = buildBlockTextLayout(block, 1200, 1600, 2.0);
+        const line = layout.lines[0];
+
+        assert.ok(line.ascent > 0, `Ascent for ${name} must be positive`);
+        assert.ok(line.descent > 0, `Descent for ${name} must be positive`);
+
+        // Baseline must be offset by half of (ascent - descent) from line centerY
+        const expectedBaselineOffset = (line.ascent - line.descent) / 2;
+        expect(line.baselineY).toBeCloseTo(line.centerY + expectedBaselineOffset, 4);
+
+        // Visual glyph center must match line centerY exactly
+        const glyphCenter = line.baselineY - expectedBaselineOffset;
+        expect(glyphCenter).toBeCloseTo(line.centerY, 4);
+    });
+});
+
+test('CASE Q — Vertical Alignment: Japanese vertical writing mode', () => {
+    const japaneseText = 'お前はもう\n死んでいる';
+    const block = {
+        id: 'b_vert_japanese',
+        type: 'dialogue',
+        translated: japaneseText,
+        box: { x: 20, y: 20, w: 30, h: 50 },
+        style: {
+            fontSize: 20,
+            fontFamily: 'font-manga',
+            vertical: true,
+            lineHeight: 1.2
+        }
+    };
+
+    const W = 1000;
+    const H = 1500;
+    const layout = buildBlockTextLayout(block, W, H, 1.0);
+
+    assert.strictEqual(layout.isVertical, true, 'Layout must be vertical');
+    assert.strictEqual(layout.lines.length, 2, 'Must have 2 vertical columns');
+
+    const by = (block.box.y / 100) * H; // 300
+    const bh = (block.box.h / 100) * H; // 750
+    const blockCenterY = by + (bh / 2); // 675
+
+    // Check each column
+    layout.lines.forEach((col, idx) => {
+        expect(col.centerY).toBeCloseTo(blockCenterY, 4);
+        assert.ok(col.rawChars && col.rawChars.length > 0, 'Vertical column must have character tokens');
+        expect(col.width).toBeCloseTo(layout.lineHeightPx, 4);
+    });
+});
+
+test('CASE R — Vertical Alignment: Rich text with mixed font sizes preserves baseline and center', () => {
+    const richText = 'Bình thường [size=150%]Chữ To Hơn[/size] bình thường';
+    const block = {
+        id: 'b_vert_rich_mixed',
+        type: 'dialogue',
+        translated: richText,
+        box: { x: 10, y: 20, w: 80, h: 40 },
+        style: {
+            fontSize: 20,
+            fontFamily: 'font-manga',
+            lineHeight: 1.3
+        }
+    };
+
+    const layout = buildBlockTextLayout(block, 1200, 1600, 1.5);
+    assert.strictEqual(layout.lines.length, 1);
+
+    const line = layout.lines[0];
+    const glyphCenter = line.baselineY - ((line.ascent - line.descent) / 2);
+
+    expect(glyphCenter).toBeCloseTo(line.centerY, 4);
+    assert.strictEqual(layout.lines[0].tokens.length, 3, 'Must parse into 3 rich text tokens');
+    assert.strictEqual(layout.lines[0].tokens[1].sizeRatio, 1.5, 'Middle token must have sizeRatio 1.5');
+});
+
+test('CASE S — Pure Alignment: Zero magic offset constants in layout calculation', () => {
+    const block = {
+        id: 'b_vert_pure',
+        type: 'dialogue',
+        translated: 'Kiểm tra độ chính xác tuyệt đối',
+        box: { x: 25, y: 25, w: 50, h: 50 },
+        style: {
+            fontSize: 16,
+            lineHeight: 1.15
+        }
+    };
+
+    const layout = buildBlockTextLayout(block, 1000, 1000, 1.0);
+    const line = layout.lines[0];
+
+    // Verification: baseline - centerY must equal exactly (ascent - descent) / 2 with 0 arbitrary constants
+    const diff = line.baselineY - line.centerY;
+    const expectedDiff = (line.ascent - line.descent) / 2;
+    expect(diff).toBeCloseTo(expectedDiff, 4);
+});
+

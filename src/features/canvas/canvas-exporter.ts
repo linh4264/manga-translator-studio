@@ -59,6 +59,11 @@ export interface BlockTextLayoutLine {
     text: string;
     width: number;
     height: number;
+    top: number;
+    centerY: number;
+    baselineY: number;
+    ascent: number;
+    descent: number;
     rawChars?: Array<{ char: string; token: any }>;
 }
 
@@ -77,13 +82,35 @@ export interface BlockTextLayout {
     by: number;
     bw: number;
     bh: number;
+    blockCenterX: number;
+    blockCenterY: number;
+    textCenterX: number;
+    textCenterY: number;
     fontName: string;
     getFontFn: (tok: any) => string;
 }
 
+let sharedMeasureCanvas: HTMLCanvasElement | null = null;
+let sharedMeasureCtx: CanvasRenderingContext2D | null = null;
+
+function getSharedMeasureContext(): CanvasRenderingContext2D | null {
+    if (sharedMeasureCtx) return sharedMeasureCtx;
+    if (typeof document !== 'undefined' && typeof document.createElement === 'function') {
+        try {
+            sharedMeasureCanvas = document.createElement('canvas');
+            sharedMeasureCtx = sharedMeasureCanvas.getContext('2d');
+            return sharedMeasureCtx;
+        } catch {
+            return null;
+        }
+    }
+    return null;
+}
+
 /**
- * Shared layout representation: Builds exact line tokens and measurements strictly adhering
- * to editor layout state (manual newlines, Diamond partition, rich text tokens) without re-partitioning words.
+ * Shared canonical layout representation: Builds exact line tokens and measurements strictly adhering
+ * to editor layout state (manual newlines, Diamond partition, rich text tokens) without re-partitioning words,
+ * computing font-metric based vertical baseline positions that align perfectly with DOM CSS line boxes.
  */
 export function buildBlockTextLayout(
     block: MangaBlock,
@@ -136,10 +163,13 @@ export function buildBlockTextLayout(
         return `${tokItalic}${tokWeight}${tokSize}px ${tokFont}`.trim();
     };
 
+    const measureCtx = ctx || getSharedMeasureContext();
     const lines: BlockTextLayoutLine[] = [];
 
     if (isVertical) {
         let maxColChars = 0;
+        const columnData: Array<{ lineToks: any[]; rawChars: Array<{ char: string; token: any }> }> = [];
+
         tokenLines.forEach(lineToks => {
             const rawChars: Array<{ char: string; token: any }> = [];
             lineToks.forEach(tok => {
@@ -149,17 +179,57 @@ export function buildBlockTextLayout(
                 segs.forEach((s: any) => rawChars.push({ char: s as string, token: tok }));
             });
             if (rawChars.length > maxColChars) maxColChars = rawChars.length;
+            columnData.push({ lineToks, rawChars });
+        });
+
+        const totalWidth = columnData.length * lineHeightPx;
+        const totalHeight = maxColChars * lineHeightPx;
+        const colStep = lineHeightPx;
+        const charStep = lineHeightPx;
+
+        columnData.forEach(({ lineToks, rawChars }) => {
+            const colHeight = rawChars.length * charStep;
+            let colStartY = by + (bh / 2) - (colHeight / 2);
+            const minColStartY = by + padYPx;
+            if (colStartY < minColStartY) colStartY = minColStartY;
+            const colTop = colStartY;
+            const colCenterY = colTop + (colHeight / 2);
+
+            let ascent = fontSizePx * 0.8;
+            let descent = fontSizePx * 0.2;
+            if (measureCtx && rawChars.length > 0) {
+                const prevFont = measureCtx.font;
+                measureCtx.font = getFontFn(rawChars[0].token || {});
+                const m = measureCtx.measureText(rawChars[0].char || 'M');
+                if (m) {
+                    if (typeof m.actualBoundingBoxAscent === 'number' && typeof m.actualBoundingBoxDescent === 'number' &&
+                        (m.actualBoundingBoxAscent > 0 || m.actualBoundingBoxDescent > 0)) {
+                        ascent = m.actualBoundingBoxAscent;
+                        descent = m.actualBoundingBoxDescent;
+                    } else if (typeof m.fontBoundingBoxAscent === 'number' && typeof m.fontBoundingBoxDescent === 'number') {
+                        ascent = m.fontBoundingBoxAscent;
+                        descent = m.fontBoundingBoxDescent;
+                    }
+                }
+                measureCtx.font = prevFont;
+            }
+            const baselineY = colCenterY + (ascent - descent) / 2;
+
             lines.push({
                 tokens: lineToks,
                 text: lineToks.map(t => t.text).join(''),
                 width: lineHeightPx,
-                height: rawChars.length * lineHeightPx,
+                height: colHeight,
+                top: colTop,
+                centerY: colCenterY,
+                baselineY,
+                ascent,
+                descent,
                 rawChars
             });
         });
 
-        const totalWidth = lines.length * lineHeightPx;
-        const totalHeight = maxColChars * lineHeightPx;
+        const textStartY = by + (bh / 2) - (totalHeight / 2);
 
         return {
             isVertical: true,
@@ -176,24 +246,29 @@ export function buildBlockTextLayout(
             by,
             bw,
             bh,
+            blockCenterX: bx + (bw / 2),
+            blockCenterY: by + (bh / 2),
+            textCenterX: bx + (bw / 2),
+            textCenterY: textStartY + (totalHeight / 2),
             fontName,
             getFontFn
         };
     } else {
         const hasCharWarp = (block.style.arcAngle || 0) !== 0 || (block.style.warpWave || 0) !== 0 || (block.style.warpBulge || 0) !== 0;
         let maxLineWidth = 0;
+        const lineMeasurements: Array<{ lineToks: any[]; lineWidth: number; rawChars?: Array<{ char: string; token: any }> }> = [];
 
         tokenLines.forEach(lineToks => {
             let lineWidth = 0;
             const rawChars: Array<{ char: string; token: any }> = [];
 
-            if (ctx) {
-                const prevFont = ctx.font;
+            if (measureCtx) {
+                const prevFont = measureCtx.font;
                 lineToks.forEach(tok => {
-                    ctx.font = getFontFn(tok);
+                    measureCtx.font = getFontFn(tok);
                     const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
-                    let w = ctx.measureText(tok.text).width;
-                    if (!('letterSpacing' in ctx) && effLetterSpacing > 0) {
+                    let w = measureCtx.measureText(tok.text).width;
+                    if (!('letterSpacing' in measureCtx) && effLetterSpacing > 0) {
                         const charCount = Array.from(tok.text).length;
                         w += Math.max(0, charCount - 1) * effLetterSpacing;
                     }
@@ -206,7 +281,7 @@ export function buildBlockTextLayout(
                         segs.forEach((s: any) => rawChars.push({ char: s as string, token: tok }));
                     }
                 });
-                ctx.font = prevFont;
+                measureCtx.font = prevFont;
             } else {
                 lineToks.forEach(tok => {
                     const tokSize = fontSizePx * (tok.sizeRatio || 1.0);
@@ -225,18 +300,61 @@ export function buildBlockTextLayout(
             }
 
             if (lineWidth > maxLineWidth) maxLineWidth = lineWidth;
+            lineMeasurements.push({
+                lineToks,
+                lineWidth,
+                rawChars: hasCharWarp ? rawChars : undefined
+            });
+        });
+
+        const totalWidth = maxLineWidth;
+        const totalHeight = lineMeasurements.length * lineHeightPx;
+
+        let startY = by + (bh / 2) - (totalHeight / 2);
+        const minStartY = by + padYPx;
+        if (startY < minStartY) startY = minStartY;
+
+        lineMeasurements.forEach(({ lineToks, lineWidth, rawChars }, i) => {
+            const lineTop = startY + (i * lineHeightPx);
+            const lineCenterY = lineTop + (lineHeightPx / 2);
+
+            let ascent = fontSizePx * 0.8;
+            let descent = fontSizePx * 0.2;
+
+            if (measureCtx) {
+                const prevFont = measureCtx.font;
+                const primaryTok = lineToks[0] || {};
+                measureCtx.font = getFontFn(primaryTok);
+                const lineFullText = lineToks.map(t => t.text).join('') || 'Mg';
+                const m = measureCtx.measureText(lineFullText);
+                if (m) {
+                    if (typeof m.actualBoundingBoxAscent === 'number' && typeof m.actualBoundingBoxDescent === 'number' &&
+                        (m.actualBoundingBoxAscent > 0 || m.actualBoundingBoxDescent > 0)) {
+                        ascent = m.actualBoundingBoxAscent;
+                        descent = m.actualBoundingBoxDescent;
+                    } else if (typeof m.fontBoundingBoxAscent === 'number' && typeof m.fontBoundingBoxDescent === 'number') {
+                        ascent = m.fontBoundingBoxAscent;
+                        descent = m.fontBoundingBoxDescent;
+                    }
+                }
+                measureCtx.font = prevFont;
+            }
+
+            const baselineY = lineCenterY + (ascent - descent) / 2;
 
             lines.push({
                 tokens: lineToks,
                 text: lineToks.map(t => t.text).join(''),
                 width: lineWidth,
                 height: lineHeightPx,
-                rawChars: hasCharWarp ? rawChars : undefined
+                top: lineTop,
+                centerY: lineCenterY,
+                baselineY,
+                ascent,
+                descent,
+                rawChars
             });
         });
-
-        const totalWidth = maxLineWidth;
-        const totalHeight = lines.length * lineHeightPx;
 
         return {
             isVertical: false,
@@ -253,6 +371,10 @@ export function buildBlockTextLayout(
             by,
             bw,
             bh,
+            blockCenterX: bx + (bw / 2),
+            blockCenterY: by + (bh / 2),
+            textCenterX: bx + (bw / 2),
+            textCenterY: startY + (totalHeight / 2),
             fontName,
             getFontFn
         };
@@ -636,7 +758,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                     if (startY < minStartY) startY = minStartY;
 
                     ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
+                    ctx.textBaseline = 'alphabetic';
 
                     ctx.save();
                     if (hasSkew) {
@@ -649,8 +771,8 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
 
                     for (let k = 0; k < colChars.length; k++) {
                         const { char, token: tok } = colChars[k];
-                        let charY = startY + (k * charStep);
-                        let charX = colX;
+                        let charCellCenterY = startY + (k * charStep);
+                        let charCellCenterX = colX;
                         let rotRad = 0;
                         let bulgeScale = 1;
 
@@ -662,11 +784,11 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                             const totalOffsetX = arcOffset + waveOffset;
                             rotRad = t * (arcAngle * 0.35) * (Math.PI / 180);
                             bulgeScale = 1 + (1 - t * t) * ((warpBulge / 50) * 0.4);
-                            charX += totalOffsetX;
+                            charCellCenterX += totalOffsetX;
                         }
 
                         ctx.save();
-                        ctx.translate(charX, charY);
+                        ctx.translate(charCellCenterX, charCellCenterY);
                         if (rotRad !== 0) ctx.rotate(rotRad);
                         if (bulgeScale !== 1) ctx.scale(bulgeScale, bulgeScale);
                         if (char === '…' || char === '―' || char === '—' || char === '~' || char === '～' || char === '-') {
@@ -674,6 +796,21 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                         }
 
                         ctx.font = layout.getFontFn(tok);
+                        const charMetrics = ctx.measureText(char);
+                        const tokSize = fontSizePx * (tok.sizeRatio || 1.0);
+                        let cAscent = tokSize * 0.8;
+                        let cDescent = tokSize * 0.2;
+                        if (charMetrics) {
+                            if (typeof charMetrics.actualBoundingBoxAscent === 'number' && typeof charMetrics.actualBoundingBoxDescent === 'number' &&
+                                (charMetrics.actualBoundingBoxAscent > 0 || charMetrics.actualBoundingBoxDescent > 0)) {
+                                cAscent = charMetrics.actualBoundingBoxAscent;
+                                cDescent = charMetrics.actualBoundingBoxDescent;
+                            } else if (typeof charMetrics.fontBoundingBoxAscent === 'number' && typeof charMetrics.fontBoundingBoxDescent === 'number') {
+                                cAscent = charMetrics.fontBoundingBoxAscent;
+                                cDescent = charMetrics.fontBoundingBoxDescent;
+                            }
+                        }
+                        const charDrawY = (cAscent - cDescent) / 2;
 
                         if (strokeWidth2 > 0) {
                             ctx.save();
@@ -687,7 +824,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                             ctx.strokeStyle = strokeColor2;
                             ctx.lineJoin = 'round';
                             ctx.miterLimit = 2;
-                            ctx.strokeText(char, 0, 0);
+                            ctx.strokeText(char, 0, charDrawY);
                             ctx.restore();
                         }
 
@@ -703,7 +840,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                             ctx.strokeStyle = strokeColor;
                             ctx.lineJoin = 'round';
                             ctx.miterLimit = 2;
-                            ctx.strokeText(char, 0, 0);
+                            ctx.strokeText(char, 0, charDrawY);
                             ctx.restore();
                         }
 
@@ -715,7 +852,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                             ctx.shadowOffsetY = shadowOffsetY;
                         }
                         ctx.fillStyle = tok.color || (block.style.gradientEnabled && blockGradient ? blockGradient : (block.style.textColor || '#000000'));
-                        ctx.fillText(char, 0, 0);
+                        ctx.fillText(char, 0, charDrawY);
                         ctx.restore();
 
                         ctx.restore();
@@ -724,28 +861,23 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                 }
             } else {
                 const lineHeight = layout.lineHeightPx;
-                let startY = by + (bh / 2) - (layout.totalHeight / 2) + (lineHeight / 2) - (fontSizePx * 0.05);
-                const minStartY = by + layout.padYPx + (lineHeight / 2);
-                if (startY < minStartY) startY = minStartY;
-
                 let startX = bx + bw / 2;
                 if (block.style.align === 'left') startX = bx + layout.padXPx;
                 else if (block.style.align === 'right') startX = bx + bw - layout.padXPx;
 
-                ctx.textBaseline = 'middle';
-
                 for (let i = 0; i < layout.lines.length; i++) {
                     const lineLayout = layout.lines[i];
                     const lineTokens = lineLayout.tokens;
-                    const lineY = startY + (i * lineHeight);
+                    const lineCenterY = lineLayout.centerY;
+                    const lineBaselineY = lineLayout.baselineY;
 
                     ctx.save();
                     if (hasSkew) {
                         const radX = (skewX * Math.PI) / 180;
                         const radY = (skewY * Math.PI) / 180;
-                        ctx.translate(startX, lineY);
+                        ctx.translate(startX, lineCenterY);
                         ctx.transform(1, Math.tan(radY), Math.tan(radX), 1, 0, 0);
-                        ctx.translate(-startX, -lineY);
+                        ctx.translate(-startX, -lineCenterY);
                     }
 
                     if (hasCharWarp) {
@@ -767,6 +899,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
 
                         let curX = startCharX;
                         ctx.textAlign = 'center';
+                        ctx.textBaseline = 'alphabetic';
 
                         for (let k = 0; k < count; k++) {
                             const { char, token: tok } = rawChars[k];
@@ -782,8 +915,24 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                             const rotRad = t * (arcAngle * 0.35) * (Math.PI / 180);
                             const bulgeScale = 1 + (1 - t * t) * bulgeFactor;
 
+                            const charMetrics = ctx.measureText(char);
+                            const tokSize = fontSizePx * (tok.sizeRatio || 1.0);
+                            let cAscent = tokSize * 0.8;
+                            let cDescent = tokSize * 0.2;
+                            if (charMetrics) {
+                                if (typeof charMetrics.actualBoundingBoxAscent === 'number' && typeof charMetrics.actualBoundingBoxDescent === 'number' &&
+                                    (charMetrics.actualBoundingBoxAscent > 0 || charMetrics.actualBoundingBoxDescent > 0)) {
+                                    cAscent = charMetrics.actualBoundingBoxAscent;
+                                    cDescent = charMetrics.actualBoundingBoxDescent;
+                                } else if (typeof charMetrics.fontBoundingBoxAscent === 'number' && typeof charMetrics.fontBoundingBoxDescent === 'number') {
+                                    cAscent = charMetrics.fontBoundingBoxAscent;
+                                    cDescent = charMetrics.fontBoundingBoxDescent;
+                                }
+                            }
+                            const charDrawY = (cAscent - cDescent) / 2;
+
                             ctx.save();
-                            ctx.translate(charCenterX, lineY + totalOffsetY);
+                            ctx.translate(charCenterX, lineCenterY + totalOffsetY);
                             if (rotRad !== 0) ctx.rotate(rotRad);
                             if (bulgeScale !== 1) ctx.scale(bulgeScale, bulgeScale);
 
@@ -799,7 +948,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                                 ctx.strokeStyle = strokeColor2;
                                 ctx.lineJoin = 'round';
                                 ctx.miterLimit = 2;
-                                ctx.strokeText(char, 0, 0);
+                                ctx.strokeText(char, 0, charDrawY);
                                 ctx.restore();
                             }
 
@@ -815,7 +964,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                                 ctx.strokeStyle = strokeColor;
                                 ctx.lineJoin = 'round';
                                 ctx.miterLimit = 2;
-                                ctx.strokeText(char, 0, 0);
+                                ctx.strokeText(char, 0, charDrawY);
                                 ctx.restore();
                             }
 
@@ -827,7 +976,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                                 ctx.shadowOffsetY = shadowOffsetY;
                             }
                             ctx.fillStyle = tok.color || (block.style.gradientEnabled && blockGradient ? blockGradient : (block.style.textColor || '#000000'));
-                            ctx.fillText(char, 0, 0);
+                            ctx.fillText(char, 0, charDrawY);
                             ctx.restore();
 
                             ctx.restore();
@@ -844,6 +993,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                         }
 
                         ctx.textAlign = 'left';
+                        ctx.textBaseline = 'alphabetic';
 
                         lineTokens.forEach(tok => {
                             const tokFontSpec = layout.getFontFn(tok);
@@ -863,7 +1013,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                                 ctx.strokeStyle = strokeColor2;
                                 ctx.lineJoin = 'round';
                                 ctx.miterLimit = 2;
-                                ctx.strokeText(tok.text, curTokenX, lineY);
+                                ctx.strokeText(tok.text, curTokenX, lineBaselineY);
                                 ctx.restore();
                             }
 
@@ -879,7 +1029,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                                 ctx.strokeStyle = strokeColor;
                                 ctx.lineJoin = 'round';
                                 ctx.miterLimit = 2;
-                                ctx.strokeText(tok.text, curTokenX, lineY);
+                                ctx.strokeText(tok.text, curTokenX, lineBaselineY);
                                 ctx.restore();
                             }
 
@@ -899,7 +1049,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                             const fillToApply: any = tok.color || (block.style.gradientEnabled && blockGradient ? blockGradient : (block.style.textColor || '#000000'));
 
                             ctx.fillStyle = fillToApply;
-                            ctx.fillText(tok.text, curTokenX, lineY);
+                            ctx.fillText(tok.text, curTokenX, lineBaselineY);
                             ctx.restore();
 
                             if (tok.underline || block.style.underline) {
@@ -907,7 +1057,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                                 ctx.strokeStyle = tok.color || block.style.textColor || '#000000';
                                 ctx.lineWidth = Math.max(1, tokSize * 0.08);
                                 ctx.beginPath();
-                                const underlineY = lineY + (tokSize * 0.55);
+                                const underlineY = lineBaselineY + Math.max(2, tokSize * 0.12);
                                 ctx.moveTo(curTokenX, underlineY);
                                 ctx.lineTo(curTokenX + tokenW, underlineY);
                                 ctx.stroke();
@@ -919,8 +1069,9 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                                 ctx.strokeStyle = tok.color || block.style.textColor || '#000000';
                                 ctx.lineWidth = Math.max(1, tokSize * 0.08);
                                 ctx.beginPath();
-                                ctx.moveTo(curTokenX, lineY);
-                                ctx.lineTo(curTokenX + tokenW, lineY);
+                                const strikethroughY = lineCenterY;
+                                ctx.moveTo(curTokenX, strikethroughY);
+                                ctx.lineTo(curTokenX + tokenW, strikethroughY);
                                 ctx.stroke();
                                 ctx.restore();
                             }
@@ -939,13 +1090,32 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                     ctx.font = subFontSpec;
                     ctx.fillStyle = block.style.textColor || '#000000';
                     ctx.globalAlpha = 0.75;
-                    const subY = startY + (layout.lines.length * lineHeight) + (subFontSizePx * 0.5);
+                    ctx.textBaseline = 'alphabetic';
                     const subLineHeight = subFontSizePx * 1.1;
                     const subLines = (block.original || '').split('\n');
+                    const lastLineBottom = layout.lines.length > 0 ? (layout.lines[layout.lines.length - 1].top + layout.lines[layout.lines.length - 1].height) : (by + bh / 2);
+                    const subStartY = lastLineBottom + (subFontSizePx * 0.3);
                     ctx.textAlign = (!block.style.align || block.style.align === 'center') ? 'center' : (block.style.align === 'right' ? 'right' : 'left');
                     const subStartX = startX;
+
+                    const subMetrics = ctx.measureText(subLines[0] || 'Mg');
+                    let subAscent = subFontSizePx * 0.8;
+                    let subDescent = subFontSizePx * 0.2;
+                    if (subMetrics) {
+                        if (typeof subMetrics.actualBoundingBoxAscent === 'number' && typeof subMetrics.actualBoundingBoxDescent === 'number' &&
+                            (subMetrics.actualBoundingBoxAscent > 0 || subMetrics.actualBoundingBoxDescent > 0)) {
+                            subAscent = subMetrics.actualBoundingBoxAscent;
+                            subDescent = subMetrics.actualBoundingBoxDescent;
+                        } else if (typeof subMetrics.fontBoundingBoxAscent === 'number' && typeof subMetrics.fontBoundingBoxDescent === 'number') {
+                            subAscent = subMetrics.fontBoundingBoxAscent;
+                            subDescent = subMetrics.fontBoundingBoxDescent;
+                        }
+                    }
+
                     for (let si = 0; si < subLines.length; si++) {
-                        ctx.fillText(subLines[si], subStartX, subY + (si * subLineHeight));
+                        const subLineCenterY = subStartY + (si * subLineHeight) + (subLineHeight / 2);
+                        const subBaselineY = subLineCenterY + (subAscent - subDescent) / 2;
+                        ctx.fillText(subLines[si], subStartX, subBaselineY);
                     }
                     ctx.restore();
                 }

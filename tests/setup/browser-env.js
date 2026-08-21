@@ -280,9 +280,15 @@ export function setupBrowserEnvironment() {
                         measureText: function(str) {
                             const text = String(str || '');
                             let fontSize = 16;
-                            const match = String(this.font || '').match(/(\d+)px/);
-                            if (match) fontSize = parseInt(match[1], 10);
-                            return { width: text.length * (fontSize * 0.55) };
+                            const match = String(this.font || '').match(/(\d+(?:\.\d+)?)px/);
+                            if (match) fontSize = parseFloat(match[1]);
+                            return {
+                                width: text.length * (fontSize * 0.55),
+                                actualBoundingBoxAscent: fontSize * 0.8,
+                                actualBoundingBoxDescent: fontSize * 0.2,
+                                fontBoundingBoxAscent: fontSize * 0.85,
+                                fontBoundingBoxDescent: fontSize * 0.25
+                            };
                         },
                         putImageData: () => {},
                         createImageData: (w, h) => ({
