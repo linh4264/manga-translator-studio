@@ -89,7 +89,9 @@ export function createMockCanvas2DContext(width = 1000, height = 1400) {
             return {
                 width: str.length * approxCharWidth,
                 actualBoundingBoxAscent: fontSize * 0.8,
-                actualBoundingBoxDescent: fontSize * 0.2
+                actualBoundingBoxDescent: fontSize * 0.2,
+                fontBoundingBoxAscent: fontSize * 0.85,
+                fontBoundingBoxDescent: fontSize * 0.25
             };
         },
 

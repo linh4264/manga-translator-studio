@@ -164,6 +164,33 @@ export function buildBlockTextLayout(
     };
 
     const measureCtx = ctx || getSharedMeasureContext();
+
+    // Determine font-level typographic metrics for the block's base font
+    // Prefer fontBoundingBoxAscent / fontBoundingBoxDescent on representative text "Mg"
+    // Baseline is purely font-dependent and strictly independent of the translated string.
+    let baseAscent = fontSizePx * 0.8;
+    let baseDescent = fontSizePx * 0.2;
+
+    if (measureCtx) {
+        const prevFont = measureCtx.font;
+        const baseFontSpec = `${block.style.italic ? 'italic ' : ''}${block.style.bold ? 'bold ' : ''}${fontSizePx}px ${fontName}`.trim();
+        measureCtx.font = baseFontSpec;
+        const fontMetrics = measureCtx.measureText('Mg');
+        if (fontMetrics) {
+            if (typeof fontMetrics.fontBoundingBoxAscent === 'number' && typeof fontMetrics.fontBoundingBoxDescent === 'number' &&
+                (fontMetrics.fontBoundingBoxAscent > 0 || fontMetrics.fontBoundingBoxDescent > 0)) {
+                baseAscent = fontMetrics.fontBoundingBoxAscent;
+                baseDescent = fontMetrics.fontBoundingBoxDescent;
+            } else if (typeof fontMetrics.actualBoundingBoxAscent === 'number' && typeof fontMetrics.actualBoundingBoxDescent === 'number' &&
+                (fontMetrics.actualBoundingBoxAscent > 0 || fontMetrics.actualBoundingBoxDescent > 0)) {
+                baseAscent = fontMetrics.actualBoundingBoxAscent;
+                baseDescent = fontMetrics.actualBoundingBoxDescent;
+            }
+        }
+        measureCtx.font = prevFont;
+    }
+
+    const baseBaselineOffset = (baseAscent - baseDescent) / 2;
     const lines: BlockTextLayoutLine[] = [];
 
     if (isVertical) {
@@ -194,26 +221,7 @@ export function buildBlockTextLayout(
             if (colStartY < minColStartY) colStartY = minColStartY;
             const colTop = colStartY;
             const colCenterY = colTop + (colHeight / 2);
-
-            let ascent = fontSizePx * 0.8;
-            let descent = fontSizePx * 0.2;
-            if (measureCtx && rawChars.length > 0) {
-                const prevFont = measureCtx.font;
-                measureCtx.font = getFontFn(rawChars[0].token || {});
-                const m = measureCtx.measureText(rawChars[0].char || 'M');
-                if (m) {
-                    if (typeof m.actualBoundingBoxAscent === 'number' && typeof m.actualBoundingBoxDescent === 'number' &&
-                        (m.actualBoundingBoxAscent > 0 || m.actualBoundingBoxDescent > 0)) {
-                        ascent = m.actualBoundingBoxAscent;
-                        descent = m.actualBoundingBoxDescent;
-                    } else if (typeof m.fontBoundingBoxAscent === 'number' && typeof m.fontBoundingBoxDescent === 'number') {
-                        ascent = m.fontBoundingBoxAscent;
-                        descent = m.fontBoundingBoxDescent;
-                    }
-                }
-                measureCtx.font = prevFont;
-            }
-            const baselineY = colCenterY + (ascent - descent) / 2;
+            const baselineY = colCenterY + baseBaselineOffset;
 
             lines.push({
                 tokens: lineToks,
@@ -223,8 +231,8 @@ export function buildBlockTextLayout(
                 top: colTop,
                 centerY: colCenterY,
                 baselineY,
-                ascent,
-                descent,
+                ascent: baseAscent,
+                descent: baseDescent,
                 rawChars
             });
         });
@@ -317,30 +325,7 @@ export function buildBlockTextLayout(
         lineMeasurements.forEach(({ lineToks, lineWidth, rawChars }, i) => {
             const lineTop = startY + (i * lineHeightPx);
             const lineCenterY = lineTop + (lineHeightPx / 2);
-
-            let ascent = fontSizePx * 0.8;
-            let descent = fontSizePx * 0.2;
-
-            if (measureCtx) {
-                const prevFont = measureCtx.font;
-                const primaryTok = lineToks[0] || {};
-                measureCtx.font = getFontFn(primaryTok);
-                const lineFullText = lineToks.map(t => t.text).join('') || 'Mg';
-                const m = measureCtx.measureText(lineFullText);
-                if (m) {
-                    if (typeof m.actualBoundingBoxAscent === 'number' && typeof m.actualBoundingBoxDescent === 'number' &&
-                        (m.actualBoundingBoxAscent > 0 || m.actualBoundingBoxDescent > 0)) {
-                        ascent = m.actualBoundingBoxAscent;
-                        descent = m.actualBoundingBoxDescent;
-                    } else if (typeof m.fontBoundingBoxAscent === 'number' && typeof m.fontBoundingBoxDescent === 'number') {
-                        ascent = m.fontBoundingBoxAscent;
-                        descent = m.fontBoundingBoxDescent;
-                    }
-                }
-                measureCtx.font = prevFont;
-            }
-
-            const baselineY = lineCenterY + (ascent - descent) / 2;
+            const baselineY = lineCenterY + baseBaselineOffset;
 
             lines.push({
                 tokens: lineToks,
@@ -350,8 +335,8 @@ export function buildBlockTextLayout(
                 top: lineTop,
                 centerY: lineCenterY,
                 baselineY,
-                ascent,
-                descent,
+                ascent: baseAscent,
+                descent: baseDescent,
                 rawChars
             });
         });
@@ -796,21 +781,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                         }
 
                         ctx.font = layout.getFontFn(tok);
-                        const charMetrics = ctx.measureText(char);
-                        const tokSize = fontSizePx * (tok.sizeRatio || 1.0);
-                        let cAscent = tokSize * 0.8;
-                        let cDescent = tokSize * 0.2;
-                        if (charMetrics) {
-                            if (typeof charMetrics.actualBoundingBoxAscent === 'number' && typeof charMetrics.actualBoundingBoxDescent === 'number' &&
-                                (charMetrics.actualBoundingBoxAscent > 0 || charMetrics.actualBoundingBoxDescent > 0)) {
-                                cAscent = charMetrics.actualBoundingBoxAscent;
-                                cDescent = charMetrics.actualBoundingBoxDescent;
-                            } else if (typeof charMetrics.fontBoundingBoxAscent === 'number' && typeof charMetrics.fontBoundingBoxDescent === 'number') {
-                                cAscent = charMetrics.fontBoundingBoxAscent;
-                                cDescent = charMetrics.fontBoundingBoxDescent;
-                            }
-                        }
-                        const charDrawY = (cAscent - cDescent) / 2;
+                        const charDrawY = (lineLayout.baselineY - lineLayout.centerY) * (tok.sizeRatio || 1.0);
 
                         if (strokeWidth2 > 0) {
                             ctx.save();
@@ -915,21 +886,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                             const rotRad = t * (arcAngle * 0.35) * (Math.PI / 180);
                             const bulgeScale = 1 + (1 - t * t) * bulgeFactor;
 
-                            const charMetrics = ctx.measureText(char);
-                            const tokSize = fontSizePx * (tok.sizeRatio || 1.0);
-                            let cAscent = tokSize * 0.8;
-                            let cDescent = tokSize * 0.2;
-                            if (charMetrics) {
-                                if (typeof charMetrics.actualBoundingBoxAscent === 'number' && typeof charMetrics.actualBoundingBoxDescent === 'number' &&
-                                    (charMetrics.actualBoundingBoxAscent > 0 || charMetrics.actualBoundingBoxDescent > 0)) {
-                                    cAscent = charMetrics.actualBoundingBoxAscent;
-                                    cDescent = charMetrics.actualBoundingBoxDescent;
-                                } else if (typeof charMetrics.fontBoundingBoxAscent === 'number' && typeof charMetrics.fontBoundingBoxDescent === 'number') {
-                                    cAscent = charMetrics.fontBoundingBoxAscent;
-                                    cDescent = charMetrics.fontBoundingBoxDescent;
-                                }
-                            }
-                            const charDrawY = (cAscent - cDescent) / 2;
+                            const charDrawY = (lineBaselineY - lineCenterY) * (tok.sizeRatio || 1.0);
 
                             ctx.save();
                             ctx.translate(charCenterX, lineCenterY + totalOffsetY);

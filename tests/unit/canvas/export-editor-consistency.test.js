@@ -581,3 +581,114 @@ test('CASE S — Pure Alignment: Zero magic offset constants in layout calculati
     expect(diff).toBeCloseTo(expectedDiff, 4);
 });
 
+test('CASE T — Content-Independent Baseline: BaselineY and CenterY are 100% identical regardless of text content', () => {
+    const testStrings = [
+        'AAAA',
+        'Hello',
+        'gggg',
+        'こんにちは',
+        '...',
+        'Tuyệt vời quá!'
+    ];
+
+    const results = testStrings.map(text => {
+        const block = {
+            id: `b_content_${text}`,
+            type: 'dialogue',
+            translated: text,
+            box: { x: 20, y: 20, w: 40, h: 30 },
+            style: {
+                fontSize: 20,
+                fontFamily: 'font-manga',
+                lineHeight: 1.25
+            }
+        };
+        const layout = buildBlockTextLayout(block, 1200, 1600, 1.5);
+        return {
+            text,
+            centerY: layout.lines[0].centerY,
+            baselineY: layout.lines[0].baselineY,
+            ascent: layout.lines[0].ascent,
+            descent: layout.lines[0].descent
+        };
+    });
+
+    const ref = results[0];
+    results.forEach(({ text, centerY, baselineY, ascent, descent }) => {
+        expect(centerY).toBeCloseTo(ref.centerY, 4);
+        expect(baselineY).toBeCloseTo(ref.baselineY, 4);
+        expect(ascent).toBeCloseTo(ref.ascent, 4);
+        expect(descent).toBeCloseTo(ref.descent, 4);
+    });
+});
+
+test('CASE U — Extended Font Palette: Nunito, Be Vietnam Pro, Patrick Hand, Comic Neue, Bangers, Permanent Marker', () => {
+    const fontList = [
+        { classKey: 'font-manga', name: 'Nunito' },
+        { classKey: 'font-vietnamese', name: 'Be Vietnam Pro' },
+        { classKey: 'font-comic', name: 'Patrick Hand' },
+        { classKey: 'font-comicneue', name: 'Comic Neue' },
+        { classKey: 'font-impact', name: 'Bangers' },
+        { classKey: 'font-marker', name: 'Permanent Marker' }
+    ];
+
+    fontList.forEach(({ classKey, name }) => {
+        const block = {
+            id: `b_palette_${classKey}`,
+            type: 'dialogue',
+            translated: `Font ${name} mẫu thử nghiệm`,
+            box: { x: 10, y: 15, w: 60, h: 25 },
+            style: {
+                fontSize: 18,
+                fontFamily: classKey,
+                lineHeight: 1.2
+            }
+        };
+
+        const W = 1600;
+        const H = 2000;
+        const layout = buildBlockTextLayout(block, W, H, 2.0);
+        const line = layout.lines[0];
+
+        const by = (block.box.y / 100) * H; // 300
+        const bh = (block.box.h / 100) * H; // 500
+        const expectedCenterY = by + (bh / 2); // 550
+
+        expect(line.centerY).toBeCloseTo(expectedCenterY, 4);
+        expect(line.ascent).toBeGreaterThan(0);
+        expect(line.descent).toBeGreaterThan(0);
+
+        const expectedBaseline = line.centerY + (line.ascent - line.descent) / 2;
+        expect(line.baselineY).toBeCloseTo(expectedBaseline, 4);
+    });
+});
+
+test('CASE V — Rich Text with Multiple Embedded Fonts does not shift baseline of the line', () => {
+    const multiFontRichText = '[font=font-impact]BOOM![/font] [font=font-comic]thì thầm nhỏ[/font] bình thường';
+    const block = {
+        id: 'b_multi_font_rich',
+        type: 'dialogue',
+        translated: multiFontRichText,
+        box: { x: 15, y: 15, w: 70, h: 30 },
+        style: {
+            fontSize: 24,
+            fontFamily: 'font-manga',
+            lineHeight: 1.3
+        }
+    };
+
+    const layout = buildBlockTextLayout(block, 1200, 1600, 1.0);
+    assert.strictEqual(layout.lines.length, 1);
+    const line = layout.lines[0];
+
+    const by = (block.box.y / 100) * 1600; // 240
+    const bh = (block.box.h / 100) * 1600; // 480
+    const expectedCenterY = by + (bh / 2); // 480
+
+    expect(line.centerY).toBeCloseTo(expectedCenterY, 4);
+    // Baseline is governed by block base font (Nunito / font-manga)
+    const expectedBaseline = line.centerY + (line.ascent - line.descent) / 2;
+    expect(line.baselineY).toBeCloseTo(expectedBaseline, 4);
+});
+
+
