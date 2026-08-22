@@ -1,7 +1,7 @@
 import { globalState, pushStateToHistory, savePageToDB, debounceSavePage, uiUpdateActiveBlockEditor, markPageAutoFitDirty, PRO_STYLE_PRESETS } from '../../core/state';
 import { elements } from '../../core/elements';
 import { showToast, setMultilineText, cleanMangaPunctuation } from '../../core/utils';
-import { requestOverlayRender, balanceTextToDiamond, balanceSingleParagraphToBox } from './canvas-renderer';
+import { requestOverlayRender, balanceTextToDiamond, balanceSingleParagraphToBox, getReferenceDisplayDimensions } from './canvas-renderer';
 import { updateFloatingToolbarPosition } from './canvas-interactions';
 import { MangaBlock, MangaPage, BlockStyle } from '../../types/index';
 
@@ -22,135 +22,19 @@ export function isBlockAutoFit(block?: MangaBlock | null): boolean {
 }
 
 export const DIAMOND_REFLOW_THRESHOLDS = {
-    MIN_LINE_UTILIZATION: 0.55,       // Max line width < 55% of allowed width -> under-utilized
-    MIN_WORD_COUNT: 4,               // Short text (1-3 words) never needs reflow
-    MAX_ASPECT_LINE_DEVIATION: 1.5,  // Line count deviation based on box aspect
+    MIN_LINE_UTILIZATION: 0.55,
+    MIN_WORD_COUNT: 4,
+    MAX_ASPECT_LINE_DEVIATION: 1.5,
 };
 
 export function shouldReflowDiamond(
-    block: MangaBlock,
-    finalFontSize: number,
-    maxAllowedWidth: number,
-    maxAllowedHeight: number,
-    targetWidth: number,
-    targetHeight: number
+    _block: MangaBlock,
+    _finalFontSize: number,
+    _maxAllowedWidth: number,
+    _maxAllowedHeight: number,
+    _targetWidth: number,
+    _targetHeight: number
 ): boolean {
-    if (!block || !block.style?.diamondWrap || block.style?.vertical || block.type === 'sfx') {
-        return false;
-    }
-    const text = (block.translated || '').trim();
-    if (!text) return false;
-
-    // Check word count - 1 to 3 words are short text tier, never reflow
-    const words = text.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim().split(/\s+/).filter(Boolean);
-    if (words.length < DIAMOND_REFLOW_THRESHOLDS.MIN_WORD_COUNT) {
-        return false;
-    }
-
-    const boxAspect = (targetWidth && targetHeight && targetHeight > 0) ? (targetWidth / targetHeight) : 0.85;
-    const baseFontSize = block.style.baseFontSize || 16;
-
-    const lines = text.split('\n').filter(l => l.trim().length > 0);
-    if (lines.length <= 1) {
-        if (words.length >= 4 && (boxAspect < 0.85 || finalFontSize < baseFontSize * 0.85)) {
-            return true;
-        }
-        return false;
-    }
-
-    // Measure line widths at finalFontSize
-    const ruler = elements.autoFitRuler || (typeof document !== 'undefined' ? document.getElementById('auto-fit-ruler') : null);
-
-    let maxLineWidth = 0;
-    const lineWidths: number[] = [];
-
-    const fontStyle = block.style.fontFamily || globalState.defaultFont || 'font-manga';
-    const isBuiltInFont = ['font-sans', 'font-manga', 'font-comic', 'font-comicneue', 'font-impact', 'font-marker', 'font-bungee', 'font-caveat', 'font-tech', 'font-condensed', 'font-vietnamese'].includes(fontStyle);
-
-    if (ruler) {
-        const prevStyle = {
-            fontSize: ruler.style.fontSize,
-            fontFamily: ruler.style.fontFamily,
-            fontWeight: ruler.style.fontWeight,
-            fontStyle: ruler.style.fontStyle,
-            letterSpacing: ruler.style.letterSpacing,
-            className: ruler.className,
-            whiteSpace: ruler.style.whiteSpace,
-            display: ruler.style.display,
-            width: ruler.style.width
-        };
-
-        if (isBuiltInFont) {
-            ruler.className = fontStyle;
-            ruler.style.fontFamily = '';
-        } else {
-            ruler.className = '';
-            ruler.style.fontFamily = `'${fontStyle}', sans-serif`;
-        }
-        ruler.style.fontSize = `${finalFontSize}px`;
-        ruler.style.fontWeight = block.style.bold ? 'bold' : 'normal';
-        ruler.style.fontStyle = block.style.italic ? 'italic' : 'normal';
-        ruler.style.letterSpacing = `${block.style.letterSpacing || 0}px`;
-        ruler.style.whiteSpace = 'nowrap';
-        ruler.style.display = 'inline-block';
-        ruler.style.width = 'auto';
-
-        for (const line of lines) {
-            ruler.textContent = line;
-            const w = ruler.scrollWidth || ruler.getBoundingClientRect().width;
-            lineWidths.push(w);
-            if (w > maxLineWidth) maxLineWidth = w;
-        }
-
-        // Restore ruler styles
-        ruler.style.fontSize = prevStyle.fontSize;
-        ruler.style.fontFamily = prevStyle.fontFamily;
-        ruler.style.fontWeight = prevStyle.fontWeight;
-        ruler.style.fontStyle = prevStyle.fontStyle;
-        ruler.style.letterSpacing = prevStyle.letterSpacing;
-        ruler.className = prevStyle.className;
-        ruler.style.whiteSpace = prevStyle.whiteSpace;
-        ruler.style.display = prevStyle.display;
-        ruler.style.width = prevStyle.width;
-    } else {
-        // Fallback token/char measurement (e.g. headless unit tests)
-        const letterSpacing = block.style.letterSpacing || 0;
-        for (const line of lines) {
-            const charCount = Array.from(line).length;
-            const w = charCount * (finalFontSize * 0.55) + Math.max(0, charCount - 1) * letterSpacing;
-            lineWidths.push(w);
-            if (w > maxLineWidth) maxLineWidth = w;
-        }
-    }
-
-    const maxLineUtilization = maxLineWidth / Math.max(1, maxAllowedWidth);
-    const estHeight = lines.length * (finalFontSize * (block.style.lineHeight || 1.15));
-    const heightUtilization = estHeight / Math.max(1, maxAllowedHeight);
-    const textAspect = maxLineWidth / Math.max(1, estHeight);
-
-    // 1. Width under-utilization: the widest line uses less than MIN_LINE_UTILIZATION (0.55) of available width
-    if (maxLineUtilization < DIAMOND_REFLOW_THRESHOLDS.MIN_LINE_UTILIZATION) {
-        return true;
-    }
-
-    // 2. Height under-utilization in tall boxes (aspect < 0.75) where text was squeezed into too few lines
-    if (boxAspect < 0.75 && heightUtilization < 0.45 && words.length >= 4) {
-        return true;
-    }
-
-    // 3. Severe font shrinkage while having plenty of vertical headroom
-    if (finalFontSize < baseFontSize * 0.75 && heightUtilization < 0.55 && words.length >= 4) {
-        return true;
-    }
-
-    // 4. Aspect ratio mismatch: wide text in tall box OR tall text in wide box
-    if (boxAspect < 0.60 && textAspect > 1.15 && words.length >= 4) {
-        return true;
-    }
-    if (boxAspect > 1.40 && textAspect < 0.65 && words.length >= 4) {
-        return true;
-    }
-
     return false;
 }
 
@@ -263,9 +147,9 @@ export function autoFitBlock(
     ruler.style.letterSpacing = `${letterSpacing}px`;
     ruler.style.lineHeight = `${lineHeight}`;
     ruler.style.fontKerning = 'normal';
-    ruler.style.whiteSpace = 'pre-wrap';
+    ruler.style.whiteSpace = 'pre';
     ruler.style.wordBreak = 'keep-all';
-    ruler.style.overflowWrap = 'break-word';
+    ruler.style.overflowWrap = 'normal';
     ruler.style.hyphens = 'none';
     ruler.style.boxSizing = 'border-box';
 
@@ -352,24 +236,6 @@ export function autoFitBlock(
     }
 
     block.style.fontSize = optimalSize;
-
-    // Coordination: Auto-reflow line breaks if layout is suboptimal or text is unbroken
-    if (allowDiamondReflow && !isVertical && block.type !== 'sfx') {
-        const needReflow = shouldReflowDiamond(block, optimalSize, maxAllowedWidth, maxAllowedHeight, targetWidth, targetHeight);
-        if (needReflow) {
-            const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-            const reflowed = isDiamondWrap
-                ? balanceTextToDiamond(cleanText, targetWidth, targetHeight, { ...block.style, fontSize: optimalSize, baseFontSize: optimalSize })
-                : balanceSingleParagraphToBox(cleanText, targetWidth, targetHeight, { ...block.style, fontSize: optimalSize, baseFontSize: optimalSize });
-            if (reflowed && reflowed !== block.translated) {
-                block.translated = reflowed;
-                block.autoFitCache = null;
-                // Single final AutoFit pass (allowDiamondReflow = false to strictly prevent any loops)
-                autoFitBlock(block, customImgElement, _forceExportScale, targetPage, false);
-                return;
-            }
-        }
-    }
 
     ruler.style.fontSize = `${optimalSize}px`;
     block.textWidth = ruler.scrollWidth;
@@ -525,17 +391,6 @@ export function autoMatchActiveBlockStyle(): void {
     if (block && imgElement) {
         pushStateToHistory();
         autoMatchBlockStyle(block, imgElement);
-        if (block.style?.diamondWrap && block.translated && !block.style?.vertical && block.type !== 'sfx') {
-            const W = imgElement.naturalWidth || 800;
-            const H = imgElement.naturalHeight || 1200;
-            const pixelW = block.box ? (block.box.w / 100) * W : 200;
-            const pixelH = block.box ? (block.box.h / 100) * H : 200;
-            const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-            block.translated = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
-            if (elements.editTranslatedText) {
-                elements.editTranslatedText.value = block.translated;
-            }
-        }
         markPageAutoFitDirty(page);
         if (isBlockAutoFit(block)) {
             autoFitBlock(block, imgElement);
@@ -723,21 +578,6 @@ export function syncActiveBlockStyle(property: string, value: any): void {
             }
             b.maskCache = null;
             b.autoFitCache = null;
-
-            if (['fontFamily', 'bold', 'italic', 'letterSpacing', 'diamondWrap'].includes(property)) {
-                if (b.style?.diamondWrap && b.translated && !b.style?.vertical && b.type !== 'sfx') {
-                    const cleanText = b.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-                    const imgEl = elements.mangaBgImage;
-                    const W = imgEl?.naturalWidth || 800;
-                    const H = imgEl?.naturalHeight || 1200;
-                    const pixelW = (b.box.w / 100) * W;
-                    const pixelH = (b.box.h / 100) * H;
-                    b.translated = balanceTextToDiamond(cleanText, pixelW, pixelH, b.style);
-                    if (elements.editTranslatedText && b.id === globalState.selectedBlockId) {
-                        elements.editTranslatedText.value = b.translated;
-                    }
-                }
-            }
 
             if (isBlockAutoFit(b)) {
                 autoFitBlock(b);
@@ -1268,7 +1108,7 @@ export function batchDiamondBalanceSelectedBlocks(): void {
         requestOverlayRender();
         uiUpdateActiveBlockEditor();
         savePageToDB(page);
-        showToast(`💎 Đã cân đối Diamond cho ${targetIds.length} ô thoại!`, 'success');
+        showToast(`Đã cân đối dòng cho ${targetIds.length} ô thoại!`, 'success');
     });
 }
 

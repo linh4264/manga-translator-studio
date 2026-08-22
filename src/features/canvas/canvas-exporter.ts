@@ -1,6 +1,6 @@
 import { globalState } from '../../core/state';
 import { elements } from '../../core/elements';
-import { waitForNextPaint, transformCase, parseRichTextLines } from '../../core/utils';
+import { waitForNextPaint, transformCase, parseRichTextLines, extractDomRenderedLines } from '../../core/utils';
 import { computeBubbleMask } from '../ocr/ocr-service';
 import { renderOverlays, convertHexToRGBA } from './canvas-renderer';
 import { MangaPage, MangaBlock } from '../../types/index';
@@ -29,18 +29,26 @@ export function getFontFamilyName(fontClass?: string): string {
 }
 
 /**
- * Calculates the exact output scale factor from editor display reference resolution to natural image resolution.
- * Isolates UI zoom so zooming in/out in the workspace has ZERO impact on export resolution or line-breaks.
+ * Gets reference display dimensions (width & height in editor coordinate system) for a page.
+ * Isolates UI zoom and natural resolution so typesetting, line-breaks, and Diamond balancing
+ * always operate in reference display pixels consistent with CSS rendering.
  */
-export function getExportScale(page: MangaPage, naturalWidth: number, imgElement?: HTMLImageElement | null): number {
+export function getReferenceDisplayDimensions(page?: MangaPage | null, imgElement?: HTMLImageElement | null): { width: number; height: number } {
     let displayWidth = (page as any)?.lastDisplayWidth;
-    if (!displayWidth && imgElement && imgElement.clientWidth > 0) {
-        const zoomScale = (globalState.zoom || 100) / 100;
-        displayWidth = imgElement.clientWidth / Math.max(0.01, zoomScale);
+    const imgEl = imgElement || (typeof document !== 'undefined' ? elements.mangaBgImage : null);
+    const zoomScale = (globalState.zoom || 100) / 100;
+
+    if (!displayWidth && imgEl && imgEl.clientWidth > 0) {
+        displayWidth = imgEl.clientWidth / Math.max(0.01, zoomScale);
     }
-    if (!displayWidth && elements.mangaBgImage && elements.mangaBgImage.clientWidth > 0) {
-        const zoomScale = (globalState.zoom || 100) / 100;
+    if (!displayWidth && typeof document !== 'undefined' && elements.mangaBgImage && elements.mangaBgImage.clientWidth > 0) {
         displayWidth = elements.mangaBgImage.clientWidth / Math.max(0.01, zoomScale);
+    }
+    if (!displayWidth && typeof document !== 'undefined' && elements.mangaCanvasContainer && elements.mangaCanvasContainer.clientWidth > 0) {
+        displayWidth = elements.mangaCanvasContainer.clientWidth / Math.max(0.01, zoomScale);
+    }
+    if (!displayWidth && typeof document !== 'undefined' && elements.workspaceViewport && elements.workspaceViewport.clientWidth > 0) {
+        displayWidth = Math.min((elements.workspaceViewport.clientWidth - 32) / Math.max(0.01, zoomScale), 1000);
     }
     if (!displayWidth) {
         const activePage = globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null;
@@ -51,6 +59,24 @@ export function getExportScale(page: MangaPage, naturalWidth: number, imgElement
     if (!displayWidth || isNaN(displayWidth) || displayWidth <= 0) {
         displayWidth = 800;
     }
+    if (page && !(page as any).lastDisplayWidth) {
+        (page as any).lastDisplayWidth = displayWidth;
+    }
+
+    const naturalW = (imgEl && imgEl.naturalWidth > 0) ? imgEl.naturalWidth : (page?.width || 800);
+    const naturalH = (imgEl && imgEl.naturalHeight > 0) ? imgEl.naturalHeight : (page?.height || 1200);
+    const aspect = naturalH / Math.max(1, naturalW);
+    const displayHeight = displayWidth * aspect;
+
+    return { width: displayWidth, height: displayHeight };
+}
+
+/**
+ * Calculates the exact output scale factor from editor display reference resolution to natural image resolution.
+ * Isolates UI zoom so zooming in/out in the workspace has ZERO impact on export resolution or line-breaks.
+ */
+export function getExportScale(page: MangaPage, naturalWidth: number, imgElement?: HTMLImageElement | null): number {
+    const { width: displayWidth } = getReferenceDisplayDimensions(page, imgElement);
     return naturalWidth / Math.max(1, displayWidth);
 }
 
@@ -112,9 +138,11 @@ export function wrapTokenLineToWidth(
     lineToks: any[],
     maxW: number,
     getFontFn: (tok: any) => string,
-    letterSpacingPx: number = 0
+    letterSpacingPx: number = 0,
+    scaledFontSize: number = 16
 ): any[][] {
-    if (!lineToks || lineToks.length === 0) return [[]];
+    if (!lineToks || lineToks.length === 0) return [];
+    if (maxW <= 0) return [lineToks];
 
     let totalLineWidth = 0;
     lineToks.forEach(tok => {
@@ -124,6 +152,9 @@ export function wrapTokenLineToWidth(
             measureCtx.font = getFontFn(tok);
             const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
             let w = measureCtx.measureText(tok.text).width;
+            if (!w && tok.text.length > 0) {
+                w = Array.from(tok.text).length * (scaledFontSize * 0.55);
+            }
             if (!('letterSpacing' in measureCtx) && effLetterSpacing > 0) {
                 const charCount = Array.from(tok.text).length;
                 w += Math.max(0, charCount - 1) * effLetterSpacing;
@@ -133,7 +164,7 @@ export function wrapTokenLineToWidth(
         } else {
             const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
             const charCount = Array.from(tok.text).length;
-            totalLineWidth += charCount * 10 + Math.max(0, charCount - 1) * effLetterSpacing;
+            totalLineWidth += charCount * (scaledFontSize * 0.55) + Math.max(0, charCount - 1) * effLetterSpacing;
         }
     });
 
@@ -160,6 +191,10 @@ export function wrapTokenLineToWidth(
                 measureCtx.font = getFontFn(tok);
                 const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
                 w = measureCtx.measureText(chunk).width;
+                if (!w && chunk.length > 0) {
+                    const charCount = Array.from(chunk).length;
+                    w = charCount * (scaledFontSize * 0.55);
+                }
                 if (!('letterSpacing' in measureCtx) && effLetterSpacing > 0) {
                     const charCount = Array.from(chunk).length;
                     w += Math.max(0, charCount - 1) * effLetterSpacing;
@@ -168,7 +203,7 @@ export function wrapTokenLineToWidth(
             } else {
                 const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
                 const charCount = Array.from(chunk).length;
-                w = charCount * 10 + Math.max(0, charCount - 1) * effLetterSpacing;
+                w = charCount * (scaledFontSize * 0.55) + Math.max(0, charCount - 1) * effLetterSpacing;
             }
 
             wordTokens.push({
@@ -319,33 +354,6 @@ export function buildBlockTextLayout(
     };
 
     const measureCtx = ctx || getSharedMeasureContext();
-
-    // Determine font-level typographic metrics for the block's base font
-    // Prefer fontBoundingBoxAscent / fontBoundingBoxDescent on representative text "Mg"
-    // Baseline is purely font-dependent and strictly independent of the translated string.
-    let baseAscent = fontSizePx * 0.8;
-    let baseDescent = fontSizePx * 0.2;
-
-    if (measureCtx) {
-        const prevFont = measureCtx.font;
-        const baseFontSpec = `${block.style.italic ? 'italic ' : ''}${block.style.bold ? 'bold ' : ''}${fontSizePx}px ${fontName}`.trim();
-        measureCtx.font = baseFontSpec;
-        const fontMetrics = measureCtx.measureText('Mg');
-        if (fontMetrics) {
-            if (typeof fontMetrics.fontBoundingBoxAscent === 'number' && typeof fontMetrics.fontBoundingBoxDescent === 'number' &&
-                (fontMetrics.fontBoundingBoxAscent > 0 || fontMetrics.fontBoundingBoxDescent > 0)) {
-                baseAscent = fontMetrics.fontBoundingBoxAscent;
-                baseDescent = fontMetrics.fontBoundingBoxDescent;
-            } else if (typeof fontMetrics.actualBoundingBoxAscent === 'number' && typeof fontMetrics.actualBoundingBoxDescent === 'number' &&
-                (fontMetrics.actualBoundingBoxAscent > 0 || fontMetrics.actualBoundingBoxDescent > 0)) {
-                baseAscent = fontMetrics.actualBoundingBoxAscent;
-                baseDescent = fontMetrics.actualBoundingBoxDescent;
-            }
-        }
-        measureCtx.font = prevFont;
-    }
-
-    const baseBaselineOffset = (baseAscent - baseDescent) / 2;
     const lines: BlockTextLayoutLine[] = [];
 
     if (isVertical) {
@@ -376,7 +384,6 @@ export function buildBlockTextLayout(
             if (colStartY < minColStartY) colStartY = minColStartY;
             const colTop = colStartY;
             const colCenterY = colTop + (colHeight / 2);
-            const baselineY = colCenterY + baseBaselineOffset;
 
             lines.push({
                 tokens: lineToks,
@@ -385,9 +392,9 @@ export function buildBlockTextLayout(
                 height: colHeight,
                 top: colTop,
                 centerY: colCenterY,
-                baselineY,
-                ascent: baseAscent,
-                descent: baseDescent,
+                baselineY: colCenterY,
+                ascent: fontSizePx * 0.8,
+                descent: fontSizePx * 0.2,
                 rawChars
             });
         });
@@ -421,13 +428,7 @@ export function buildBlockTextLayout(
         let maxLineWidth = 0;
         const lineMeasurements: Array<{ lineToks: any[]; lineWidth: number; rawChars?: Array<{ char: string; token: any }> }> = [];
 
-        const maxTextWidth = Math.max(10, bw - (padXPx * 2));
-
-        const effectiveLines: any[][] = [];
-        tokenLines.forEach(lineToks => {
-            const wrappedSubLines = wrapTokenLineToWidth(measureCtx, lineToks, maxTextWidth, getFontFn, letterSpacingPx);
-            effectiveLines.push(...wrappedSubLines);
-        });
+        const effectiveLines: any[][] = tokenLines;
 
         effectiveLines.forEach(lineToks => {
             let lineWidth = 0;
@@ -488,7 +489,6 @@ export function buildBlockTextLayout(
         lineMeasurements.forEach(({ lineToks, lineWidth, rawChars }, i) => {
             const lineTop = startY + (i * lineHeightPx);
             const lineCenterY = lineTop + (lineHeightPx / 2);
-            const baselineY = lineCenterY + baseBaselineOffset;
 
             lines.push({
                 tokens: lineToks,
@@ -497,9 +497,9 @@ export function buildBlockTextLayout(
                 height: lineHeightPx,
                 top: lineTop,
                 centerY: lineCenterY,
-                baselineY,
-                ascent: baseAscent,
-                descent: baseDescent,
+                baselineY: lineCenterY,
+                ascent: fontSizePx * 0.8,
+                descent: fontSizePx * 0.2,
                 rawChars
             });
         });
@@ -906,7 +906,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                     if (startY < minStartY) startY = minStartY;
 
                     ctx.textAlign = 'center';
-                    ctx.textBaseline = 'alphabetic';
+                    ctx.textBaseline = 'middle';
 
                     ctx.save();
                     if (hasSkew) {
@@ -944,7 +944,6 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                         }
 
                         ctx.font = layout.getFontFn(tok);
-                        const charDrawY = (colLine.baselineY - colLine.centerY) * (tok.sizeRatio || 1.0);
 
                         if (strokeWidth2 > 0) {
                             ctx.save();
@@ -958,7 +957,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                             ctx.strokeStyle = strokeColor2;
                             ctx.lineJoin = 'round';
                             ctx.miterLimit = 2;
-                            ctx.strokeText(char, 0, charDrawY);
+                            ctx.strokeText(char, 0, 0);
                             ctx.restore();
                         }
 
@@ -974,7 +973,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                             ctx.strokeStyle = strokeColor;
                             ctx.lineJoin = 'round';
                             ctx.miterLimit = 2;
-                            ctx.strokeText(char, 0, charDrawY);
+                            ctx.strokeText(char, 0, 0);
                             ctx.restore();
                         }
 
@@ -986,7 +985,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                             ctx.shadowOffsetY = shadowOffsetY;
                         }
                         ctx.fillStyle = tok.color || (block.style.gradientEnabled && blockGradient ? blockGradient : (block.style.textColor || '#000000'));
-                        ctx.fillText(char, 0, charDrawY);
+                        ctx.fillText(char, 0, 0);
                         ctx.restore();
 
                         ctx.restore();
@@ -1003,7 +1002,6 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                     const lineLayout = layout.lines[i];
                     const lineTokens = lineLayout.tokens;
                     const lineCenterY = lineLayout.centerY;
-                    const lineBaselineY = lineLayout.baselineY;
 
                     ctx.save();
                     if (hasSkew) {
@@ -1022,9 +1020,13 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                         const bulgeFactor = (warpBulge / 50) * 0.4;
 
                         let lineW = 0;
-                        rawChars.forEach(({ char: c, token: t }) => {
+                        rawChars.forEach(({ char: c, token: t }, ci) => {
                             ctx.font = layout.getFontFn(t);
+                            const effLetterSpacing = letterSpacingPx * (t.sizeRatio || 1.0);
                             lineW += ctx.measureText(c).width;
+                            if (ci < count - 1) {
+                                lineW += effLetterSpacing;
+                            }
                         });
 
                         let startCharX = startX - (lineW / 2);
@@ -1033,12 +1035,13 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
 
                         let curX = startCharX;
                         ctx.textAlign = 'center';
-                        ctx.textBaseline = 'alphabetic';
+                        ctx.textBaseline = 'middle';
 
                         for (let k = 0; k < count; k++) {
                             const { char, token: tok } = rawChars[k];
                             ctx.font = layout.getFontFn(tok);
                             const cw = ctx.measureText(char).width;
+                            const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
                             const charCenterX = curX + (cw / 2);
                             const t = count > 1 ? (k - (count - 1) / 2) / ((count - 1) / 2) : 0;
 
@@ -1048,8 +1051,6 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
 
                             const rotRad = t * (arcAngle * 0.35) * (Math.PI / 180);
                             const bulgeScale = 1 + (1 - t * t) * bulgeFactor;
-
-                            const charDrawY = (lineBaselineY - lineCenterY) * (tok.sizeRatio || 1.0);
 
                             ctx.save();
                             ctx.translate(charCenterX, lineCenterY + totalOffsetY);
@@ -1068,7 +1069,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                                 ctx.strokeStyle = strokeColor2;
                                 ctx.lineJoin = 'round';
                                 ctx.miterLimit = 2;
-                                ctx.strokeText(char, 0, charDrawY);
+                                ctx.strokeText(char, 0, 0);
                                 ctx.restore();
                             }
 
@@ -1084,7 +1085,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                                 ctx.strokeStyle = strokeColor;
                                 ctx.lineJoin = 'round';
                                 ctx.miterLimit = 2;
-                                ctx.strokeText(char, 0, charDrawY);
+                                ctx.strokeText(char, 0, 0);
                                 ctx.restore();
                             }
 
@@ -1096,12 +1097,12 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                                 ctx.shadowOffsetY = shadowOffsetY;
                             }
                             ctx.fillStyle = tok.color || (block.style.gradientEnabled && blockGradient ? blockGradient : (block.style.textColor || '#000000'));
-                            ctx.fillText(char, 0, charDrawY);
+                            ctx.fillText(char, 0, 0);
                             ctx.restore();
 
                             ctx.restore();
 
-                            curX += cw;
+                            curX += cw + effLetterSpacing;
                         }
                     } else {
                         const measuredLineWidth = lineLayout.width;
@@ -1113,7 +1114,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                         }
 
                         ctx.textAlign = 'left';
-                        ctx.textBaseline = 'alphabetic';
+                        ctx.textBaseline = 'middle';
 
                         lineTokens.forEach(tok => {
                             const tokFontSpec = layout.getFontFn(tok);
@@ -1133,7 +1134,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                                 ctx.strokeStyle = strokeColor2;
                                 ctx.lineJoin = 'round';
                                 ctx.miterLimit = 2;
-                                ctx.strokeText(tok.text, curTokenX, lineBaselineY);
+                                ctx.strokeText(tok.text, curTokenX, lineCenterY);
                                 ctx.restore();
                             }
 
@@ -1149,7 +1150,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                                 ctx.strokeStyle = strokeColor;
                                 ctx.lineJoin = 'round';
                                 ctx.miterLimit = 2;
-                                ctx.strokeText(tok.text, curTokenX, lineBaselineY);
+                                ctx.strokeText(tok.text, curTokenX, lineCenterY);
                                 ctx.restore();
                             }
 
@@ -1169,7 +1170,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                             const fillToApply: any = tok.color || (block.style.gradientEnabled && blockGradient ? blockGradient : (block.style.textColor || '#000000'));
 
                             ctx.fillStyle = fillToApply;
-                            ctx.fillText(tok.text, curTokenX, lineBaselineY);
+                            ctx.fillText(tok.text, curTokenX, lineCenterY);
                             ctx.restore();
 
                             if (tok.underline || block.style.underline) {
@@ -1177,7 +1178,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                                 ctx.strokeStyle = tok.color || block.style.textColor || '#000000';
                                 ctx.lineWidth = Math.max(1, tokSize * 0.08);
                                 ctx.beginPath();
-                                const underlineY = lineBaselineY + Math.max(2, tokSize * 0.12);
+                                const underlineY = lineCenterY + Math.max(2, tokSize * 0.45);
                                 ctx.moveTo(curTokenX, underlineY);
                                 ctx.lineTo(curTokenX + tokenW, underlineY);
                                 ctx.stroke();
@@ -1210,7 +1211,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                     ctx.font = subFontSpec;
                     ctx.fillStyle = block.style.textColor || '#000000';
                     ctx.globalAlpha = 0.75;
-                    ctx.textBaseline = 'alphabetic';
+                    ctx.textBaseline = 'middle';
                     const subLineHeight = subFontSizePx * 1.1;
                     const subLines = (block.original || '').split('\n');
                     const lastLineBottom = layout.lines.length > 0 ? (layout.lines[layout.lines.length - 1].top + layout.lines[layout.lines.length - 1].height) : (by + bh / 2);
@@ -1218,24 +1219,9 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                     ctx.textAlign = (!block.style.align || block.style.align === 'center') ? 'center' : (block.style.align === 'right' ? 'right' : 'left');
                     const subStartX = startX;
 
-                    const subMetrics = ctx.measureText(subLines[0] || 'Mg');
-                    let subAscent = subFontSizePx * 0.8;
-                    let subDescent = subFontSizePx * 0.2;
-                    if (subMetrics) {
-                        if (typeof subMetrics.actualBoundingBoxAscent === 'number' && typeof subMetrics.actualBoundingBoxDescent === 'number' &&
-                            (subMetrics.actualBoundingBoxAscent > 0 || subMetrics.actualBoundingBoxDescent > 0)) {
-                            subAscent = subMetrics.actualBoundingBoxAscent;
-                            subDescent = subMetrics.actualBoundingBoxDescent;
-                        } else if (typeof subMetrics.fontBoundingBoxAscent === 'number' && typeof subMetrics.fontBoundingBoxDescent === 'number') {
-                            subAscent = subMetrics.fontBoundingBoxAscent;
-                            subDescent = subMetrics.fontBoundingBoxDescent;
-                        }
-                    }
-
                     for (let si = 0; si < subLines.length; si++) {
                         const subLineCenterY = subStartY + (si * subLineHeight) + (subLineHeight / 2);
-                        const subBaselineY = subLineCenterY + (subAscent - subDescent) / 2;
-                        ctx.fillText(subLines[si], subStartX, subBaselineY);
+                        ctx.fillText(subLines[si], subStartX, subLineCenterY);
                     }
                     ctx.restore();
                 }

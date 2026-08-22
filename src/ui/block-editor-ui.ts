@@ -630,24 +630,10 @@ export function clearRichFormattingFromSelection(): void {
 export function toggleDiamondWrapActiveBlock(): void {
     const activeBlock = getActiveBlock();
     if (!activeBlock) return;
-    if (!activeBlock.style) activeBlock.style = {} as BlockStyle;
-    activeBlock.style.diamondWrap = !activeBlock.style.diamondWrap;
     activeBlock.autoFitCache = null;
     activeBlock.maskCache = null;
 
-    if (activeBlock.style.diamondWrap) {
-        import('../features/canvas/canvas-renderer').then(m => m.applyDiamondFormat());
-    } else {
-        const flattened = activeBlock.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-        activeBlock.translated = flattened;
-        if (elements.editTranslatedText) {
-            elements.editTranslatedText.value = flattened;
-        }
-        import('../features/canvas/canvas-styling').then(m => m.syncActiveBlockTranslation(flattened));
-        requestOverlayRender();
-        const page = globalState.pages[globalState.activePageIndex];
-        if (page) savePageToDB(page);
-    }
-    showToast(activeBlock.style.diamondWrap ? "Đã bật ngắt dòng Elip Manga 💎" : "Đã chuyển về ngắt dòng chữ nhật", "info");
+    import('../features/canvas/canvas-renderer').then(m => m.applyDiamondFormat());
+    showToast("Đã cân đối dòng cho ô thoại", "info");
 }
 

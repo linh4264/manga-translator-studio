@@ -1,10 +1,12 @@
 import { globalState, pushStateToHistory, savePageToDB, uiUpdateActiveBlockEditor, uiSetRightTab } from '../../core/state';
 import { elements } from '../../core/elements';
-import { showToast, setMultilineText, stripRichTextTags, parseRichTextLines } from '../../core/utils';
+import { showToast, setMultilineText, stripRichTextTags, parseRichTextLines, extractDomRenderedLines } from '../../core/utils';
 import { computeBubbleMask } from '../ocr/ocr-service';
 import { autoFitAllBlocksOnPage, autoFitBlock, isBlockAutoFit } from './canvas-styling';
 import { startBlockDrag, startBlockResize } from './canvas-interactions';
 import { MangaBlock, MangaPage } from '../../types/index';
+export { getReferenceDisplayDimensions } from './canvas-exporter';
+import { getReferenceDisplayDimensions } from './canvas-exporter';
 
 export let overlayRenderRafId: any = null;
 
@@ -43,7 +45,7 @@ export function renderOverlays(
         }
     }
 
-    if (globalState.autoFitEnabled) {
+    if (globalState.autoFitEnabled && !isMirror) {
         autoFitAllBlocksOnPage(page, customImgElement, forceExportScale);
     }
 
@@ -1374,138 +1376,7 @@ export function balanceSingleParagraphToDiamond(
     boxH: number | null = null,
     styleOptions: any = {}
 ): string {
-    if (!text) return '';
-    const cleanText = text.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
-    if (!cleanText) return '';
-
-    const words = measureWordTokens(cleanText, styleOptions);
-    const wordCount = words.length;
-    if (wordCount <= 1) return words.map(w => w.raw).join(' ');
-
-    const boxAspect = (boxW && boxH && boxH > 0) ? (boxW / boxH) : 0.85;
-    const avgSpaceWidth = words.reduce((acc, w) => acc + w.spaceWidth, 0) / wordCount;
-    const totalWordsWidth = words.reduce((acc, w) => acc + w.width, 0);
-    const totalTextWidth = totalWordsWidth + (wordCount - 1) * avgSpaceWidth;
-    const totalCleanChars = words.reduce((sum, w) => sum + w.text.length, 0) + (wordCount - 1);
-
-    const baseFontSize = styleOptions.baseFontSize || styleOptions.fontSize || 16;
-    const lineHeight = (styleOptions.lineHeight !== undefined ? styleOptions.lineHeight : 1.18) * baseFontSize;
-
-    // ==========================================
-    // TIER 1: Siêu ngắn (1 - 3 từ)
-    // ==========================================
-    // - Dưới 14 ký tự (VD: "Cảm ơn!", "Đi thôi nào!", "Thật vậy sao?"): giữ 1 dòng duy nhất để chữ to tròn, nằm giữa bóng thoại
-    // - Nếu dài hơn: chia tối đa 2 dòng. Tuyệt đối KHÔNG chia 3 dòng 1 chữ.
-    if (wordCount <= 3) {
-        if (totalCleanChars <= 14 || wordCount === 2) {
-            if (boxAspect < 0.45 && wordCount === 2) {
-                return `${words[0].raw}\n${words[1].raw}`;
-            }
-            if (totalCleanChars <= 14 || totalTextWidth < 180 || boxAspect >= 0.75) {
-                return words.map(w => w.raw).join(' ');
-            }
-            return `${words[0].raw}\n${words[1].raw}`;
-        }
-        if (wordCount === 3) {
-            const len1 = words[0].width + words[1].width;
-            const len2 = words[1].width + words[2].width;
-            if (len1 <= len2) {
-                return `${words[0].raw} ${words[1].raw}\n${words[2].raw}`;
-            } else {
-                return `${words[0].raw}\n${words[1].raw} ${words[2].raw}`;
-            }
-        }
-    }
-
-    // ==========================================
-    // TIER 2: Ngắn (4 - 6 từ)
-    // ==========================================
-    // - Dáng Oval nhẹ tự nhiên (2 - 3 dòng). Dòng dài nhất phải có ít nhất 2 từ.
-    if (wordCount <= 6) {
-        let candidateLines = 2;
-        if (wordCount >= 5 && (totalCleanChars >= 22 || totalTextWidth >= 220)) {
-            candidateLines = 3;
-        }
-        if (boxAspect < 0.65) {
-            candidateLines = Math.min(3, Math.ceil(wordCount / 2));
-        }
-
-        const lines = partitionWordsToDiamondLines(words, candidateLines, boxAspect, avgSpaceWidth);
-        return lines.join('\n');
-    }
-
-    // ==========================================
-    // TIER 3: Trung bình & Dài (>= 7 từ)
-    // ==========================================
-    let minLines = 3;
-    let maxAllowedLines = 4;
-
-    if (boxAspect < 0.55) {
-        // Very tall box (vertical/narrow bubble): allow more lines with fewer words per line
-        minLines = Math.min(wordCount, Math.max(3, Math.ceil(wordCount / 3)));
-        maxAllowedLines = Math.min(wordCount, Math.max(minLines, Math.ceil(wordCount / 1.7)));
-    } else if (boxAspect < 0.70) {
-        // Moderate vertical bubble
-        minLines = 3;
-        maxAllowedLines = Math.min(wordCount, Math.max(4, Math.ceil(wordCount / 2.2)));
-    } else if (boxAspect > 1.4) {
-        // Wide horizontal bubble: prefer fewer wider lines
-        minLines = 2;
-        maxAllowedLines = Math.min(wordCount, Math.max(3, Math.ceil(wordCount / 3.5)));
-    } else {
-        // Standard bubble (0.70 - 1.4)
-        if (wordCount >= 14 && wordCount < 22) {
-            minLines = 3;
-            maxAllowedLines = 5;
-        } else if (wordCount >= 22) {
-            minLines = 4;
-            maxAllowedLines = Math.min(wordCount, Math.max(5, Math.ceil(wordCount / 3)));
-        }
-    }
-
-    let bestNumLines = minLines;
-    let bestScore = Infinity;
-
-    for (let k = minLines; k <= maxAllowedLines; k++) {
-        const candidateLines = partitionWordsToDiamondLines(words, k, boxAspect, avgSpaceWidth);
-        let maxLineWidth = 0;
-        let wordIdx = 0;
-        candidateLines.forEach(lineStr => {
-            const segs = lineStr.split(' ');
-            const lineTokens = words.slice(wordIdx, wordIdx + segs.length);
-            const lineW = lineTokens.reduce((sum, t) => sum + t.width, 0) + (lineTokens.length - 1) * avgSpaceWidth;
-            if (lineW > maxLineWidth) maxLineWidth = lineW;
-            wordIdx += segs.length;
-        });
-
-        const estHeight = k * lineHeight;
-        const candidateTextAspect = maxLineWidth / Math.max(1, estHeight);
-
-        let score = 0;
-        const aspectDiff = (candidateTextAspect - boxAspect) / boxAspect;
-        score += aspectDiff * aspectDiff * 100;
-
-        if (boxW && boxH && boxH > 0) {
-            const availableW = boxW * 0.9;
-            const availableH = boxH * 0.9;
-            const widthFill = maxLineWidth / Math.max(1, availableW);
-            const heightFill = estHeight / Math.max(1, availableH);
-
-            if (widthFill > 1.0) {
-                score += (widthFill - 1.0) * 150;
-            }
-            const fillImbalance = Math.abs(widthFill - heightFill);
-            score += fillImbalance * 80;
-        }
-
-        if (score < bestScore) {
-            bestScore = score;
-            bestNumLines = k;
-        }
-    }
-
-    const finalLines = partitionWordsToDiamondLines(words, bestNumLines, boxAspect, avgSpaceWidth);
-    return finalLines.join('\n');
+    return balanceSingleParagraphToBox(text, boxW, boxH, styleOptions);
 }
 
 export function balanceTextToDiamond(
@@ -1514,35 +1385,19 @@ export function balanceTextToDiamond(
     boxH: number | null = null,
     styleOptions: any = {}
 ): string {
-    if (!text) return '';
-    const normalized = text.replace(/\r\n/g, '\n');
-    if (!normalized.trim()) return '';
-
-    // Preserve user manual line breaks (\n): balance each paragraph independently
-    if (normalized.includes('\n')) {
-        const paragraphs = normalized.split('\n');
-        const balancedParagraphs = paragraphs.map(p => {
-            const trimmed = p.trim();
-            if (!trimmed) return '';
-            return balanceSingleParagraphToDiamond(trimmed, boxW, boxH, styleOptions);
-        });
-        return balancedParagraphs.join('\n');
-    }
-
-    return balanceSingleParagraphToDiamond(normalized.trim(), boxW, boxH, styleOptions);
+    return balanceTextToBox(text, boxW, boxH, styleOptions);
 }
 
-export function balanceBlockDiamond(block: MangaBlock): void {
+export function balanceBlockDiamond(block: MangaBlock, targetPage?: MangaPage | null, customImg?: HTMLImageElement | null): void {
     if (!block || block.type === 'image' || block.type === 'sfx') return;
     if (!block.style) block.style = {} as any;
     block.style.diamondWrap = true;
     const cleanText = (block.translated || '').replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-    const imgEl = typeof document !== 'undefined' ? (elements.mangaBgImage || document.querySelector('#manga-bg-image')) as HTMLImageElement | null : null;
-    const naturalW = (imgEl && imgEl.naturalWidth > 0) ? imgEl.naturalWidth : 800;
-    const naturalH = (imgEl && imgEl.naturalHeight > 0) ? imgEl.naturalHeight : 1200;
-    const pixelW = block.box ? (block.box.w / 100) * naturalW : 200;
-    const pixelH = block.box ? (block.box.h / 100) * naturalH : 200;
-    const formatted = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
+    const page = targetPage || (globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null);
+    const { width: displayW, height: displayH } = getReferenceDisplayDimensions(page, customImg);
+    const pixelW = block.box ? (block.box.w / 100) * displayW : 200;
+    const pixelH = block.box ? (block.box.h / 100) * displayH : 200;
+    const formatted = balanceTextToBox(cleanText, pixelW, pixelH, block.style);
     block.translated = formatted;
     block.autoFitCache = null;
     block.maskCache = null;
@@ -1553,15 +1408,11 @@ export function applyDiamondFormat(): void {
     const page = globalState.pages[globalState.activePageIndex];
     const block = page?.blocks.find(b => b.id === globalState.selectedBlockId);
     if (block && page && block.type !== 'image' && block.type !== 'sfx') {
-        if (!block.style) block.style = {} as any;
-        block.style.diamondWrap = true;
         const cleanText = (block.translated || '').replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-        const imgEl = typeof document !== 'undefined' ? (elements.mangaBgImage || document.querySelector('#manga-bg-image')) as HTMLImageElement | null : null;
-        const naturalW = (imgEl && imgEl.naturalWidth > 0) ? imgEl.naturalWidth : 800;
-        const naturalH = (imgEl && imgEl.naturalHeight > 0) ? imgEl.naturalHeight : 1200;
-        const pixelW = block.box ? (block.box.w / 100) * naturalW : 200;
-        const pixelH = block.box ? (block.box.h / 100) * naturalH : 200;
-        const formatted = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
+        const { width: displayW, height: displayH } = getReferenceDisplayDimensions(page);
+        const pixelW = block.box ? (block.box.w / 100) * displayW : 200;
+        const pixelH = block.box ? (block.box.h / 100) * displayH : 200;
+        const formatted = balanceTextToBox(cleanText, pixelW, pixelH, block.style);
         block.translated = formatted;
         if (elements.editTranslatedText) {
             elements.editTranslatedText.value = formatted;
@@ -1584,19 +1435,14 @@ export function batchDiamondBalanceAllPages(): void {
     pushStateToHistory();
     let totalBalanced = 0;
 
-    const imgEl = typeof document !== 'undefined' ? (elements.mangaBgImage || document.querySelector('#manga-bg-image')) as HTMLImageElement | null : null;
-    const naturalW = (imgEl && imgEl.naturalWidth > 0) ? imgEl.naturalWidth : 800;
-    const naturalH = (imgEl && imgEl.naturalHeight > 0) ? imgEl.naturalHeight : 1200;
-
     globalState.pages.forEach(page => {
+        const { width: displayW, height: displayH } = getReferenceDisplayDimensions(page);
         (page.blocks || []).forEach(block => {
             if (block.translated && block.type !== 'sfx' && !block.style?.vertical) {
-                if (!block.style) block.style = {} as any;
-                block.style.diamondWrap = true;
                 const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-                const pixelW = block.box ? (block.box.w / 100) * naturalW : null;
-                const pixelH = block.box ? (block.box.h / 100) * naturalH : null;
-                const balanced = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
+                const pixelW = block.box ? (block.box.w / 100) * displayW : null;
+                const pixelH = block.box ? (block.box.h / 100) * displayH : null;
+                const balanced = balanceTextToBox(cleanText, pixelW, pixelH, block.style);
                 if (balanced && balanced !== block.translated) {
                     block.translated = balanced;
                     block.autoFitCache = null;
@@ -1612,7 +1458,7 @@ export function batchDiamondBalanceAllPages(): void {
 
     requestOverlayRender();
     uiUpdateActiveBlockEditor();
-    showToast(`⚡ Đã tự động cân đối layout Diamond cho ${totalBalanced} ô thoại trên toàn chương!`, "success");
+    showToast(`⚡ Đã cân đối dòng cho ${totalBalanced} ô thoại trên toàn chương!`, "success");
 }
 
 export function startInlineEditing(block: MangaBlock, bubble: HTMLElement, maskContent: HTMLElement, innerTextDiv: HTMLElement): void {

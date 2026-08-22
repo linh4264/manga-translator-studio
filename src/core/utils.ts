@@ -241,9 +241,9 @@ export function setMultilineText(target: HTMLElement | null, value: string, warp
             lineDiv.style.minWidth = 'auto';
             lineDiv.style.display = 'block';
             lineDiv.style.textAlign = target.style.textAlign || 'center';
-            lineDiv.style.whiteSpace = 'pre-wrap';
+            lineDiv.style.whiteSpace = 'pre';
             lineDiv.style.wordBreak = 'keep-all';
-            lineDiv.style.overflowWrap = 'break-word';
+            lineDiv.style.overflowWrap = 'normal';
         }
         lineDiv.style.margin = '0';
         lineDiv.style.padding = '0';
@@ -365,6 +365,134 @@ export function setMultilineText(target: HTMLElement | null, value: string, warp
 
         target.appendChild(lineDiv);
     });
+}
+
+/**
+ * Extracts exact visual lines rendered by the DOM for a text container element using DOM Range rects.
+ * Guarantees 100% fidelity between DOM-rendered words and Canvas Exporter without altering DOM structure.
+ */
+export function extractDomRenderedLines(container: HTMLElement | null): RichTextSegment[][] | null {
+    if (!container || typeof document === 'undefined' || typeof document.createRange !== 'function') return null;
+
+    const lineDivs = Array.from(container.children) as HTMLElement[];
+    if (lineDivs.length === 0) return null;
+
+    // Check if element is attached to DOM with client rects
+    const firstRect = lineDivs[0].getBoundingClientRect ? lineDivs[0].getBoundingClientRect() : null;
+    const isMeasuringRects = firstRect && (firstRect.width > 0 || firstRect.height > 0 || firstRect.top !== 0);
+    if (!isMeasuringRects && lineDivs[0].offsetTop === 0 && lineDivs[0].offsetWidth === 0) {
+        return null;
+    }
+
+    const resultLines: RichTextSegment[][] = [];
+
+    lineDivs.forEach(lineDiv => {
+        const textNodes: Node[] = [];
+        if (typeof document.createTreeWalker === 'function') {
+            const walker = document.createTreeWalker(lineDiv, NodeFilter.SHOW_TEXT);
+            let node: Node | null;
+            while ((node = walker.nextNode())) {
+                textNodes.push(node);
+            }
+        } else {
+            // Fallback for simple elements
+            if (lineDiv.firstChild && lineDiv.firstChild.nodeType === Node.TEXT_NODE) {
+                textNodes.push(lineDiv.firstChild);
+            }
+        }
+
+        if (textNodes.length === 0) return;
+
+        const lineGroups: Array<{ top: number; words: Array<{ text: string; parent: HTMLElement }> }> = [];
+
+        textNodes.forEach(textNode => {
+            const str = textNode.textContent || '';
+            const parent = (textNode.parentElement || lineDiv) as HTMLElement;
+            if (!str.trim()) return;
+
+            const words = str.split(/\s+/).filter(Boolean);
+            let searchIndex = 0;
+
+            words.forEach(word => {
+                const wordStart = str.indexOf(word, searchIndex);
+                if (wordStart !== -1) {
+                    searchIndex = wordStart + word.length;
+                    try {
+                        const range = document.createRange();
+                        range.setStart(textNode, wordStart);
+                        range.setEnd(textNode, searchIndex);
+                        const rects = range.getClientRects();
+                        const top = rects.length > 0 ? rects[0].top : parent.getBoundingClientRect().top;
+
+                        let group = lineGroups.find(g => Math.abs(g.top - top) < 6);
+                        if (!group) {
+                            group = { top, words: [] };
+                            lineGroups.push(group);
+                        }
+                        group.words.push({ text: word, parent });
+                    } catch (e) {
+                        // Fallback: put in first group
+                        let group = lineGroups[0];
+                        if (!group) {
+                            group = { top: parent.offsetTop || 0, words: [] };
+                            lineGroups.push(group);
+                        }
+                        group.words.push({ text: word, parent });
+                    }
+                }
+            });
+        });
+
+        lineGroups.sort((a, b) => a.top - b.top);
+
+        lineGroups.forEach(group => {
+            const lineSegments: RichTextSegment[] = [];
+            let currentSeg: RichTextSegment | null = null;
+
+            group.words.forEach((w) => {
+                const parent = w.parent;
+                const bold = parent.style?.fontWeight === 'bold' || parent.tagName === 'B';
+                const italic = parent.style?.fontStyle === 'italic' || parent.tagName === 'I';
+                const underline = parent.style?.textDecoration?.includes('underline') || parent.tagName === 'U';
+                const strikethrough = parent.style?.textDecoration?.includes('line-through') || parent.tagName === 'S';
+                const color = parent.style?.color || null;
+                const font = parent.style?.fontFamily || null;
+
+                if (
+                    currentSeg &&
+                    currentSeg.bold === bold &&
+                    currentSeg.italic === italic &&
+                    currentSeg.underline === underline &&
+                    currentSeg.strikethrough === strikethrough &&
+                    currentSeg.color === color &&
+                    currentSeg.font === font
+                ) {
+                    currentSeg.text += ' ' + w.text;
+                } else {
+                    currentSeg = {
+                        text: (lineSegments.length > 0 ? ' ' : '') + w.text,
+                        bold,
+                        italic,
+                        underline,
+                        strikethrough,
+                        color,
+                        sizeRatio: 1.0,
+                        font
+                    };
+                    lineSegments.push(currentSeg);
+                }
+            });
+
+            if (lineSegments.length > 0) {
+                if (lineSegments[0].text.startsWith(' ')) {
+                    lineSegments[0].text = lineSegments[0].text.trimStart();
+                }
+                resultLines.push(lineSegments);
+            }
+        });
+    });
+
+    return resultLines.length > 0 ? resultLines : null;
 }
 
 export function waitForNextPaint(): Promise<void> {

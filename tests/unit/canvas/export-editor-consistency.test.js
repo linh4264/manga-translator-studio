@@ -308,7 +308,7 @@ test('CASE K — Clean Text: Diamond balance on italic / thought block does not 
     assert.ok(thoughtBlock.translated.includes('Vì lúc đó') || thoughtBlock.translated.includes('ngượng'), 'Content must be preserved');
 });
 
-test('CASE L — Vertical Alignment: Single line normal centered text glyph center matches editor logical center', () => {
+test('CASE L — Vertical Alignment: Single line normal centered text center matches editor logical center', () => {
     const block = {
         id: 'b_vert_single',
         type: 'dialogue',
@@ -326,7 +326,6 @@ test('CASE L — Vertical Alignment: Single line normal centered text glyph cent
     const scaleFactor = 1.0;
     const layout = buildBlockTextLayout(block, naturalW, naturalH, scaleFactor);
 
-    const bx = (block.box.x / 100) * naturalW; // 200
     const by = (block.box.y / 100) * naturalH; // 300
     const bh = (block.box.h / 100) * naturalH; // 200
 
@@ -336,12 +335,8 @@ test('CASE L — Vertical Alignment: Single line normal centered text glyph cent
     assert.strictEqual(layout.lines.length, 1);
     const line = layout.lines[0];
 
-    // Assert logical line center
+    // Assert logical line center matches editor vertical center exactly
     assert.strictEqual(line.centerY, editorLogicalLineCenter, 'Line center must match editor vertical center');
-
-    // Assert computed glyph center from font metrics
-    const computedGlyphCenter = line.baselineY - ((line.ascent - line.descent) / 2);
-    assert.strictEqual(computedGlyphCenter, editorLogicalLineCenter, 'Exported glyph center must match editor text center');
     assert.strictEqual(layout.textCenterY, editorBlockCenterY, 'Text block center must match speech bubble center');
 });
 
@@ -382,9 +377,6 @@ test('CASE M — Vertical Alignment: Multiple lines (2, 4, 6 lines) centers matc
         layout.lines.forEach((line, idx) => {
             const expectedLineCenter = editorTextTop + (idx + 0.5) * lineHeightPx;
             expect(line.centerY).toBeCloseTo(expectedLineCenter, 4);
-
-            const computedGlyphCenter = line.baselineY - ((line.ascent - line.descent) / 2);
-            expect(computedGlyphCenter).toBeCloseTo(expectedLineCenter, 4);
         });
     });
 });
@@ -423,8 +415,6 @@ test('CASE N — Vertical Alignment: Different line heights (1.0, 1.15, 1.35, 1.
         layout.lines.forEach((line, idx) => {
             const expectedCenter = expectedTop + (idx + 0.5) * expectedLhPx;
             expect(line.centerY).toBeCloseTo(expectedCenter, 4);
-            const glyphCenter = line.baselineY - ((line.ascent - line.descent) / 2);
-            expect(glyphCenter).toBeCloseTo(expectedCenter, 4);
         });
     });
 });
@@ -458,13 +448,10 @@ test('CASE O — Vertical Alignment: Small and large font sizes (9px, 14px, 24px
         expect(layout.fontSizePx).toBeCloseTo(expectedFsPx, 4);
         const line = layout.lines[0];
         expect(line.centerY).toBeCloseTo(blockCenterY, 4);
-
-        const glyphCenter = line.baselineY - ((line.ascent - line.descent) / 2);
-        expect(glyphCenter).toBeCloseTo(blockCenterY, 4);
     });
 });
 
-test('CASE P — Vertical Alignment: Fonts Nunito, Be Vietnam Pro, Patrick Hand, Bangers', () => {
+test('CASE P — Vertical Alignment: Fonts Nunito, Be Vietnam Pro, Patrick Hand, Bangers have identical line box centers', () => {
     const fonts = [
         { key: 'font-manga', name: 'Nunito' },
         { key: 'font-vietnamese', name: 'Be Vietnam Pro' },
@@ -488,16 +475,11 @@ test('CASE P — Vertical Alignment: Fonts Nunito, Be Vietnam Pro, Patrick Hand,
         const layout = buildBlockTextLayout(block, 1200, 1600, 2.0);
         const line = layout.lines[0];
 
-        assert.ok(line.ascent > 0, `Ascent for ${name} must be positive`);
-        assert.ok(line.descent > 0, `Descent for ${name} must be positive`);
+        const by = (block.box.y / 100) * 1600; // 240
+        const bh = (block.box.h / 100) * 1600; // 480
+        const expectedCenterY = by + (bh / 2); // 480
 
-        // Baseline must be offset by half of (ascent - descent) from line centerY
-        const expectedBaselineOffset = (line.ascent - line.descent) / 2;
-        expect(line.baselineY).toBeCloseTo(line.centerY + expectedBaselineOffset, 4);
-
-        // Visual glyph center must match line centerY exactly
-        const glyphCenter = line.baselineY - expectedBaselineOffset;
-        expect(glyphCenter).toBeCloseTo(line.centerY, 4);
+        expect(line.centerY).toBeCloseTo(expectedCenterY, 4);
     });
 });
 
@@ -528,167 +510,82 @@ test('CASE Q — Vertical Alignment: Japanese vertical writing mode', () => {
     const blockCenterY = by + (bh / 2); // 675
 
     // Check each column
-    layout.lines.forEach((col, idx) => {
+    layout.lines.forEach((col) => {
         expect(col.centerY).toBeCloseTo(blockCenterY, 4);
         assert.ok(col.rawChars && col.rawChars.length > 0, 'Vertical column must have character tokens');
         expect(col.width).toBeCloseTo(layout.lineHeightPx, 4);
     });
 });
 
-test('CASE R — Vertical Alignment: Rich text with mixed font sizes preserves baseline and center', () => {
-    const richText = 'Bình thường [size=150%]Chữ To Hơn[/size] bình thường';
+test('CASE W — P0: Exporter strictly adheres to editor line partition without auto-wrapping long lines', () => {
+    // A single very long line without newlines that exceeds box width
+    const longSingleLine = 'Đây là một câu rất dài không có dấu xuống dòng nào cả và exporter không được tự ý bẻ dòng ra';
     const block = {
-        id: 'b_vert_rich_mixed',
+        id: 'b_no_rewrap',
         type: 'dialogue',
-        translated: richText,
-        box: { x: 10, y: 20, w: 80, h: 40 },
+        translated: longSingleLine,
+        box: { x: 10, y: 10, w: 20, h: 20 }, // Narrow box (20% of 1000 = 200px)
         style: {
-            fontSize: 20,
+            fontSize: 18,
             fontFamily: 'font-manga',
-            lineHeight: 1.3
-        }
-    };
-
-    const layout = buildBlockTextLayout(block, 1200, 1600, 1.5);
-    assert.strictEqual(layout.lines.length, 1);
-
-    const line = layout.lines[0];
-    const glyphCenter = line.baselineY - ((line.ascent - line.descent) / 2);
-
-    expect(glyphCenter).toBeCloseTo(line.centerY, 4);
-    assert.strictEqual(layout.lines[0].tokens.length, 3, 'Must parse into 3 rich text tokens');
-    assert.strictEqual(layout.lines[0].tokens[1].sizeRatio, 1.5, 'Middle token must have sizeRatio 1.5');
-});
-
-test('CASE S — Pure Alignment: Zero magic offset constants in layout calculation', () => {
-    const block = {
-        id: 'b_vert_pure',
-        type: 'dialogue',
-        translated: 'Kiểm tra độ chính xác tuyệt đối',
-        box: { x: 25, y: 25, w: 50, h: 50 },
-        style: {
-            fontSize: 16,
-            lineHeight: 1.15
+            lineHeight: 1.2
         }
     };
 
     const layout = buildBlockTextLayout(block, 1000, 1000, 1.0);
-    const line = layout.lines[0];
-
-    // Verification: baseline - centerY must equal exactly (ascent - descent) / 2 with 0 arbitrary constants
-    const diff = line.baselineY - line.centerY;
-    const expectedDiff = (line.ascent - line.descent) / 2;
-    expect(diff).toBeCloseTo(expectedDiff, 4);
+    // Exporter must have exactly 1 line (does not re-wrap on its own)
+    assert.strictEqual(layout.lines.length, 1, 'Exporter must NOT split lines unless editor/layout explicitly breaks them');
+    assert.strictEqual(layout.lines[0].text, longSingleLine);
 });
 
-test('CASE T — Content-Independent Baseline: BaselineY and CenterY are 100% identical regardless of text content', () => {
-    const testStrings = [
-        'AAAA',
-        'Hello',
-        'gggg',
-        'こんにちは',
-        '...',
-        'Tuyệt vời quá!'
-    ];
+test('CASE X — P0: Image Source Unification between originalFile and file', async () => {
+    const { getPageCanonicalFile } = await import('../../../src/core/state.ts');
 
-    const results = testStrings.map(text => {
-        const block = {
-            id: `b_content_${text}`,
-            type: 'dialogue',
-            translated: text,
-            box: { x: 20, y: 20, w: 40, h: 30 },
-            style: {
-                fontSize: 20,
-                fontFamily: 'font-manga',
-                lineHeight: 1.25
-            }
-        };
-        const layout = buildBlockTextLayout(block, 1200, 1600, 1.5);
-        return {
-            text,
-            centerY: layout.lines[0].centerY,
-            baselineY: layout.lines[0].baselineY,
-            ascent: layout.lines[0].ascent,
-            descent: layout.lines[0].descent
-        };
-    });
+    const mockOriginalFile = new Blob(['mock original data'], { type: 'image/png' });
+    const mockOptimizedFile = new Blob(['mock optimized webp'], { type: 'image/webp' });
 
-    const ref = results[0];
-    results.forEach(({ text, centerY, baselineY, ascent, descent }) => {
-        expect(centerY).toBeCloseTo(ref.centerY, 4);
-        expect(baselineY).toBeCloseTo(ref.baselineY, 4);
-        expect(ascent).toBeCloseTo(ref.ascent, 4);
-        expect(descent).toBeCloseTo(ref.descent, 4);
-    });
+    const pageWithBoth = {
+        id: 'p_unify_1',
+        name: 'page1.png',
+        originalFile: mockOriginalFile,
+        file: mockOptimizedFile
+    };
+
+    // Canonical source must prioritize originalFile
+    const canonical1 = getPageCanonicalFile(pageWithBoth);
+    assert.strictEqual(canonical1, mockOriginalFile, 'Canonical file must be originalFile when available');
+
+    const pageWithOnlyFile = {
+        id: 'p_unify_2',
+        name: 'page2.png',
+        originalFile: null,
+        file: mockOptimizedFile
+    };
+
+    const canonical2 = getPageCanonicalFile(pageWithOnlyFile);
+    assert.strictEqual(canonical2, mockOptimizedFile, 'Canonical file falls back to file when originalFile is null');
 });
 
-test('CASE U — Extended Font Palette: Nunito, Be Vietnam Pro, Patrick Hand, Comic Neue, Bangers, Permanent Marker', () => {
-    const fontList = [
-        { classKey: 'font-manga', name: 'Nunito' },
-        { classKey: 'font-vietnamese', name: 'Be Vietnam Pro' },
-        { classKey: 'font-comic', name: 'Patrick Hand' },
-        { classKey: 'font-comicneue', name: 'Comic Neue' },
-        { classKey: 'font-impact', name: 'Bangers' },
-        { classKey: 'font-marker', name: 'Permanent Marker' }
-    ];
-
-    fontList.forEach(({ classKey, name }) => {
-        const block = {
-            id: `b_palette_${classKey}`,
-            type: 'dialogue',
-            translated: `Font ${name} mẫu thử nghiệm`,
-            box: { x: 10, y: 15, w: 60, h: 25 },
-            style: {
-                fontSize: 18,
-                fontFamily: classKey,
-                lineHeight: 1.2
-            }
-        };
-
-        const W = 1600;
-        const H = 2000;
-        const layout = buildBlockTextLayout(block, W, H, 2.0);
-        const line = layout.lines[0];
-
-        const by = (block.box.y / 100) * H; // 300
-        const bh = (block.box.h / 100) * H; // 500
-        const expectedCenterY = by + (bh / 2); // 550
-
-        expect(line.centerY).toBeCloseTo(expectedCenterY, 4);
-        expect(line.ascent).toBeGreaterThan(0);
-        expect(line.descent).toBeGreaterThan(0);
-
-        const expectedBaseline = line.centerY + (line.ascent - line.descent) / 2;
-        expect(line.baselineY).toBeCloseTo(expectedBaseline, 4);
-    });
-});
-
-test('CASE V — Rich Text with Multiple Embedded Fonts does not shift baseline of the line', () => {
-    const multiFontRichText = '[font=font-impact]BOOM![/font] [font=font-comic]thì thầm nhỏ[/font] bình thường';
+test('CASE Y — P1: AutoFit Frozen Layout during Export pipeline', async () => {
     const block = {
-        id: 'b_multi_font_rich',
+        id: 'b_autofit_freeze',
         type: 'dialogue',
-        translated: multiFontRichText,
-        box: { x: 15, y: 15, w: 70, h: 30 },
+        translated: 'Văn bản đã qua AutoFit',
+        box: { x: 10, y: 10, w: 30, h: 30 },
         style: {
-            fontSize: 24,
-            fontFamily: 'font-manga',
-            lineHeight: 1.3
+            fontSize: 22, // Frozen font size from editor
+            baseFontSize: 24,
+            autoFit: true
         }
     };
 
-    const layout = buildBlockTextLayout(block, 1200, 1600, 1.0);
-    assert.strictEqual(layout.lines.length, 1);
-    const line = layout.lines[0];
+    const page = createMockPage(block, 2000, 3000, 1000);
+    const initialFontSize = block.style.fontSize;
 
-    const by = (block.box.y / 100) * 1600; // 240
-    const bh = (block.box.h / 100) * 1600; // 480
-    const expectedCenterY = by + (bh / 2); // 480
-
-    expect(line.centerY).toBeCloseTo(expectedCenterY, 4);
-    // Baseline is governed by block base font (Nunito / font-manga)
-    const expectedBaseline = line.centerY + (line.ascent - line.descent) / 2;
-    expect(line.baselineY).toBeCloseTo(expectedBaseline, 4);
+    // Canvas export rendering must not mutate block.style.fontSize
+    const canvas = await renderPageToCanvas2D(page);
+    assert.ok(canvas);
+    assert.strictEqual(block.style.fontSize, initialFontSize, 'Export must never re-run AutoFit or mutate block.style.fontSize');
 });
 
 

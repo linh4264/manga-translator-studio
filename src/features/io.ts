@@ -413,10 +413,6 @@ export async function runBatchExport(): Promise<void> {
 
     try {
         await document.fonts.ready;
-        const { autoFitAllBlocksOnPage } = globalState.autoFitEnabled
-            ? await import('./canvas/canvas-styling')
-            : { autoFitAllBlocksOnPage: null };
-
         for (let i = startIndex; i <= endIndex; i++) {
             const page = globalState.pages[i];
             const currentCount = i - startIndex + 1;
@@ -441,10 +437,6 @@ export async function runBatchExport(): Promise<void> {
                 const displayWidth = Math.max(200, Math.round(containerW / zoomScale));
                 if (!(page as any).lastDisplayWidth) {
                     (page as any).lastDisplayWidth = displayWidth;
-                }
-
-                if (globalState.autoFitEnabled && autoFitAllBlocksOnPage) {
-                    autoFitAllBlocksOnPage(page, img);
                 }
 
                 const canvas = await renderPageToCanvas2D(page, img);

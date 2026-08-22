@@ -1,7 +1,7 @@
 import { globalState, pushStateToHistory, savePageToDB, uiUpdateActiveBlockEditor, uiUpdateSplitView } from '../../core/state';
 import { elements } from '../../core/elements';
 import { DEFAULT_VERTICAL_WRITING_MODE, DEFAULT_BLOCK_SIZE_PX } from '../../config/constants';
-import { requestOverlayRender, balanceTextToDiamond, balanceSingleParagraphToBox, balanceTextToBox } from './canvas-renderer';
+import { requestOverlayRender, balanceTextToDiamond, balanceSingleParagraphToBox, balanceTextToBox, getReferenceDisplayDimensions } from './canvas-renderer';
 import { autoFitBlock, isBlockAutoFit, copiedStyle } from './canvas-styling';
 import { showToast, setMultilineText } from '../../core/utils';
 import { MangaBlock, BlockStyle } from '../../types/index';
@@ -233,18 +233,12 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
                 block.autoFitCache = null;
                 const activePage = globalState.pages[globalState.activePageIndex];
                 const imgEl = elements.mangaBgImage;
-                const W = (activePage?.imageDataCache?.width) || (imgEl && imgEl.naturalWidth > 0 ? imgEl.naturalWidth : (elements.mangaCanvas?.width || 800));
-                const H = (activePage?.imageDataCache?.height) || (imgEl && imgEl.naturalHeight > 0 ? imgEl.naturalHeight : (elements.mangaCanvas?.height || 1200));
-                const pixelW = (block.box.w / 100) * W;
-                const pixelH = (block.box.h / 100) * H;
+                const { width: displayW, height: displayH } = getReferenceDisplayDimensions(activePage, imgEl);
+                const pixelW = (block.box.w / 100) * displayW;
+                const pixelH = (block.box.h / 100) * displayH;
 
                 if (block.translated && !block.style?.vertical && block.type !== 'sfx') {
-                    if (block.style?.diamondWrap) {
-                        const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-                        block.translated = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
-                    } else {
-                        block.translated = balanceTextToBox(block.translated, pixelW, pixelH, block.style);
-                    }
+                    block.translated = balanceTextToBox(block.translated, pixelW, pixelH, block.style);
                 }
                 if (isBlockAutoFit(block)) {
                     autoFitBlock(block, null, 1, null, false);
@@ -292,16 +286,10 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
         if (block.translated && !block.style?.vertical && block.type !== 'sfx') {
             const activePage = globalState.pages[globalState.activePageIndex];
             const imgEl = elements.mangaBgImage;
-            const W = (activePage?.imageDataCache?.width) || (imgEl && imgEl.naturalWidth > 0 ? imgEl.naturalWidth : (elements.mangaCanvas?.width || 800));
-            const H = (activePage?.imageDataCache?.height) || (imgEl && imgEl.naturalHeight > 0 ? imgEl.naturalHeight : (elements.mangaCanvas?.height || 1200));
-            const pixelW = (block.box.w / 100) * W;
-            const pixelH = (block.box.h / 100) * H;
-            if (block.style?.diamondWrap) {
-                const cleanText = block.translated.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-                block.translated = balanceTextToDiamond(cleanText, pixelW, pixelH, block.style);
-            } else {
-                block.translated = balanceTextToBox(block.translated, pixelW, pixelH, block.style);
-            }
+            const { width: displayW, height: displayH } = getReferenceDisplayDimensions(activePage, imgEl);
+            const pixelW = (block.box.w / 100) * displayW;
+            const pixelH = (block.box.h / 100) * displayH;
+            block.translated = balanceTextToBox(block.translated, pixelW, pixelH, block.style);
             if (elements.editTranslatedText && block.id === globalState.selectedBlockId) {
                 elements.editTranslatedText.value = block.translated;
             }

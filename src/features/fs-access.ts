@@ -251,11 +251,6 @@ export async function exportPagesDirectlyToDisk(): Promise<void> {
         const totalToExport = endIndex - startIndex + 1;
         uiUpdateProcessingOverlay(true, "Đang ghi trực tiếp vào ổ cứng...", `Khởi tạo thư mục /translated (${totalToExport} trang)...`, 0);
 
-        await document.fonts.ready;
-        const { autoFitAllBlocksOnPage } = globalState.autoFitEnabled
-            ? await import('./canvas/canvas-styling')
-            : { autoFitAllBlocksOnPage: null };
-
         const zoomScale = (globalState.zoom || 100) / 100;
         const containerW = elements.mangaCanvasContainer && elements.mangaCanvasContainer.clientWidth > 0
             ? elements.mangaCanvasContainer.clientWidth
@@ -293,10 +288,6 @@ export async function exportPagesDirectlyToDisk(): Promise<void> {
                     offImg!.onerror = () => reject(new Error(`Không thể tải ảnh cho trang ${page.name}`));
                     offImg!.src = page.src!;
                 });
-            }
-
-            if (globalState.autoFitEnabled && autoFitAllBlocksOnPage && offImg) {
-                autoFitAllBlocksOnPage(page, offImg);
             }
 
             const canvas = await renderPageToCanvas2D(page, offImg);

@@ -18,8 +18,7 @@ import {
 import { elements } from '../../core/elements';
 import { showToast } from '../../core/utils';
 import { refineAiBlockBox, mergeOverlappingAiBlocks, extractTextAnchor } from '../ocr/ocr-service';
-import { requestOverlayRender, autoMatchBlockStyle, autoFitBlock, isBlockAutoFit } from '../canvas/canvas-service';
-import { balanceTextToDiamond, balanceTextToBox } from '../canvas/canvas-renderer';
+import { requestOverlayRender, autoMatchBlockStyle, autoFitBlock, isBlockAutoFit, balanceTextToDiamond, balanceTextToBox, getReferenceDisplayDimensions } from '../canvas/canvas-service';
 import { getConfiguredApiEndpoint, getGeminiGenerateContentUrl } from './ai-config';
 import {
     cancelTranslationFlag,
@@ -242,7 +241,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 "- Do not use the bubble center when text is offset inside the bubble.",
                 "- Do not use the center of the empty bubble area.",
                 "- For SFX outside bubbles, use the center of the visible glyphs.",
-                "- SINGLE CONTINUOUS LINE: Keep translated text as a single complete sentence/paragraph without manual newline characters (\\n). The layout engine automatically balances diamond shaping.",
+                "- SINGLE CONTINUOUS LINE: Keep translated text as a single complete sentence/paragraph without manual newline characters (\\n). The layout engine automatically balances line wrapping to fit the speech bubble.",
                 `Translate to short, natural ${targetLangName} that matches the scene and speaker relationship.`,
                 `Maintain character voice, ${pronounTerm} consistency, and terminology across the page, allowing natural shifts if emotions or interpersonal dynamics change.`,
                 ctx.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
@@ -401,8 +400,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 strokeColor: b.style?.strokeColor || '#ffffff',
                 strokeWidth: b.style?.strokeWidth !== undefined ? b.style.strokeWidth : 0,
                 shadowColor: b.style?.shadowColor || '#000000',
-                shadowBlur: b.style?.shadowBlur !== undefined ? b.style.shadowBlur : 0,
-                diamondWrap: b.style?.diamondWrap || false
+                shadowBlur: b.style?.shadowBlur !== undefined ? b.style.shadowBlur : 0
             };
 
             const rawTrans = (b.translated || '').trim();
@@ -424,15 +422,13 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
             } catch (e) { }
         }
 
+        const { width: displayW, height: displayH } = getReferenceDisplayDimensions(page, imgEl);
         page.blocks.forEach(b => {
             const rawTrans = (b.translated || '').trim();
             if (rawTrans) {
-                const pixelW = (b.box.w / 100) * imgW;
-                const pixelH = (b.box.h / 100) * imgH;
-                if (b.style?.diamondWrap && !b.style?.vertical && b.type !== 'sfx') {
-                    const cleanTrans = rawTrans.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-                    b.translated = balanceTextToDiamond(cleanTrans, pixelW, pixelH, b.style);
-                } else if (!b.style?.vertical && b.type !== 'sfx') {
+                const pixelW = (b.box.w / 100) * displayW;
+                const pixelH = (b.box.h / 100) * displayH;
+                if (!b.style?.vertical && b.type !== 'sfx') {
                     b.translated = balanceTextToBox(rawTrans, pixelW, pixelH, b.style);
                 } else {
                     b.translated = rawTrans;
@@ -662,8 +658,7 @@ export async function runBatchTranslation(): Promise<void> {
                                     strokeColor: b.style?.strokeColor || '#ffffff',
                                     strokeWidth: b.style?.strokeWidth !== undefined ? b.style.strokeWidth : 0,
                                     shadowColor: b.style?.shadowColor || '#000000',
-                                    shadowBlur: b.style?.shadowBlur !== undefined ? b.style.shadowBlur : 0,
-                                    diamondWrap: b.style?.diamondWrap || false
+                                    shadowBlur: b.style?.shadowBlur !== undefined ? b.style.shadowBlur : 0
                                 },
                                 ...(textAnchor ? { textAnchor } : {})
                             };
@@ -769,15 +764,13 @@ export async function runBatchTranslation(): Promise<void> {
                                     } catch (e) { }
                                 }
 
+                                const { width: pDisplayW, height: pDisplayH } = getReferenceDisplayDimensions(p, imgEl);
                                 p.blocks.forEach((b) => {
                                     const rawTrans = (b.translated || '').trim();
                                     if (rawTrans) {
-                                        const pixelW = b.box ? (b.box.w / 100) * imgW : 200;
-                                        const pixelH = b.box ? (b.box.h / 100) * imgH : 200;
-                                        if (b.style?.diamondWrap && !b.style?.vertical && b.type !== 'sfx') {
-                                            const cleanTrans = rawTrans.replace(/\r\n/g, ' ').replace(/\n+/g, ' ').trim();
-                                            b.translated = balanceTextToDiamond(cleanTrans, pixelW, pixelH, b.style);
-                                        } else if (!b.style?.vertical && b.type !== 'sfx') {
+                                        const pixelW = b.box ? (b.box.w / 100) * pDisplayW : 200;
+                                        const pixelH = b.box ? (b.box.h / 100) * pDisplayH : 200;
+                                        if (!b.style?.vertical && b.type !== 'sfx') {
                                             b.translated = balanceTextToBox(rawTrans, pixelW, pixelH, b.style);
                                         } else {
                                             b.translated = rawTrans;

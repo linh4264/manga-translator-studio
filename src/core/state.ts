@@ -854,11 +854,22 @@ export async function createThumbnail(file: Blob, maxDim: number = 120): Promise
     });
 }
 
+/**
+ * Canonical Image Source for a MangaPage.
+ * Guarantees that editor, canvas export, PSD export, and batch export all use the exact same image source and resolution.
+ * Primary source of truth is always page.originalFile if present; fallback to page.file.
+ */
+export function getPageCanonicalFile(page: any): Blob | File | null {
+    if (!page) return null;
+    return page.originalFile || page.file || null;
+}
+
 export async function activatePage(page: any): Promise<void> {
     if (!page) return;
 
     if (!page.src) {
-        page.src = getSafeMediaUrl(page.originalFile) || getSafeMediaUrl(page.file);
+        const canonicalFile = getPageCanonicalFile(page);
+        page.src = getSafeMediaUrl(canonicalFile);
 
         if (!page.src && page.id) {
             try {
@@ -866,7 +877,7 @@ export async function activatePage(page: any): Promise<void> {
                 if (dbPage) {
                     if (dbPage.originalFile) page.originalFile = dbPage.originalFile;
                     if (dbPage.file) page.file = dbPage.file;
-                    page.src = getSafeMediaUrl(page.originalFile) || getSafeMediaUrl(page.file);
+                    page.src = getSafeMediaUrl(getPageCanonicalFile(page));
                 }
             } catch (err) {
                 console.warn("activatePage DB load error:", err);
