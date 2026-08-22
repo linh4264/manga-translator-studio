@@ -107,24 +107,85 @@ describe('Manga Font Matcher & Set Recommendation Engine', () => {
             const shoutAnalysis = {
                 category: 'shout',
                 weightScore: 0.85,
+                roundnessScore: 0.20,
+                handwrittenScore: 0.20,
                 energyScore: 0.90,
                 formalityScore: 0.20,
-                roughnessScore: 0.70
+                roughnessScore: 0.70,
+                isAllCaps: true
             };
 
             const ranked = rankFontsAgainstAnalysis(mockFontLibrary, shoutAnalysis, 'auto');
             expect(ranked.length).toBe(3);
             expect(ranked[0].id).toBe('font_wild_shout');
             expect(ranked[0].rank).toBe(1);
-            expect(ranked[0].matchPercent).toBeGreaterThanOrEqual(95);
+            expect(ranked[0].matchPercent).toBeGreaterThanOrEqual(90);
             expect(ranked[2].id).toBe('font_light_whisper');
             expect(ranked[2].matchPercent).toBeLessThan(60);
+        });
+
+        test('Differentiates between rounded dialogue font and sharp font with same weight', () => {
+            const fontLibraryWithEqualWeight = [
+                {
+                    id: 'font_soft_rounded',
+                    name: 'Soft Rounded Comic',
+                    family: 'Soft Rounded Comic',
+                    fontClass: 'font-custom',
+                    category: 'dialogue',
+                    type: 'custom',
+                    weightScore: 0.50,
+                    roundnessScore: 0.90,
+                    handwrittenScore: 0.20,
+                    energyScore: 0.50,
+                    formalityScore: 0.40,
+                    roughnessScore: 0.15,
+                    isAllCaps: false,
+                    dateAdded: 1,
+                    desc: '',
+                    recommendedStroke: '2px'
+                },
+                {
+                    id: 'font_sharp_angular',
+                    name: 'Sharp Angular Tech',
+                    family: 'Sharp Angular Tech',
+                    fontClass: 'font-custom',
+                    category: 'dialogue',
+                    type: 'custom',
+                    weightScore: 0.50,
+                    roundnessScore: 0.15,
+                    handwrittenScore: 0.10,
+                    energyScore: 0.50,
+                    formalityScore: 0.70,
+                    roughnessScore: 0.20,
+                    isAllCaps: false,
+                    dateAdded: 2,
+                    desc: '',
+                    recommendedStroke: '2px'
+                }
+            ];
+
+            const softDialogueAnalysis = {
+                category: 'dialogue',
+                weightScore: 0.50,
+                roundnessScore: 0.85,
+                handwrittenScore: 0.20,
+                energyScore: 0.50,
+                formalityScore: 0.40,
+                roughnessScore: 0.15,
+                isAllCaps: false
+            };
+
+            const ranked = rankFontsAgainstAnalysis(fontLibraryWithEqualWeight, softDialogueAnalysis, 'auto');
+            expect(ranked[0].id).toBe('font_soft_rounded');
+            expect(ranked[0].matchPercent).toBeGreaterThan(ranked[1].matchPercent);
         });
 
         test('Realistic scoring does NOT artificially inflate Top 1 score when match is poor', () => {
             const techCyberAnalysis = {
                 category: 'tech',
                 weightScore: 0.95,
+                roundnessScore: 0.10,
+                handwrittenScore: 0.05,
                 energyScore: 0.10,
                 formalityScore: 0.95,
                 roughnessScore: 0.05
@@ -132,6 +193,111 @@ describe('Manga Font Matcher & Set Recommendation Engine', () => {
 
             const ranked = rankFontsAgainstAnalysis(mockFontLibrary, techCyberAnalysis, 'auto');
             expect(ranked[0].matchPercent).toBeLessThan(70);
+        });
+
+        test('Standard Manga dialogue strictly prioritizes clean manga fonts and penalizes cartoon/quirky fonts (like Akbar)', () => {
+            const fontLibraryWithCartoon = [
+                {
+                    id: 'font_akbar_cartoon',
+                    name: '000 Akbar [TeddyBear]',
+                    family: '000 Akbar [TeddyBear]',
+                    fontClass: 'font-custom',
+                    category: 'cute',
+                    fontStyleType: 'cartoon_quirky',
+                    type: 'custom',
+                    weightScore: 0.52,
+                    roundnessScore: 0.70,
+                    handwrittenScore: 0.75,
+                    energyScore: 0.50,
+                    formalityScore: 0.30,
+                    roughnessScore: 0.18,
+                    isAllCaps: false,
+                    dateAdded: 1,
+                    desc: '',
+                    recommendedStroke: '2px'
+                },
+                {
+                    id: 'font_svn_avo',
+                    name: 'SVN-Avo',
+                    family: 'SVN-Avo',
+                    fontClass: 'font-custom',
+                    category: 'dialogue',
+                    fontStyleType: 'standard_dialogue',
+                    type: 'custom',
+                    weightScore: 0.48,
+                    roundnessScore: 0.75,
+                    handwrittenScore: 0.15,
+                    energyScore: 0.45,
+                    formalityScore: 0.65,
+                    roughnessScore: 0.10,
+                    isAllCaps: false,
+                    dateAdded: 2,
+                    desc: '',
+                    recommendedStroke: '1.5px'
+                },
+                {
+                    id: 'font_wild_words',
+                    name: 'CC Wild Words',
+                    family: 'CC Wild Words',
+                    fontClass: 'font-custom',
+                    category: 'dialogue',
+                    fontStyleType: 'standard_dialogue',
+                    type: 'custom',
+                    weightScore: 0.50,
+                    roundnessScore: 0.65,
+                    handwrittenScore: 0.18,
+                    energyScore: 0.50,
+                    formalityScore: 0.60,
+                    roughnessScore: 0.12,
+                    isAllCaps: false,
+                    dateAdded: 3,
+                    desc: '',
+                    recommendedStroke: '2px'
+                }
+            ];
+
+            const standardMangaAnalysis = {
+                category: 'dialogue',
+                fontStyleType: 'standard_dialogue',
+                weightScore: 0.48,
+                roundnessScore: 0.75,
+                handwrittenScore: 0.18,
+                energyScore: 0.45,
+                formalityScore: 0.65,
+                roughnessScore: 0.10,
+                isAllCaps: false
+            };
+
+            const ranked = rankFontsAgainstAnalysis(fontLibraryWithCartoon, standardMangaAnalysis, 'auto');
+            expect(ranked[0].id).toBe('font_svn_avo');
+            expect(ranked[0].rank).toBe(1);
+            expect(ranked[1].id).toBe('font_wild_words');
+            expect(ranked[2].id).toBe('font_akbar_cartoon');
+            expect(ranked[0].matchPercent).toBeGreaterThan(ranked[2].matchPercent + 20);
+        });
+
+        test('profileFontGlyph correctly classifies cartoon names vs standard manga font names', () => {
+            const akbarProfile = profileFontGlyph('000 Akbar [TeddyBear]');
+            expect(akbarProfile.fontStyleType).toBe('cartoon_quirky');
+            expect(akbarProfile.category).toBe('cute');
+            expect(akbarProfile.handwrittenScore).toBeGreaterThanOrEqual(0.70);
+
+            const avoProfile = profileFontGlyph('SVN-Avo Soft');
+            expect(avoProfile.fontStyleType).toBe('standard_dialogue');
+            expect(avoProfile.category).toBe('dialogue');
+
+            const wildWordsProfile = profileFontGlyph('CC Wild Words');
+            expect(wildWordsProfile.fontStyleType).toBe('standard_dialogue');
+            expect(wildWordsProfile.category).toBe('dialogue');
+        });
+
+        test('analyzeImageWithCanvasHeuristics returns multi-dimensional properties in fallback mode', () => {
+            const fallback = analyzeImageWithCanvasHeuristics(null, 'whisper');
+            expect(fallback).toBeDefined();
+            expect(fallback.category).toBe('whisper');
+            expect(fallback.roundnessScore).toBeDefined();
+            expect(fallback.handwrittenScore).toBeDefined();
+            expect(fallback.weightScore).toBeLessThan(0.40);
         });
     });
 

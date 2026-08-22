@@ -155,6 +155,36 @@ import {
     runAiGenreAnalysis
 } from './font-matcher';
 
+import {
+    TEXT_TYPE_CONFIGS,
+    TONE_CONFIGS,
+    classifyFontOfflineHeuristics,
+    classifyFontWithAI,
+    classifyDialogueWithAI,
+    classifyDialogueOfflineHeuristics,
+    scoreFontForTypeAndTone,
+    matchFontsForTypeAndTone,
+    batchClassifyFontLibrary,
+    renderClassifiedFontCanvas,
+    getClassifierMode,
+    setClassifierMode,
+    populateFontSelectDropdown,
+    onClassifierFontSelected,
+    setClassifierSampleText,
+    handleDialogueImageUpload,
+    resetDialogueImage,
+    runDialogueClassification,
+    runFontClassification,
+    classifyAllLoadedFonts,
+    setGalleryTypeFilter,
+    setGalleryToneFilter,
+    onGallerySearchInput,
+    renderAllClassifiedFontsGallery,
+    renderDialogueClassificationResults,
+    renderFontClassificationResultCard,
+    initFontClassifierModule
+} from './font-classifier';
+
 // Bind all necessary public functions to global window for inline HTML onclick/onchange/oninput bindings
 const globalScope: any = typeof window !== 'undefined' ? window : globalThis;
 
@@ -259,7 +289,23 @@ Object.assign(globalScope, {
     downloadFontSetSampleImage,
     handleGenreSampleImageSelect,
     resetGenreSampleImages,
-    runAiGenreAnalysis
+    runAiGenreAnalysis,
+
+    // Font & Dialogue Tone Classifier Actions
+    TEXT_TYPE_CONFIGS,
+    TONE_CONFIGS,
+    setClassifierMode,
+    onClassifierFontSelected,
+    setClassifierSampleText,
+    resetDialogueImage,
+    runDialogueClassification,
+    runFontClassification,
+    classifyAllLoadedFonts,
+    setGalleryTypeFilter,
+    setGalleryToneFilter,
+    onGallerySearchInput,
+    renderAllClassifiedFontsGallery,
+    renderClassifiedFontCanvas
 });
 
 if (typeof document !== 'undefined') {
@@ -312,6 +358,11 @@ if (typeof document !== 'undefined') {
                 handleCustomFontUpload(files);
             }
         });
+        setupDragAndDrop('classify-dropzone', 'classify-image-input', (files) => {
+            if (files && files[0]) {
+                handleDialogueImageUpload(files[0]);
+            }
+        });
 
         // Initialize all tool event handlers & modules
         initPdfConverter();
@@ -322,6 +373,7 @@ if (typeof document !== 'undefined') {
         initImageEnhancer();
         initOcrExtractor();
         initFontMatcherModule();
+        initFontClassifierModule();
     };
 
     if (document.readyState === 'loading') {

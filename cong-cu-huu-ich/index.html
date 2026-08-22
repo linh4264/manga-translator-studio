@@ -518,6 +518,9 @@
                     <button type="button" id="btn-subtab-fontmatch-analyze" onclick="switchFontMatchSubTab('analyze')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5 cursor-pointer">
                         <i class="fa-solid fa-bullseye"></i> So Khớp Theo Ảnh Đơn
                     </button>
+                    <button type="button" id="btn-subtab-fontmatch-classify" onclick="switchFontMatchSubTab('classify')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5 cursor-pointer">
+                        <i class="fa-solid fa-tags"></i> Phân Loại AI (Type & Tone)
+                    </button>
                     <button type="button" id="btn-subtab-fontmatch-custom" onclick="switchFontMatchSubTab('custom')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5 cursor-pointer">
                         <i class="fa-solid fa-folder-plus"></i> Kho Font Của Bạn <span id="fontmatch-custom-badge" class="px-1.5 py-0.2 rounded-full bg-slate-800 text-[10px] font-mono text-indigo-400">0</span>
                     </button>
@@ -862,7 +865,7 @@
                                             <button type="button" onclick="setLiveTestText('ẦM ẦM ẦM!!!')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300 transition-colors">💥 SFX</button>
                                         </div>
                                     </div>
-                                    <textarea id="fontmatch-live-text" rows="2" oninput="onLiveTestTextChange()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-100 font-medium focus:outline-none focus:border-indigo-500 custom-scrollbar">Ngươi dám cản đường ta sao?!</textarea>
+                                    <textarea id="fontmatch-live-text" rows="2" oninput="onLiveTestTextChange()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-100 font-medium focus:outline-none focus:border-indigo-500 custom-scrollbar">Hôm nay trời đẹp thật đấy, cậu có muốn cùng đi dạo không?</textarea>
                                 </div>
 
                                 <!-- Live Styling Sliders -->
@@ -878,9 +881,9 @@
                                     <div class="flex flex-col gap-1">
                                         <label class="text-[10px] font-bold text-slate-400 flex justify-between">
                                             <span>Độ dày viền</span>
-                                            <span id="lbl-live-stroke" class="text-indigo-400 font-mono">3px</span>
+                                            <span id="lbl-live-stroke" class="text-indigo-400 font-mono">1.5px</span>
                                         </label>
-                                        <input type="range" id="live-stroke-width" min="0" max="8" value="3" oninput="document.getElementById('lbl-live-stroke').innerText=this.value+'px'; updateAllFontCanvases();" class="accent-indigo-500">
+                                        <input type="range" id="live-stroke-width" min="0" max="8" step="0.5" value="1.5" oninput="document.getElementById('lbl-live-stroke').innerText=this.value+'px'; updateAllFontCanvases();" class="accent-indigo-500">
                                     </div>
 
                                     <div class="flex items-center gap-2">
@@ -896,7 +899,7 @@
 
                                     <div class="flex items-center justify-end gap-3">
                                         <label class="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer select-none">
-                                            <input type="checkbox" id="live-bold" checked onchange="updateAllFontCanvases()" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-indigo-600">
+                                            <input type="checkbox" id="live-bold" onchange="updateAllFontCanvases()" class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-indigo-600">
                                             <span class="font-bold">Đậm (B)</span>
                                         </label>
                                         <label class="flex items-center gap-1.5 text-xs text-slate-300 cursor-pointer select-none">
@@ -910,6 +913,362 @@
 
                     </div>
                 </div>
+            </div>
+
+            <!-- ================= SUB-PANEL: AI CLASSIFIER (TEXT TYPE & TONE) ================= -->
+            <div id="fontmatch-panel-classify" class="hidden flex flex-col gap-6">
+
+                <!-- Header & Mode Switcher Card -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4 shadow-xl">
+                    <div class="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-slate-800">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 text-lg">
+                                <i class="fa-solid fa-tags"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-100 flex items-center gap-2">
+                                    Phân Loại Phông Chữ & Đoạn Thoại Manga Theo Text Type & Tone (AI Vision)
+                                </h3>
+                                <p class="text-xs text-slate-400 mt-0.5">
+                                    Taxonomy chuẩn mực: <strong class="text-indigo-400">5 Text Types</strong> (Dialogue, Thought, Narration, Aside, SFX) & <strong class="text-pink-400">16 Tones</strong> (Normal, Soft, Shy, Hesitant, Whisper, Shaky, Sad, Crying, Scared, Angry, Shouting, Excited, Serious, Weak, Cold, Special).
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Mode Switcher Buttons -->
+                        <div class="flex items-center p-1 bg-slate-950 border border-slate-800 rounded-xl gap-1">
+                            <button type="button" id="btn-classify-mode-dialogue" onclick="setClassifierMode('dialogue')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all bg-indigo-600 text-white shadow-md flex items-center gap-2 cursor-pointer">
+                                <i class="fa-solid fa-comments"></i> Phân Loại Thoại / Ảnh Manga
+                            </button>
+                            <button type="button" id="btn-classify-mode-font" onclick="setClassifierMode('font')" class="px-4 py-2 rounded-xl text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-2 cursor-pointer">
+                                <i class="fa-solid fa-font"></i> Phân Loại Phông Chữ Cá Nhân
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Main Two Columns -->
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                        <!-- LEFT COLUMN: INPUT CONTROLS -->
+                        <div class="lg:col-span-5 flex flex-col gap-4">
+
+                            <!-- SECTION A: DIALOGUE CLASSIFIER CONTROLS -->
+                            <div id="classify-section-dialogue" class="flex flex-col gap-4">
+                                <div class="bg-slate-950 p-4 rounded-xl border border-slate-855 flex flex-col gap-3">
+                                    <div class="flex items-center justify-between">
+                                        <label class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                            <i class="fa-solid fa-comment-dots text-indigo-400"></i> Nội dung câu thoại Manga cần phân loại
+                                        </label>
+                                        <span class="text-[10px] text-slate-400">Gõ hoặc bấm mẫu nhanh bên dưới</span>
+                                    </div>
+
+                                    <textarea id="classify-dialogue-input" rows="3" class="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-slate-100 font-medium focus:outline-none focus:border-indigo-500 custom-scrollbar" placeholder="Nhập câu thoại tiếng Việt hoặc tiếng Nhật cần AI phân tích sắc thái cảm xúc...">C-Cậu... có muốn cùng tớ về chung đường không?</textarea>
+
+                                    <!-- Quick Tone & Type Sample Chips -->
+                                    <div class="flex flex-col gap-1.5 pt-1">
+                                        <span class="text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">Mẫu thoại theo sắc thái cảm xúc (16 Tones):</span>
+                                        <div class="flex items-center gap-1 flex-wrap max-h-28 overflow-y-auto custom-scrollbar p-1 bg-slate-900/60 rounded-xl border border-slate-800">
+                                            <button type="button" onclick="setClassifierSampleText('shy')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-pink-600/30 text-[10px] text-pink-300 border border-slate-700 transition-colors">😳 Ngại ngùng (Shy)</button>
+                                            <button type="button" onclick="setClassifierSampleText('shouting')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-red-600/30 text-[10px] text-red-300 border border-slate-700 transition-colors">📢 Hét lớn (Shouting)</button>
+                                            <button type="button" onclick="setClassifierSampleText('soft')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-pink-600/30 text-[10px] text-pink-300 border border-slate-700 transition-colors">🌸 Dịu dàng (Soft)</button>
+                                            <button type="button" onclick="setClassifierSampleText('crying')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-sky-600/30 text-[10px] text-sky-300 border border-slate-700 transition-colors">😭 Khóc lóc (Crying)</button>
+                                            <button type="button" onclick="setClassifierSampleText('angry')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-orange-600/30 text-[10px] text-orange-300 border border-slate-700 transition-colors">💢 Giận dữ (Angry)</button>
+                                            <button type="button" onclick="setClassifierSampleText('whisper')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-cyan-600/30 text-[10px] text-cyan-300 border border-slate-700 transition-colors">🤫 Thì thầm (Whisper)</button>
+                                            <button type="button" onclick="setClassifierSampleText('hesitant')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-amber-600/30 text-[10px] text-amber-300 border border-slate-700 transition-colors">🥺 Ngập ngừng (Hesitant)</button>
+                                            <button type="button" onclick="setClassifierSampleText('shaky')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-teal-600/30 text-[10px] text-teal-300 border border-slate-700 transition-colors">〰️ Run rẩy (Shaky)</button>
+                                            <button type="button" onclick="setClassifierSampleText('excited')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-yellow-600/30 text-[10px] text-yellow-300 border border-slate-700 transition-colors">✨ Hào hứng (Excited)</button>
+                                            <button type="button" onclick="setClassifierSampleText('serious')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-emerald-600/30 text-[10px] text-emerald-300 border border-slate-700 transition-colors">🧐 Nghiêm túc (Serious)</button>
+                                            <button type="button" onclick="setClassifierSampleText('cold')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-slate-600/30 text-[10px] text-slate-300 border border-slate-700 transition-colors">❄️ Lạnh lùng (Cold)</button>
+                                            <button type="button" onclick="setClassifierSampleText('weak')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-zinc-600/30 text-[10px] text-zinc-300 border border-slate-700 transition-colors">🥀 Yếu ớt (Weak)</button>
+                                            <button type="button" onclick="setClassifierSampleText('special')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-violet-600/30 text-[10px] text-violet-300 border border-slate-700 transition-colors">🔮 Ma mị (Special)</button>
+                                            <button type="button" onclick="setClassifierSampleText('none')" class="px-2 py-0.5 rounded-lg bg-slate-800 hover:bg-amber-600/30 text-[10px] text-amber-300 border border-slate-700 transition-colors">📜 Dẫn truyện (Narration)</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Optional Image Upload Dropzone -->
+                                <div class="bg-slate-950 p-4 rounded-xl border border-slate-855 flex flex-col gap-2.5">
+                                    <div class="flex items-center justify-between">
+                                        <label class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                            <i class="fa-solid fa-image text-purple-400"></i> Ảnh bóng thoại / SFX Manga (Tùy chọn)
+                                        </label>
+                                        <span class="text-[10px] text-slate-400">Kèm ảnh để AI Vision quét chính xác 100%</span>
+                                    </div>
+
+                                    <div id="classify-dropzone" onclick="document.getElementById('classify-image-input').click()" class="border-2 border-dashed border-slate-800 hover:border-indigo-500/50 bg-slate-900/60 hover:bg-slate-900/90 rounded-xl p-4 text-center flex items-center justify-center gap-2.5 cursor-pointer transition-all">
+                                        <input type="file" id="classify-image-input" accept="image/*" class="hidden">
+                                        <i class="fa-solid fa-cloud-arrow-up text-indigo-400 text-base"></i>
+                                        <span class="text-xs text-slate-300 font-medium">Tải ảnh crop bóng thoại hoặc kéo thả vào đây</span>
+                                    </div>
+
+                                    <!-- Uploaded Image Preview Box -->
+                                    <div id="classify-img-preview-box" class="hidden flex items-center justify-between gap-3 p-2 bg-slate-900 border border-slate-800 rounded-xl">
+                                        <div class="flex items-center gap-2.5 overflow-hidden">
+                                            <img id="classify-img-thumb" src="" alt="Dialogue Crop" class="w-10 h-10 object-contain bg-slate-950 rounded-lg border border-slate-800">
+                                            <p id="classify-img-name" class="text-xs font-bold text-slate-200 truncate">image.png</p>
+                                        </div>
+                                        <button type="button" onclick="resetDialogueImage()" class="text-slate-400 hover:text-red-400 p-1 text-xs" title="Xóa ảnh">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Run Action Button -->
+                                <button type="button" id="btn-run-classify-dialogue" onclick="runDialogueClassification()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 active:scale-[0.98] text-white text-xs font-bold shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                                    <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
+                                    <span>Phân Loại Cảm Xúc & Gợi Ý Font Tương Thích</span>
+                                </button>
+                            </div>
+
+                            <!-- SECTION B: FONT CLASSIFIER CONTROLS (Initially hidden) -->
+                            <div id="classify-section-font" class="hidden flex flex-col gap-4">
+                                
+                                <!-- BATCH CLASSIFY ALL FONTS HERO CARD -->
+                                <div class="bg-gradient-to-br from-indigo-950/60 to-purple-950/40 p-4 rounded-xl border border-indigo-500/30 flex flex-col gap-3 shadow-lg">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                                            <i class="fa-solid fa-bolt-lightning"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="text-xs font-bold text-slate-100 uppercase tracking-wider">Phân Loại Toàn Bộ Kho Font</h4>
+                                            <p class="text-[11px] text-slate-400">Tự động gắn nhãn Text Type & Tone cho toàn bộ font trong kho</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                        <button type="button" id="btn-classify-all-offline" onclick="classifyAllLoadedFonts(false)" class="py-2.5 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white text-xs font-bold shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
+                                            <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                                            <span>⚡ Phân Loại Toàn Bộ (Nhanh)</span>
+                                        </button>
+                                        <button type="button" id="btn-classify-all-ai" onclick="classifyAllLoadedFonts(true)" class="py-2.5 px-3 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/40 active:scale-[0.98] text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer">
+                                            <i class="fa-solid fa-robot text-xs text-purple-300"></i>
+                                            <span>🤖 Phân Loại Bằng AI Gemini</span>
+                                        </button>
+                                    </div>
+
+                                    <!-- Batch Progress Bar (Initially hidden) -->
+                                    <div id="classify-batch-progress-box" class="hidden flex flex-col gap-1.5 p-3 bg-slate-950/80 rounded-xl border border-indigo-500/30">
+                                        <div class="flex items-center justify-between text-xs">
+                                            <span id="classify-batch-status-text" class="text-[11px] font-mono text-slate-300">Đang khởi tạo...</span>
+                                            <span id="classify-batch-percent" class="text-xs font-bold text-indigo-400 font-mono">0%</span>
+                                        </div>
+                                        <div class="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                                            <div id="classify-batch-progress-bar" class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-150" style="width: 0%;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- SINGLE FONT INSPECTION CARD -->
+                                <div class="bg-slate-950 p-4 rounded-xl border border-slate-855 flex flex-col gap-3">
+                                    <label class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-magnifying-glass text-indigo-400"></i> Xem chi tiết / Phân loại từng phông chữ đơn lẻ
+                                    </label>
+                                    <select id="classify-font-select" onchange="onClassifierFontSelected(this.value)" class="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-indigo-300 font-bold focus:outline-none focus:border-indigo-500">
+                                        <!-- Populated dynamically via JS -->
+                                    </select>
+
+                                    <!-- Selected Font Preview Canvas / Box -->
+                                    <div id="classify-font-preview-box" class="pt-1">
+                                        <!-- Rendered dynamically -->
+                                    </div>
+
+                                    <!-- Run Single Font Action Button -->
+                                    <button type="button" id="btn-run-classify-font" onclick="runFontClassification()" class="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                                        <i class="fa-solid fa-microchip text-xs text-indigo-400"></i>
+                                        <span>Phân Tích Chi Tiết Riêng Font Này</span>
+                                    </button>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- RIGHT COLUMN: RESULTS SHOWCASE & GALLERY -->
+                        <div class="lg:col-span-7 flex flex-col gap-4">
+
+                            <!-- Initial Empty State -->
+                            <div id="classify-empty-state" class="bg-slate-950/60 border border-slate-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-3 min-h-[360px]">
+                                <div class="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-2xl animate-pulse">
+                                    <i class="fa-solid fa-tags"></i>
+                                </div>
+                                <h3 class="text-sm font-bold text-slate-200">Sẵn sàng phân loại Text Type & Tone cảm xúc</h3>
+                                <p class="text-xs text-slate-400 max-w-md">Nhập câu thoại hoặc tải ảnh ở cột bên trái để nhận diện Text Type (5 loại) & Tone (16 sắc thái), hoặc chọn <strong>Phân Loại Phông Chữ Cá Nhân</strong> để phân loại toàn bộ kho font của bạn cùng một lúc.</p>
+                            </div>
+
+                            <!-- Loading State -->
+                            <div id="classify-loading-state" class="hidden bg-slate-950/80 border border-slate-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-4 min-h-[360px]">
+                                <div class="relative w-16 h-16 flex items-center justify-center">
+                                    <div class="w-16 h-16 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin"></div>
+                                    <i class="fa-solid fa-brain text-indigo-400 text-xl absolute"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-bold text-slate-200">Đang phân tích ngữ cảnh, cảm xúc & hình thái chữ...</h3>
+                                    <p class="text-xs text-slate-400 mt-1 font-mono">Đang đối chiếu với hệ thống taxonomy 5 Text Types & 16 Manga Tones...</p>
+                                </div>
+                            </div>
+
+                            <!-- Single/Dialogue Results Container -->
+                            <div id="classify-results-container" class="hidden flex flex-col gap-4">
+                                <!-- Rendered dynamically by renderDialogueClassificationResults or renderFontClassificationResultCard -->
+                            </div>
+
+                            <!-- Full Classified Gallery Container (For Font Mode) -->
+                            <div id="classify-gallery-container" class="flex flex-col gap-4">
+                                <!-- Rendered dynamically by renderAllClassifiedFontsGallery -->
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+
+                    </div>
+                </div>
+
+                <!-- TAXONOMY EXPLORER MATRIX (BOTTOM CARD) -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4 shadow-xl">
+                    <div class="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-slate-800">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-sitemap text-indigo-400 text-sm"></i>
+                            <h3 class="text-xs font-bold text-slate-100 uppercase tracking-wider">Hệ Thống Phân Loại Đầy Đủ (Taxonomy Matrix)</h3>
+                        </div>
+                        <span class="text-[10px] text-slate-400">Bấm vào bất kỳ Tone nào để thử nghiệm câu thoại mẫu tương ứng</span>
+                    </div>
+
+                    <!-- 1. Text Types Row -->
+                    <div class="flex flex-col gap-2">
+                        <h4 class="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-layer-group text-[11px]"></i> 1. Phân Loại Text Type (5 Nhóm Chính)
+                        </h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
+                            <div class="bg-slate-950 p-3 rounded-xl border border-indigo-500/30 flex flex-col gap-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base">💬</span>
+                                    <span class="text-xs font-bold text-indigo-300">Dialogue</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400">Hội thoại bình thường giữa các nhân vật (hỗ trợ 16 Tones cảm xúc).</p>
+                            </div>
+                            <div class="bg-slate-950 p-3 rounded-xl border border-cyan-500/30 flex flex-col gap-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base">💭</span>
+                                    <span class="text-xs font-bold text-cyan-300">Thought</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400">Bóng thoại đám mây, độc thoại nội tâm thầm kín.</p>
+                            </div>
+                            <div class="bg-slate-950 p-3 rounded-xl border border-amber-500/30 flex flex-col gap-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base">📜</span>
+                                    <span class="text-xs font-bold text-amber-300">Narration</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400">Khung dẫn truyện góc trang (Tone = None, nét Serif trang trọng).</p>
+                            </div>
+                            <div class="bg-slate-950 p-3 rounded-xl border border-emerald-500/30 flex flex-col gap-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base">🗨️</span>
+                                    <span class="text-xs font-bold text-emerald-300">Aside</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400">Lời thoại phụ, thì thầm ngoài bóng thoại (Tone = None, nét viết tay chibi).</p>
+                            </div>
+                            <div class="bg-slate-950 p-3 rounded-xl border border-rose-500/30 flex flex-col gap-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-base">💥</span>
+                                    <span class="text-xs font-bold text-rose-300">SFX</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400">Hiệu ứng âm thanh tiếng động hành động (Tone = None, nét cọ / display).</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. Tones Grid (16 Tones) -->
+                    <div class="flex flex-col gap-2 pt-2 border-t border-slate-800">
+                        <h4 class="text-xs font-bold text-pink-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-masks-theater text-[11px]"></i> 2. Phân Loại Sắc Thái Cảm Xúc (16 Tones)
+                        </h4>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-8 gap-2">
+                            <button type="button" onclick="setClassifierSampleText('normal')" class="bg-slate-950 hover:bg-slate-800 p-2.5 rounded-xl border border-slate-800 hover:border-slate-600 transition-all text-left flex flex-col gap-1 cursor-pointer">
+                                <span class="text-sm">😐</span>
+                                <span class="text-[11px] font-bold text-slate-200">Normal</span>
+                                <span class="text-[9px] text-slate-400 truncate">Bình thường</span>
+                            </button>
+                            <button type="button" onclick="setClassifierSampleText('soft')" class="bg-slate-950 hover:bg-pink-950/40 p-2.5 rounded-xl border border-pink-500/20 hover:border-pink-500/40 transition-all text-left flex flex-col gap-1 cursor-pointer">
+                                <span class="text-sm">🌸</span>
+                                <span class="text-[11px] font-bold text-pink-300">Soft</span>
+                                <span class="text-[9px] text-slate-400 truncate">Dịu dàng</span>
+                            </button>
+                            <button type="button" onclick="setClassifierSampleText('shy')" class="bg-slate-950 hover:bg-rose-950/40 p-2.5 rounded-xl border border-rose-500/20 hover:border-rose-500/40 transition-all text-left flex flex-col gap-1 cursor-pointer">
+                                <span class="text-sm">😳</span>
+                                <span class="text-[11px] font-bold text-rose-300">Shy</span>
+                                <span class="text-[9px] text-slate-400 truncate">Ngại ngùng</span>
+                            </button>
+                            <button type="button" onclick="setClassifierSampleText('hesitant')" class="bg-slate-950 hover:bg-amber-950/40 p-2.5 rounded-xl border border-amber-500/20 hover:border-amber-500/40 transition-all text-left flex flex-col gap-1 cursor-pointer">
+                                <span class="text-sm">🥺</span>
+                                <span class="text-[11px] font-bold text-amber-300">Hesitant</span>
+                                <span class="text-[9px] text-slate-400 truncate">Ngập ngừng</span>
+                            </button>
+                            <button type="button" onclick="setClassifierSampleText('whisper')" class="bg-slate-950 hover:bg-cyan-950/40 p-2.5 rounded-xl border border-cyan-500/20 hover:border-cyan-500/40 transition-all text-left flex flex-col gap-1 cursor-pointer">
+                                <span class="text-sm">🤫</span>
+                                <span class="text-[11px] font-bold text-cyan-300">Whisper</span>
+                                <span class="text-[9px] text-slate-400 truncate">Thì thầm</span>
+                            </button>
+                            <button type="button" onclick="setClassifierSampleText('shaky')" class="bg-slate-950 hover:bg-teal-950/40 p-2.5 rounded-xl border border-teal-500/20 hover:border-teal-500/40 transition-all text-left flex flex-col gap-1 cursor-pointer">
+                                <span class="text-sm">〰️</span>
+                                <span class="text-[11px] font-bold text-teal-300">Shaky</span>
+                                <span class="text-[9px] text-slate-400 truncate">Run rẩy</span>
+                            </button>
+                            <button type="button" onclick="setClassifierSampleText('sad')" class="bg-slate-950 hover:bg-blue-950/40 p-2.5 rounded-xl border border-blue-500/20 hover:border-blue-500/40 transition-all text-left flex flex-col gap-1 cursor-pointer">
+                                <span class="text-sm">😢</span>
+                                <span class="text-[11px] font-bold text-blue-300">Sad</span>
+                                <span class="text-[9px] text-slate-400 truncate">Buồn bã</span>
+                            </button>
+                            <button type="button" onclick="setClassifierSampleText('crying')" class="bg-slate-950 hover:bg-sky-950/40 p-2.5 rounded-xl border border-sky-500/20 hover:border-sky-500/40 transition-all text-left flex flex-col gap-1 cursor-pointer">
+                                <span class="text-sm">😭</span>
+                                <span class="text-[11px] font-bold text-sky-300">Crying</span>
+                                <span class="text-[9px] text-slate-400 truncate">Khóc lóc</span>
+                            </button>
+                            <button type="button" onclick="setClassifierSampleText('scared')" class="bg-slate-950 hover:bg-purple-950/40 p-2.5 rounded-xl border border-purple-500/20 hover:border-purple-500/40 transition-all text-left flex flex-col gap-1 cursor-pointer">
+                                <span class="text-sm">😨</span>
+                                <span class="text-[11px] font-bold text-purple-300">Scared</span>
+                                <span class="text-[9px] text-slate-400 truncate">Sợ hãi</span>
+                            </button>
+                            <button type="button" onclick="setClassifierSampleText('angry')" class="bg-slate-950 hover:bg-orange-950/40 p-2.5 rounded-xl border border-orange-500/20 hover:border-orange-500/40 transition-all text-left flex flex-col gap-1 cursor-pointer">
+                                <span class="text-sm">💢</span>
+                                <span class="text-[11px] font-bold text-orange-300">Angry</span>
+                                <span class="text-[9px] text-slate-400 truncate">Giận dữ</span>
+                            </button>
+                            <button type="button" onclick="setClassifierSampleText('shouting')" class="bg-slate-950 hover:bg-red-950/40 p-2.5 rounded-xl border border-red-500/20 hover:border-red-500/40 transition-all text-left flex flex-col gap-1 cursor-pointer">
+                                <span class="text-sm">📢</span>
+                                <span class="text-[11px] font-bold text-red-300">Shouting</span>
+                                <span class="text-[9px] text-slate-400 truncate">Hét lớn</span>
+                            </button>
+                            <button type="button" onclick="setClassifierSampleText('excited')" class="bg-slate-950 hover:bg-yellow-950/40 p-2.5 rounded-xl border border-yellow-500/20 hover:border-yellow-500/40 transition-all text-left flex flex-col gap-1 cursor-pointer">
+                                <span class="text-sm">✨</span>
+                                <span class="text-[11px] font-bold text-yellow-300">Excited</span>
+                                <span class="text-[9px] text-slate-400 truncate">Hào hứng</span>
+                            </button>
+                            <button type="button" onclick="setClassifierSampleText('serious')" class="bg-slate-950 hover:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-500/20 hover:border-emerald-500/40 transition-all text-left flex flex-col gap-1 cursor-pointer">
+                                <span class="text-sm">🧐</span>
+                                <span class="text-[11px] font-bold text-emerald-300">Serious</span>
+                                <span class="text-[9px] text-slate-400 truncate">Nghiêm túc</span>
+                            </button>
+                            <button type="button" onclick="setClassifierSampleText('weak')" class="bg-slate-950 hover:bg-zinc-900 p-2.5 rounded-xl border border-zinc-500/20 hover:border-zinc-500/40 transition-all text-left flex flex-col gap-1 cursor-pointer">
+                                <span class="text-sm">🥀</span>
+                                <span class="text-[11px] font-bold text-zinc-300">Weak</span>
+                                <span class="text-[9px] text-slate-400 truncate">Yếu ớt</span>
+                            </button>
+                            <button type="button" onclick="setClassifierSampleText('cold')" class="bg-slate-950 hover:bg-slate-850 p-2.5 rounded-xl border border-indigo-800/30 hover:border-indigo-600/40 transition-all text-left flex flex-col gap-1 cursor-pointer">
+                                <span class="text-sm">❄️</span>
+                                <span class="text-[11px] font-bold text-indigo-300">Cold</span>
+                                <span class="text-[9px] text-slate-400 truncate">Lạnh lùng</span>
+                            </button>
+                            <button type="button" onclick="setClassifierSampleText('special')" class="bg-slate-950 hover:bg-violet-950/40 p-2.5 rounded-xl border border-violet-500/20 hover:border-violet-500/40 transition-all text-left flex flex-col gap-1 cursor-pointer">
+                                <span class="text-sm">🔮</span>
+                                <span class="text-[11px] font-bold text-violet-300">Special</span>
+                                <span class="text-[9px] text-slate-400 truncate">Đặc biệt</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- ================= SUB-PANEL 2: CUSTOM FONT LIBRARY ================= -->
