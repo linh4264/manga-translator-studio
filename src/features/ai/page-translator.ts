@@ -425,17 +425,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
         const { width: displayW, height: displayH } = getReferenceDisplayDimensions(page, imgEl);
         page.blocks.forEach(b => {
             const rawTrans = (b.translated || '').trim();
-            if (rawTrans) {
-                const pixelW = (b.box.w / 100) * displayW;
-                const pixelH = (b.box.h / 100) * displayH;
-                if (!b.style?.vertical && b.type !== 'sfx') {
-                    b.translated = balanceTextToBox(rawTrans, pixelW, pixelH, b.style);
-                } else {
-                    b.translated = rawTrans;
-                }
-            } else {
-                b.translated = '';
-            }
+            b.translated = rawTrans;
 
             b.autoFitCache = null;
             if (isBlockAutoFit(b)) {
@@ -767,17 +757,7 @@ export async function runBatchTranslation(): Promise<void> {
                                 const { width: pDisplayW, height: pDisplayH } = getReferenceDisplayDimensions(p, imgEl);
                                 p.blocks.forEach((b) => {
                                     const rawTrans = (b.translated || '').trim();
-                                    if (rawTrans) {
-                                        const pixelW = b.box ? (b.box.w / 100) * pDisplayW : 200;
-                                        const pixelH = b.box ? (b.box.h / 100) * pDisplayH : 200;
-                                        if (!b.style?.vertical && b.type !== 'sfx') {
-                                            b.translated = balanceTextToBox(rawTrans, pixelW, pixelH, b.style);
-                                        } else {
-                                            b.translated = rawTrans;
-                                        }
-                                    } else {
-                                        b.translated = '';
-                                    }
+                                    b.translated = rawTrans;
 
                                     b.autoFitCache = null;
                                     if (isBlockAutoFit(b)) {

@@ -10,7 +10,8 @@ import {
 } from '../../../src/features/canvas/canvas-exporter.ts';
 import {
     balanceBlockDiamond,
-    balanceTextToDiamond
+    balanceTextToDiamond,
+    computeBlockTextLayout
 } from '../../../src/features/canvas/canvas-renderer.ts';
 import { autoFitBlock } from '../../../src/features/canvas/canvas-styling.ts';
 import { parseRichTextLines } from '../../../src/core/utils.ts';
@@ -459,6 +460,8 @@ test('CASE P — Vertical Alignment: Fonts Nunito, Be Vietnam Pro, Patrick Hand,
         { key: 'font-impact', name: 'Bangers' }
     ];
 
+    const centerYs = [];
+
     fonts.forEach(({ key, name }) => {
         const block = {
             id: `b_vert_font_${key}`,
@@ -473,13 +476,16 @@ test('CASE P — Vertical Alignment: Fonts Nunito, Be Vietnam Pro, Patrick Hand,
         };
 
         const layout = buildBlockTextLayout(block, 1200, 1600, 2.0);
-        const line = layout.lines[0];
-
         const by = (block.box.y / 100) * 1600; // 240
         const bh = (block.box.h / 100) * 1600; // 480
         const expectedCenterY = by + (bh / 2); // 480
 
-        expect(line.centerY).toBeCloseTo(expectedCenterY, 4);
+        expect(layout.textCenterY).toBeCloseTo(expectedCenterY, 4);
+        centerYs.push(layout.lines[0].centerY);
+    });
+
+    centerYs.forEach(cy => {
+        expect(cy).toBeCloseTo(centerYs[0], 4);
     });
 });
 
@@ -517,8 +523,8 @@ test('CASE Q — Vertical Alignment: Japanese vertical writing mode', () => {
     });
 });
 
-test('CASE W — P0: Exporter strictly adheres to editor line partition without auto-wrapping long lines', () => {
-    // A single very long line without newlines that exceeds box width
+test('CASE W — P0: Exporter strictly adheres to canonical Canva layout model without diverging', () => {
+    // A single very long line without newlines that wraps naturally to box width
     const longSingleLine = 'Đây là một câu rất dài không có dấu xuống dòng nào cả và exporter không được tự ý bẻ dòng ra';
     const block = {
         id: 'b_no_rewrap',
@@ -533,9 +539,9 @@ test('CASE W — P0: Exporter strictly adheres to editor line partition without 
     };
 
     const layout = buildBlockTextLayout(block, 1000, 1000, 1.0);
-    // Exporter must have exactly 1 line (does not re-wrap on its own)
-    assert.strictEqual(layout.lines.length, 1, 'Exporter must NOT split lines unless editor/layout explicitly breaks them');
-    assert.strictEqual(layout.lines[0].text, longSingleLine);
+    const canonicalLayout = computeBlockTextLayout(block, 1000, 1000, 1.0);
+    assert.strictEqual(layout.lines.length, canonicalLayout.lines.length, 'Exporter must match canonical layout line count');
+    assert.strictEqual(layout.lines.map(l => l.text).join(' '), longSingleLine);
 });
 
 test('CASE X — P0: Image Source Unification between originalFile and file', async () => {

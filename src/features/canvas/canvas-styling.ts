@@ -2,6 +2,7 @@ import { globalState, pushStateToHistory, savePageToDB, debounceSavePage, uiUpda
 import { elements } from '../../core/elements';
 import { showToast, setMultilineText, cleanMangaPunctuation } from '../../core/utils';
 import { requestOverlayRender, balanceTextToDiamond, balanceSingleParagraphToBox, getReferenceDisplayDimensions } from './canvas-renderer';
+import { computeBlockTextLayout, renderBlockTextToDOM } from './text-layout-engine';
 import { updateFloatingToolbarPosition } from './canvas-interactions';
 import { MangaBlock, MangaPage, BlockStyle } from '../../types/index';
 
@@ -116,130 +117,49 @@ export function autoFitBlock(
         return;
     }
 
-    const ruler = elements.autoFitRuler || document.getElementById('auto-fit-ruler');
-    if (!ruler) {
-        block.style.fontSize = 17;
-        return;
-    }
-
-    const isBuiltInFont = ['font-sans', 'font-manga', 'font-comic', 'font-comicneue', 'font-impact', 'font-marker', 'font-bungee', 'font-caveat', 'font-tech', 'font-condensed', 'font-vietnamese'].includes(fontStyle);
-    if (isBuiltInFont) {
-        ruler.className = fontStyle;
-        ruler.style.fontFamily = '';
-    } else {
-        ruler.className = '';
-        ruler.style.fontFamily = `'${fontStyle}', sans-serif`;
-    }
-
-    if (typeof block.style.padding === 'string' && block.style.padding.includes('%')) {
-        const parts = block.style.padding.trim().split(/\s+/);
-        const pctY = parseFloat(parts[0]) || 9;
-        const pctX = parseFloat(parts[1] || parts[0]) || 12;
-        const padY = ((block.box.h / 100) * displayHeight) * (pctY / 100);
-        const padX = ((block.box.w / 100) * displayWidth) * (pctX / 100);
-        ruler.style.padding = `${padY}px ${padX}px`;
-    } else if (typeof block.style.padding === 'number') {
-        ruler.style.padding = `${block.style.padding}px`;
-    } else {
-        ruler.style.padding = '4px';
-    }
-    ruler.style.textAlign = align;
-    ruler.style.letterSpacing = `${letterSpacing}px`;
-    ruler.style.lineHeight = `${lineHeight}`;
-    ruler.style.fontKerning = 'normal';
-    ruler.style.whiteSpace = 'pre';
-    ruler.style.wordBreak = 'keep-all';
-    ruler.style.overflowWrap = 'normal';
-    ruler.style.hyphens = 'none';
-    ruler.style.boxSizing = 'border-box';
-
-    if (isBold) {
-        ruler.style.fontWeight = 'bold';
-    } else {
-        ruler.style.fontWeight = 'normal';
-    }
-
-    if (isItalic) {
-        ruler.style.fontStyle = 'italic';
-    } else {
-        ruler.style.fontStyle = 'normal';
-    }
-
-    if (isUnderline) {
-        ruler.style.textDecoration = 'underline';
-    } else {
-        ruler.style.textDecoration = 'none';
-    }
-
-    if (isVertical) {
-        ruler.classList.add('text-vertical');
-        ruler.style.writingMode = 'vertical-rl';
-        ruler.style.textOrientation = 'upright';
-    } else {
-        ruler.classList.remove('text-vertical');
-        ruler.style.writingMode = 'horizontal-tb';
-        ruler.style.textOrientation = 'mixed';
-    }
-
-    const targetWidth = (block.box.w / 100) * displayWidth;
-    const targetHeight = (block.box.h / 100) * displayHeight;
-
-    const isEllipseShape = maskShape === 'ellipse' || maskShape === 'bubble-fit';
-    const fitMargin = isEllipseShape ? 0.88 : 0.94;
-    const totalExtraBorder = (strokeWidth + strokeWidth2) * 2;
-    const maxAllowedWidth = Math.max(10, (targetWidth * fitMargin) - totalExtraBorder);
-    const maxAllowedHeight = Math.max(10, (targetHeight * fitMargin) - totalExtraBorder);
-
-    if (isVertical) {
-        ruler.style.height = `${maxAllowedHeight}px`;
-        ruler.style.maxHeight = `${maxAllowedHeight}px`;
-        ruler.style.width = 'auto';
-        ruler.style.maxWidth = `${maxAllowedWidth}px`;
-    } else {
-        ruler.style.width = `${maxAllowedWidth}px`;
-        ruler.style.maxWidth = `${maxAllowedWidth}px`;
-        ruler.style.height = 'auto';
-        ruler.style.maxHeight = 'none';
-    }
-
-    const warpOpts = {
-        arcAngle: arcAngle,
-        skewX: skewX,
-        skewY: skewY,
-        warpWave: warpWave,
-        warpBulge: warpBulge,
-        textTransform: textTransform,
-        letterSpacing: letterSpacing,
-        underline: isUnderline
-    };
-    setMultilineText(ruler, block.translated, warpOpts);
-
     let minSize = 6;
-    let maxSize = Math.min(80, Math.max(minSize, Math.floor(targetHeight * 0.9)));
-    let optimalSize = minSize;
+    let targetBaseSize = baseFontSize || 16;
+    
+    // Test if targetBaseSize fits
+    const baseTestBlock: MangaBlock = {
+        ...block,
+        style: {
+            ...block.style,
+            fontSize: targetBaseSize
+        }
+    };
+    const baseLayout = computeBlockTextLayout(baseTestBlock, displayWidth, displayHeight, 1);
+    let optimalSize = targetBaseSize;
 
-    while (minSize <= maxSize) {
-        const mid = Math.floor((minSize + maxSize) / 2);
-        ruler.style.fontSize = `${mid}px`;
+    if (baseLayout.overflowing) {
+        let low = minSize;
+        let high = targetBaseSize - 1;
+        optimalSize = minSize;
 
-        const contentWidth = ruler.scrollWidth;
-        const contentHeight = ruler.scrollHeight;
-
-        const fits = contentWidth <= maxAllowedWidth + 2 && contentHeight <= maxAllowedHeight + 2;
-
-        if (fits) {
-            optimalSize = mid;
-            minSize = mid + 1;
-        } else {
-            maxSize = mid - 1;
+        while (low <= high) {
+            const mid = Math.floor((low + high) / 2);
+            const testBlock: MangaBlock = {
+                ...block,
+                style: {
+                    ...block.style,
+                    fontSize: mid
+                }
+            };
+            const testLayout = computeBlockTextLayout(testBlock, displayWidth, displayHeight, 1);
+            if (!testLayout.overflowing) {
+                optimalSize = mid;
+                low = mid + 1;
+            } else {
+                high = mid - 1;
+            }
         }
     }
 
     block.style.fontSize = optimalSize;
 
-    ruler.style.fontSize = `${optimalSize}px`;
-    block.textWidth = ruler.scrollWidth;
-    block.textHeight = ruler.scrollHeight;
+    const finalLayout = computeBlockTextLayout(block, displayWidth, displayHeight, 1);
+    block.textWidth = finalLayout.textWidth;
+    block.textHeight = finalLayout.textHeight;
 
     block.autoFitCache = {
         key: cacheKey,
@@ -655,7 +575,10 @@ export function syncActiveBlockTranslation(val: string): void {
         if (overlayElem) {
             const textContainer = overlayElem.querySelector('div > div') as HTMLElement | null;
             if (textContainer) {
-                setMultilineText(textContainer, val);
+                const imgEl = elements.mangaBgImage;
+                const { width: displayW, height: displayH } = getReferenceDisplayDimensions(page, imgEl);
+                const zoomScale = (globalState.zoom || 100) / 100;
+                renderBlockTextToDOM(textContainer, block, displayW, displayH, zoomScale);
             }
             if (autoFitActive) {
                 const maskElem = overlayElem.firstElementChild as HTMLElement | null;
@@ -673,7 +596,11 @@ export function syncActiveBlockTranslation(val: string): void {
             const cloneOverlay = document.getElementById(`mirror-${block.id}`);
             if (cloneOverlay) {
                 const cloneTextContainer = cloneOverlay.querySelector('div > div') as HTMLElement | null;
-                if (cloneTextContainer) setMultilineText(cloneTextContainer, val);
+                if (cloneTextContainer) {
+                    const imgEl = elements.mangaBgImage;
+                    const { width: displayW, height: displayH } = getReferenceDisplayDimensions(page, imgEl);
+                    renderBlockTextToDOM(cloneTextContainer, block, displayW, displayH, 1);
+                }
                 if (autoFitActive) {
                     const cloneMask = cloneOverlay.firstElementChild as HTMLElement | null;
                     if (cloneMask) {

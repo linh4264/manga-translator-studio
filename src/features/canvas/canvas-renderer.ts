@@ -7,6 +7,22 @@ import { startBlockDrag, startBlockResize } from './canvas-interactions';
 import { MangaBlock, MangaPage } from '../../types/index';
 export { getReferenceDisplayDimensions } from './canvas-exporter';
 import { getReferenceDisplayDimensions } from './canvas-exporter';
+export {
+    computeTextLayout,
+    computeBlockTextLayout,
+    renderDerivedLinesToDOM,
+    renderBlockTextToDOM,
+    getFontFamilyName,
+    wrapParagraphCanva
+} from './text-layout-engine';
+export type {
+    TextLayoutInput,
+    TextLayoutResult,
+    LayoutLine,
+    LayoutLineRect
+} from './text-layout-engine';
+import { renderBlockTextToDOM } from './text-layout-engine';
+
 
 export let overlayRenderRafId: any = null;
 
@@ -433,14 +449,14 @@ export function renderOverlays(
                 letterSpacing: displayLetterSpacing,
                 underline: !!block.style.underline
             };
-            setMultilineText(innerTextDiv, block.translated, warpOpts);
+            renderBlockTextToDOM(innerTextDiv, block, displayW, displayH, zoomScale, warpOpts);
 
             if ((globalState.bilingualMode === 'sub' || block.style.bilingualSub) && block.original && block.original.trim()) {
                 const origSub = document.createElement('div');
                 origSub.className = 'text-[0.7em] opacity-75 font-sans tracking-normal mt-0.5 select-none pointer-events-none';
                 origSub.style.color = 'inherit';
                 origSub.style.lineHeight = '1.1';
-                setMultilineText(origSub, block.original, warpOpts);
+                renderBlockTextToDOM(origSub, { ...block, translated: block.original }, displayW, displayH, zoomScale, warpOpts);
                 innerTextDiv.appendChild(origSub);
             }
 

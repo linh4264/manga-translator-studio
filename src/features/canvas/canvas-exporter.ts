@@ -3,30 +3,11 @@ import { elements } from '../../core/elements';
 import { waitForNextPaint, transformCase, parseRichTextLines, extractDomRenderedLines } from '../../core/utils';
 import { computeBubbleMask } from '../ocr/ocr-service';
 import { renderOverlays, convertHexToRGBA } from './canvas-renderer';
+import { computeBlockTextLayout } from './text-layout-engine';
 import { MangaPage, MangaBlock } from '../../types/index';
 
-export function getFontFamilyName(fontClass?: string): string {
-    if (!fontClass) return "'Nunito', sans-serif";
-    const cleanFont = String(fontClass).trim();
-
-    const fontMap: Record<string, string> = {
-        'font-comic': "'Patrick Hand', 'Pangolin', cursive",
-        'font-manga': "'Nunito', sans-serif",
-        'font-vietnamese': "'Be Vietnam Pro', 'Inter', sans-serif",
-        'font-comicneue': "'Comic Neue', cursive",
-        'font-impact': "'Bangers', cursive",
-        'font-marker': "'Permanent Marker', cursive",
-        'font-bungee': "'Bungee', cursive",
-        'font-caveat': "'Caveat', cursive",
-        'font-tech': "'Chakra Petch', sans-serif",
-        'font-condensed': "'Saira Condensed', sans-serif",
-        'font-sans': 'sans-serif'
-    };
-
-    if (fontMap[cleanFont]) return fontMap[cleanFont];
-    const stripped = cleanFont.replace(/^font-/, '');
-    return `'${cleanFont}', '${stripped}', 'Nunito', sans-serif`;
-}
+export { getFontFamilyName } from './text-layout-engine';
+import { getFontFamilyName } from './text-layout-engine';
 
 /**
  * Gets reference display dimensions (width & height in editor coordinate system) for a page.
@@ -299,7 +280,7 @@ export function wrapTokenLineToWidth(
 
 /**
  * Shared canonical layout representation: Builds exact line tokens and measurements strictly adhering
- * to editor layout state (manual newlines, Diamond partition, rich text tokens) without re-partitioning words,
+ * to Canva-style layout engine without re-partitioning words,
  * computing font-metric based vertical baseline positions that align perfectly with DOM CSS line boxes.
  */
 export function buildBlockTextLayout(
@@ -309,224 +290,7 @@ export function buildBlockTextLayout(
     scaleFactor: number,
     ctx?: CanvasRenderingContext2D | null
 ): BlockTextLayout {
-    const bx = (block.box.x / 100) * W;
-    const by = (block.box.y / 100) * H;
-    const bw = (block.box.w / 100) * W;
-    const bh = (block.box.h / 100) * H;
-
-    const fontName = getFontFamilyName(block.style.fontFamily);
-    const fontSizePx = (block.style.fontSize || 17) * scaleFactor;
-    const currentLineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : 1.15;
-    const lineHeightPx = fontSizePx * currentLineHeight;
-    const letterSpacingPx = (block.style.letterSpacing || 0) * scaleFactor;
-    const isVertical = !!block.style.vertical;
-    const align = block.style.align || 'center';
-
-    let padXPx = 4 * scaleFactor;
-    let padYPx = 4 * scaleFactor;
-    if (typeof block.style.padding === 'string' && block.style.padding.includes('%')) {
-        const parts = block.style.padding.trim().split(/\s+/);
-        const pctY = parseFloat(parts[0]) || 9;
-        const pctX = parseFloat(parts[1] || parts[0]) || 12;
-        padYPx = bh * (pctY / 100);
-        padXPx = bw * (pctX / 100);
-    } else if (typeof block.style.padding === 'number') {
-        padXPx = block.style.padding * scaleFactor;
-        padYPx = block.style.padding * scaleFactor;
-    } else {
-        padYPx = 4 * scaleFactor;
-        padXPx = 4 * scaleFactor;
-    }
-
-    const transformedText = transformCase(block.translated || '', block.style.textTransform || 'none');
-    const tokenLines = parseRichTextLines(transformedText, {
-        bold: !!block.style.bold,
-        italic: !!block.style.italic,
-        underline: !!block.style.underline
-    });
-
-    const getFontFn = (tok: any) => {
-        const tokItalic = (tok.italic || (tok.italic === undefined && block.style.italic)) ? 'italic ' : '';
-        const tokWeight = (tok.bold || (tok.bold === undefined && block.style.bold)) ? 'bold ' : '';
-        const tokSize = fontSizePx * (tok.sizeRatio || 1.0);
-        const tokFont = tok.font ? getFontFamilyName(tok.font) : fontName;
-        return `${tokItalic}${tokWeight}${tokSize}px ${tokFont}`.trim();
-    };
-
-    const measureCtx = ctx || getSharedMeasureContext();
-    const lines: BlockTextLayoutLine[] = [];
-
-    if (isVertical) {
-        let maxColChars = 0;
-        const columnData: Array<{ lineToks: any[]; rawChars: Array<{ char: string; token: any }> }> = [];
-
-        tokenLines.forEach(lineToks => {
-            const rawChars: Array<{ char: string; token: any }> = [];
-            lineToks.forEach(tok => {
-                const segs = (typeof Intl !== 'undefined' && (Intl as any).Segmenter)
-                    ? Array.from(new (Intl as any).Segmenter().segment(tok.text)).map((s: any) => s.segment)
-                    : Array.from(tok.text);
-                segs.forEach((s: any) => rawChars.push({ char: s as string, token: tok }));
-            });
-            if (rawChars.length > maxColChars) maxColChars = rawChars.length;
-            columnData.push({ lineToks, rawChars });
-        });
-
-        const totalWidth = columnData.length * lineHeightPx;
-        const totalHeight = maxColChars * lineHeightPx;
-        const colStep = lineHeightPx;
-        const charStep = lineHeightPx;
-
-        columnData.forEach(({ lineToks, rawChars }) => {
-            const colHeight = rawChars.length * charStep;
-            let colStartY = by + (bh / 2) - (colHeight / 2);
-            const minColStartY = by + padYPx;
-            if (colStartY < minColStartY) colStartY = minColStartY;
-            const colTop = colStartY;
-            const colCenterY = colTop + (colHeight / 2);
-
-            lines.push({
-                tokens: lineToks,
-                text: lineToks.map(t => t.text).join(''),
-                width: lineHeightPx,
-                height: colHeight,
-                top: colTop,
-                centerY: colCenterY,
-                baselineY: colCenterY,
-                ascent: fontSizePx * 0.8,
-                descent: fontSizePx * 0.2,
-                rawChars
-            });
-        });
-
-        const textStartY = by + (bh / 2) - (totalHeight / 2);
-
-        return {
-            isVertical: true,
-            lines,
-            fontSizePx,
-            lineHeightPx,
-            letterSpacingPx,
-            totalWidth,
-            totalHeight,
-            align,
-            padXPx,
-            padYPx,
-            bx,
-            by,
-            bw,
-            bh,
-            blockCenterX: bx + (bw / 2),
-            blockCenterY: by + (bh / 2),
-            textCenterX: bx + (bw / 2),
-            textCenterY: textStartY + (totalHeight / 2),
-            fontName,
-            getFontFn
-        };
-    } else {
-        const hasCharWarp = (block.style.arcAngle || 0) !== 0 || (block.style.warpWave || 0) !== 0 || (block.style.warpBulge || 0) !== 0;
-        let maxLineWidth = 0;
-        const lineMeasurements: Array<{ lineToks: any[]; lineWidth: number; rawChars?: Array<{ char: string; token: any }> }> = [];
-
-        const effectiveLines: any[][] = tokenLines;
-
-        effectiveLines.forEach(lineToks => {
-            let lineWidth = 0;
-            const rawChars: Array<{ char: string; token: any }> = [];
-
-            if (measureCtx) {
-                const prevFont = measureCtx.font;
-                lineToks.forEach(tok => {
-                    measureCtx.font = getFontFn(tok);
-                    const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
-                    let w = measureCtx.measureText(tok.text).width;
-                    if (!('letterSpacing' in measureCtx) && effLetterSpacing > 0) {
-                        const charCount = Array.from(tok.text).length;
-                        w += Math.max(0, charCount - 1) * effLetterSpacing;
-                    }
-                    lineWidth += w;
-
-                    if (hasCharWarp) {
-                        const segs = (typeof Intl !== 'undefined' && (Intl as any).Segmenter)
-                            ? Array.from(new (Intl as any).Segmenter().segment(tok.text)).map((s: any) => s.segment)
-                            : Array.from(tok.text);
-                        segs.forEach((s: any) => rawChars.push({ char: s as string, token: tok }));
-                    }
-                });
-                measureCtx.font = prevFont;
-            } else {
-                lineToks.forEach(tok => {
-                    const tokSize = fontSizePx * (tok.sizeRatio || 1.0);
-                    const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
-                    const charCount = Array.from(tok.text).length;
-                    const w = charCount * (tokSize * 0.6) + Math.max(0, charCount - 1) * effLetterSpacing;
-                    lineWidth += w;
-
-                    if (hasCharWarp) {
-                        const segs = (typeof Intl !== 'undefined' && (Intl as any).Segmenter)
-                            ? Array.from(new (Intl as any).Segmenter().segment(tok.text)).map((s: any) => s.segment)
-                            : Array.from(tok.text);
-                        segs.forEach((s: any) => rawChars.push({ char: s as string, token: tok }));
-                    }
-                });
-            }
-
-            if (lineWidth > maxLineWidth) maxLineWidth = lineWidth;
-            lineMeasurements.push({
-                lineToks,
-                lineWidth,
-                rawChars: hasCharWarp ? rawChars : undefined
-            });
-        });
-
-        const totalWidth = maxLineWidth;
-        const totalHeight = lineMeasurements.length * lineHeightPx;
-
-        let startY = by + (bh / 2) - (totalHeight / 2);
-        const minStartY = by + padYPx;
-        if (startY < minStartY) startY = minStartY;
-
-        lineMeasurements.forEach(({ lineToks, lineWidth, rawChars }, i) => {
-            const lineTop = startY + (i * lineHeightPx);
-            const lineCenterY = lineTop + (lineHeightPx / 2);
-
-            lines.push({
-                tokens: lineToks,
-                text: lineToks.map(t => t.text).join(''),
-                width: lineWidth,
-                height: lineHeightPx,
-                top: lineTop,
-                centerY: lineCenterY,
-                baselineY: lineCenterY,
-                ascent: fontSizePx * 0.8,
-                descent: fontSizePx * 0.2,
-                rawChars
-            });
-        });
-
-        return {
-            isVertical: false,
-            lines,
-            fontSizePx,
-            lineHeightPx,
-            letterSpacingPx,
-            totalWidth,
-            totalHeight,
-            align,
-            padXPx,
-            padYPx,
-            bx,
-            by,
-            bw,
-            bh,
-            blockCenterX: bx + (bw / 2),
-            blockCenterY: by + (bh / 2),
-            textCenterX: bx + (bw / 2),
-            textCenterY: startY + (totalHeight / 2),
-            fontName,
-            getFontFn
-        };
-    }
+    return computeBlockTextLayout(block, W, H, scaleFactor, ctx) as BlockTextLayout;
 }
 
 export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTMLImageElement | null = null): Promise<HTMLCanvasElement> {
@@ -599,38 +363,55 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
         });
     }
 
-    if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+    // 1. Ensure custom fonts from DB are loaded into document.fonts
+    try {
+        const { loadAndRegisterCustomFonts } = await import('../../core/state');
+        await loadAndRegisterCustomFonts();
+    } catch (e) {}
+
+    // 2. Preload and warm up only the fonts actually used on this page
+    if (typeof document !== 'undefined' && document.fonts) {
         try {
             await document.fonts.ready;
         } catch (e) {}
-    }
 
-    // Preload all fonts used across blocks and tokens to ensure measurement & rendering fidelity
-    if (typeof document !== 'undefined' && document.fonts && document.fonts.load && page.blocks && page.blocks.length > 0) {
-        const fontPromises: Promise<any>[] = [];
-        const scaleFactor = getExportScale(page, W, imgElement);
+        if (document.fonts.load) {
+            const fontFamiliesToLoad = new Set<string>();
 
-        for (const block of page.blocks) {
-            if (block.type === 'image' || !block.translated || !block.translated.trim()) continue;
-            const blockFontSize = (block.style.fontSize || 13) * scaleFactor;
-            const blockFont = getFontFamilyName(block.style.fontFamily);
-            const blockWeight = block.style.bold ? 'bold ' : '';
-            const blockItalic = block.style.italic ? 'italic ' : '';
-            fontPromises.push(document.fonts.load(`${blockItalic}${blockWeight}${blockFontSize}px ${blockFont}`).catch(() => {}));
-
-            const transformed = transformCase(block.translated, block.style.textTransform || 'none');
-            const tokenLines = parseRichTextLines(transformed);
-            tokenLines.flat().forEach(tok => {
-                if (tok.font) {
-                    const tokFontName = getFontFamilyName(tok.font);
-                    const tokSize = blockFontSize * (tok.sizeRatio || 1.0);
-                    fontPromises.push(document.fonts.load(`16px ${tokFontName}`).catch(() => {}));
-                    fontPromises.push(document.fonts.load(`${tokSize}px ${tokFontName}`).catch(() => {}));
+            if (page.blocks && page.blocks.length > 0) {
+                for (const block of page.blocks) {
+                    if (block.type === 'image' || !block.translated || !block.translated.trim()) continue;
+                    const blockFont = block.style?.fontFamily;
+                    if (blockFont) {
+                        const fontNameResolved = getFontFamilyName(blockFont);
+                        const parts = fontNameResolved.split(',').map(s => s.replace(/['"]/g, '').trim()).filter(s => s && s !== 'sans-serif' && s !== 'cursive' && s !== 'serif');
+                        parts.forEach(p => fontFamiliesToLoad.add(p));
+                    }
+                    const transformed = transformCase(block.translated, block.style?.textTransform || 'none');
+                    const tokenLines = parseRichTextLines(transformed);
+                    tokenLines.flat().forEach(tok => {
+                        if (tok.font) {
+                            const tokFontResolved = getFontFamilyName(tok.font);
+                            const parts = tokFontResolved.split(',').map(s => s.replace(/['"]/g, '').trim()).filter(s => s && s !== 'sans-serif' && s !== 'cursive' && s !== 'serif');
+                            parts.forEach(p => fontFamiliesToLoad.add(p));
+                        }
+                    });
                 }
+            }
+
+            if (fontFamiliesToLoad.size === 0) {
+                fontFamiliesToLoad.add('Nunito');
+            }
+
+            const fontLoadPromises: Promise<any>[] = [];
+            fontFamiliesToLoad.forEach(family => {
+                fontLoadPromises.push(document.fonts.load(`16px '${family}'`).catch(() => {}));
             });
-        }
-        if (fontPromises.length > 0) {
-            await Promise.all(fontPromises);
+
+            try {
+                await Promise.all(fontLoadPromises);
+                await document.fonts.ready;
+            } catch (e) {}
         }
     }
 

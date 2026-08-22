@@ -2,6 +2,7 @@ import { globalState, pushStateToHistory, savePageToDB, uiUpdateActiveBlockEdito
 import { elements } from '../../core/elements';
 import { DEFAULT_VERTICAL_WRITING_MODE, DEFAULT_BLOCK_SIZE_PX } from '../../config/constants';
 import { requestOverlayRender, balanceTextToDiamond, balanceSingleParagraphToBox, balanceTextToBox, getReferenceDisplayDimensions } from './canvas-renderer';
+import { renderBlockTextToDOM } from './text-layout-engine';
 import { autoFitBlock, isBlockAutoFit, copiedStyle } from './canvas-styling';
 import { showToast, setMultilineText } from '../../core/utils';
 import { MangaBlock, BlockStyle } from '../../types/index';
@@ -234,12 +235,7 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
                 const activePage = globalState.pages[globalState.activePageIndex];
                 const imgEl = elements.mangaBgImage;
                 const { width: displayW, height: displayH } = getReferenceDisplayDimensions(activePage, imgEl);
-                const pixelW = (block.box.w / 100) * displayW;
-                const pixelH = (block.box.h / 100) * displayH;
 
-                if (block.translated && !block.style?.vertical && block.type !== 'sfx') {
-                    block.translated = balanceTextToBox(block.translated, pixelW, pixelH, block.style);
-                }
                 if (isBlockAutoFit(block)) {
                     autoFitBlock(block, null, 1, null, false);
                     const zoomScale = (globalState.zoom || 100) / 100;
@@ -264,7 +260,7 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
                         letterSpacing: (block.style?.letterSpacing || 0) * zoomScale,
                         underline: !!block.style?.underline
                     };
-                    setMultilineText(textContainer, block.translated, warpOpts);
+                    renderBlockTextToDOM(textContainer, block, displayW, displayH, zoomScale, warpOpts);
                 }
             });
         }
@@ -283,17 +279,6 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
 
         block.maskCache = null;
         block.autoFitCache = null;
-        if (block.translated && !block.style?.vertical && block.type !== 'sfx') {
-            const activePage = globalState.pages[globalState.activePageIndex];
-            const imgEl = elements.mangaBgImage;
-            const { width: displayW, height: displayH } = getReferenceDisplayDimensions(activePage, imgEl);
-            const pixelW = (block.box.w / 100) * displayW;
-            const pixelH = (block.box.h / 100) * displayH;
-            block.translated = balanceTextToBox(block.translated, pixelW, pixelH, block.style);
-            if (elements.editTranslatedText && block.id === globalState.selectedBlockId) {
-                elements.editTranslatedText.value = block.translated;
-            }
-        }
         if (isBlockAutoFit(block)) {
             autoFitBlock(block);
         }
