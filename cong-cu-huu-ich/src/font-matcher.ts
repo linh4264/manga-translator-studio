@@ -2136,8 +2136,8 @@ TRẢ VỀ DUY NHẤT ĐỊNH DẠNG JSON TUÂN THỦ SCHEMA SAU:
     };
 }
 
-export function analyzeImageWithCanvasHeuristics(img: HTMLImageElement, contextTag: string): AnalysisResult {
-    if (typeof document === 'undefined') {
+export function analyzeImageWithCanvasHeuristics(img?: HTMLImageElement | null, contextTag?: string): AnalysisResult {
+    if (typeof document === 'undefined' || !img) {
         const fallbackCat: FontCategory = (contextTag && contextTag !== 'auto') ? (contextTag as FontCategory) : 'dialogue';
         const fallbackWeightScore = fallbackCat === 'shout' || fallbackCat === 'sfx' ? 0.85 : fallbackCat === 'whisper' ? 0.28 : 0.48;
         const fallbackRoundness = fallbackCat === 'cute' ? 0.90 : fallbackCat === 'dialogue' ? 0.75 : fallbackCat === 'shout' ? 0.35 : 0.50;
@@ -3082,6 +3082,7 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
         let fullCapMatches = 0;
         let smallCapMatches = 0;
         let totalHeightRatio = 0;
+        let distinctGlyphCount = 0;
 
         for (const [lowChar, upChar] of casePairs) {
             // Lowercase glyph
@@ -3126,6 +3127,11 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
             const darkRatio = lowDark / Math.max(1, upDark);
             totalHeightRatio += hRatio;
 
+            // In real rendering, lowercase glyph has different dark count and height compared to uppercase
+            if (lowDark !== upDark || lowH !== upH) {
+                distinctGlyphCount++;
+            }
+
             if (hRatio > 0.90 && Math.abs(darkRatio - 1.0) < 0.18 && upDark > 20) {
                 fullCapMatches++;
             } else if (hRatio >= 0.60 && hRatio <= 0.85 && darkRatio >= 0.50 && darkRatio <= 0.85) {
@@ -3136,8 +3142,9 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
         }
 
         const avgCaseRatio = Number((totalHeightRatio / casePairs.length).toFixed(2));
-        const isAllCaps = fullCapMatches >= 3 || lowerName.includes('allcaps') || lowerName.includes('all-caps');
-        const isSmallCaps = !isAllCaps && (smallCapMatches >= 2 || lowerName.includes('smallcaps') || lowerName.includes('small-caps'));
+        const isRealGlyphCanvas = distinctGlyphCount > 0;
+        const isAllCaps = (isRealGlyphCanvas && fullCapMatches >= 4) || lowerName.includes('allcaps') || lowerName.includes('all-caps') || lowerName.includes('all caps');
+        const isSmallCaps = !isAllCaps && ((isRealGlyphCanvas && smallCapMatches >= 2) || lowerName.includes('smallcaps') || lowerName.includes('small-caps') || lowerName.includes('small caps'));
         const caseGrade = determineCaseGrade(isAllCaps, isSmallCaps);
 
         return {
@@ -3237,6 +3244,9 @@ export function profileFontGlyph(family: string): FontProfile {
             fallbackStyleType = 'cartoon_quirky';
             fallbackCat = 'cute';
             fallbackHandwritten = 0.75;
+        } else if (isStandardMangaName) {
+            fallbackStyleType = 'standard_dialogue';
+            fallbackCat = 'dialogue';
         } else if (isShoutName || morphology.weight === 'Black' || morphology.weight === 'Bold') {
             fallbackStyleType = 'shout_impact';
             fallbackCat = 'shout';
@@ -3397,6 +3407,10 @@ export function profileFontGlyph(family: string): FontProfile {
             fontStyleType = 'cartoon_quirky';
             category = 'cute';
             handwrittenScore = Math.max(0.75, handwrittenScore);
+        } else if (isStandardMangaName) {
+            fontStyleType = 'standard_dialogue';
+            category = 'dialogue';
+            handwrittenScore = Math.min(0.20, handwrittenScore);
         } else if (isShoutName || (isAllCaps && weightScore > 0.72)) {
             fontStyleType = 'shout_impact';
             category = 'shout';
@@ -3409,9 +3423,6 @@ export function profileFontGlyph(family: string): FontProfile {
         } else {
             fontStyleType = 'standard_dialogue';
             category = 'dialogue';
-            if (isStandardMangaName) {
-                handwrittenScore = Math.min(0.20, handwrittenScore);
-            }
         }
 
         // Energy / Intensity score

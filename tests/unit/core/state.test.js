@@ -16,6 +16,13 @@ import {
 import { DEFAULT_MODEL, DEFAULT_PIPELINE_MODE, DEFAULT_OCR_MODEL, DEFAULT_TRANSLATION_MODEL } from '../../../src/config/constants.ts';
 
 test('Core State - Initialization and Defaults', () => {
+    localStorage.clear();
+    globalState.selectedModel = DEFAULT_MODEL;
+    globalState.translationPipelineMode = DEFAULT_PIPELINE_MODE;
+    globalState.ocrModel = DEFAULT_OCR_MODEL;
+    globalState.translationModel = DEFAULT_TRANSLATION_MODEL;
+    globalState.autoFitEnabled = false;
+    initializeStateFromStorage();
     assert.strictEqual(globalState.selectedModel, DEFAULT_MODEL, 'Default model should match constant');
     assert.strictEqual(globalState.translationPipelineMode, DEFAULT_PIPELINE_MODE, 'Pipeline mode should match default');
     assert.strictEqual(globalState.ocrModel, DEFAULT_OCR_MODEL, 'OCR model should match default');
