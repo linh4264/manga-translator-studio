@@ -221,8 +221,34 @@ export function setupBrowserEnvironment() {
                 top: 0, left: 0, right: 1000, bottom: 1400,
                 width: 1000, height: 1400, x: 0, y: 0
             }),
-            querySelector: () => null,
-            querySelectorAll: () => []
+            querySelector: (sel) => {
+                const cleanSel = String(sel || '').trim();
+                const findMatch = (node) => {
+                    for (const child of node.children || []) {
+                        if (cleanSel.startsWith('#') && child.id === cleanSel.slice(1)) return child;
+                        if (cleanSel.startsWith('.') && child.classList && child.classList.contains(cleanSel.slice(1))) return child;
+                        if (cleanSel.toUpperCase() === child.tagName) return child;
+                        const sub = findMatch(child);
+                        if (sub) return sub;
+                    }
+                    return null;
+                };
+                return findMatch(element);
+            },
+            querySelectorAll: (sel) => {
+                const cleanSel = String(sel || '').trim();
+                const results = [];
+                const findMatches = (node) => {
+                    for (const child of node.children || []) {
+                        if (cleanSel.startsWith('#') && child.id === cleanSel.slice(1)) results.push(child);
+                        else if (cleanSel.startsWith('.') && child.classList && child.classList.contains(cleanSel.slice(1))) results.push(child);
+                        else if (cleanSel.toUpperCase() === child.tagName) results.push(child);
+                        findMatches(child);
+                    }
+                };
+                findMatches(element);
+                return results;
+            }
         };
 
         return element;

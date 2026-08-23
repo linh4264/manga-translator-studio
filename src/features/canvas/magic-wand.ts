@@ -3,12 +3,12 @@ import type { BoundingBox } from '../../types';
 import { globalState, pushStateToHistory, savePageToDB, uiUpdateActiveBlockEditor } from '../../core/state';
 import { elements } from '../../core/elements';
 import { showToast } from '../../core/utils';
-import { detectSpeechBubbleAtPoint } from '../ocr/ocr-service';
+import { detectSpeechBubbleAtPoint, detectSpeechBubbleAtPointAsync } from '../ocr/ocr-service';
 import { autoFitBlock, isBlockAutoFit } from './canvas-styling';
 import { selectBlock, isSpacePanPressed } from './canvas-interactions';
 import { requestOverlayRender } from './canvas-renderer';
 
-export { detectSpeechBubbleAtPoint };
+export { detectSpeechBubbleAtPoint, detectSpeechBubbleAtPointAsync };
 
 export let isMagicWandActive = false;
 
@@ -119,7 +119,7 @@ export function getActivePageImageData(): ImageData | null {
     return null;
 }
 
-export function handleMagicWandCanvasClick(e: MouseEvent): boolean {
+export async function handleMagicWandCanvasClick(e: MouseEvent): Promise<boolean> {
     if (globalState.activePageIndex === -1) {
         showToast("Vui lòng tải hoặc mở một trang truyện trước!", "warn");
         return false;
@@ -151,7 +151,7 @@ export function handleMagicWandCanvasClick(e: MouseEvent): boolean {
         return false;
     }
 
-    const result = detectSpeechBubbleAtPoint(imageData, pixelX, pixelY);
+    const result = await detectSpeechBubbleAtPointAsync(imageData, pixelX, pixelY);
     if (!result || !result.box) {
         showToast("Không tìm thấy bóng thoại rõ ràng tại vị trí này. Hãy nhấp vào vùng ruột sáng bên trong bóng thoại.", "warn");
         return false;

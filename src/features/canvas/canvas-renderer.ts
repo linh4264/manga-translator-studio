@@ -35,6 +35,26 @@ export function requestOverlayRender(): void {
     });
 }
 
+export function updateActiveSelectionUI(): void {
+    const container = elements.mangaOverlaysContainer;
+    if (!container) return;
+    const textsLayer = container.querySelector('.manga-texts-layer');
+    if (!textsLayer) return;
+
+    const selectedId = globalState.selectedBlockId;
+    const multiSelectedIds = globalState.selectedBlockIds || [];
+
+    Array.from(textsLayer.children).forEach((child: any) => {
+        if (!child.id || child.id.startsWith('mirror-')) return;
+        const isSelected = child.id === selectedId || multiSelectedIds.includes(child.id);
+        if (isSelected) {
+            child.classList.add('active');
+        } else {
+            child.classList.remove('active');
+        }
+    });
+}
+
 export function renderOverlays(
     targetContainer: HTMLElement | null = null,
     customPage: MangaPage | null = null,
@@ -45,12 +65,52 @@ export function renderOverlays(
     const container = targetContainer || elements.mangaOverlaysContainer;
     if (!container) return;
 
-    container.innerHTML = '';
-
     const page = customPage || (globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null);
-    if (!page) return;
+    if (!page) {
+        container.innerHTML = '';
+        return;
+    }
 
-    if (globalState.viewMode === 'original' && !isMirror) return;
+    let coversLayer = (Array.from(container.children).find((c: any) => c.classList && c.classList.contains('manga-covers-layer')) ||
+        container.querySelector('.manga-covers-layer')) as HTMLElement | null;
+    let textsLayer = (Array.from(container.children).find((c: any) => c.classList && c.classList.contains('manga-texts-layer')) ||
+        container.querySelector('.manga-texts-layer')) as HTMLElement | null;
+
+    if (!coversLayer || !textsLayer) {
+        container.innerHTML = '';
+        coversLayer = document.createElement('div');
+        coversLayer.className = 'manga-covers-layer absolute inset-0 pointer-events-none z-10';
+        coversLayer.setAttribute('data-darkreader-ignore', 'true');
+        coversLayer.style.position = 'absolute';
+        coversLayer.style.top = '0';
+        coversLayer.style.left = '0';
+        coversLayer.style.width = '100%';
+        coversLayer.style.height = '100%';
+        coversLayer.style.zIndex = '1';
+        coversLayer.style.pointerEvents = 'none';
+
+        textsLayer = document.createElement('div');
+        textsLayer.className = 'manga-texts-layer absolute inset-0 z-20';
+        textsLayer.setAttribute('data-darkreader-ignore', 'true');
+        textsLayer.style.position = 'absolute';
+        textsLayer.style.top = '0';
+        textsLayer.style.left = '0';
+        textsLayer.style.width = '100%';
+        textsLayer.style.height = '100%';
+        textsLayer.style.zIndex = '2';
+
+        container.appendChild(coversLayer);
+        container.appendChild(textsLayer);
+    }
+
+    if (globalState.viewMode === 'original' && !isMirror) {
+        coversLayer.style.display = 'none';
+        textsLayer.style.display = 'none';
+        return;
+    } else {
+        coversLayer.style.display = '';
+        textsLayer.style.display = '';
+    }
 
     const imgElement = customImgElement || elements.mangaBgImage;
     if (imgElement && imgElement.clientWidth > 0) {
@@ -84,43 +144,40 @@ export function renderOverlays(
         }
     }
 
-    const coversLayer = document.createElement('div');
-    coversLayer.className = 'manga-covers-layer absolute inset-0 pointer-events-none z-10';
-    coversLayer.setAttribute('data-darkreader-ignore', 'true');
-    coversLayer.style.position = 'absolute';
-    coversLayer.style.top = '0';
-    coversLayer.style.left = '0';
-    coversLayer.style.width = '100%';
-    coversLayer.style.height = '100%';
-    coversLayer.style.zIndex = '1';
-    coversLayer.style.pointerEvents = 'none';
-
-    const textsLayer = document.createElement('div');
-    textsLayer.className = 'manga-texts-layer absolute inset-0 z-20';
-    textsLayer.setAttribute('data-darkreader-ignore', 'true');
-    textsLayer.style.position = 'absolute';
-    textsLayer.style.top = '0';
-    textsLayer.style.left = '0';
-    textsLayer.style.width = '100%';
-    textsLayer.style.height = '100%';
-    textsLayer.style.zIndex = '2';
+    const activeCoverIds = new Set<string>();
+    const activeBubbleIds = new Set<string>();
 
     page.blocks.forEach((block) => {
         if (!block || !block.box) return;
         if (!block.style) block.style = {} as any;
 
-        const coverEl = document.createElement('div');
-        coverEl.id = isMirror ? `mirror-cover-${block.id}` : `cover-${block.id}`;
-        coverEl.setAttribute('data-darkreader-ignore', 'true');
-        coverEl.style.position = 'absolute';
+        const coverId = isMirror ? `mirror-cover-${block.id}` : `cover-${block.id}`;
+        const bubbleId = isMirror ? `mirror-${block.id}` : block.id;
+        activeCoverIds.add(coverId);
+        activeBubbleIds.add(bubbleId);
+
+        // 1. Cover Layer Node Reconciliation
+        let coverEl = (Array.from(coversLayer!.children).find((c: any) => c.id === coverId) ||
+            coversLayer!.querySelector(`#${coverId}`)) as HTMLElement | null;
+        let isNewCover = false;
+        if (!coverEl) {
+            coverEl = document.createElement('div');
+            coverEl.id = coverId;
+            coverEl.setAttribute('data-darkreader-ignore', 'true');
+            coverEl.style.position = 'absolute';
+            coverEl.style.pointerEvents = 'none';
+            isNewCover = true;
+        }
+
         coverEl.style.top = `${block.box.y}%`;
         coverEl.style.left = `${block.box.x}%`;
         coverEl.style.width = `${block.box.w}%`;
         coverEl.style.height = `${block.box.h}%`;
-        coverEl.style.pointerEvents = 'none';
 
         if (block.style.rotate) {
             coverEl.style.transform = `rotate(${block.style.rotate}deg)`;
+        } else {
+            coverEl.style.transform = '';
         }
 
         coverEl.style.display = 'flex';
@@ -133,11 +190,15 @@ export function renderOverlays(
             coverEl.style.justifyContent = 'center';
         }
 
-        const coverMaskContent = document.createElement('div');
-        coverMaskContent.setAttribute('data-darkreader-ignore', 'true');
-        coverMaskContent.style.position = 'relative';
-        coverMaskContent.style.overflow = 'hidden';
-        coverMaskContent.style.boxSizing = 'border-box';
+        let coverMaskContent = coverEl.firstElementChild as HTMLElement | null;
+        if (!coverMaskContent) {
+            coverMaskContent = document.createElement('div');
+            coverMaskContent.setAttribute('data-darkreader-ignore', 'true');
+            coverMaskContent.style.position = 'relative';
+            coverMaskContent.style.overflow = 'hidden';
+            coverMaskContent.style.boxSizing = 'border-box';
+            coverEl.appendChild(coverMaskContent);
+        }
 
         if (block.type === 'image') {
             coverMaskContent.style.width = '100%';
@@ -146,18 +207,24 @@ export function renderOverlays(
             coverMaskContent.style.alignItems = 'center';
             coverMaskContent.style.justifyContent = 'center';
 
-            const imgEl = document.createElement('img');
+            let imgEl = coverMaskContent.querySelector('img') as HTMLImageElement | null;
+            if (!imgEl) {
+                coverMaskContent.innerHTML = '';
+                imgEl = document.createElement('img');
+                imgEl.className = 'w-full h-full pointer-events-none select-none';
+                coverMaskContent.appendChild(imgEl);
+            }
             imgEl.src = block.imageUrl || '';
-            imgEl.className = 'w-full h-full pointer-events-none select-none';
             imgEl.style.objectFit = block.style.fit || 'contain';
             const rad = block.style.borderRadius || 0;
             imgEl.style.borderRadius = `${rad}px`;
             const opacity = (block.style.opacity !== undefined ? block.style.opacity : 100) / 100;
             imgEl.style.opacity = `${opacity}`;
-
-            coverMaskContent.appendChild(imgEl);
-            coverEl.appendChild(coverMaskContent);
         } else {
+            if (coverMaskContent.querySelector('img')) {
+                coverMaskContent.innerHTML = '';
+            }
+
             const fontStyle = block.style.fontFamily || globalState.defaultFont || 'font-manga';
             const isBuiltInFont = fontStyle.startsWith('font-');
 
@@ -220,12 +287,23 @@ export function renderOverlays(
                     coverMaskContent.style.borderRadius = '0px';
                 }
             }
-            coverEl.appendChild(coverMaskContent);
         }
-        coversLayer.appendChild(coverEl);
 
-        const bubble = document.createElement('div');
-        bubble.id = isMirror ? `mirror-${block.id}` : block.id;
+        if (isNewCover) {
+            coversLayer!.appendChild(coverEl);
+        }
+
+        // 2. Texts Layer Node Reconciliation
+        let bubble = (Array.from(textsLayer!.children).find((c: any) => c.id === bubbleId) ||
+            textsLayer!.querySelector(`#${bubbleId}`)) as HTMLElement | null;
+        let isNewBubble = false;
+        if (!bubble) {
+            bubble = document.createElement('div');
+            bubble.id = bubbleId;
+            bubble.style.position = 'absolute';
+            bubble.style.backgroundColor = 'transparent';
+            isNewBubble = true;
+        }
 
         bubble.style.top = `${block.box.y}%`;
         bubble.style.left = `${block.box.x}%`;
@@ -238,8 +316,8 @@ export function renderOverlays(
             bubble.style.transform = '';
         }
 
-        bubble.className = `bubble-overlay ${block.id === globalState.selectedBlockId && !isMirror ? 'active' : ''}`;
-        bubble.style.backgroundColor = 'transparent';
+        const isSelected = (block.id === globalState.selectedBlockId || (globalState.selectedBlockIds && globalState.selectedBlockIds.includes(block.id))) && !isMirror;
+        bubble.className = `bubble-overlay ${isSelected ? 'active' : ''}`;
         bubble.style.display = 'flex';
         bubble.style.alignItems = 'center';
         if (block.style.vertical) {
@@ -253,12 +331,17 @@ export function renderOverlays(
             bubble.style.justifyContent = 'center';
         }
 
-        const maskContent = document.createElement('div');
-        maskContent.style.position = 'relative';
-        maskContent.style.overflow = 'hidden';
-        maskContent.style.boxSizing = 'border-box';
-        maskContent.style.backgroundColor = 'transparent';
-        maskContent.style.backgroundImage = 'none';
+        let maskContent = bubble.querySelector(':scope > .mask-content-container') as HTMLElement | null;
+        if (!maskContent) {
+            maskContent = document.createElement('div');
+            maskContent.className = 'mask-content-container';
+            maskContent.style.position = 'relative';
+            maskContent.style.overflow = 'hidden';
+            maskContent.style.boxSizing = 'border-box';
+            maskContent.style.backgroundColor = 'transparent';
+            maskContent.style.backgroundImage = 'none';
+            bubble.appendChild(maskContent);
+        }
 
         if (block.type !== 'image') {
             const fontStyle = block.style.fontFamily || globalState.defaultFont || 'font-manga';
@@ -276,7 +359,7 @@ export function renderOverlays(
                     maskContent.style.alignItems = 'center';
                     maskContent.style.justifyContent = block.style.align === 'left' ? 'flex-start' : block.style.align === 'right' ? 'flex-end' : 'center';
                 }
-                maskContent.className = `${isBuiltInFont ? fontStyle : ''} pointer-events-none`;
+                maskContent.className = `mask-content-container ${isBuiltInFont ? fontStyle : ''} pointer-events-none`;
             } else {
                 maskContent.style.display = 'flex';
                 maskContent.style.alignItems = 'center';
@@ -285,7 +368,7 @@ export function renderOverlays(
                 maskContent.style.height = 'auto';
                 maskContent.style.maxWidth = '100%';
                 maskContent.style.maxHeight = '100%';
-                maskContent.className = `${isBuiltInFont ? fontStyle : ''} pointer-events-none`;
+                maskContent.className = `mask-content-container ${isBuiltInFont ? fontStyle : ''} pointer-events-none`;
             }
 
             if (!isBuiltInFont) {
@@ -360,6 +443,10 @@ export function renderOverlays(
                 maskContent.style.writingMode = 'vertical-rl';
                 maskContent.style.textOrientation = 'upright';
                 maskContent.style.lineHeight = `${currentLineHeight}`;
+            } else {
+                maskContent.classList.remove('text-vertical');
+                maskContent.style.writingMode = '';
+                maskContent.style.textOrientation = '';
             }
 
             const strokeWidth = block.style.strokeWidth || 0;
@@ -424,14 +511,22 @@ export function renderOverlays(
                 maskContent.style.mixBlendMode = 'normal';
             }
 
-            const innerTextDiv = document.createElement('div');
+            let innerTextDiv = maskContent.querySelector(':scope > .inner-text-container') as HTMLElement | null;
+            if (!innerTextDiv) {
+                innerTextDiv = document.createElement('div');
+                innerTextDiv.className = 'inner-text-container';
+                maskContent.appendChild(innerTextDiv);
+            }
+
             const isCenterAlign = !block.style.align || block.style.align === 'center';
             if (block.style.vertical) {
                 innerTextDiv.style.writingMode = 'vertical-rl';
                 innerTextDiv.style.textOrientation = 'upright';
-                innerTextDiv.className = `max-h-full max-w-full inline-block`;
+                innerTextDiv.className = 'inner-text-container max-h-full max-w-full inline-block';
             } else {
-                innerTextDiv.className = `w-full flex flex-col ${isCenterAlign ? 'items-center justify-center' : block.style.align === 'right' ? 'items-end' : 'items-start'}`;
+                innerTextDiv.style.writingMode = '';
+                innerTextDiv.style.textOrientation = '';
+                innerTextDiv.className = `inner-text-container w-full flex flex-col ${isCenterAlign ? 'items-center justify-center' : block.style.align === 'right' ? 'items-end' : 'items-start'}`;
             }
             innerTextDiv.style.margin = '0';
             innerTextDiv.style.padding = '0';
@@ -452,99 +547,114 @@ export function renderOverlays(
             renderBlockTextToDOM(innerTextDiv, block, displayW, displayH, zoomScale, warpOpts);
 
             if ((globalState.bilingualMode === 'sub' || block.style.bilingualSub) && block.original && block.original.trim()) {
-                const origSub = document.createElement('div');
-                origSub.className = 'text-[0.7em] opacity-75 font-sans tracking-normal mt-0.5 select-none pointer-events-none';
+                let origSub = innerTextDiv.querySelector(':scope > .bilingual-sub-line') as HTMLElement | null;
+                if (!origSub) {
+                    origSub = document.createElement('div');
+                    origSub.className = 'bilingual-sub-line text-[0.7em] opacity-75 font-sans tracking-normal mt-0.5 select-none pointer-events-none';
+                    innerTextDiv.appendChild(origSub);
+                }
                 origSub.style.color = 'inherit';
                 origSub.style.lineHeight = '1.1';
                 renderBlockTextToDOM(origSub, { ...block, translated: block.original }, displayW, displayH, zoomScale, warpOpts);
-                innerTextDiv.appendChild(origSub);
+            } else {
+                const existingSub = innerTextDiv.querySelector(':scope > .bilingual-sub-line');
+                if (existingSub) existingSub.remove();
             }
 
             innerTextDiv.style.position = 'relative';
             innerTextDiv.style.zIndex = '1';
-            maskContent.appendChild(innerTextDiv);
 
             bubble.setAttribute('data-original', block.original || '');
             bubble.setAttribute('data-translated', block.translated || '');
-            bubble.appendChild(maskContent);
         }
 
-        if (!isMirror) {
-            let lastMousedownTime = 0;
-            bubble.addEventListener('mousedown', (e: MouseEvent) => {
-                const now = Date.now();
-                if (now - lastMousedownTime < 350) {
-                    lastMousedownTime = 0;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (block.type !== 'image') {
-                        const innerText = maskContent.firstElementChild as HTMLElement;
-                        startInlineEditing(block, bubble, maskContent, innerText);
-                    } else {
-                        uiSetRightTab('edit');
-                        if (elements.editTranslatedText) elements.editTranslatedText.focus();
-                    }
-                    return;
-                }
-                lastMousedownTime = now;
-                startBlockDrag(e, block);
-            });
-
-            let lastTouchTime = 0;
-            bubble.addEventListener('touchstart', (e: TouchEvent) => {
-                const now = Date.now();
-                if (now - lastTouchTime < 350) {
-                    lastTouchTime = 0;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (window.innerWidth < 1024) {
-                        import('../../ui/layout-ui').then(m => m.openMobileQuickEditor(block.id));
+        if (isNewBubble) {
+            if (!isMirror) {
+                let lastMousedownTime = 0;
+                bubble.addEventListener('mousedown', (e: MouseEvent) => {
+                    const now = Date.now();
+                    if (now - lastMousedownTime < 350) {
+                        lastMousedownTime = 0;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (block.type !== 'image') {
+                            const innerText = maskContent!.querySelector('.inner-text-container') as HTMLElement || maskContent!.firstElementChild as HTMLElement;
+                            startInlineEditing(block, bubble!, maskContent!, innerText);
+                        } else {
+                            uiSetRightTab('edit');
+                            if (elements.editTranslatedText) elements.editTranslatedText.focus();
+                        }
                         return;
                     }
-                    if (block.type !== 'image') {
-                        const innerText = maskContent.firstElementChild as HTMLElement;
-                        startInlineEditing(block, bubble, maskContent, innerText);
-                    } else {
-                        uiSetRightTab('edit');
-                        if (elements.editTranslatedText) elements.editTranslatedText.focus();
+                    lastMousedownTime = now;
+                    startBlockDrag(e, block);
+                });
+
+                let lastTouchTime = 0;
+                bubble.addEventListener('touchstart', (e: TouchEvent) => {
+                    const now = Date.now();
+                    if (now - lastTouchTime < 350) {
+                        lastTouchTime = 0;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (window.innerWidth < 1024) {
+                            import('../../ui/layout-ui').then(m => m.openMobileQuickEditor(block.id));
+                            return;
+                        }
+                        if (block.type !== 'image') {
+                            const innerText = maskContent!.querySelector('.inner-text-container') as HTMLElement || maskContent!.firstElementChild as HTMLElement;
+                            startInlineEditing(block, bubble!, maskContent!, innerText);
+                        } else {
+                            uiSetRightTab('edit');
+                            if (elements.editTranslatedText) elements.editTranslatedText.focus();
+                        }
+                        return;
                     }
-                    return;
-                }
-                lastTouchTime = now;
-                startBlockDrag(e, block);
-            }, { passive: false });
+                    lastTouchTime = now;
+                    startBlockDrag(e, block);
+                }, { passive: false });
 
-            const handleSW = document.createElement('div');
-            handleSW.className = "resize-handle resize-sw";
-            handleSW.addEventListener('mousedown', (e) => startBlockResize(e, block, 'sw'));
-            handleSW.addEventListener('touchstart', (e) => startBlockResize(e, block, 'sw'), { passive: false });
+                const handleSW = document.createElement('div');
+                handleSW.className = "resize-handle resize-sw";
+                handleSW.addEventListener('mousedown', (e) => startBlockResize(e, block, 'sw'));
+                handleSW.addEventListener('touchstart', (e) => startBlockResize(e, block, 'sw'), { passive: false });
 
-            const handleSE = document.createElement('div');
-            handleSE.className = "resize-handle resize-se";
-            handleSE.addEventListener('mousedown', (e) => startBlockResize(e, block, 'se'));
-            handleSE.addEventListener('touchstart', (e) => startBlockResize(e, block, 'se'), { passive: false });
+                const handleSE = document.createElement('div');
+                handleSE.className = "resize-handle resize-se";
+                handleSE.addEventListener('mousedown', (e) => startBlockResize(e, block, 'se'));
+                handleSE.addEventListener('touchstart', (e) => startBlockResize(e, block, 'se'), { passive: false });
 
-            const handleNW = document.createElement('div');
-            handleNW.className = "resize-handle resize-nw";
-            handleNW.addEventListener('mousedown', (e) => startBlockResize(e, block, 'nw'));
-            handleNW.addEventListener('touchstart', (e) => startBlockResize(e, block, 'nw'), { passive: false });
+                const handleNW = document.createElement('div');
+                handleNW.className = "resize-handle resize-nw";
+                handleNW.addEventListener('mousedown', (e) => startBlockResize(e, block, 'nw'));
+                handleNW.addEventListener('touchstart', (e) => startBlockResize(e, block, 'nw'), { passive: false });
 
-            const handleNE = document.createElement('div');
-            handleNE.className = "resize-handle resize-ne";
-            handleNE.addEventListener('mousedown', (e) => startBlockResize(e, block, 'ne'));
-            handleNE.addEventListener('touchstart', (e) => startBlockResize(e, block, 'ne'), { passive: false });
+                const handleNE = document.createElement('div');
+                handleNE.className = "resize-handle resize-ne";
+                handleNE.addEventListener('mousedown', (e) => startBlockResize(e, block, 'ne'));
+                handleNE.addEventListener('touchstart', (e) => startBlockResize(e, block, 'ne'), { passive: false });
 
-            bubble.appendChild(handleSW);
-            bubble.appendChild(handleSE);
-            bubble.appendChild(handleNW);
-            bubble.appendChild(handleNE);
+                bubble.appendChild(handleSW);
+                bubble.appendChild(handleSE);
+                bubble.appendChild(handleNW);
+                bubble.appendChild(handleNE);
+            }
+
+            textsLayer!.appendChild(bubble);
         }
-
-        textsLayer.appendChild(bubble);
     });
 
-    container.appendChild(coversLayer);
-    container.appendChild(textsLayer);
+    // 3. Cleanup Orphan Elements
+    Array.from(coversLayer!.children).forEach((child) => {
+        if (child.id && !activeCoverIds.has(child.id)) {
+            coversLayer!.removeChild(child);
+        }
+    });
+    Array.from(textsLayer!.children).forEach((child) => {
+        if (child.id && !activeBubbleIds.has(child.id)) {
+            textsLayer!.removeChild(child);
+        }
+    });
 }
 
 export function convertHexToRGBA(hex: string, alpha: number): string {

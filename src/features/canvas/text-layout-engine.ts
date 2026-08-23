@@ -209,6 +209,13 @@ export function mergeAdjacentIdenticalTokens(tokens: RichTextSegment[]): RichTex
     return merged;
 }
 
+const MAX_TEXT_MEASURE_CACHE_SIZE = 3000;
+const textMeasureCache = new Map<string, number>();
+
+export function clearTextMeasureCache(): void {
+    textMeasureCache.clear();
+}
+
 /**
  * Measures the width of a styled text segment with letter spacing and font metrics.
  */
@@ -226,7 +233,6 @@ export function measureStyledSegmentWidth(
     const extraSpacing = Math.max(0, charCount - 1) * effLetterSpacing;
 
     if (ctx) {
-        const prevFont = ctx.font;
         const tokFontStr = buildFontString({
             bold: !!tok.bold,
             italic: !!tok.italic,
@@ -235,10 +241,28 @@ export function measureStyledSegmentWidth(
             fontFamily: tok.font || baseFontFamily,
             fontSize: fontSizePx
         }, fontSizePx, baseFontFamily);
+
+        const cacheKey = `${tokFontStr}\0${segText}`;
+        const cachedWidth = textMeasureCache.get(cacheKey);
+        if (cachedWidth !== undefined) {
+            return cachedWidth + extraSpacing;
+        }
+
+        const prevFont = ctx.font;
         ctx.font = tokFontStr;
         const w = ctx.measureText(segText).width;
         ctx.font = prevFont;
+
         if (w > 0) {
+            if (textMeasureCache.size >= MAX_TEXT_MEASURE_CACHE_SIZE) {
+                // Evict oldest 500 entries
+                const it = textMeasureCache.keys();
+                for (let i = 0; i < 500; i++) {
+                    const k = it.next().value;
+                    if (k) textMeasureCache.delete(k);
+                }
+            }
+            textMeasureCache.set(cacheKey, w);
             return w + extraSpacing;
         }
     }

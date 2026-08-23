@@ -6,6 +6,158 @@ import { showToast } from '../../core/utils/dom';
 import { requestOverlayRender } from '../canvas/canvas-service';
 import { BoundingBox, MangaBlock, MangaPage } from '../../types/index';
 
+let ocrWorker: Worker | null = null;
+let ocrRequestIdCounter = 0;
+const ocrPendingRequests = new Map<number, { resolve: (val: any) => void; reject: (err: any) => void }>();
+
+export function getOcrWorker(): Worker | null {
+    if (typeof window === 'undefined' || typeof Worker === 'undefined') return null;
+    if (ocrWorker) return ocrWorker;
+
+    try {
+        ocrWorker = new Worker(new URL('../../workers/ocr.worker.ts', import.meta.url), { type: 'module' });
+        ocrWorker.onmessage = (e: MessageEvent) => {
+            const { requestId, type, result, error } = e.data || {};
+            const handler = ocrPendingRequests.get(requestId);
+            if (!handler) return;
+            ocrPendingRequests.delete(requestId);
+
+            if (type === 'ERROR' || error) {
+                handler.reject(new Error(error || 'Worker error'));
+            } else {
+                handler.resolve(result);
+            }
+        };
+        ocrWorker.onerror = (err) => {
+            console.warn("OCR Worker error, falling back to sync execution:", err);
+            ocrPendingRequests.forEach(({ reject }) => reject(err));
+            ocrPendingRequests.clear();
+        };
+        return ocrWorker;
+    } catch (e) {
+        console.warn("Could not instantiate OCR worker, will use main thread sync fallback:", e);
+        return null;
+    }
+}
+
+export async function detectSpeechBubbleAtPointAsync(
+    imageData: ImageData,
+    clickPixelX: number,
+    clickPixelY: number,
+    options: any = {}
+): Promise<any> {
+    const worker = getOcrWorker();
+    if (!worker || !imageData?.data) {
+        return detectSpeechBubbleAtPoint(imageData, clickPixelX, clickPixelY, options);
+    }
+
+    const requestId = ++ocrRequestIdCounter;
+    return new Promise((resolve, reject) => {
+        ocrPendingRequests.set(requestId, { resolve, reject });
+        const rgbaCopy = new Uint8Array(imageData.data);
+        worker.postMessage(
+            {
+                type: 'DETECT_SPEECH_BUBBLE',
+                requestId,
+                rgbaBuffer: rgbaCopy.buffer,
+                width: imageData.width,
+                height: imageData.height,
+                clickPixelX,
+                clickPixelY,
+                options
+            },
+            [rgbaCopy.buffer]
+        );
+    }).catch((err) => {
+        console.warn("OCR Worker bubble detection failed, fallback to sync:", err);
+        return detectSpeechBubbleAtPoint(imageData, clickPixelX, clickPixelY, options);
+    });
+}
+
+export async function computeTextMaskDilatedRoiAsync(
+    rawBox: any,
+    imageData: ImageData | null,
+    options: any = {}
+): Promise<BoundingBox> {
+    const worker = getOcrWorker();
+    if (!worker || !imageData?.data) {
+        return computeTextMaskDilatedRoi(rawBox, imageData, options);
+    }
+
+    const requestId = ++ocrRequestIdCounter;
+    return new Promise((resolve, reject) => {
+        ocrPendingRequests.set(requestId, { resolve, reject });
+        const rgbaCopy = new Uint8Array(imageData.data);
+        worker.postMessage(
+            {
+                type: 'COMPUTE_TEXT_MASK_DILATED_ROI',
+                requestId,
+                rgbaBuffer: rgbaCopy.buffer,
+                width: imageData.width,
+                height: imageData.height,
+                rawBox,
+                options
+            },
+            [rgbaCopy.buffer]
+        );
+    }).catch((err) => {
+        console.warn("OCR Worker mask dilation failed, fallback to sync:", err);
+        return computeTextMaskDilatedRoi(rawBox, imageData, options);
+    });
+}
+
+export async function refineAiBlockBoxAsync(
+    box: any,
+    imageData?: ImageData | null,
+    _modelId?: string,
+    blockType?: string
+): Promise<BoundingBox> {
+    let effectiveImageData = imageData;
+    if (!effectiveImageData) {
+        if (typeof globalState !== 'undefined' && globalState.activePageIndex >= 0) {
+            effectiveImageData = globalState.pages[globalState.activePageIndex]?.imageDataCache || null;
+        }
+    }
+
+    const imgW = (effectiveImageData && effectiveImageData.width > 0)
+        ? effectiveImageData.width
+        : ((typeof elements !== 'undefined' && elements?.mangaBgImage?.naturalWidth! > 0) ? elements.mangaBgImage!.naturalWidth : 1000);
+    const imgH = (effectiveImageData && effectiveImageData.height > 0)
+        ? effectiveImageData.height
+        : ((typeof elements !== 'undefined' && elements?.mangaBgImage?.naturalHeight! > 0) ? elements.mangaBgImage!.naturalHeight : 1000);
+
+    const normalizedType = (blockType || 'dialogue').toLowerCase();
+    const isSfx = normalizedType === 'sfx';
+    const targetBlockSizePx = isSfx ? (DEFAULT_SFX_BLOCK_SIZE_PX || 200) : (DEFAULT_BLOCK_SIZE_PX || 400);
+
+    const normalized = normalizeAiBlockBox(box, imgW, imgH, blockType);
+    const defaultWPct = Math.round(((targetBlockSizePx / imgW) * 100) * 100) / 100;
+    const defaultHPct = Math.round(((targetBlockSizePx / imgH) * 100) * 100) / 100;
+
+    normalized.w = defaultWPct;
+    normalized.h = defaultHPct;
+    normalized.x = Math.max(0, Math.min(100 - defaultWPct, normalized.x));
+    normalized.y = Math.max(0, Math.min(100 - defaultHPct, normalized.y));
+
+    const isBubbleType = normalizedType === 'dialogue' || normalizedType === 'thought';
+
+    if (isBubbleType && effectiveImageData && effectiveImageData.data && effectiveImageData.width > 0 && effectiveImageData.height > 0) {
+        try {
+            const centerX = (normalized.x + normalized.w / 2) * (imgW / 100);
+            const centerY = (normalized.y + normalized.h / 2) * (imgH / 100);
+            const bubbleResult = await detectSpeechBubbleAtPointAsync(effectiveImageData, centerX, centerY);
+            if (bubbleResult && bubbleResult.box && bubbleResult.box.w >= 2 && bubbleResult.box.h >= 2) {
+                normalized.x = Math.round(bubbleResult.box.x * 100) / 100;
+                normalized.y = Math.round(bubbleResult.box.y * 100) / 100;
+                normalized.w = Math.round(bubbleResult.box.w * 100) / 100;
+                normalized.h = Math.round(bubbleResult.box.h * 100) / 100;
+            }
+        } catch (err) { }
+    }
+
+    return normalized;
+}
+
 export async function runLocalOcrDetectionOnPage(): Promise<void> {
     const activePage = globalState.pages[globalState.activePageIndex];
     if (!activePage) {
