@@ -396,7 +396,9 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
 
             const blockStyle = {
                 fontFamily: chosenFont,
-                fontSize: b.style?.fontSize || globalState.globalStyle.fontSize,
+                fontSize: b.style?.fontSize || globalState.defaultFontSize || globalState.globalStyle.fontSize,
+                lineHeight: b.style?.lineHeight !== undefined ? b.style.lineHeight : (globalState.defaultLineHeight !== undefined ? globalState.defaultLineHeight : (globalState.globalStyle.lineHeight !== undefined ? globalState.globalStyle.lineHeight : 1.15)),
+                letterSpacing: b.style?.letterSpacing !== undefined ? b.style.letterSpacing : (globalState.defaultLetterSpacing !== undefined ? globalState.defaultLetterSpacing : (globalState.globalStyle.letterSpacing !== undefined ? globalState.globalStyle.letterSpacing : 0)),
                 textColor: b.style?.textColor || '#000000',
                 bgColor: b.style?.bgColor || '#ffffff',
                 bgOpacity: b.style?.bgOpacity !== undefined ? b.style.bgOpacity : 100,
@@ -644,7 +646,9 @@ export async function runBatchTranslation(): Promise<void> {
                                 box: normalisedBox,
                                 style: {
                                     fontFamily: chosenFont,
-                                    fontSize: b.style?.fontSize || globalState.globalStyle.fontSize,
+                                    fontSize: b.style?.fontSize || globalState.defaultFontSize || globalState.globalStyle.fontSize,
+                                    lineHeight: b.style?.lineHeight !== undefined ? b.style.lineHeight : (globalState.defaultLineHeight !== undefined ? globalState.defaultLineHeight : (globalState.globalStyle.lineHeight !== undefined ? globalState.globalStyle.lineHeight : 1.15)),
+                                    letterSpacing: b.style?.letterSpacing !== undefined ? b.style.letterSpacing : (globalState.defaultLetterSpacing !== undefined ? globalState.defaultLetterSpacing : (globalState.globalStyle.letterSpacing !== undefined ? globalState.globalStyle.letterSpacing : 0)),
                                     textColor: b.style?.textColor || '#000000',
                                     bgColor: b.style?.bgColor || '#ffffff',
                                     bgOpacity: b.style?.bgOpacity !== undefined ? b.style.bgOpacity : 100,

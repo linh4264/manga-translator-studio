@@ -405,11 +405,7 @@ export function updateModelLockingUI(): void {
 
 export function mountSettingsModal(): void { }
 
-export async function openSettingsModal(): Promise<void> {
-    mountSettingsModal();
-    const modal = document.getElementById('settings-modal') || await ensureModalElement('settings-modal');
-    if (modal) modal.classList.remove('hidden');
-
+export function syncSettingsUI(): void {
     if (elements.uiLangSelect) elements.uiLangSelect.value = globalState.uiLanguage || 'vi';
     if (elements.apiKeyInput) elements.apiKeyInput.value = globalState.apiKey || '';
 
@@ -441,6 +437,24 @@ export async function openSettingsModal(): Promise<void> {
     const defaultSfxSelect = document.getElementById('default-sfx-font') as HTMLSelectElement | null;
     if (defaultSfxSelect) defaultSfxSelect.value = globalState.defaultSfxFont || 'font-impact';
 
+    const defaultFontSizeSlider = document.getElementById('slider-default-font-size') as HTMLInputElement | null;
+    const defaultFontSizeLbl = document.getElementById('lbl-default-font-size');
+    const curFontSize = globalState.defaultFontSize || 17;
+    if (defaultFontSizeSlider) defaultFontSizeSlider.value = String(curFontSize);
+    if (defaultFontSizeLbl) defaultFontSizeLbl.textContent = `${curFontSize}px`;
+
+    const defaultLineHeightSlider = document.getElementById('slider-default-line-height') as HTMLInputElement | null;
+    const defaultLineHeightLbl = document.getElementById('lbl-default-line-height');
+    const curLineHeight = globalState.defaultLineHeight !== undefined ? globalState.defaultLineHeight : 1.15;
+    if (defaultLineHeightSlider) defaultLineHeightSlider.value = String(curLineHeight);
+    if (defaultLineHeightLbl) defaultLineHeightLbl.textContent = `${curLineHeight}`;
+
+    const defaultLetterSpacingSlider = document.getElementById('slider-default-letter-spacing') as HTMLInputElement | null;
+    const defaultLetterSpacingLbl = document.getElementById('lbl-default-letter-spacing');
+    const curLetterSpacing = globalState.defaultLetterSpacing !== undefined ? globalState.defaultLetterSpacing : 0;
+    if (defaultLetterSpacingSlider) defaultLetterSpacingSlider.value = String(curLetterSpacing);
+    if (defaultLetterSpacingLbl) defaultLetterSpacingLbl.textContent = `${curLetterSpacing}px`;
+
     const apiDelay = document.getElementById('api-delay-input') as HTMLInputElement | null;
     if (apiDelay) apiDelay.value = String(globalState.apiDelay || 2);
 
@@ -461,6 +475,13 @@ export async function openSettingsModal(): Promise<void> {
     const storedPdfQuality = localStorage.getItem('manga_pdf_quality') || globalState.pdfQuality || 'hd';
     globalState.pdfQuality = storedPdfQuality;
     if (exportPdfQualitySelect) exportPdfQualitySelect.value = storedPdfQuality;
+}
+
+export async function openSettingsModal(): Promise<void> {
+    mountSettingsModal();
+    const modal = document.getElementById('settings-modal') || await ensureModalElement('settings-modal');
+    if (modal) modal.classList.remove('hidden');
+    syncSettingsUI();
 }
 
 export function switchSettingsTab(tabId: string): void {
@@ -538,6 +559,96 @@ export function updateDefaultTypeFont(type: string, value: string): void {
 
 export function updateDefaultFont(value: string): void {
     updateDefaultTypeFont('dialogue', value);
+}
+
+export function updateDefaultFontSize(val: string | number): void {
+    const num = typeof val === 'number' ? val : parseInt(val, 10);
+    if (isNaN(num) || num <= 0) return;
+    const clamped = Math.max(8, Math.min(120, Math.round(num)));
+
+    globalState.defaultFontSize = clamped;
+    if (globalState.globalStyle) globalState.globalStyle.fontSize = clamped;
+    safeSetLocalStorage('manga_default_font_size', clamped);
+
+    const slider = document.getElementById('slider-default-font-size') as HTMLInputElement | null;
+    if (slider && Number(slider.value) !== clamped) slider.value = String(clamped);
+    const lbl = document.getElementById('lbl-default-font-size');
+    if (lbl) lbl.textContent = `${clamped}px`;
+
+    if (globalState.pages && Array.isArray(globalState.pages)) {
+        globalState.pages.forEach(p => {
+            if (p && p.blocks) {
+                p.blocks.forEach(b => {
+                    b.autoFitCache = null;
+                    b.maskCache = null;
+                });
+                markPageAutoFitDirty(p);
+            }
+        });
+    }
+    requestOverlayRender();
+}
+
+export function updateDefaultLineHeight(val: string | number): void {
+    const num = typeof val === 'number' ? val : parseFloat(val);
+    if (isNaN(num) || num <= 0) return;
+    const rounded = Math.round(Math.max(0.5, Math.min(3.0, num)) * 100) / 100;
+
+    globalState.defaultLineHeight = rounded;
+    if (globalState.globalStyle) globalState.globalStyle.lineHeight = rounded;
+    safeSetLocalStorage('manga_default_line_height', rounded);
+
+    const slider = document.getElementById('slider-default-line-height') as HTMLInputElement | null;
+    if (slider && Number(slider.value) !== rounded) slider.value = String(rounded);
+    const lbl = document.getElementById('lbl-default-line-height');
+    if (lbl) lbl.textContent = `${rounded}`;
+
+    if (globalState.pages && Array.isArray(globalState.pages)) {
+        globalState.pages.forEach(p => {
+            if (p && p.blocks) {
+                p.blocks.forEach(b => {
+                    b.autoFitCache = null;
+                    b.maskCache = null;
+                });
+                markPageAutoFitDirty(p);
+            }
+        });
+    }
+    requestOverlayRender();
+}
+
+export function updateDefaultLetterSpacing(val: string | number): void {
+    const num = typeof val === 'number' ? val : parseFloat(val);
+    if (isNaN(num)) return;
+    const rounded = Math.round(Math.max(-5, Math.min(30, num)) * 10) / 10;
+
+    globalState.defaultLetterSpacing = rounded;
+    if (globalState.globalStyle) globalState.globalStyle.letterSpacing = rounded;
+    safeSetLocalStorage('manga_default_letter_spacing', rounded);
+
+    const slider = document.getElementById('slider-default-letter-spacing') as HTMLInputElement | null;
+    if (slider && Number(slider.value) !== rounded) slider.value = String(rounded);
+    const lbl = document.getElementById('lbl-default-letter-spacing');
+    if (lbl) lbl.textContent = `${rounded}px`;
+
+    if (globalState.pages && Array.isArray(globalState.pages)) {
+        globalState.pages.forEach(p => {
+            if (p && p.blocks) {
+                p.blocks.forEach(b => {
+                    b.autoFitCache = null;
+                    b.maskCache = null;
+                });
+                markPageAutoFitDirty(p);
+            }
+        });
+    }
+    requestOverlayRender();
+}
+
+export function resetDefaultFontMetrics(): void {
+    updateDefaultFontSize(17);
+    updateDefaultLineHeight(1.15);
+    updateDefaultLetterSpacing(0);
 }
 
 export function updateSourceLanguage(value: string): void {

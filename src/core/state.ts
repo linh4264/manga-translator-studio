@@ -127,6 +127,21 @@ export const globalState: GlobalState & Record<string, any> = {
     defaultThoughtFont: localStorage.getItem('manga_default_thought_font') || DEFAULT_TYPE_FONTS.thought,
     defaultSfxFont: localStorage.getItem('manga_default_sfx_font') || DEFAULT_TYPE_FONTS.sfx,
     defaultFont: localStorage.getItem('manga_default_dialogue_font') || localStorage.getItem('manga_default_font') || DEFAULT_TYPE_FONTS.dialogue,
+    defaultFontSize: (() => {
+        const val = localStorage.getItem('manga_default_font_size');
+        const num = val ? parseFloat(val) : NaN;
+        return !isNaN(num) && num > 0 ? num : DEFAULT_BLOCK_STYLE.fontSize;
+    })(),
+    defaultLineHeight: (() => {
+        const val = localStorage.getItem('manga_default_line_height');
+        const num = val ? parseFloat(val) : NaN;
+        return !isNaN(num) && num > 0 ? num : DEFAULT_BLOCK_STYLE.lineHeight;
+    })(),
+    defaultLetterSpacing: (() => {
+        const val = localStorage.getItem('manga_default_letter_spacing');
+        const num = val ? parseFloat(val) : NaN;
+        return !isNaN(num) ? num : (DEFAULT_BLOCK_STYLE.letterSpacing !== undefined ? DEFAULT_BLOCK_STYLE.letterSpacing : 0);
+    })(),
     pages: [],
     activePageIndex: -1,
     selectedBlockId: null,
@@ -175,6 +190,21 @@ export const globalState: GlobalState & Record<string, any> = {
     globalStyle: {
         ...DEFAULT_BLOCK_STYLE,
         fontFamily: localStorage.getItem('manga_default_font') || 'font-manga',
+        fontSize: (() => {
+            const val = localStorage.getItem('manga_default_font_size');
+            const num = val ? parseFloat(val) : NaN;
+            return !isNaN(num) && num > 0 ? num : DEFAULT_BLOCK_STYLE.fontSize;
+        })(),
+        lineHeight: (() => {
+            const val = localStorage.getItem('manga_default_line_height');
+            const num = val ? parseFloat(val) : NaN;
+            return !isNaN(num) && num > 0 ? num : DEFAULT_BLOCK_STYLE.lineHeight;
+        })(),
+        letterSpacing: (() => {
+            const val = localStorage.getItem('manga_default_letter_spacing');
+            const num = val ? parseFloat(val) : NaN;
+            return !isNaN(num) ? num : (DEFAULT_BLOCK_STYLE.letterSpacing !== undefined ? DEFAULT_BLOCK_STYLE.letterSpacing : 0);
+        })(),
         vertical: DEFAULT_VERTICAL_WRITING_MODE
     },
     customStylePresets: (() => {
@@ -219,6 +249,9 @@ export function initializeStateFromStorage(): void {
         'manga_default_thought_font': 'defaultThoughtFont',
         'manga_default_sfx_font': 'defaultSfxFont',
         'manga_default_font': 'defaultFont',
+        'manga_default_font_size': 'defaultFontSize',
+        'manga_default_line_height': 'defaultLineHeight',
+        'manga_default_letter_spacing': 'defaultLetterSpacing',
         'manga_export_format': 'exportFormat',
         'manga_pdf_quality': 'pdfQuality'
     };
@@ -238,6 +271,24 @@ export function initializeStateFromStorage(): void {
                 globalState.defaultDialogueFont = val;
                 globalState.defaultFont = val;
                 if (globalState.globalStyle) globalState.globalStyle.fontFamily = val;
+            } else if (stateKey === 'defaultFontSize') {
+                const num = parseFloat(val);
+                if (!isNaN(num) && num > 0) {
+                    globalState.defaultFontSize = num;
+                    if (globalState.globalStyle) globalState.globalStyle.fontSize = num;
+                }
+            } else if (stateKey === 'defaultLineHeight') {
+                const num = parseFloat(val);
+                if (!isNaN(num) && num > 0) {
+                    globalState.defaultLineHeight = num;
+                    if (globalState.globalStyle) globalState.globalStyle.lineHeight = num;
+                }
+            } else if (stateKey === 'defaultLetterSpacing') {
+                const num = parseFloat(val);
+                if (!isNaN(num)) {
+                    globalState.defaultLetterSpacing = num;
+                    if (globalState.globalStyle) globalState.globalStyle.letterSpacing = num;
+                }
             } else {
                 globalState[stateKey] = val;
             }

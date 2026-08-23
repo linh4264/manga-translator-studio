@@ -174,6 +174,9 @@ export interface GlobalState {
     defaultThoughtFont: string;
     defaultSfxFont: string;
     defaultFont: string;
+    defaultFontSize?: number;
+    defaultLineHeight?: number;
+    defaultLetterSpacing?: number;
     pages: MangaPage[];
     activePageIndex: number;
     selectedBlockId: string | null;
