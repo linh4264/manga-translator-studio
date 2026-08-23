@@ -7,6 +7,7 @@ import { matchTranslationsToBlocks } from './matching-engine';
 import { getTranslationGuidancePrompt } from './prompt-builder';
 import { cancelTranslationFlag } from './story-memory';
 import { getTranslationContext, TranslationContextOptions } from './ai-state';
+import { getCachedTranslationSync, setCachedTranslationsBatch } from './translation-cache';
 
 export async function executeTextTranslationStep({
     blocksToTranslate,
@@ -39,6 +40,36 @@ export async function executeTextTranslationStep({
     const targetLang = ctx.targetLanguage || 'vi';
     const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
 
+    // 1. Check Translation Hash Cache
+    const contextSig = [ctx.comicUniverse, ctx.comicTone, (ctx.comicGenres || []).join('-'), (ctx.translationContextPrompt || '').trim()].filter(Boolean).join('_');
+    const cachedResultsMap = new Map<string, any>();
+    const uncachedBlocks: any[] = [];
+
+    blocksToTranslate.forEach(b => {
+        const orig = (b.original || '').trim();
+        if (orig) {
+            const cached = getCachedTranslationSync(orig, targetLang, {
+                speaker: b.speaker,
+                target: b.target,
+                contextSignature: contextSig
+            });
+            if (cached && cached.translated) {
+                cachedResultsMap.set(String(b.id), {
+                    ...b,
+                    translated: cached.translated
+                });
+                return;
+            }
+        }
+        uncachedBlocks.push(b);
+    });
+
+    // 100% Cache HIT -> 0 API calls & 0ms latency!
+    if (uncachedBlocks.length === 0) {
+        console.log(`[Translation Cache] 100% HIT: Reused ${blocksToTranslate.length} cached block(s), skipped API request.`);
+        return blocksToTranslate.map(b => cachedResultsMap.get(String(b.id)) || b);
+    }
+
     const transSystemInstruction = [
         `You are a master manga translator and publication editor specializing in translating Japanese/Korean/Chinese comic dialogues into natural, expressive, and fluent ${targetLangName}.`,
         `SEQUENTIAL DIALOGUE CONTEXT: The input dialogue blocks are arranged in sequential manga reading order (Top-Right to Bottom-Left). Treat them as continuous, interactive conversational turns between characters.`,
@@ -50,7 +81,7 @@ export async function executeTextTranslationStep({
         "Strict Rule: Maintain the exact same block IDs. Each translation must be a single complete sentence/paragraph without arbitrary newline characters (\\n). Return valid JSON only with schema: {\"blocks\": [{\"id\": \"...\", \"translated\": \"...\"}]}"
     ].filter(Boolean).join("\n\n");
 
-    const textPayloadList = blocksToTranslate.map(b => {
+    const textPayloadList = uncachedBlocks.map(b => {
         const item: any = {
             id: b.id,
             original: b.original || ''
@@ -117,7 +148,7 @@ export async function executeTextTranslationStep({
         });
     }
 
-    return executeAiJsonRequestWithRetry<any[]>({
+    const translatedUncached = await executeAiJsonRequestWithRetry<any[]>({
         apiUrl,
         headers: requestHeaders,
         body: requestBody,
@@ -127,7 +158,29 @@ export async function executeTextTranslationStep({
         onRetry
     }, (jsonText) => {
         const data = parseGeminiJsonText(jsonText);
-        return matchTranslationsToBlocks(blocksToTranslate, data);
+        return matchTranslationsToBlocks(uncachedBlocks, data);
+    });
+
+    // Save newly translated blocks into cache
+    setCachedTranslationsBatch(translatedUncached.map(b => ({
+        original: b.original,
+        translated: b.translated,
+        targetLang,
+        speaker: b.speaker,
+        target: b.target,
+        contextSignature: contextSig,
+        modelId: translationModel
+    })));
+
+    // Merge cached and newly translated blocks in original block order
+    const uncachedMap = new Map<string, any>();
+    translatedUncached.forEach(b => uncachedMap.set(String(b.id), b));
+
+    return blocksToTranslate.map(b => {
+        const idStr = String(b.id);
+        if (cachedResultsMap.has(idStr)) return cachedResultsMap.get(idStr);
+        if (uncachedMap.has(idStr)) return uncachedMap.get(idStr);
+        return b;
     });
 }
 
@@ -162,6 +215,36 @@ export async function executeChapterChunkTranslationStep({
     const targetLang = ctx.targetLanguage || 'vi';
     const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
 
+    // 1. Check Translation Hash Cache
+    const contextSig = [ctx.comicUniverse, ctx.comicTone, (ctx.comicGenres || []).join('-'), (ctx.translationContextPrompt || '').trim()].filter(Boolean).join('_');
+    const cachedResultsMap = new Map<string, any>();
+    const uncachedChunkBlocks: any[] = [];
+
+    chunkBlocks.forEach(b => {
+        const orig = (b.original || '').trim();
+        if (orig) {
+            const cached = getCachedTranslationSync(orig, targetLang, {
+                speaker: b.speaker,
+                target: b.target,
+                contextSignature: contextSig
+            });
+            if (cached && cached.translated) {
+                cachedResultsMap.set(String(b.id), {
+                    ...b,
+                    translated: cached.translated
+                });
+                return;
+            }
+        }
+        uncachedChunkBlocks.push(b);
+    });
+
+    // 100% Cache HIT -> Skip API request!
+    if (uncachedChunkBlocks.length === 0) {
+        console.log(`[Translation Cache] Chapter chunk 100% HIT: Reused ${chunkBlocks.length} block(s), skipped API call.`);
+        return chunkBlocks.map(b => cachedResultsMap.get(String(b.id)) || b);
+    }
+
     const transSystemInstruction = [
         `You are a master manga translator and senior editor specializing in translating entire manga chapters with coherent storytelling, seamless conversational flow, and natural, expressive, publication-grade ${targetLangName} dialogue.`,
         `CHAPTER NARRATIVE CONTEXT: The input dialogues are grouped by page in chronological reading sequence. Maintain consistent character voices across the entire chapter.`,
@@ -173,12 +256,11 @@ export async function executeChapterChunkTranslationStep({
         "Strict Rule: Maintain the exact same block IDs. Each translation must be a single complete sentence/paragraph without arbitrary newline characters (\\n). Return valid JSON only containing all block translations with schema: {\"blocks\": [{\"id\": \"...\", \"translated\": \"...\"}]}"
     ].filter(Boolean).join("\n\n");
 
-
     const groupedNarrative: string[] = [];
     let currentPage = -1;
     let pageItems: any[] = [];
 
-    chunkBlocks.forEach(b => {
+    uncachedChunkBlocks.forEach(b => {
         if (b.pageIndex !== currentPage) {
             if (pageItems.length > 0) {
                 groupedNarrative.push(`[--- TRANG / PAGE ${currentPage + 1} ---]\n` + JSON.stringify(pageItems, null, 2));
@@ -253,7 +335,7 @@ export async function executeChapterChunkTranslationStep({
         });
     }
 
-    return executeAiJsonRequestWithRetry<any[]>({
+    const translatedUncached = await executeAiJsonRequestWithRetry<any[]>({
         apiUrl,
         headers: requestHeaders,
         body: requestBody,
@@ -264,7 +346,29 @@ export async function executeChapterChunkTranslationStep({
         onRetry
     }, (jsonText) => {
         const data = parseGeminiJsonText(jsonText);
-        return matchTranslationsToBlocks(chunkBlocks, data);
+        return matchTranslationsToBlocks(uncachedChunkBlocks, data);
+    });
+
+    // Save newly translated chunk blocks into cache
+    setCachedTranslationsBatch(translatedUncached.map(b => ({
+        original: b.original,
+        translated: b.translated,
+        targetLang,
+        speaker: b.speaker,
+        target: b.target,
+        contextSignature: contextSig,
+        modelId: translationModel
+    })));
+
+    // Merge cached and newly translated blocks in original block order
+    const uncachedMap = new Map<string, any>();
+    translatedUncached.forEach(b => uncachedMap.set(String(b.id), b));
+
+    return chunkBlocks.map(b => {
+        const idStr = String(b.id);
+        if (cachedResultsMap.has(idStr)) return cachedResultsMap.get(idStr);
+        if (uncachedMap.has(idStr)) return uncachedMap.get(idStr);
+        return b;
     });
 }
 

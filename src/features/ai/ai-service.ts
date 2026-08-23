@@ -9,6 +9,7 @@ export * from './ai-client';
 export * from './translation-pipeline';
 export * from './page-translator';
 export * from './ai-inpainting';
+export * from './translation-cache';
 
 
 import {
