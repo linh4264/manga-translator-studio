@@ -189,7 +189,7 @@ export function changeZoom(amount: number, mouseEvent: MouseEvent | null = null)
     if (elements.mangaCanvasContainer) {
         elements.mangaCanvasContainer.style.height = `${globalState.zoom}%`;
         elements.mangaCanvasContainer.style.maxHeight = 'none';
-        elements.mangaCanvasContainer.style.width = 'auto';
+        elements.mangaCanvasContainer.style.width = 'max-content';
 
         if (newZoom > 100) {
             elements.mangaCanvasContainer.classList.remove('m-auto');
@@ -233,7 +233,7 @@ export function resetZoom(): void {
     if (elements.mangaCanvasContainer) {
         elements.mangaCanvasContainer.style.height = '100%';
         elements.mangaCanvasContainer.style.maxHeight = '100%';
-        elements.mangaCanvasContainer.style.width = 'auto';
+        elements.mangaCanvasContainer.style.width = 'max-content';
         elements.mangaCanvasContainer.classList.remove('my-auto', 'mx-0');
         elements.mangaCanvasContainer.classList.add('m-auto');
     }

@@ -114,7 +114,7 @@ export function initTouchGestures(): void {
                     if (elements.mangaCanvasContainer) {
                         elements.mangaCanvasContainer.style.height = `${globalState.zoom}%`;
                         elements.mangaCanvasContainer.style.maxHeight = 'none';
-                        elements.mangaCanvasContainer.style.width = 'auto';
+                        elements.mangaCanvasContainer.style.width = 'max-content';
 
                         if (newZoom > 100) {
                             elements.mangaCanvasContainer.classList.remove('m-auto');

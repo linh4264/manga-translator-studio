@@ -122,7 +122,9 @@ export function renderOverlays(
     if (imgElement && imgElement.clientWidth > 0) {
         const zoomScale = (globalState.zoom || 100) / 100;
         const normalizedWidth = Math.round(imgElement.clientWidth / zoomScale);
-        if (!(page as any).lastDisplayWidth || Math.abs((page as any).lastDisplayWidth - normalizedWidth) > 5) {
+        if (!(page as any).lastDisplayWidth) {
+            (page as any).lastDisplayWidth = normalizedWidth;
+        } else if (Math.abs(zoomScale - 1) < 0.05 && Math.abs((page as any).lastDisplayWidth - normalizedWidth) > 5) {
             (page as any).lastDisplayWidth = normalizedWidth;
         }
     }
@@ -261,7 +263,11 @@ export function renderOverlays(
                 coverMaskContent.style.alignItems = 'center';
                 coverMaskContent.style.justifyContent = 'center';
                 if (block.translated && block.translated.trim()) {
-                    const blockLayout = computeBlockTextLayout(block, displayW, displayH, zoomScale);
+                    const baseW = Math.max(1, displayW / Math.max(0.001, zoomScale));
+                    const baseH = Math.max(1, displayH / Math.max(0.001, zoomScale));
+                    const refLayout = computeBlockTextLayout(block, baseW, baseH, 1.0);
+                    const lockedLines = (refLayout.lines && refLayout.lines.length > 0) ? refLayout.lines.map(l => l.tokens) : undefined;
+                    const blockLayout = computeBlockTextLayout(block, displayW, displayH, zoomScale, null, lockedLines);
                     const snugW = Math.min(bubblePxW, blockLayout.totalWidth + (blockLayout.padXPx * 2));
                     const snugH = Math.min(bubblePxH, blockLayout.totalHeight + (blockLayout.padYPx * 2));
                     coverMaskContent.style.width = `${snugW}px`;
@@ -623,6 +629,7 @@ export function renderOverlays(
 
                 let lastTouchTime = 0;
                 bubble.addEventListener('touchstart', (e: TouchEvent) => {
+                    if (globalState.isMobileHandMode) return;
                     const now = Date.now();
                     if (now - lastTouchTime < 350) {
                         lastTouchTime = 0;
@@ -642,28 +649,38 @@ export function renderOverlays(
                         return;
                     }
                     lastTouchTime = now;
-                    startBlockDrag(e, block);
+                    if (e.touches.length === 1) {
+                        startBlockDrag(e, block);
+                    }
                 }, { passive: false });
 
                 const handleSW = document.createElement('div');
                 handleSW.className = "resize-handle resize-sw";
                 handleSW.addEventListener('mousedown', (e) => startBlockResize(e, block, 'sw'));
-                handleSW.addEventListener('touchstart', (e) => startBlockResize(e, block, 'sw'), { passive: false });
+                handleSW.addEventListener('touchstart', (e) => {
+                    if (!globalState.isMobileHandMode && e.touches.length === 1) startBlockResize(e, block, 'sw');
+                }, { passive: false });
 
                 const handleSE = document.createElement('div');
                 handleSE.className = "resize-handle resize-se";
                 handleSE.addEventListener('mousedown', (e) => startBlockResize(e, block, 'se'));
-                handleSE.addEventListener('touchstart', (e) => startBlockResize(e, block, 'se'), { passive: false });
+                handleSE.addEventListener('touchstart', (e) => {
+                    if (!globalState.isMobileHandMode && e.touches.length === 1) startBlockResize(e, block, 'se');
+                }, { passive: false });
 
                 const handleNW = document.createElement('div');
                 handleNW.className = "resize-handle resize-nw";
                 handleNW.addEventListener('mousedown', (e) => startBlockResize(e, block, 'nw'));
-                handleNW.addEventListener('touchstart', (e) => startBlockResize(e, block, 'nw'), { passive: false });
+                handleNW.addEventListener('touchstart', (e) => {
+                    if (!globalState.isMobileHandMode && e.touches.length === 1) startBlockResize(e, block, 'nw');
+                }, { passive: false });
 
                 const handleNE = document.createElement('div');
                 handleNE.className = "resize-handle resize-ne";
                 handleNE.addEventListener('mousedown', (e) => startBlockResize(e, block, 'ne'));
-                handleNE.addEventListener('touchstart', (e) => startBlockResize(e, block, 'ne'), { passive: false });
+                handleNE.addEventListener('touchstart', (e) => {
+                    if (!globalState.isMobileHandMode && e.touches.length === 1) startBlockResize(e, block, 'ne');
+                }, { passive: false });
 
                 bubble.appendChild(handleSW);
                 bubble.appendChild(handleSE);

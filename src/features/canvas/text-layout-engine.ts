@@ -1178,6 +1178,10 @@ export function renderBlockTextToDOM(
     warpOpts: any = {}
 ): void {
     if (!target) return;
-    const layout = computeBlockTextLayout(block, displayW, displayH, zoomScale);
+    const baseW = Math.max(1, displayW / Math.max(0.001, zoomScale));
+    const baseH = Math.max(1, displayH / Math.max(0.001, zoomScale));
+    const refLayout = computeBlockTextLayout(block, baseW, baseH, 1.0);
+    const lockedLines = (refLayout.lines && refLayout.lines.length > 0) ? refLayout.lines.map(l => l.tokens) : undefined;
+    const layout = computeBlockTextLayout(block, displayW, displayH, zoomScale, null, lockedLines);
     renderDerivedLinesToDOM(target, layout, warpOpts);
 }

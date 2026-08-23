@@ -315,6 +315,10 @@ body.space-panning *,
     border-radius: 8px !important;
     height: 100%;
     max-height: 100%;
+    width: max-content !important;
+    max-width: max-content !important;
+    display: inline-block !important;
+    flex-shrink: 0 !important;
 }
 
 .bubble-overlay {

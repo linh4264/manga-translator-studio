@@ -16,9 +16,12 @@ export function setSpacePanPressed(pressed: boolean): void {
 }
 
 export function startBlockDrag(e: any, block: MangaBlock): void {
-    if (isSpacePanPressed() || e.button === 1) return;
+    if (isSpacePanPressed() || e.button === 1 || globalState.isMobileHandMode) return;
     if (e.target.classList.contains('resize-handle')) return;
     if (e.target.isContentEditable || (block as any)._isEditingInline) return;
+
+    const isTouch = e.type.startsWith('touch');
+    if (isTouch && e.touches && e.touches.length > 1) return;
 
     if ((e.ctrlKey || e.metaKey) && (globalState as any).magicWandDetectedBox) {
         e.preventDefault();
@@ -29,7 +32,9 @@ export function startBlockDrag(e: any, block: MangaBlock): void {
         return;
     }
 
-    e.preventDefault();
+    if (!isTouch) {
+        e.preventDefault();
+    }
     pushStateToHistory();
 
     const isMulti = e.shiftKey || e.ctrlKey || e.metaKey;
@@ -45,7 +50,6 @@ export function startBlockDrag(e: any, block: MangaBlock): void {
         })
         : [];
 
-    const isTouch = e.type.startsWith('touch');
     const clientX = isTouch ? e.touches[0].clientX : e.clientX;
     const clientY = isTouch ? e.touches[0].clientY : e.clientY;
 
@@ -55,19 +59,40 @@ export function startBlockDrag(e: any, block: MangaBlock): void {
     const startPercentX = block.box.x;
     const startPercentY = block.box.y;
 
-    const containerWidth = elements.mangaCanvasContainer?.clientWidth || 1;
-    const containerHeight = elements.mangaCanvasContainer?.clientHeight || 1;
+    const container = elements.mangaCanvasContainer || document.getElementById('manga-canvas-container');
+    const containerWidth = Math.max(10, container?.clientWidth || 800);
+    const containerHeight = Math.max(10, container?.clientHeight || 1200);
 
     let hasMoved = false;
+    let dragThresholdPassed = !isTouch;
 
     function onDragging(moveEvent: any) {
-        hasMoved = true;
+        if (globalState.isMobileHandMode) return;
         const curTouch = moveEvent.type.startsWith('touch');
+        if (curTouch && moveEvent.touches && moveEvent.touches.length > 1) {
+            onDragEnd();
+            return;
+        }
+
         const curX = curTouch ? moveEvent.touches[0].clientX : moveEvent.clientX;
         const curY = curTouch ? moveEvent.touches[0].clientY : moveEvent.clientY;
 
         const deltaX = curX - startX;
         const deltaY = curY - startY;
+
+        if (!dragThresholdPassed) {
+            if (Math.hypot(deltaX, deltaY) >= 5) {
+                dragThresholdPassed = true;
+            } else {
+                return;
+            }
+        }
+
+        if (curTouch && moveEvent.cancelable) {
+            moveEvent.preventDefault();
+        }
+
+        hasMoved = true;
 
         const deltaPercentX = (deltaX / containerWidth) * 100;
         const deltaPercentY = (deltaY / containerHeight) * 100;
@@ -146,12 +171,16 @@ export function startBlockDrag(e: any, block: MangaBlock): void {
 }
 
 export function startBlockResize(e: any, block: MangaBlock, handleDir: string): void {
-    if (isSpacePanPressed() || e.button === 1) return;
+    if (isSpacePanPressed() || e.button === 1 || globalState.isMobileHandMode) return;
+    const isTouch = e.type.startsWith('touch');
+    if (isTouch && e.touches && e.touches.length > 1) return;
+
     e.stopPropagation();
-    e.preventDefault();
+    if (!isTouch || e.cancelable) {
+        e.preventDefault();
+    }
     pushStateToHistory();
 
-    const isTouch = e.type.startsWith('touch');
     const clientX = isTouch ? e.touches[0].clientX : e.clientX;
     const clientY = isTouch ? e.touches[0].clientY : e.clientY;
 
@@ -160,13 +189,23 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
 
     const startBox = { ...block.box };
 
-    const containerWidth = elements.mangaCanvasContainer?.clientWidth || 1;
-    const containerHeight = elements.mangaCanvasContainer?.clientHeight || 1;
+    const container = elements.mangaCanvasContainer || document.getElementById('manga-canvas-container');
+    const containerWidth = Math.max(10, container?.clientWidth || 800);
+    const containerHeight = Math.max(10, container?.clientHeight || 1200);
 
     let resizeRafId: number | null = null;
 
     function onResizing(moveEvent: any) {
+        if (globalState.isMobileHandMode) return;
         const curTouch = moveEvent.type.startsWith('touch');
+        if (curTouch && moveEvent.touches && moveEvent.touches.length > 1) {
+            onResizeEnd();
+            return;
+        }
+        if (curTouch && moveEvent.cancelable) {
+            moveEvent.preventDefault();
+        }
+
         const curX = curTouch ? moveEvent.touches[0].clientX : moveEvent.clientX;
         const curY = curTouch ? moveEvent.touches[0].clientY : moveEvent.clientY;
 
