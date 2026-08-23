@@ -52,7 +52,7 @@ export async function detectSpeechBubbleAtPointAsync(
     }
 
     const requestId = ++ocrRequestIdCounter;
-    return new Promise((resolve, reject) => {
+    return new Promise<any>((resolve, reject) => {
         ocrPendingRequests.set(requestId, { resolve, reject });
         const rgbaCopy = new Uint8Array(imageData.data);
         worker.postMessage(
@@ -85,7 +85,7 @@ export async function computeTextMaskDilatedRoiAsync(
     }
 
     const requestId = ++ocrRequestIdCounter;
-    return new Promise((resolve, reject) => {
+    return new Promise<BoundingBox>((resolve, reject) => {
         ocrPendingRequests.set(requestId, { resolve, reject });
         const rgbaCopy = new Uint8Array(imageData.data);
         worker.postMessage(
