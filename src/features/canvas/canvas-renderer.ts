@@ -21,7 +21,7 @@ export type {
     LayoutLine,
     LayoutLineRect
 } from './text-layout-engine';
-import { renderBlockTextToDOM } from './text-layout-engine';
+import { renderBlockTextToDOM, computeBlockTextLayout } from './text-layout-engine';
 
 
 export let overlayRenderRafId: any = null;
@@ -153,9 +153,18 @@ export function renderOverlays(
     const activeCoverIds = new Set<string>();
     const activeBubbleIds = new Set<string>();
 
+    const zoomScale = isMirror ? 1 : ((globalState.zoom || 100) / 100);
+    const displayW = (page as any).lastDisplayWidth ? (page as any).lastDisplayWidth * zoomScale : (imgElement && imgElement.clientWidth > 0 ? imgElement.clientWidth : 800);
+    const naturalW = (imgElement && imgElement.naturalWidth > 0) ? imgElement.naturalWidth : 800;
+    const naturalH = (imgElement && imgElement.naturalHeight > 0) ? imgElement.naturalHeight : 1200;
+    const displayH = displayW * (naturalH / Math.max(1, naturalW));
+
     page.blocks.forEach((block) => {
         if (!block || !block.box) return;
         if (!block.style) block.style = {} as any;
+
+        const bubblePxW = (block.box.w / 100) * displayW;
+        const bubblePxH = (block.box.h / 100) * displayH;
 
         const coverId = isMirror ? `mirror-cover-${block.id}` : `cover-${block.id}`;
         const bubbleId = isMirror ? `mirror-${block.id}` : block.id;
@@ -251,8 +260,16 @@ export function renderOverlays(
                 coverMaskContent.style.display = 'flex';
                 coverMaskContent.style.alignItems = 'center';
                 coverMaskContent.style.justifyContent = 'center';
-                coverMaskContent.style.width = 'auto';
-                coverMaskContent.style.height = 'auto';
+                if (block.translated && block.translated.trim()) {
+                    const blockLayout = computeBlockTextLayout(block, displayW, displayH, zoomScale);
+                    const snugW = Math.min(bubblePxW, blockLayout.totalWidth + (blockLayout.padXPx * 2));
+                    const snugH = Math.min(bubblePxH, blockLayout.totalHeight + (blockLayout.padYPx * 2));
+                    coverMaskContent.style.width = `${snugW}px`;
+                    coverMaskContent.style.height = `${snugH}px`;
+                } else {
+                    coverMaskContent.style.width = 'auto';
+                    coverMaskContent.style.height = 'auto';
+                }
                 coverMaskContent.style.maxWidth = '100%';
                 coverMaskContent.style.maxHeight = '100%';
                 coverMaskContent.className = `${isBuiltInFont ? fontStyle : ''} pointer-events-none`;
@@ -476,9 +493,16 @@ export function renderOverlays(
             const scaleToUse = forceExportScale !== 1 ? forceExportScale : zoomScale;
 
             if (strokeWidth2 > 0) {
+                const displayStroke1 = (strokeWidth || 0) * scaleToUse;
                 const displayStroke2 = strokeWidth2 * scaleToUse;
-                shadowParts.push(`0px 0px ${displayStroke2}px ${strokeColor2}`);
-                shadowParts.push(`0px 0px ${displayStroke2 * 0.75}px ${strokeColor2}`);
+                const r = (displayStroke1 / 2) + displayStroke2;
+                const numSteps = 16;
+                for (let a = 0; a < 360; a += 360 / numSteps) {
+                    const rad = (a * Math.PI) / 180;
+                    const ox = (Math.cos(rad) * r).toFixed(1);
+                    const oy = (Math.sin(rad) * r).toFixed(1);
+                    shadowParts.push(`${ox}px ${oy}px 0px ${strokeColor2}`);
+                }
             }
 
             if (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0) {

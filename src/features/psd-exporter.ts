@@ -6,7 +6,9 @@
  * - Layer 3+: Individual Text Layers for every translated speech bubble
  */
 
-import { MangaPage } from '../types/index';
+import { MangaPage, MangaBlock } from '../types/index';
+import { computeBlockTextLayout } from './canvas/text-layout-engine';
+import { getExportScale } from './canvas/canvas-exporter';
 
 export async function createMangaPSD(page: MangaPage, originalImgEl: HTMLImageElement, eraserCanvas?: HTMLCanvasElement | null): Promise<Blob> {
     if (!page || !originalImgEl) {
@@ -50,8 +52,12 @@ export async function createMangaPSD(page: MangaPage, originalImgEl: HTMLImageEl
 
         if (agPsd && (agPsd.writePsd || agPsd.writePsdUint8Array)) {
             const writeFn = agPsd.writePsdUint8Array || agPsd.writePsd;
+            const scaleFactor = getExportScale(page, width, originalImgEl);
 
             const textChildren = (page.blocks || []).map((block, idx) => {
+                if (block.type === 'image') return null;
+                if (!block.translated || !block.translated.trim()) return null;
+
                 const bx = Math.round((block.box.x / 100) * width);
                 const by = Math.round((block.box.y / 100) * height);
                 const bw = Math.max(10, Math.round((block.box.w / 100) * width));
@@ -63,19 +69,129 @@ export async function createMangaPSD(page: MangaPage, originalImgEl: HTMLImageEl
                 const tCtx = tCanvas.getContext('2d');
                 if (!tCtx) return null;
 
-                const fontSize = block.style?.fontSize ? Math.round(block.style.fontSize * (width / 800)) : 13;
-                tCtx.font = `${block.style?.bold ? 'bold ' : ''}${fontSize}px sans-serif`;
-                tCtx.fillStyle = block.style?.textColor || '#000000';
-                tCtx.textAlign = 'center';
-                tCtx.textBaseline = 'middle';
+                const layout = computeBlockTextLayout(block, width, height, scaleFactor, tCtx);
 
-                const lines = (block.translated || '').split('\n');
-                const lh = fontSize * (block.style?.lineHeight || 1.15);
-                const startY = (bh / 2) - ((lines.length - 1) * lh) / 2;
+                // Optional Background Mask for the block
+                const hexBgColor = block.style?.bgColor || '#ffffff';
+                const alpha = (block.style?.bgOpacity !== undefined ? block.style.bgOpacity : 100) / 100;
+                const maskShape = block.style?.maskShape || 'bubble-fit';
 
-                lines.forEach((line, i) => {
-                    tCtx.fillText(line, bw / 2, startY + i * lh);
-                });
+                if (alpha > 0 && block.style?.bgOpacity !== 0 && block.style?.maskShape !== 'none') {
+                    tCtx.fillStyle = hexBgColor;
+                    tCtx.globalAlpha = alpha;
+                    if (maskShape === 'ellipse') {
+                        tCtx.beginPath();
+                        tCtx.ellipse(bw / 2, bh / 2, bw / 2, bh / 2, 0, 0, 2 * Math.PI);
+                        tCtx.fill();
+                    } else if (maskShape === 'rounded') {
+                        const r = Math.min(16 * scaleFactor, bw / 4, bh / 4);
+                        tCtx.beginPath();
+                        if (typeof tCtx.roundRect === 'function') tCtx.roundRect(0, 0, bw, bh, r);
+                        else tCtx.rect(0, 0, bw, bh);
+                        tCtx.fill();
+                    } else {
+                        tCtx.fillRect(0, 0, bw, bh);
+                    }
+                    tCtx.globalAlpha = 1.0;
+                }
+
+                const strokeWidth = parseFloat(block.style?.strokeWidth as any) || 0;
+                const strokeColor = block.style?.strokeColor || '#ffffff';
+                const strokeWidthPx = strokeWidth * scaleFactor;
+
+                const strokeWidth2 = parseFloat(block.style?.strokeWidth2 as any) || 0;
+                const strokeColor2 = block.style?.strokeColor2 || '#000000';
+                const strokeWidth2Px = strokeWidth2 * scaleFactor;
+
+                if (layout.isVertical) {
+                    const colStep = layout.lineHeightPx;
+                    const charStep = layout.lineHeightPx;
+                    const rightX = bw / 2 + layout.totalWidth / 2 - colStep / 2;
+
+                    for (let j = 0; j < layout.lines.length; j++) {
+                        const colLine = layout.lines[j];
+                        const colChars = colLine.rawChars || [];
+                        const colX = rightX - (j * colStep);
+                        const colHeight = colChars.length * charStep;
+                        let startY = (bh / 2) - (colHeight / 2) + (charStep / 2);
+                        const minStartY = layout.padYPx + (charStep / 2);
+                        if (startY < minStartY) startY = minStartY;
+
+                        tCtx.textAlign = 'center';
+                        tCtx.textBaseline = 'middle';
+
+                        for (let k = 0; k < colChars.length; k++) {
+                            const { char, token: tok } = colChars[k];
+                            const charCenterY = startY + (k * charStep);
+                            tCtx.save();
+                            tCtx.translate(colX, charCenterY);
+                            if (char === '…' || char === '―' || char === '—' || char === '~' || char === '～' || char === '-') {
+                                tCtx.rotate(Math.PI / 2);
+                            }
+                            tCtx.font = layout.getFontFn(tok);
+
+                            if (strokeWidth2 > 0) {
+                                tCtx.lineWidth = strokeWidthPx + (strokeWidth2Px * 2);
+                                tCtx.strokeStyle = strokeColor2;
+                                tCtx.lineJoin = 'round';
+                                tCtx.strokeText(char, 0, 0);
+                            }
+                            if (strokeWidth > 0) {
+                                tCtx.lineWidth = strokeWidthPx;
+                                tCtx.strokeStyle = strokeColor;
+                                tCtx.lineJoin = 'round';
+                                tCtx.strokeText(char, 0, 0);
+                            }
+                            tCtx.fillStyle = tok.color || block.style?.textColor || '#000000';
+                            tCtx.fillText(char, 0, 0);
+                            tCtx.restore();
+                        }
+                    }
+                } else {
+                    let startX = bw / 2;
+                    if (block.style?.align === 'left') startX = layout.padXPx;
+                    else if (block.style?.align === 'right') startX = bw - layout.padXPx;
+
+                    for (let i = 0; i < layout.lines.length; i++) {
+                        const lineLayout = layout.lines[i];
+                        const lineTokens = lineLayout.tokens;
+                        const lineCenterY = (lineLayout.centerY - layout.by!);
+
+                        const measuredLineWidth = lineLayout.width;
+                        let curTokenX = startX;
+                        if (!block.style?.align || block.style?.align === 'center') {
+                            curTokenX = startX - (measuredLineWidth / 2);
+                        } else if (block.style?.align === 'right') {
+                            curTokenX = startX - measuredLineWidth;
+                        }
+
+                        tCtx.textAlign = 'left';
+                        tCtx.textBaseline = 'middle';
+
+                        lineTokens.forEach(tok => {
+                            const tokFontSpec = layout.getFontFn(tok);
+                            tCtx.font = tokFontSpec;
+                            const tokenW = tCtx.measureText(tok.text).width;
+
+                            if (strokeWidth2 > 0) {
+                                tCtx.lineWidth = strokeWidthPx + (strokeWidth2Px * 2);
+                                tCtx.strokeStyle = strokeColor2;
+                                tCtx.lineJoin = 'round';
+                                tCtx.strokeText(tok.text, curTokenX, lineCenterY);
+                            }
+                            if (strokeWidth > 0) {
+                                tCtx.lineWidth = strokeWidthPx;
+                                tCtx.strokeStyle = strokeColor;
+                                tCtx.lineJoin = 'round';
+                                tCtx.strokeText(tok.text, curTokenX, lineCenterY);
+                            }
+                            tCtx.fillStyle = tok.color || block.style?.textColor || '#000000';
+                            tCtx.fillText(tok.text, curTokenX, lineCenterY);
+
+                            curTokenX += tokenW;
+                        });
+                    }
+                }
 
                 return {
                     name: `Text ${idx + 1}: ${(block.translated || '').slice(0, 16)}`,

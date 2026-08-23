@@ -19,36 +19,43 @@ export function getReferenceDisplayDimensions(page?: MangaPage | null, imgElemen
     const imgEl = imgElement || (typeof document !== 'undefined' ? elements.mangaBgImage : null);
     const zoomScale = (globalState.zoom || 100) / 100;
 
-    if (!displayWidth && imgEl && imgEl.clientWidth > 0) {
+    const isCurrentActiveEl = (typeof document !== 'undefined' && imgEl === elements.mangaBgImage);
+
+    if (!displayWidth && isCurrentActiveEl && imgEl && imgEl.clientWidth > 0) {
         displayWidth = imgEl.clientWidth / Math.max(0.01, zoomScale);
-    }
-    if (!displayWidth && typeof document !== 'undefined' && elements.mangaBgImage && elements.mangaBgImage.clientWidth > 0) {
-        displayWidth = elements.mangaBgImage.clientWidth / Math.max(0.01, zoomScale);
-    }
-    if (!displayWidth && typeof document !== 'undefined' && elements.mangaCanvasContainer && elements.mangaCanvasContainer.clientWidth > 0) {
-        displayWidth = elements.mangaCanvasContainer.clientWidth / Math.max(0.01, zoomScale);
-    }
-    if (!displayWidth && typeof document !== 'undefined' && elements.workspaceViewport && elements.workspaceViewport.clientWidth > 0) {
-        displayWidth = Math.min((elements.workspaceViewport.clientWidth - 32) / Math.max(0.01, zoomScale), 1000);
-    }
-    if (!displayWidth) {
-        const activePage = globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null;
-        if (activePage && (activePage as any).lastDisplayWidth) {
-            displayWidth = (activePage as any).lastDisplayWidth;
-        }
-    }
-    if (!displayWidth || isNaN(displayWidth) || displayWidth <= 0) {
-        displayWidth = 800;
-    }
-    if (page && !(page as any).lastDisplayWidth) {
-        (page as any).lastDisplayWidth = displayWidth;
     }
 
     const naturalW = (imgEl && imgEl.naturalWidth > 0) ? imgEl.naturalWidth : (page?.width || 800);
     const naturalH = (imgEl && imgEl.naturalHeight > 0) ? imgEl.naturalHeight : (page?.height || 1200);
     const aspect = naturalH / Math.max(1, naturalW);
-    const displayHeight = displayWidth * aspect;
 
+    if (!displayWidth) {
+        // If it's the active page, check container / viewport
+        if (isCurrentActiveEl) {
+            if (typeof document !== 'undefined' && elements.mangaCanvasContainer && elements.mangaCanvasContainer.clientWidth > 0) {
+                displayWidth = elements.mangaCanvasContainer.clientWidth / Math.max(0.01, zoomScale);
+            } else if (typeof document !== 'undefined' && elements.workspaceViewport && elements.workspaceViewport.clientWidth > 0) {
+                displayWidth = Math.min((elements.workspaceViewport.clientWidth - 32) / Math.max(0.01, zoomScale), 1000);
+            }
+        }
+    }
+
+    if (!displayWidth || isNaN(displayWidth) || displayWidth <= 0) {
+        // Calculate standard viewport-equivalent display width tailored to page aspect ratio
+        if (aspect <= 1.0) {
+            // Landscape / Double-page spread
+            displayWidth = Math.min(1400, Math.round(900 / Math.max(0.4, aspect)));
+        } else {
+            // Standard portrait page
+            displayWidth = 800;
+        }
+    }
+
+    if (page && !(page as any).lastDisplayWidth) {
+        (page as any).lastDisplayWidth = displayWidth;
+    }
+
+    const displayHeight = displayWidth * aspect;
     return { width: displayWidth, height: displayHeight };
 }
 

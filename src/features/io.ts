@@ -430,15 +430,6 @@ export async function runBatchExport(): Promise<void> {
                     img.src = blobUrl;
                 });
 
-                const zoomScale = (globalState.zoom || 100) / 100;
-                const containerW = elements.mangaCanvasContainer && elements.mangaCanvasContainer.clientWidth > 0
-                    ? elements.mangaCanvasContainer.clientWidth
-                    : (elements.workspaceViewport?.clientWidth ? Math.min(elements.workspaceViewport.clientWidth - 32, 1000) : 800);
-                const displayWidth = Math.max(200, Math.round(containerW / zoomScale));
-                if (!(page as any).lastDisplayWidth) {
-                    (page as any).lastDisplayWidth = displayWidth;
-                }
-
                 const canvas = await renderPageToCanvas2D(page, img);
                 URL.revokeObjectURL(blobUrl);
 
