@@ -117,6 +117,7 @@ export interface TextLayoutInput {
     skewY?: number;
     warpWave?: number;
     warpBulge?: number;
+    lockedLines?: RichTextSegment[][];
 }
 
 export interface LayoutLine {
@@ -232,7 +233,9 @@ export function measureStyledSegmentWidth(
     const charCount = Array.from(segText).length;
     const extraSpacing = Math.max(0, charCount - 1) * effLetterSpacing;
 
-    if (ctx) {
+    const measureCtx = ctx || getSharedMeasureContext();
+
+    if (measureCtx) {
         const tokFontStr = buildFontString({
             bold: !!tok.bold,
             italic: !!tok.italic,
@@ -248,10 +251,10 @@ export function measureStyledSegmentWidth(
             return cachedWidth + extraSpacing;
         }
 
-        const prevFont = ctx.font;
-        ctx.font = tokFontStr;
-        const w = ctx.measureText(segText).width;
-        ctx.font = prevFont;
+        const prevFont = measureCtx.font;
+        measureCtx.font = tokFontStr;
+        const w = measureCtx.measureText(segText).width;
+        measureCtx.font = prevFont;
 
         if (w > 0) {
             if (textMeasureCache.size >= MAX_TEXT_MEASURE_CACHE_SIZE) {
@@ -812,22 +815,26 @@ export function computeTextLayout(
 
     const allDerivedTokenLines: RichTextSegment[][] = [];
 
-    tokenParagraphs.forEach((paraTokens) => {
-        if (!paraTokens || paraTokens.length === 0 || (paraTokens.length === 1 && !paraTokens[0].text)) {
-            allDerivedTokenLines.push([]);
-            return;
-        }
+    if (input.lockedLines && input.lockedLines.length > 0) {
+        allDerivedTokenLines.push(...input.lockedLines);
+    } else {
+        tokenParagraphs.forEach((paraTokens) => {
+            if (!paraTokens || paraTokens.length === 0 || (paraTokens.length === 1 && !paraTokens[0].text)) {
+                allDerivedTokenLines.push([]);
+                return;
+            }
 
-        const wrappedParaLines = wrapParagraphCanva(
-            paraTokens,
-            availableWidth,
-            fontSize,
-            letterSpacingPx,
-            fontName,
-            ctx
-        );
-        allDerivedTokenLines.push(...wrappedParaLines);
-    });
+            const wrappedParaLines = wrapParagraphCanva(
+                paraTokens,
+                availableWidth,
+                fontSize,
+                letterSpacingPx,
+                fontName,
+                ctx
+            );
+            allDerivedTokenLines.push(...wrappedParaLines);
+        });
+    }
 
     const hasCharWarp = (input.arcAngle || 0) !== 0 || (input.warpWave || 0) !== 0 || (input.warpBulge || 0) !== 0;
     let maxLineWidth = 0;
@@ -929,7 +936,8 @@ export function computeBlockTextLayout(
     displayW: number,
     displayH: number,
     scaleFactor: number = 1,
-    ctx?: CanvasRenderingContext2D | null
+    ctx?: CanvasRenderingContext2D | null,
+    lockedLines?: RichTextSegment[][]
 ): TextLayoutResult {
     const bw = (block.box.w / 100) * displayW;
     const bh = (block.box.h / 100) * displayH;
@@ -971,7 +979,8 @@ export function computeBlockTextLayout(
         skewX: block.style?.skewX || 0,
         skewY: block.style?.skewY || 0,
         warpWave: block.style?.warpWave || 0,
-        warpBulge: block.style?.warpBulge || 0
+        warpBulge: block.style?.warpBulge || 0,
+        lockedLines: lockedLines
     }, ctx);
 
     layout.bx = bx;
@@ -992,6 +1001,8 @@ export function computeBlockTextLayout(
             layout.lineRects[idx].y = by + layout.lineRects[idx].y;
         }
     });
+
+    (block as any)._derivedLines = layout.lines.map(l => l.tokens);
 
     return layout;
 }

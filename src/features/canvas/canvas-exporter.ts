@@ -295,9 +295,32 @@ export function buildBlockTextLayout(
     W: number,
     H: number,
     scaleFactor: number,
-    ctx?: CanvasRenderingContext2D | null
+    ctx?: CanvasRenderingContext2D | null,
+    page?: MangaPage | null
 ): BlockTextLayout {
-    return computeBlockTextLayout(block, W, H, scaleFactor, ctx) as BlockTextLayout;
+    let lockedLines: any = (block as any)._derivedLines || null;
+
+    if (!lockedLines && typeof document !== 'undefined') {
+        const overlayEl = document.getElementById(block.id);
+        if (overlayEl) {
+            const textContainer = overlayEl.querySelector(':scope > .mask-content-container > .inner-text-container') as HTMLElement | null
+                || overlayEl.querySelector('.inner-text-container') as HTMLElement | null
+                || overlayEl.querySelector('div > div') as HTMLElement | null;
+            if (textContainer) {
+                lockedLines = extractDomRenderedLines(textContainer);
+            }
+        }
+    }
+
+    if (!lockedLines && page) {
+        const { width: refW, height: refH } = getReferenceDisplayDimensions(page);
+        const refLayout = computeBlockTextLayout(block, refW, refH, 1.0, ctx);
+        if (refLayout && refLayout.lines && refLayout.lines.length > 0) {
+            lockedLines = refLayout.lines.map(l => l.tokens);
+        }
+    }
+
+    return computeBlockTextLayout(block, W, H, scaleFactor, ctx, lockedLines || undefined) as BlockTextLayout;
 }
 
 export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTMLImageElement | null = null): Promise<HTMLCanvasElement> {
@@ -543,7 +566,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
             let fillBh = Math.max(1, bh - (insetPad * 2));
 
             if (maskSize === 'snug' && block.translated && block.translated.trim()) {
-                const layout = buildBlockTextLayout(block, W, H, scaleFactor, ctx);
+                const layout = buildBlockTextLayout(block, W, H, scaleFactor, ctx, page);
                 const snugW = Math.min(fillBw, layout.totalWidth + (layout.padXPx * 2));
                 const snugH = Math.min(fillBh, layout.totalHeight + (layout.padYPx * 2));
                 fillBx = bx + (bw - snugW) / 2;
@@ -603,7 +626,7 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
             if (block.type === 'image') continue;
             if (!block.translated || !block.translated.trim()) continue;
 
-            const layout = buildBlockTextLayout(block, W, H, scaleFactor, ctx);
+            const layout = buildBlockTextLayout(block, W, H, scaleFactor, ctx, page);
             const { bx, by, bw, bh, fontSizePx, lineHeightPx, letterSpacingPx, fontName } = layout;
 
             ctx.save();
