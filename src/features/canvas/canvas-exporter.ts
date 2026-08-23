@@ -805,14 +805,17 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
                 }
             } else {
                 const lineHeight = layout.lineHeightPx;
+                const totalLines = layout.lines.length;
+
                 let startX = bx + bw / 2;
                 if (block.style.align === 'left') startX = bx + layout.padXPx;
                 else if (block.style.align === 'right') startX = bx + bw - layout.padXPx;
 
-                for (let i = 0; i < layout.lines.length; i++) {
+                for (let i = 0; i < totalLines; i++) {
                     const lineLayout = layout.lines[i];
                     const lineTokens = lineLayout.tokens;
-                    const lineCenterY = lineLayout.centerY;
+                    const lineCenterY = lineLayout.centerY - (fontSizePx * 0.165);
+                    const fullLineText = lineLayout.text || '';
 
                     ctx.save();
                     if (hasSkew) {
@@ -850,8 +853,11 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
 
                         for (let k = 0; k < count; k++) {
                             const { char, token: tok } = rawChars[k];
-                            ctx.font = layout.getFontFn(tok);
-                            const cw = ctx.measureText(char).width;
+                            const tokFontSpec = layout.getFontFn(tok);
+                            ctx.font = tokFontSpec;
+                            const charMetrics = ctx.measureText(char);
+                            const cw = charMetrics.width;
+
                             const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
                             const charCenterX = curX + (cw / 2);
                             const t = count > 1 ? (k - (count - 1) / 2) / ((count - 1) / 2) : 0;
@@ -1049,9 +1055,30 @@ export async function renderPageToCanvas2D(page: MangaPage, bgImageOverride: HTM
     return canvas;
 }
 
-export async function renderPageToCanvasSVG(page: MangaPage): Promise<HTMLCanvasElement> {
-    const imgElement = elements.mangaBgImage;
+export async function renderPageToCanvasSVG(page: MangaPage, bgImageOverride: HTMLImageElement | null = null): Promise<HTMLCanvasElement> {
+    const isCurrentActivePage = (globalState.activePageIndex >= 0 && page === globalState.pages[globalState.activePageIndex]);
+    let imgElement = bgImageOverride || (isCurrentActivePage ? elements.mangaBgImage : null);
+    let createdBlobUrl: string | null = null;
+
     if (!imgElement || !imgElement.naturalWidth || !imgElement.naturalHeight) {
+        const pageFile = page.originalFile || page.file;
+        const srcToLoad = pageFile ? (createdBlobUrl = URL.createObjectURL(pageFile as Blob)) : page.src;
+        if (srcToLoad) {
+            const offImg = new Image();
+            offImg.crossOrigin = 'anonymous';
+            await new Promise<void>((resolve) => {
+                offImg.onload = () => resolve();
+                offImg.onerror = () => resolve();
+                offImg.src = srcToLoad;
+            });
+            if (offImg.naturalWidth > 0) {
+                imgElement = offImg;
+            }
+        }
+    }
+
+    if (!imgElement || !imgElement.naturalWidth || !imgElement.naturalHeight) {
+        if (createdBlobUrl) URL.revokeObjectURL(createdBlobUrl);
         throw new Error("Dữ liệu ảnh gốc chưa sẵn sàng.");
     }
 
@@ -1067,6 +1094,7 @@ export async function renderPageToCanvasSVG(page: MangaPage): Promise<HTMLCanvas
     mirrorContainer.style.height = `${H}px`;
     mirrorContainer.style.overflow = 'hidden';
     mirrorContainer.style.boxSizing = 'border-box';
+    mirrorContainer.className = 'exporting-mode';
     document.body.appendChild(mirrorContainer);
 
     try {
@@ -1078,10 +1106,31 @@ export async function renderPageToCanvasSVG(page: MangaPage): Promise<HTMLCanvas
         renderOverlays(mirrorContainer, page, imgElement, forceExportScale);
         await waitForNextPaint();
 
+        let customFontFaces = '';
+        if (typeof document !== 'undefined') {
+            try {
+                for (let i = 0; i < document.styleSheets.length; i++) {
+                    const sheet = document.styleSheets[i];
+                    try {
+                        const rules = sheet.cssRules || (sheet as any).rules;
+                        if (rules) {
+                            for (let j = 0; j < rules.length; j++) {
+                                const rule = rules[j];
+                                if (rule && ((rule as any).type === 5 || (rule.cssText && rule.cssText.startsWith('@font-face')))) {
+                                    customFontFaces += rule.cssText + '\n';
+                                }
+                            }
+                        }
+                    } catch (e) {}
+                }
+            } catch (e) {}
+        }
+
         const cssStyles = `
             @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,700;1,400&family=Comic+Neue:wght@400;700&family=Nunito:wght@400;700&family=Patrick+Hand&family=Bangers&family=Permanent+Marker&family=Bungee&family=Caveat:wght@400;700&family=Chakra+Petch:wght@400;700&family=Saira+Condensed:wght@400;700&display=swap');
+            ${customFontFaces}
             * { box-sizing: border-box; }
-            .bubble-overlay { position: absolute; box-sizing: border-box; }
+            .bubble-overlay { position: absolute; box-sizing: border-box; border: none !important; box-shadow: none !important; outline: none !important; }
             .text-vertical { writing-mode: vertical-rl; text-orientation: upright; }
             .font-comic { font-family: 'Patrick Hand', cursive; }
             .font-manga { font-family: 'Nunito', sans-serif; }
@@ -1163,6 +1212,7 @@ export async function renderPageToCanvasSVG(page: MangaPage): Promise<HTMLCanvas
 
         return canvas;
     } finally {
+        if (createdBlobUrl) URL.revokeObjectURL(createdBlobUrl);
         if (mirrorContainer.parentNode) {
             mirrorContainer.parentNode.removeChild(mirrorContainer);
         }

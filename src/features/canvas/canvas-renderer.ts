@@ -153,11 +153,11 @@ export function renderOverlays(
     const activeCoverIds = new Set<string>();
     const activeBubbleIds = new Set<string>();
 
-    const zoomScale = isMirror ? 1 : ((globalState.zoom || 100) / 100);
-    const displayW = (page as any).lastDisplayWidth ? (page as any).lastDisplayWidth * zoomScale : (imgElement && imgElement.clientWidth > 0 ? imgElement.clientWidth : 800);
     const naturalW = (imgElement && imgElement.naturalWidth > 0) ? imgElement.naturalWidth : 800;
     const naturalH = (imgElement && imgElement.naturalHeight > 0) ? imgElement.naturalHeight : 1200;
-    const displayH = displayW * (naturalH / Math.max(1, naturalW));
+    const zoomScale = isMirror ? 1 : ((globalState.zoom || 100) / 100);
+    const displayW = isMirror ? naturalW : ((page as any).lastDisplayWidth ? (page as any).lastDisplayWidth * zoomScale : (imgElement && imgElement.clientWidth > 0 ? imgElement.clientWidth : 800));
+    const displayH = isMirror ? naturalH : displayW * (naturalH / Math.max(1, naturalW));
 
     page.blocks.forEach((block) => {
         if (!block || !block.box) return;
@@ -574,7 +574,8 @@ export function renderOverlays(
                 letterSpacing: displayLetterSpacing,
                 underline: !!block.style.underline
             };
-            renderBlockTextToDOM(innerTextDiv, block, displayW, displayH, zoomScale, warpOpts);
+            const scaleForLayout = isMirror ? forceExportScale : zoomScale;
+            renderBlockTextToDOM(innerTextDiv, block, displayW, displayH, scaleForLayout, warpOpts);
 
             if ((globalState.bilingualMode === 'sub' || block.style.bilingualSub) && block.original && block.original.trim()) {
                 let origSub = innerTextDiv.querySelector(':scope > .bilingual-sub-line') as HTMLElement | null;
