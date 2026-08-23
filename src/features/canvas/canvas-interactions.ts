@@ -1,4 +1,4 @@
-import { globalState, pushStateToHistory, savePageToDB, uiUpdateActiveBlockEditor, uiUpdateSplitView } from '../../core/state';
+import { globalState, pushStateToHistory, savePageToDB, uiUpdateActiveBlockEditor, uiUpdateSplitView, getFontMetrics } from '../../core/state';
 import { elements } from '../../core/elements';
 import { DEFAULT_VERTICAL_WRITING_MODE, DEFAULT_BLOCK_SIZE_PX } from '../../config/constants';
 import { requestOverlayRender, getReferenceDisplayDimensions } from './canvas-renderer';
@@ -505,6 +505,8 @@ export function addNewBlock(): void {
     const xPct = Math.max(0, Math.min(100 - wPct, Math.round((50 - wPct / 2) * 100) / 100));
     const yPct = Math.max(0, Math.min(100 - hPct, Math.round((50 - hPct / 2) * 100) / 100));
 
+    const initFont = globalState.defaultFont || globalState.globalStyle?.fontFamily || 'font-manga';
+    const initMetrics = getFontMetrics(initFont);
     const newBlock: MangaBlock = {
         id: newId,
         type: 'dialogue',
@@ -513,7 +515,11 @@ export function addNewBlock(): void {
         box: { x: xPct, y: yPct, w: wPct, h: hPct },
         style: {
             ...(globalState.globalStyle || {}),
-            fontFamily: globalState.defaultFont || globalState.globalStyle?.fontFamily || 'font-manga',
+            fontFamily: initFont,
+            fontSize: initMetrics.fontSize,
+            baseFontSize: initMetrics.fontSize,
+            lineHeight: initMetrics.lineHeight,
+            letterSpacing: initMetrics.letterSpacing,
             vertical: DEFAULT_VERTICAL_WRITING_MODE
         } as BlockStyle
     };
@@ -819,30 +825,35 @@ export function initMarqueeSelection(): void {
                         w: wPct,
                         h: hPct
                     },
-                    style: {
-                        ...(globalState.globalStyle || {}),
-                        fontFamily: globalState.defaultFont || globalState.globalStyle?.fontFamily || 'font-manga',
-                        fontSize: globalState.defaultFontSize || globalState.globalStyle?.fontSize || 17,
-                        lineHeight: globalState.defaultLineHeight !== undefined ? globalState.defaultLineHeight : (globalState.globalStyle?.lineHeight !== undefined ? globalState.globalStyle.lineHeight : 1.15),
-                        letterSpacing: globalState.defaultLetterSpacing !== undefined ? globalState.defaultLetterSpacing : (globalState.globalStyle?.letterSpacing !== undefined ? globalState.globalStyle.letterSpacing : 0),
-                        textTransform: globalState.globalStyle?.textTransform || 'none',
-                        bold: globalState.globalStyle?.bold || false,
-                        italic: globalState.globalStyle?.italic || false,
-                        underline: globalState.globalStyle?.underline || false,
-                        textColor: globalState.globalStyle?.textColor || '#000000',
-                        bgColor: globalState.globalStyle?.bgColor || '#ffffff',
-                        bgOpacity: globalState.globalStyle?.bgOpacity !== undefined ? globalState.globalStyle.bgOpacity : 100,
-                        padding: globalState.globalStyle?.padding !== undefined ? globalState.globalStyle.padding : 4,
-                        rotate: 0,
-                        vertical: false,
-                        align: globalState.globalStyle?.align || 'center',
-                        maskShape: globalState.globalStyle?.maskShape || 'bubble-fit',
-                        maskSize: globalState.globalStyle?.maskSize || 'full',
-                        strokeColor: globalState.globalStyle?.strokeColor || '#000000',
-                        strokeWidth: globalState.globalStyle?.strokeWidth || 0,
-                        shadowColor: globalState.globalStyle?.shadowColor || '#000000',
-                        shadowBlur: globalState.globalStyle?.shadowBlur || 0
-                    }
+                    style: (() => {
+                        const boxFont = globalState.defaultFont || globalState.globalStyle?.fontFamily || 'font-manga';
+                        const boxMetrics = getFontMetrics(boxFont);
+                        return {
+                            ...(globalState.globalStyle || {}),
+                            fontFamily: boxFont,
+                            fontSize: boxMetrics.fontSize,
+                            baseFontSize: boxMetrics.fontSize,
+                            lineHeight: boxMetrics.lineHeight,
+                            letterSpacing: boxMetrics.letterSpacing,
+                            textTransform: globalState.globalStyle?.textTransform || 'none',
+                            bold: globalState.globalStyle?.bold || false,
+                            italic: globalState.globalStyle?.italic || false,
+                            underline: globalState.globalStyle?.underline || false,
+                            textColor: globalState.globalStyle?.textColor || '#000000',
+                            bgColor: globalState.globalStyle?.bgColor || '#ffffff',
+                            bgOpacity: globalState.globalStyle?.bgOpacity !== undefined ? globalState.globalStyle.bgOpacity : 100,
+                            padding: globalState.globalStyle?.padding !== undefined ? globalState.globalStyle.padding : 4,
+                            rotate: 0,
+                            vertical: false,
+                            align: globalState.globalStyle?.align || 'center',
+                            maskShape: globalState.globalStyle?.maskShape || 'bubble-fit',
+                            maskSize: globalState.globalStyle?.maskSize || 'full',
+                            strokeColor: globalState.globalStyle?.strokeColor || '#000000',
+                            strokeWidth: globalState.globalStyle?.strokeWidth || 0,
+                            shadowColor: globalState.globalStyle?.shadowColor || '#000000',
+                            shadowBlur: globalState.globalStyle?.shadowBlur || 0
+                        } as BlockStyle;
+                    })()
                 };
                 pushStateToHistory();
                 page.blocks.push(newBlock);

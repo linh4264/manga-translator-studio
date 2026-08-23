@@ -52,6 +52,9 @@ export async function populateCustomFontsDropdown(): Promise<void> {
             });
         });
 
+        const typoSelect = document.getElementById('typography-target-font') as HTMLSelectElement | null;
+        const prevTypoVal = typoSelect?.value;
+
         const typoOptgroup = document.getElementById('typography-custom-fonts-optgroup');
         if (typoOptgroup) {
             typoOptgroup.replaceChildren();
@@ -62,6 +65,10 @@ export async function populateCustomFontsDropdown(): Promise<void> {
                 opt.setAttribute('data-custom', 'true');
                 typoOptgroup.appendChild(opt);
             });
+        }
+
+        if (typoSelect && prevTypoVal) {
+            typoSelect.value = prevTypoVal;
         }
 
         await renderCustomFontsListUI(fonts);

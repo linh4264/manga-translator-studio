@@ -1,5 +1,5 @@
 import { selectPage } from './pages-ui';
-import { globalState, markPageAutoFitDirty } from '../core/state';
+import { globalState, markPageAutoFitDirty, debounceSavePage, uiUpdateActiveBlockEditor } from '../core/state';
 import { VALID_MODEL_IDS, VALID_OCR_MODEL_IDS, CUSTOM_MODEL_VALUE, DEFAULT_MODEL, DEFAULT_OCR_MODEL, DEFAULT_TRANSLATION_MODEL } from '../config/constants';
 import { elements } from '../core/elements';
 import { showToast } from '../core/utils';
@@ -437,23 +437,9 @@ export function syncSettingsUI(): void {
     const defaultSfxSelect = document.getElementById('default-sfx-font') as HTMLSelectElement | null;
     if (defaultSfxSelect) defaultSfxSelect.value = globalState.defaultSfxFont || 'font-impact';
 
-    const defaultFontSizeSlider = document.getElementById('slider-default-font-size') as HTMLInputElement | null;
-    const defaultFontSizeLbl = document.getElementById('lbl-default-font-size');
-    const curFontSize = globalState.defaultFontSize || 17;
-    if (defaultFontSizeSlider) defaultFontSizeSlider.value = String(curFontSize);
-    if (defaultFontSizeLbl) defaultFontSizeLbl.textContent = `${curFontSize}px`;
-
-    const defaultLineHeightSlider = document.getElementById('slider-default-line-height') as HTMLInputElement | null;
-    const defaultLineHeightLbl = document.getElementById('lbl-default-line-height');
-    const curLineHeight = globalState.defaultLineHeight !== undefined ? globalState.defaultLineHeight : 1.15;
-    if (defaultLineHeightSlider) defaultLineHeightSlider.value = String(curLineHeight);
-    if (defaultLineHeightLbl) defaultLineHeightLbl.textContent = `${curLineHeight}`;
-
-    const defaultLetterSpacingSlider = document.getElementById('slider-default-letter-spacing') as HTMLInputElement | null;
-    const defaultLetterSpacingLbl = document.getElementById('lbl-default-letter-spacing');
-    const curLetterSpacing = globalState.defaultLetterSpacing !== undefined ? globalState.defaultLetterSpacing : 0;
-    if (defaultLetterSpacingSlider) defaultLetterSpacingSlider.value = String(curLetterSpacing);
-    if (defaultLetterSpacingLbl) defaultLetterSpacingLbl.textContent = `${curLetterSpacing}px`;
+    const typoSelect = document.getElementById('typography-target-font') as HTMLSelectElement | null;
+    const activeTargetFont = typoSelect ? typoSelect.value : '__global__';
+    onTypographyTargetFontChange(activeTargetFont);
 
     const apiDelay = document.getElementById('api-delay-input') as HTMLInputElement | null;
     if (apiDelay) apiDelay.value = String(globalState.apiDelay || 2);
@@ -559,12 +545,20 @@ export function updateDefaultTypeFont(type: string, value: string): void {
 
 export function getActiveTypographyTargetFont(): string {
     const select = document.getElementById('typography-target-font') as HTMLSelectElement | null;
-    return select ? select.value : '__global__';
+    if (!select) return '__global__';
+    if (select.value) return select.value;
+    if (select.options && select.selectedIndex >= 0 && select.options[select.selectedIndex]) {
+        return select.options[select.selectedIndex].value || '__global__';
+    }
+    return '__global__';
 }
 
 export function onTypographyTargetFontChange(fontFamily: string): void {
     const badge = document.getElementById('typography-font-badge');
     const select = document.getElementById('typography-target-font') as HTMLSelectElement | null;
+    if (select && select.value !== fontFamily) {
+        select.value = fontFamily;
+    }
     const selectedText = (select && select.options && select.selectedIndex >= 0 && select.options[select.selectedIndex]?.textContent) || fontFamily;
 
     if (!globalState.fontSpecificMetrics) {
@@ -617,6 +611,47 @@ function syncTypographySliders(fontSize: number, lineHeight: number, letterSpaci
     if (lblLS) lblLS.textContent = `${letterSpacing}px`;
 }
 
+function applyFontMetricsToAllBlocks(targetFont: string, updates: { fontSize?: number; lineHeight?: number; letterSpacing?: number }): void {
+    if (!globalState.pages || !Array.isArray(globalState.pages)) return;
+
+    let anyModified = false;
+    globalState.pages.forEach(p => {
+        if (!p || !p.blocks || p.blocks.length === 0) return;
+        let pageModified = false;
+
+        p.blocks.forEach((b: any) => {
+            const blockFont = b.style?.fontFamily || b.style?.font;
+            const matches = targetFont === '__global__' || blockFont === targetFont;
+            if (matches) {
+                if (!b.style) b.style = {};
+                if (updates.fontSize !== undefined) {
+                    b.style.fontSize = updates.fontSize;
+                    b.style.baseFontSize = updates.fontSize;
+                }
+                if (updates.lineHeight !== undefined) {
+                    b.style.lineHeight = updates.lineHeight;
+                }
+                if (updates.letterSpacing !== undefined) {
+                    b.style.letterSpacing = updates.letterSpacing;
+                }
+                b.autoFitCache = null;
+                b.maskCache = null;
+                pageModified = true;
+                anyModified = true;
+            }
+        });
+
+        if (pageModified) {
+            markPageAutoFitDirty(p);
+            debounceSavePage(p);
+        }
+    });
+
+    if (anyModified) {
+        uiUpdateActiveBlockEditor();
+    }
+}
+
 export function updateDefaultFont(value: string): void {
     updateDefaultTypeFont('dialogue', value);
 }
@@ -653,17 +688,7 @@ export function updateDefaultFontSize(val: string | number): void {
     const lbl = document.getElementById('lbl-default-font-size');
     if (lbl) lbl.textContent = `${clamped}px`;
 
-    if (globalState.pages && Array.isArray(globalState.pages)) {
-        globalState.pages.forEach(p => {
-            if (p && p.blocks) {
-                p.blocks.forEach(b => {
-                    b.autoFitCache = null;
-                    b.maskCache = null;
-                });
-                markPageAutoFitDirty(p);
-            }
-        });
-    }
+    applyFontMetricsToAllBlocks(targetFont, { fontSize: clamped });
     requestOverlayRender();
 }
 
@@ -699,17 +724,7 @@ export function updateDefaultLineHeight(val: string | number): void {
     const lbl = document.getElementById('lbl-default-line-height');
     if (lbl) lbl.textContent = `${rounded}`;
 
-    if (globalState.pages && Array.isArray(globalState.pages)) {
-        globalState.pages.forEach(p => {
-            if (p && p.blocks) {
-                p.blocks.forEach(b => {
-                    b.autoFitCache = null;
-                    b.maskCache = null;
-                });
-                markPageAutoFitDirty(p);
-            }
-        });
-    }
+    applyFontMetricsToAllBlocks(targetFont, { lineHeight: rounded });
     requestOverlayRender();
 }
 
@@ -745,17 +760,7 @@ export function updateDefaultLetterSpacing(val: string | number): void {
     const lbl = document.getElementById('lbl-default-letter-spacing');
     if (lbl) lbl.textContent = `${rounded}px`;
 
-    if (globalState.pages && Array.isArray(globalState.pages)) {
-        globalState.pages.forEach(p => {
-            if (p && p.blocks) {
-                p.blocks.forEach(b => {
-                    b.autoFitCache = null;
-                    b.maskCache = null;
-                });
-                markPageAutoFitDirty(p);
-            }
-        });
-    }
+    applyFontMetricsToAllBlocks(targetFont, { letterSpacing: rounded });
     requestOverlayRender();
 }
 
@@ -766,14 +771,21 @@ export function resetDefaultFontMetrics(): void {
             delete globalState.fontSpecificMetrics[targetFont];
             safeSetLocalStorage('manga_font_specific_metrics', globalState.fontSpecificMetrics);
         }
+        applyFontMetricsToAllBlocks(targetFont, {
+            fontSize: globalState.defaultFontSize || 17,
+            lineHeight: globalState.defaultLineHeight !== undefined ? globalState.defaultLineHeight : 1.15,
+            letterSpacing: globalState.defaultLetterSpacing !== undefined ? globalState.defaultLetterSpacing : 0
+        });
         onTypographyTargetFontChange(targetFont);
         showToast("Đã khôi phục thông số phông chữ này về chuẩn chung!", "info");
     } else {
         updateDefaultFontSize(17);
         updateDefaultLineHeight(1.15);
         updateDefaultLetterSpacing(0);
+        applyFontMetricsToAllBlocks('__global__', { fontSize: 17, lineHeight: 1.15, letterSpacing: 0 });
         showToast("Đã khôi phục thông số mặc định chung!", "info");
     }
+    requestOverlayRender();
 }
 
 export function updateSourceLanguage(value: string): void {

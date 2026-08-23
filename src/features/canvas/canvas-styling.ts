@@ -487,6 +487,20 @@ export function syncActiveBlockStyle(property: string, value: any): void {
                 b.style.strokeColor2Hex = String(value).toUpperCase();
             } else if (property === 'shadowColor') {
                 b.style.shadowColorHex = String(value).toUpperCase();
+            } else if (property === 'fontFamily') {
+                const fontCustom = globalState.fontSpecificMetrics?.[value];
+                if (fontCustom) {
+                    if (fontCustom.fontSize !== undefined) {
+                        b.style.fontSize = fontCustom.fontSize;
+                        b.style.baseFontSize = fontCustom.fontSize;
+                    }
+                    if (fontCustom.lineHeight !== undefined) {
+                        b.style.lineHeight = fontCustom.lineHeight;
+                    }
+                    if (fontCustom.letterSpacing !== undefined) {
+                        b.style.letterSpacing = fontCustom.letterSpacing;
+                    }
+                }
             }
             b.maskCache = null;
             b.autoFitCache = null;

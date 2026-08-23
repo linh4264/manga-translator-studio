@@ -1,5 +1,6 @@
 import { MangaBlock, BlockStyle } from '../../types/index';
 import { parseRichTextLines, segmentString, transformCase, RichTextSegment } from '../../core/utils';
+import { getFontMetrics } from '../../core/state';
 
 export const BUILTIN_FONT_MAP: Record<string, string> = {
     'font-comic': "'Patrick Hand', 'Pangolin', cursive",
@@ -686,10 +687,11 @@ export function computeTextLayout(
     const ctx = customCtx || getSharedMeasureContext();
     const rawText = input.text || '';
     const fontName = getFontFamilyName(input.fontFamily);
-    const fontSize = Math.max(1, input.fontSize || 17);
-    const lineHeight = input.lineHeight !== undefined ? input.lineHeight : 1.15;
+    const defaultMetrics = getFontMetrics(input.fontFamily);
+    const fontSize = Math.max(1, input.fontSize || defaultMetrics.fontSize);
+    const lineHeight = input.lineHeight !== undefined ? input.lineHeight : defaultMetrics.lineHeight;
     const lineHeightPx = fontSize * lineHeight;
-    const letterSpacingPx = input.letterSpacing || 0;
+    const letterSpacingPx = input.letterSpacing !== undefined ? input.letterSpacing : defaultMetrics.letterSpacing;
     const isVertical = !!input.vertical;
     const align = input.align || 'center';
 

@@ -315,6 +315,18 @@ export function initializeStateFromStorage(): void {
         globalState.customStylePresets = [];
     }
 
+    try {
+        const savedMetrics = localStorage.getItem('manga_font_specific_metrics');
+        if (savedMetrics) {
+            globalState.fontSpecificMetrics = JSON.parse(savedMetrics);
+        } else if (!globalState.fontSpecificMetrics) {
+            globalState.fontSpecificMetrics = {};
+        }
+    } catch (e) {
+        console.warn('Lỗi đọc manga_font_specific_metrics:', e);
+        globalState.fontSpecificMetrics = {};
+    }
+
     const savedGenrePreset = localStorage.getItem('gemini_manga_translation_genre_preset');
     if (savedGenrePreset !== null) {
         try {

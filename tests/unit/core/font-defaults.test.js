@@ -233,3 +233,49 @@ test('Font Defaults - clearAllFontsFromDB removes all custom font records', asyn
     fonts = await getAllFontsFromDB();
     assert.strictEqual(fonts.length, 0);
 });
+
+test('Font Defaults - Modifying font metrics actively updates matching canvas blocks', async () => {
+    document.body.innerHTML = `
+        <select id="typography-target-font">
+            <option value="ZombieFont">ZombieFont (Tùy chỉnh)</option>
+        </select>
+        <span id="typography-font-badge">Riêng: ZombieFont</span>
+        <input type="range" id="slider-default-font-size" value="17">
+        <span id="lbl-default-font-size">17px</span>
+        <input type="range" id="slider-default-line-height" value="1.15">
+        <span id="lbl-default-line-height">1.15</span>
+        <input type="range" id="slider-default-letter-spacing" value="0">
+        <span id="lbl-default-letter-spacing">0px</span>
+    `;
+
+    const testBlock1 = {
+        id: 'b1',
+        style: { fontFamily: 'ZombieFont', fontSize: 17, baseFontSize: 17, lineHeight: 1.15, letterSpacing: 0 }
+    };
+    const testBlock2 = {
+        id: 'b2',
+        style: { fontFamily: 'OtherFont', fontSize: 17, baseFontSize: 17, lineHeight: 1.15, letterSpacing: 0 }
+    };
+
+    globalState.pages = [
+        { id: 'p1', blocks: [testBlock1, testBlock2] }
+    ];
+
+    onTypographyTargetFontChange('ZombieFont');
+
+    updateDefaultFontSize(25);
+    updateDefaultLineHeight(1.3);
+    updateDefaultLetterSpacing(3);
+
+    // Block with ZombieFont must be actively updated
+    assert.strictEqual(testBlock1.style.fontSize, 25);
+    assert.strictEqual(testBlock1.style.baseFontSize, 25);
+    assert.strictEqual(testBlock1.style.lineHeight, 1.3);
+    assert.strictEqual(testBlock1.style.letterSpacing, 3);
+
+    // Other blocks must NOT be modified
+    assert.strictEqual(testBlock2.style.fontSize, 17);
+    assert.strictEqual(testBlock2.style.lineHeight, 1.15);
+    assert.strictEqual(testBlock2.style.letterSpacing, 0);
+});
+
