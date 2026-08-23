@@ -3482,17 +3482,48 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
         const tx = db.transaction(STORE_FONTS_NAME, 'readonly');
         const store = tx.objectStore(STORE_FONTS_NAME);
         const req = store.getAll();
-        const entries: any[] = await new Promise((res, rej) => {
+        const rawEntries: any[] = await new Promise((res, rej) => {
             req.onsuccess = () => res(req.result || []);
             req.onerror = (e: any) => rej(e.target.error);
         });
 
-        if (!entries || entries.length === 0) {
+        if (!rawEntries || rawEntries.length === 0) {
             customFontsList = [];
             updateCustomFontsBadge();
             renderCustomFontsUI();
             return;
         }
+
+        // Auto-deduplicate font records if legacy underscore/space duplicates exist
+        const seenNormalizedMap = new Map<string, any>();
+        const duplicatesToDelete: string[] = [];
+
+        for (const item of rawEntries) {
+            if (!item || !item.family) continue;
+            const normKey = item.family.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
+
+            if (seenNormalizedMap.has(normKey)) {
+                const existing = seenNormalizedMap.get(normKey);
+                if (!existing.weightGrade && item.weightGrade) {
+                    duplicatesToDelete.push(existing.family);
+                    seenNormalizedMap.set(normKey, item);
+                } else {
+                    duplicatesToDelete.push(item.family);
+                }
+            } else {
+                seenNormalizedMap.set(normKey, item);
+            }
+        }
+
+        if (duplicatesToDelete.length > 0) {
+            try {
+                const delTx = db.transaction(STORE_FONTS_NAME, 'readwrite');
+                const delStore = delTx.objectStore(STORE_FONTS_NAME);
+                duplicatesToDelete.forEach(fam => delStore.delete(fam));
+            } catch (e) {}
+        }
+
+        const entries = Array.from(seenNormalizedMap.values());
 
         const newCustomList: CustomFontItem[] = [];
         const itemsToUpdateDB: any[] = [];

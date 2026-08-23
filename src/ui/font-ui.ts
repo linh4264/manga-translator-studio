@@ -154,7 +154,8 @@ export async function uploadCustomFonts(files: FileList | File[]): Promise<void>
 
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const family = file.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_').trim();
+        const cleanName = file.name.replace(/\.[^/.]+$/, '').trim();
+        const family = cleanName.replace(/[^a-zA-Z0-9\s_-]/g, ' ').replace(/\s+/g, ' ').trim() || 'CustomFont';
         if (!family) continue;
 
         try {

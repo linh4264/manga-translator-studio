@@ -1080,7 +1080,40 @@ export async function loadAndRegisterCustomFonts(forceReload = false): Promise<v
         try {
             const fonts = await getAllFontsFromDB();
             let newlyRegistered = 0;
+
+            // Auto-deduplicate font records in IndexedDB if legacy versions exist with different casing or underscores
+            const seenNormalizedMap = new Map<string, any>();
+            const duplicatesToDelete: string[] = [];
+
             for (const fontEntry of fonts) {
+                if (!fontEntry || !fontEntry.family) continue;
+                const normKey = fontEntry.family.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
+
+                if (seenNormalizedMap.has(normKey)) {
+                    const existing = seenNormalizedMap.get(normKey);
+                    // Keep the entry that has richer metadata (e.g. font-matcher profile) or valid blob
+                    if (!existing.weightGrade && fontEntry.weightGrade) {
+                        duplicatesToDelete.push(existing.family);
+                        seenNormalizedMap.set(normKey, fontEntry);
+                    } else {
+                        duplicatesToDelete.push(fontEntry.family);
+                    }
+                } else {
+                    seenNormalizedMap.set(normKey, fontEntry);
+                }
+            }
+
+            // Remove duplicates from IndexedDB in the background
+            if (duplicatesToDelete.length > 0) {
+                console.log(`Phát hiện ${duplicatesToDelete.length} phông chữ bị trùng lặp (do định dạng tên gạch dưới / khoảng trắng). Đang tự động dọn dẹp...`);
+                for (const dupFamily of duplicatesToDelete) {
+                    await deleteFontFromDB(dupFamily).catch(() => {});
+                }
+            }
+
+            const uniqueFonts = Array.from(seenNormalizedMap.values());
+
+            for (const fontEntry of uniqueFonts) {
                 if (!fontEntry?.family || loadedCustomFontFamilies.has(fontEntry.family)) {
                     continue;
                 }
@@ -1097,8 +1130,8 @@ export async function loadAndRegisterCustomFonts(forceReload = false): Promise<v
                 }
             }
             customFontsLoadedOnce = true;
-            if (newlyRegistered > 0) {
-                console.log(`Đã nạp thành công ${newlyRegistered} phông chữ tùy chỉnh từ IndexedDB.`);
+            if (newlyRegistered > 0 || duplicatesToDelete.length > 0) {
+                console.log(`Đã nạp ${uniqueFonts.length} phông chữ tùy chỉnh từ IndexedDB (đã loại bỏ trùng lặp).`);
             }
         } catch (err) {
             console.error("Lỗi tải phông chữ tùy chỉnh:", err);
