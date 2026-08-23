@@ -5,13 +5,19 @@ import '../../setup/indexeddb-mock.js';
 
 import {
     globalState,
-    initializeStateFromStorage
+    initializeStateFromStorage,
+    getFontMetrics,
+    initDB,
+    saveFontToDB,
+    getAllFontsFromDB,
+    clearAllFontsFromDB
 } from '../../../src/core/state.ts';
 import {
     updateDefaultFontSize,
     updateDefaultLineHeight,
     updateDefaultLetterSpacing,
     resetDefaultFontMetrics,
+    onTypographyTargetFontChange,
     syncSettingsUI
 } from '../../../src/ui/settings-ui.ts';
 
@@ -151,4 +157,79 @@ test('Font Defaults - UI Synchronization with DOM Elements', () => {
     assert.strictEqual(lhLbl.textContent, '1.45');
     assert.strictEqual(lsSlider.value, '3');
     assert.strictEqual(lsLbl.textContent, '3px');
+});
+
+test('Font Defaults - Per-Font Typography Metrics Configuration', () => {
+    document.body.innerHTML = `
+        <select id="typography-target-font">
+            <option value="__global__">Mặc định chung</option>
+            <option value="font-impact">Kỳ vĩ / SFX (Bangers)</option>
+            <option value="MyCustomFont">MyCustomFont (Tùy chỉnh)</option>
+        </select>
+        <span id="typography-font-badge">Mặc định chung</span>
+        <input type="range" id="slider-default-font-size" value="17">
+        <span id="lbl-default-font-size">17px</span>
+        <input type="range" id="slider-default-line-height" value="1.15">
+        <span id="lbl-default-line-height">1.15</span>
+        <input type="range" id="slider-default-letter-spacing" value="0">
+        <span id="lbl-default-letter-spacing">0px</span>
+    `;
+
+    globalState.defaultFontSize = 17;
+    globalState.defaultLineHeight = 1.15;
+    globalState.defaultLetterSpacing = 0;
+    globalState.fontSpecificMetrics = {};
+
+    const typoSelect = document.getElementById('typography-target-font');
+
+    // 1. Initially check global metrics
+    const initialMetrics = getFontMetrics('font-impact');
+    assert.strictEqual(initialMetrics.fontSize, 17);
+    assert.strictEqual(initialMetrics.lineHeight, 1.15);
+    assert.strictEqual(initialMetrics.letterSpacing, 0);
+
+    // 2. Select specific font
+    typoSelect.value = 'font-impact';
+    onTypographyTargetFontChange('font-impact');
+
+    // 3. Update metrics for font-impact
+    updateDefaultFontSize(26);
+    updateDefaultLineHeight(1.05);
+    updateDefaultLetterSpacing(2);
+
+    // 4. Verify font-specific metrics
+    const impactMetrics = getFontMetrics('font-impact');
+    assert.strictEqual(impactMetrics.fontSize, 26);
+    assert.strictEqual(impactMetrics.lineHeight, 1.05);
+    assert.strictEqual(impactMetrics.letterSpacing, 2);
+
+    // 5. Global defaults remain intact
+    assert.strictEqual(globalState.defaultFontSize, 17);
+    assert.strictEqual(globalState.defaultLineHeight, 1.15);
+    assert.strictEqual(globalState.defaultLetterSpacing, 0);
+
+    // 6. Reset font-specific metrics
+    resetDefaultFontMetrics();
+    const resetImpact = getFontMetrics('font-impact');
+    assert.strictEqual(resetImpact.fontSize, 17);
+    assert.strictEqual(resetImpact.lineHeight, 1.15);
+    assert.strictEqual(resetImpact.letterSpacing, 0);
+});
+
+test('Font Defaults - clearAllFontsFromDB removes all custom font records', async () => {
+    await initDB();
+
+    const fakeBlob1 = new Blob(['font1'], { type: 'font/ttf' });
+    const fakeBlob2 = new Blob(['font2'], { type: 'font/ttf' });
+
+    await saveFontToDB('CustomFontA', fakeBlob1);
+    await saveFontToDB('CustomFontB', fakeBlob2);
+
+    let fonts = await getAllFontsFromDB();
+    assert.strictEqual(fonts.length >= 2, true);
+
+    await clearAllFontsFromDB();
+
+    fonts = await getAllFontsFromDB();
+    assert.strictEqual(fonts.length, 0);
 });

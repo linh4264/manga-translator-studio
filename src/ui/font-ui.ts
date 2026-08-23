@@ -52,6 +52,18 @@ export async function populateCustomFontsDropdown(): Promise<void> {
             });
         });
 
+        const typoOptgroup = document.getElementById('typography-custom-fonts-optgroup');
+        if (typoOptgroup) {
+            typoOptgroup.replaceChildren();
+            fonts.forEach((font: any) => {
+                const opt = document.createElement('option');
+                opt.value = font.family;
+                opt.textContent = `${font.family} (Tùy chỉnh)`;
+                opt.setAttribute('data-custom', 'true');
+                typoOptgroup.appendChild(opt);
+            });
+        }
+
         await renderCustomFontsListUI(fonts);
     } catch (e) {
         console.error("Lỗi nạp phông chữ tùy chỉnh từ DB:", e);
@@ -120,11 +132,56 @@ export async function deleteCustomFont(family: string): Promise<void> {
             }
         });
 
+        const typoOpt = document.querySelector(`#typography-custom-fonts-optgroup option[value="${family}"]`);
+        if (typoOpt) typoOpt.remove();
+
         await renderCustomFontsListUI();
         requestOverlayRender();
         showToast(`Đã xóa phông chữ "${family}" thành công!`, "info");
     } catch (err: any) {
         console.error(`Lỗi xóa phông chữ ${family}:`, err);
+        showToast(`Không thể xóa phông chữ: ${err.message}`, "error");
+    }
+}
+
+export async function deleteAllCustomFonts(): Promise<void> {
+    const { getAllFontsFromDB, clearAllFontsFromDB } = await import('../core/state');
+    const fonts = await getAllFontsFromDB();
+    if (!fonts || fonts.length === 0) {
+        showToast("Không có phông chữ tùy chỉnh nào để xóa.", "info");
+        return;
+    }
+
+    if (!confirm(`Bạn có chắc chắn muốn xóa TOÀN BỘ ${fonts.length} phông chữ tùy chỉnh khỏi ứng dụng?\nThao tác này không thể hoàn tác.`)) {
+        return;
+    }
+
+    try {
+        await clearAllFontsFromDB();
+
+        FONT_SELECT_IDS.forEach(id => {
+            const fontSelect = document.getElementById(id) as HTMLSelectElement | null;
+            if (fontSelect) {
+                const customOptions = fontSelect.querySelectorAll('option[data-custom="true"]');
+                customOptions.forEach(opt => opt.remove());
+            }
+        });
+
+        const typoOptgroup = document.getElementById('typography-custom-fonts-optgroup');
+        if (typoOptgroup) typoOptgroup.replaceChildren();
+
+        const typoSelect = document.getElementById('typography-target-font') as HTMLSelectElement | null;
+        if (typoSelect && typoSelect.value !== '__global__') {
+            typoSelect.value = '__global__';
+            const { onTypographyTargetFontChange } = await import('./settings-ui');
+            onTypographyTargetFontChange('__global__');
+        }
+
+        await renderCustomFontsListUI([]);
+        requestOverlayRender();
+        showToast(`Đã xóa sạch toàn bộ ${fonts.length} phông chữ tùy chỉnh thành công!`, "success");
+    } catch (err: any) {
+        console.error("Lỗi xóa toàn bộ phông chữ:", err);
         showToast(`Không thể xóa phông chữ: ${err.message}`, "error");
     }
 }

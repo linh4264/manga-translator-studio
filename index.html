@@ -3108,7 +3108,7 @@
                             <div class="space-y-3 pt-2 border-t border-slate-800/80">
                                 <div class="flex items-center justify-between">
                                     <label class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
-                                        <i class="fa-solid fa-text-height"></i> Thông số kích thước & khoảng cách mặc định
+                                        <i class="fa-solid fa-text-height"></i> Thông số kích thước & khoảng cách
                                     </label>
                                     <button type="button" onclick="resetDefaultFontMetrics()"
                                         title="Khôi phục cỡ chữ, khoảng cách dòng và chữ về chuẩn mặc định"
@@ -3118,11 +3118,40 @@
                                 </div>
 
                                 <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800/90 space-y-3">
+                                    <!-- Target Font Selector -->
+                                    <div class="space-y-1">
+                                        <div class="flex items-center justify-between">
+                                            <label class="text-[10px] font-bold text-slate-300 flex items-center gap-1.5">
+                                                <i class="fa-solid fa-font text-indigo-400"></i> Phông chữ áp dụng:
+                                            </label>
+                                            <span id="typography-font-badge" class="text-[9px] font-semibold text-indigo-400 bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-500/30">Mặc định chung</span>
+                                        </div>
+                                        <select id="typography-target-font" onchange="onTypographyTargetFontChange(this.value)"
+                                            class="w-full bg-slate-950 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
+                                            <option value="__global__" selected>🌐 Áp dụng chung cho tất cả phông chữ (Global Default)</option>
+                                            <optgroup label="Phông chữ hệ thống">
+                                                <option value="font-manga">Chuẩn Manga (Nunito)</option>
+                                                <option value="font-comic">Vui nhộn (Patrick Hand)</option>
+                                                <option value="font-vietnamese">Việt tối ưu (Be Vietnam Pro)</option>
+                                                <option value="font-comicneue">Comic mượt (Comic Neue)</option>
+                                                <option value="font-impact">Kỳ vĩ / SFX (Bangers)</option>
+                                                <option value="font-marker">Cọ vẽ (Permanent Marker)</option>
+                                                <option value="font-bungee">Khối vuông (Bungee)</option>
+                                                <option value="font-caveat">Viết tay (Caveat)</option>
+                                                <option value="font-tech">Robot / Cơ khí (Chakra Petch)</option>
+                                                <option value="font-condensed">Ghi chú (Saira Condensed)</option>
+                                            </optgroup>
+                                            <optgroup label="Phông chữ tùy chỉnh" id="typography-custom-fonts-optgroup">
+                                                <!-- Dynamically populated custom fonts -->
+                                            </optgroup>
+                                        </select>
+                                    </div>
+
                                     <!-- 1. Default Font Size -->
-                                    <div class="space-y-1.5">
+                                    <div class="space-y-1.5 pt-1.5 border-t border-slate-800/70">
                                         <div class="flex justify-between items-center text-xs">
                                             <span class="text-[10px] font-bold text-slate-300 flex items-center gap-1.5">
-                                                <i class="fa-solid fa-text-width text-indigo-400 text-[10px]"></i> Cỡ chữ mặc định (Font Size)
+                                                <i class="fa-solid fa-text-width text-indigo-400 text-[10px]"></i> Cỡ chữ (Font Size)
                                             </span>
                                             <span id="lbl-default-font-size" class="text-xs text-indigo-400 font-mono font-bold">17px</span>
                                         </div>
@@ -3137,7 +3166,7 @@
                                         <div class="space-y-1.5">
                                             <div class="flex justify-between items-center text-xs">
                                                 <span class="text-[10px] font-semibold text-slate-300 flex items-center gap-1">
-                                                    <span>↕</span> Giãn dòng mặc định (Line Height)
+                                                    <span>↕</span> Giãn dòng (Line Height)
                                                 </span>
                                                 <span id="lbl-default-line-height" class="text-xs text-indigo-400 font-mono font-bold">1.15</span>
                                             </div>
@@ -3150,7 +3179,7 @@
                                         <div class="space-y-1.5">
                                             <div class="flex justify-between items-center text-xs">
                                                 <span class="text-[10px] font-semibold text-slate-300 flex items-center gap-1">
-                                                    <span>↔</span> Giãn chữ mặc định (Letter Spacing)
+                                                    <span>↔</span> Giãn chữ (Letter Spacing)
                                                 </span>
                                                 <span id="lbl-default-letter-spacing" class="text-xs text-indigo-400 font-mono font-bold">0px</span>
                                             </div>
@@ -3169,10 +3198,17 @@
                                         <i class="fa-solid fa-file-arrow-up text-indigo-400"></i> Phông chữ đã tải lên
                                         (<span id="custom-fonts-count" class="text-indigo-400 font-mono">0</span>)
                                     </span>
-                                    <button onclick="document.getElementById('font-uploader-modal').click()"
-                                        class="px-2.5 py-1 bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer">
-                                        <i class="fa-solid fa-plus"></i> Tải Font TTF/OTF
-                                    </button>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" onclick="deleteAllCustomFonts()"
+                                            class="px-2 py-1 bg-red-950/40 hover:bg-red-900 border border-red-500/30 text-red-300 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                                            title="Xóa toàn bộ phông chữ tùy chỉnh khỏi hệ thống">
+                                            <i class="fa-solid fa-trash-can text-[10px]"></i> Xóa tất cả
+                                        </button>
+                                        <button type="button" onclick="document.getElementById('font-uploader-modal').click()"
+                                            class="px-2.5 py-1 bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer">
+                                            <i class="fa-solid fa-plus"></i> Tải Font TTF/OTF
+                                        </button>
+                                    </div>
                                     <input type="file" id="font-uploader-modal" accept=".ttf,.otf,.woff,.woff2"
                                         class="hidden" multiple onchange="uploadCustomFonts(this.files)">
                                 </div>

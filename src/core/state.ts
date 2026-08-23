@@ -214,6 +214,14 @@ export const globalState: GlobalState & Record<string, any> = {
         } catch (e) {
             return [];
         }
+    })(),
+    fontSpecificMetrics: (() => {
+        try {
+            const saved = localStorage.getItem('manga_font_specific_metrics');
+            return saved ? JSON.parse(saved) : {};
+        } catch (e) {
+            return {};
+        }
     })()
 };
 
@@ -1149,7 +1157,7 @@ export async function deleteFontFromDB(family: string): Promise<boolean> {
             reject(new Error("Cơ sở dữ liệu chưa sẵn sàng."));
             return;
         }
-        const tx = dbInstance.transaction(STORE_FONTS, 'readwrite');
+        const tx = dbInstance.transaction([STORE_FONTS], 'readwrite');
         const store = tx.objectStore(STORE_FONTS);
         const req = store.delete(family);
         req.onsuccess = () => {
@@ -1158,4 +1166,39 @@ export async function deleteFontFromDB(family: string): Promise<boolean> {
         };
         req.onerror = (e: any) => reject(e.target.error);
     });
+}
+
+export async function clearAllFontsFromDB(): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+        if (!dbInstance) {
+            reject(new Error("Cơ sở dữ liệu chưa sẵn sàng."));
+            return;
+        }
+        const tx = dbInstance.transaction([STORE_FONTS], 'readwrite');
+        const store = tx.objectStore(STORE_FONTS);
+        const req = store.clear();
+        req.onsuccess = () => {
+            loadedCustomFontFamilies.clear();
+            customFontsLoadedOnce = true;
+            resolve(true);
+        };
+        req.onerror = (e: any) => reject(e.target.error);
+    });
+}
+
+export function getFontMetrics(fontFamily?: string): { fontSize: number; lineHeight: number; letterSpacing: number } {
+    const globalSize = globalState.defaultFontSize || 17;
+    const globalLH = globalState.defaultLineHeight !== undefined ? globalState.defaultLineHeight : 1.15;
+    const globalLS = globalState.defaultLetterSpacing !== undefined ? globalState.defaultLetterSpacing : 0;
+
+    if (!fontFamily || !globalState.fontSpecificMetrics || !globalState.fontSpecificMetrics[fontFamily]) {
+        return { fontSize: globalSize, lineHeight: globalLH, letterSpacing: globalLS };
+    }
+
+    const specific = globalState.fontSpecificMetrics[fontFamily];
+    return {
+        fontSize: typeof specific.fontSize === 'number' && specific.fontSize > 0 ? specific.fontSize : globalSize,
+        lineHeight: typeof specific.lineHeight === 'number' && specific.lineHeight > 0 ? specific.lineHeight : globalLH,
+        letterSpacing: typeof specific.letterSpacing === 'number' ? specific.letterSpacing : globalLS
+    };
 }

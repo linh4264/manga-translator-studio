@@ -557,6 +557,66 @@ export function updateDefaultTypeFont(type: string, value: string): void {
     requestOverlayRender();
 }
 
+export function getActiveTypographyTargetFont(): string {
+    const select = document.getElementById('typography-target-font') as HTMLSelectElement | null;
+    return select ? select.value : '__global__';
+}
+
+export function onTypographyTargetFontChange(fontFamily: string): void {
+    const badge = document.getElementById('typography-font-badge');
+    const select = document.getElementById('typography-target-font') as HTMLSelectElement | null;
+    const selectedText = (select && select.options && select.selectedIndex >= 0 && select.options[select.selectedIndex]?.textContent) || fontFamily;
+
+    if (!globalState.fontSpecificMetrics) {
+        globalState.fontSpecificMetrics = {};
+    }
+
+    if (fontFamily === '__global__') {
+        if (badge) {
+            badge.textContent = 'Mặc định chung';
+            badge.className = 'text-[9px] font-semibold text-indigo-400 bg-indigo-950/60 px-1.5 py-0.5 rounded border border-indigo-500/30';
+        }
+        syncTypographySliders(
+            globalState.defaultFontSize || 17,
+            globalState.defaultLineHeight !== undefined ? globalState.defaultLineHeight : 1.15,
+            globalState.defaultLetterSpacing !== undefined ? globalState.defaultLetterSpacing : 0
+        );
+    } else {
+        const customMetrics = globalState.fontSpecificMetrics[fontFamily];
+        const hasCustom = !!customMetrics && (customMetrics.fontSize !== undefined || customMetrics.lineHeight !== undefined || customMetrics.letterSpacing !== undefined);
+        const displayName = selectedText.split('(')[0].replace('🌐', '').trim();
+
+        if (badge) {
+            badge.textContent = hasCustom ? `Riêng: ${displayName}` : `Theo chuẩn chung (${displayName})`;
+            badge.className = hasCustom
+                ? 'text-[9px] font-semibold text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/30'
+                : 'text-[9px] font-semibold text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-700/50';
+        }
+
+        const size = customMetrics?.fontSize ?? (globalState.defaultFontSize || 17);
+        const lh = customMetrics?.lineHeight ?? (globalState.defaultLineHeight !== undefined ? globalState.defaultLineHeight : 1.15);
+        const ls = customMetrics?.letterSpacing ?? (globalState.defaultLetterSpacing !== undefined ? globalState.defaultLetterSpacing : 0);
+        syncTypographySliders(size, lh, ls);
+    }
+}
+
+function syncTypographySliders(fontSize: number, lineHeight: number, letterSpacing: number): void {
+    const slider = document.getElementById('slider-default-font-size') as HTMLInputElement | null;
+    if (slider) slider.value = String(fontSize);
+    const lbl = document.getElementById('lbl-default-font-size');
+    if (lbl) lbl.textContent = `${fontSize}px`;
+
+    const sliderLH = document.getElementById('slider-default-line-height') as HTMLInputElement | null;
+    if (sliderLH) sliderLH.value = String(lineHeight);
+    const lblLH = document.getElementById('lbl-default-line-height');
+    if (lblLH) lblLH.textContent = `${lineHeight}`;
+
+    const sliderLS = document.getElementById('slider-default-letter-spacing') as HTMLInputElement | null;
+    if (sliderLS) sliderLS.value = String(letterSpacing);
+    const lblLS = document.getElementById('lbl-default-letter-spacing');
+    if (lblLS) lblLS.textContent = `${letterSpacing}px`;
+}
+
 export function updateDefaultFont(value: string): void {
     updateDefaultTypeFont('dialogue', value);
 }
@@ -566,9 +626,27 @@ export function updateDefaultFontSize(val: string | number): void {
     if (isNaN(num) || num <= 0) return;
     const clamped = Math.max(8, Math.min(120, Math.round(num)));
 
-    globalState.defaultFontSize = clamped;
-    if (globalState.globalStyle) globalState.globalStyle.fontSize = clamped;
-    safeSetLocalStorage('manga_default_font_size', clamped);
+    const targetFont = getActiveTypographyTargetFont();
+
+    if (targetFont && targetFont !== '__global__') {
+        if (!globalState.fontSpecificMetrics) globalState.fontSpecificMetrics = {};
+        globalState.fontSpecificMetrics[targetFont] = {
+            ...globalState.fontSpecificMetrics[targetFont],
+            fontSize: clamped
+        };
+        safeSetLocalStorage('manga_font_specific_metrics', globalState.fontSpecificMetrics);
+        const badge = document.getElementById('typography-font-badge');
+        if (badge) {
+            const select = document.getElementById('typography-target-font') as HTMLSelectElement | null;
+            const displayName = ((select && select.options && select.selectedIndex >= 0 && select.options[select.selectedIndex]?.textContent) || targetFont).split('(')[0].replace('🌐', '').trim();
+            badge.textContent = `Riêng: ${displayName}`;
+            badge.className = 'text-[9px] font-semibold text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/30';
+        }
+    } else {
+        globalState.defaultFontSize = clamped;
+        if (globalState.globalStyle) globalState.globalStyle.fontSize = clamped;
+        safeSetLocalStorage('manga_default_font_size', clamped);
+    }
 
     const slider = document.getElementById('slider-default-font-size') as HTMLInputElement | null;
     if (slider && Number(slider.value) !== clamped) slider.value = String(clamped);
@@ -594,9 +672,27 @@ export function updateDefaultLineHeight(val: string | number): void {
     if (isNaN(num) || num <= 0) return;
     const rounded = Math.round(Math.max(0.5, Math.min(3.0, num)) * 100) / 100;
 
-    globalState.defaultLineHeight = rounded;
-    if (globalState.globalStyle) globalState.globalStyle.lineHeight = rounded;
-    safeSetLocalStorage('manga_default_line_height', rounded);
+    const targetFont = getActiveTypographyTargetFont();
+
+    if (targetFont && targetFont !== '__global__') {
+        if (!globalState.fontSpecificMetrics) globalState.fontSpecificMetrics = {};
+        globalState.fontSpecificMetrics[targetFont] = {
+            ...globalState.fontSpecificMetrics[targetFont],
+            lineHeight: rounded
+        };
+        safeSetLocalStorage('manga_font_specific_metrics', globalState.fontSpecificMetrics);
+        const badge = document.getElementById('typography-font-badge');
+        if (badge) {
+            const select = document.getElementById('typography-target-font') as HTMLSelectElement | null;
+            const displayName = ((select && select.options && select.selectedIndex >= 0 && select.options[select.selectedIndex]?.textContent) || targetFont).split('(')[0].replace('🌐', '').trim();
+            badge.textContent = `Riêng: ${displayName}`;
+            badge.className = 'text-[9px] font-semibold text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/30';
+        }
+    } else {
+        globalState.defaultLineHeight = rounded;
+        if (globalState.globalStyle) globalState.globalStyle.lineHeight = rounded;
+        safeSetLocalStorage('manga_default_line_height', rounded);
+    }
 
     const slider = document.getElementById('slider-default-line-height') as HTMLInputElement | null;
     if (slider && Number(slider.value) !== rounded) slider.value = String(rounded);
@@ -622,9 +718,27 @@ export function updateDefaultLetterSpacing(val: string | number): void {
     if (isNaN(num)) return;
     const rounded = Math.round(Math.max(-5, Math.min(30, num)) * 10) / 10;
 
-    globalState.defaultLetterSpacing = rounded;
-    if (globalState.globalStyle) globalState.globalStyle.letterSpacing = rounded;
-    safeSetLocalStorage('manga_default_letter_spacing', rounded);
+    const targetFont = getActiveTypographyTargetFont();
+
+    if (targetFont && targetFont !== '__global__') {
+        if (!globalState.fontSpecificMetrics) globalState.fontSpecificMetrics = {};
+        globalState.fontSpecificMetrics[targetFont] = {
+            ...globalState.fontSpecificMetrics[targetFont],
+            letterSpacing: rounded
+        };
+        safeSetLocalStorage('manga_font_specific_metrics', globalState.fontSpecificMetrics);
+        const badge = document.getElementById('typography-font-badge');
+        if (badge) {
+            const select = document.getElementById('typography-target-font') as HTMLSelectElement | null;
+            const displayName = ((select && select.options && select.selectedIndex >= 0 && select.options[select.selectedIndex]?.textContent) || targetFont).split('(')[0].replace('🌐', '').trim();
+            badge.textContent = `Riêng: ${displayName}`;
+            badge.className = 'text-[9px] font-semibold text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-500/30';
+        }
+    } else {
+        globalState.defaultLetterSpacing = rounded;
+        if (globalState.globalStyle) globalState.globalStyle.letterSpacing = rounded;
+        safeSetLocalStorage('manga_default_letter_spacing', rounded);
+    }
 
     const slider = document.getElementById('slider-default-letter-spacing') as HTMLInputElement | null;
     if (slider && Number(slider.value) !== rounded) slider.value = String(rounded);
@@ -646,9 +760,20 @@ export function updateDefaultLetterSpacing(val: string | number): void {
 }
 
 export function resetDefaultFontMetrics(): void {
-    updateDefaultFontSize(17);
-    updateDefaultLineHeight(1.15);
-    updateDefaultLetterSpacing(0);
+    const targetFont = getActiveTypographyTargetFont();
+    if (targetFont && targetFont !== '__global__') {
+        if (globalState.fontSpecificMetrics && globalState.fontSpecificMetrics[targetFont]) {
+            delete globalState.fontSpecificMetrics[targetFont];
+            safeSetLocalStorage('manga_font_specific_metrics', globalState.fontSpecificMetrics);
+        }
+        onTypographyTargetFontChange(targetFont);
+        showToast("Đã khôi phục thông số phông chữ này về chuẩn chung!", "info");
+    } else {
+        updateDefaultFontSize(17);
+        updateDefaultLineHeight(1.15);
+        updateDefaultLetterSpacing(0);
+        showToast("Đã khôi phục thông số mặc định chung!", "info");
+    }
 }
 
 export function updateSourceLanguage(value: string): void {

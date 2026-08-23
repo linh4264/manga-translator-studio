@@ -174,6 +174,7 @@ export function initGlobalBridge(): void {
         updateDefaultLineHeight: settingsUI.updateDefaultLineHeight,
         updateDefaultLetterSpacing: settingsUI.updateDefaultLetterSpacing,
         resetDefaultFontMetrics: settingsUI.resetDefaultFontMetrics,
+        onTypographyTargetFontChange: settingsUI.onTypographyTargetFontChange,
         updateSourceLanguage: settingsUI.updateSourceLanguage,
         updateTargetLanguage: settingsUI.updateTargetLanguage,
         updatePronounMatrix: settingsUI.updatePronounMatrix,
@@ -216,6 +217,7 @@ export function initGlobalBridge(): void {
         registerCustomFont: fontUI.registerCustomFont,
         uploadCustomFonts: fontUI.uploadCustomFonts,
         deleteCustomFont: fontUI.deleteCustomFont,
+        deleteAllCustomFonts: fontUI.deleteAllCustomFonts,
         renderCustomFontsListUI: fontUI.renderCustomFontsListUI,
 
         // Inpainting & Eraser

@@ -35,7 +35,11 @@ export function createMockIndexedDB() {
                                 oncomplete: null,
                                 onerror: null,
                                 objectStore(sName) {
-                                    const store = stores.get(sName) || new Map();
+                                    const actualStoreName = Array.isArray(sName) ? sName[0] : sName;
+                                    if (!stores.has(actualStoreName)) {
+                                        stores.set(actualStoreName, new Map());
+                                    }
+                                    const store = stores.get(actualStoreName);
                                     return {
                                         get(key) {
                                             const getReq = { result: undefined, onsuccess: null, onerror: null };
@@ -47,7 +51,7 @@ export function createMockIndexedDB() {
                                         },
                                         put(val, key) {
                                             const putReq = { result: key, onsuccess: null, onerror: null };
-                                            const actualKey = key !== undefined ? key : (val?.id || val?.name || Date.now());
+                                            const actualKey = key !== undefined ? key : (val?.id || val?.name || val?.family || Date.now());
                                             store.set(actualKey, val);
                                             setTimeout(() => {
                                                 if (putReq.onsuccess) putReq.onsuccess({ target: putReq });
