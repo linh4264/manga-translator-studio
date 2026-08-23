@@ -67,7 +67,13 @@ export function renderOverlays(
 
     const page = customPage || (globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null);
     if (!page) {
-        container.innerHTML = '';
+        const existingCovers = (Array.from(container.children).find((c: any) => c.classList && c.classList.contains('manga-covers-layer')) ||
+            container.querySelector('.manga-covers-layer')) as HTMLElement | null;
+        const existingTexts = (Array.from(container.children).find((c: any) => c.classList && c.classList.contains('manga-texts-layer')) ||
+            container.querySelector('.manga-texts-layer')) as HTMLElement | null;
+        if (existingCovers) existingCovers.replaceChildren();
+        if (existingTexts) existingTexts.replaceChildren();
+        if (!existingCovers && !existingTexts) container.replaceChildren();
         return;
     }
 
@@ -77,7 +83,7 @@ export function renderOverlays(
         container.querySelector('.manga-texts-layer')) as HTMLElement | null;
 
     if (!coversLayer || !textsLayer) {
-        container.innerHTML = '';
+        container.replaceChildren();
         coversLayer = document.createElement('div');
         coversLayer.className = 'manga-covers-layer absolute inset-0 pointer-events-none z-10';
         coversLayer.setAttribute('data-darkreader-ignore', 'true');
@@ -209,7 +215,7 @@ export function renderOverlays(
 
             let imgEl = coverMaskContent.querySelector('img') as HTMLImageElement | null;
             if (!imgEl) {
-                coverMaskContent.innerHTML = '';
+                coverMaskContent.replaceChildren();
                 imgEl = document.createElement('img');
                 imgEl.className = 'w-full h-full pointer-events-none select-none';
                 coverMaskContent.appendChild(imgEl);
@@ -222,7 +228,7 @@ export function renderOverlays(
             imgEl.style.opacity = `${opacity}`;
         } else {
             if (coverMaskContent.querySelector('img')) {
-                coverMaskContent.innerHTML = '';
+                coverMaskContent.replaceChildren();
             }
 
             const fontStyle = block.style.fontFamily || globalState.defaultFont || 'font-manga';
