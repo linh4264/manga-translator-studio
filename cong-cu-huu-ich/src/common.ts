@@ -18,6 +18,43 @@ export function escapeCssFontFamily(name: string): string {
         .replace(/"/g, '\\"');
 }
 
+const SEC_PREFIX = 'mts_sec_v1:';
+
+export function saveSecureToken(key: string, value: string): void {
+    try {
+        if (typeof window === 'undefined' || !window.localStorage) return;
+        if (!value) {
+            window.localStorage.removeItem(key);
+            return;
+        }
+        const str = String(value);
+        let encoded = '';
+        for (let i = 0; i < str.length; i++) {
+            encoded += String.fromCharCode(str.charCodeAt(i) ^ 0x5a);
+        }
+        window.localStorage.setItem(key, SEC_PREFIX + btoa(encoded));
+    } catch { }
+}
+
+export function getSecureToken(key: string): string {
+    try {
+        if (typeof window === 'undefined' || !window.localStorage) return '';
+        const stored = window.localStorage.getItem(key);
+        if (!stored) return '';
+        if (stored.startsWith(SEC_PREFIX)) {
+            const raw = atob(stored.slice(SEC_PREFIX.length));
+            let decoded = '';
+            for (let i = 0; i < raw.length; i++) {
+                decoded += String.fromCharCode(raw.charCodeAt(i) ^ 0x5a);
+            }
+            return decoded;
+        }
+        return stored;
+    } catch {
+        return '';
+    }
+}
+
 export function safeSetLocalStorage(key: string, value: any): void {
     try {
         if (typeof window !== 'undefined' && window.localStorage) {

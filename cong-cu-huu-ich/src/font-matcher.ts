@@ -2,7 +2,7 @@
  * Module 8: Manga Font Matcher & Recommender (AI Vision & Custom Font Repository) (TypeScript)
  */
 
-import { formatFileSize, openPreviewModal, escapeHTML, escapeCssFontFamily, safeSetLocalStorage } from './common';
+import { formatFileSize, openPreviewModal, escapeHTML, escapeCssFontFamily, safeSetLocalStorage, saveSecureToken, getSecureToken } from './common';
 import type {
     FontCategory,
     FontStyleType,
@@ -1363,9 +1363,9 @@ export async function runAiGenreAnalysis(): Promise<void> {
     const apiKeyInput = document.getElementById('fontmatch-api-key') as HTMLInputElement | null;
     let apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
     if (!apiKey) {
-        apiKey = localStorage.getItem('gemini_manga_api_key') ||
-            localStorage.getItem('gemini_api_key') ||
-            localStorage.getItem('manga_gemini_key') || '';
+        apiKey = getSecureToken('gemini_manga_api_key') ||
+            getSecureToken('gemini_api_key') ||
+            getSecureToken('manga_gemini_key') || '';
     }
 
     const loadingBtn = document.getElementById('btn-run-genre-ai');
@@ -1606,8 +1606,8 @@ export function updateFontMatchModelDropdown(fetchedModels: string[] = []): void
 export async function fetchFontMatchModels(isManual: boolean = false): Promise<void> {
     const apiKeyInput = document.getElementById('fontmatch-api-key') as HTMLInputElement | null;
     let apiKey = (apiKeyInput ? apiKeyInput.value.trim() : '') ||
-        localStorage.getItem('gemini_manga_api_key') ||
-        localStorage.getItem('gemini_api_key') || '';
+        getSecureToken('gemini_manga_api_key') ||
+        getSecureToken('gemini_api_key') || '';
 
     if (!apiKey) {
         updateFontMatchModelDropdown(cachedGeminiModels);
@@ -1869,18 +1869,18 @@ export async function runFontMatchAnalysis(): Promise<void> {
     const apiKeyInput = document.getElementById('fontmatch-api-key') as HTMLInputElement | null;
     let apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
     if (!apiKey) {
-        apiKey = localStorage.getItem('gemini_manga_api_key') ||
-            localStorage.getItem('gemini_api_key') ||
-            localStorage.getItem('manga_gemini_key') || '';
+        apiKey = getSecureToken('gemini_manga_api_key') ||
+            getSecureToken('gemini_api_key') ||
+            getSecureToken('manga_gemini_key') || '';
     }
     if (apiKeyInput && apiKey && !apiKeyInput.value) {
         apiKeyInput.value = apiKey;
     }
 
     if (apiKey) {
-        safeSetLocalStorage('gemini_manga_api_key', apiKey);
-        safeSetLocalStorage('gemini_api_key', apiKey);
-        safeSetLocalStorage('manga_gemini_key', apiKey);
+        saveSecureToken('gemini_manga_api_key', apiKey);
+        saveSecureToken('gemini_api_key', apiKey);
+        saveSecureToken('manga_gemini_key', apiKey);
     }
 
     const emptyState = document.getElementById('fontmatch-empty-state');
@@ -4496,9 +4496,9 @@ export function initFontMatcherModule(): void {
         generateAndDisplayFontSet('romance');
     });
 
-    const savedKey = localStorage.getItem('gemini_manga_api_key') ||
-        localStorage.getItem('gemini_api_key') ||
-        localStorage.getItem('manga_gemini_key') || '';
+    const savedKey = getSecureToken('gemini_manga_api_key') ||
+        getSecureToken('gemini_api_key') ||
+        getSecureToken('manga_gemini_key') || '';
     const keyInput = document.getElementById('fontmatch-api-key') as HTMLInputElement | null;
     if (keyInput && savedKey) {
         keyInput.value = savedKey;
@@ -4514,9 +4514,9 @@ export function initFontMatcherModule(): void {
         keyInput.addEventListener('input', (e: Event) => {
             const target = e.target as HTMLInputElement;
             const k = target.value.trim();
-            safeSetLocalStorage('gemini_manga_api_key', k);
-            safeSetLocalStorage('gemini_api_key', k);
-            safeSetLocalStorage('manga_gemini_key', k);
+            saveSecureToken('gemini_manga_api_key', k);
+            saveSecureToken('gemini_api_key', k);
+            saveSecureToken('manga_gemini_key', k);
         });
     }
 
