@@ -369,6 +369,7 @@ export function setMultilineText(target: HTMLElement | null, value: string, warp
 
 /**
  * Extracts exact visual lines rendered by the DOM for a text container element using DOM Range rects.
+ * Supports both horizontal text and vertical-rl manga text.
  * Guarantees 100% fidelity between DOM-rendered words and Canvas Exporter without altering DOM structure.
  */
 export function extractDomRenderedLines(container: HTMLElement | null): RichTextSegment[][] | null {
@@ -383,6 +384,10 @@ export function extractDomRenderedLines(container: HTMLElement | null): RichText
     if (!isMeasuringRects && lineDivs[0].offsetTop === 0 && lineDivs[0].offsetWidth === 0) {
         return null;
     }
+
+    const isVertical = container.style.writingMode === 'vertical-rl' ||
+        container.classList.contains('text-vertical') ||
+        (container.parentElement ? (container.parentElement.style.writingMode === 'vertical-rl' || container.parentElement.classList.contains('text-vertical')) : false);
 
     const resultLines: RichTextSegment[][] = [];
 
@@ -403,47 +408,68 @@ export function extractDomRenderedLines(container: HTMLElement | null): RichText
 
         if (textNodes.length === 0) return;
 
-        const lineGroups: Array<{ top: number; words: Array<{ text: string; parent: HTMLElement }> }> = [];
+        const lineGroups: Array<{ coord: number; words: Array<{ text: string; parent: HTMLElement }> }> = [];
 
         textNodes.forEach(textNode => {
             const str = textNode.textContent || '';
             const parent = (textNode.parentElement || lineDiv) as HTMLElement;
             if (!str.trim()) return;
 
-            const words = str.split(/\s+/).filter(Boolean);
+            // In vertical mode, process character-by-character or word tokens; in horizontal mode, by words
+            const tokens = isVertical ? (Array.from(str).filter(ch => ch.trim().length > 0)) : (str.split(/\s+/).filter(Boolean));
             let searchIndex = 0;
 
-            words.forEach(word => {
-                const wordStart = str.indexOf(word, searchIndex);
-                if (wordStart !== -1) {
-                    searchIndex = wordStart + word.length;
+            tokens.forEach(tok => {
+                const tokStart = str.indexOf(tok, searchIndex);
+                if (tokStart !== -1) {
+                    searchIndex = tokStart + tok.length;
                     try {
                         const range = document.createRange();
-                        range.setStart(textNode, wordStart);
+                        range.setStart(textNode, tokStart);
                         range.setEnd(textNode, searchIndex);
                         const rects = range.getClientRects();
-                        const top = rects.length > 0 ? rects[0].top : parent.getBoundingClientRect().top;
-
-                        let group = lineGroups.find(g => Math.abs(g.top - top) < 6);
-                        if (!group) {
-                            group = { top, words: [] };
-                            lineGroups.push(group);
+                        const parentRect = parent.getBoundingClientRect ? parent.getBoundingClientRect() : null;
+                        
+                        if (isVertical) {
+                            // In vertical-rl, columns are placed right-to-left
+                            const coord = rects.length > 0 ? (rects[0].right || rects[0].left) : (parentRect ? parentRect.right : 0);
+                            let group = lineGroups.find(g => Math.abs(g.coord - coord) < 8);
+                            if (!group) {
+                                group = { coord, words: [] };
+                                lineGroups.push(group);
+                            }
+                            group.words.push({ text: tok, parent });
+                        } else {
+                            // In horizontal, lines are placed top-to-bottom
+                            const coord = rects.length > 0 ? rects[0].top : (parentRect ? parentRect.top : (parent.offsetTop || 0));
+                            let group = lineGroups.find(g => Math.abs(g.coord - coord) < 6);
+                            if (!group) {
+                                group = { coord, words: [] };
+                                lineGroups.push(group);
+                            }
+                            group.words.push({ text: tok, parent });
                         }
-                        group.words.push({ text: word, parent });
                     } catch (e) {
                         // Fallback: put in first group
                         let group = lineGroups[0];
                         if (!group) {
-                            group = { top: parent.offsetTop || 0, words: [] };
+                            const fallbackCoord = isVertical ? (parent.offsetLeft || 0) : (parent.offsetTop || 0);
+                            group = { coord: fallbackCoord, words: [] };
                             lineGroups.push(group);
                         }
-                        group.words.push({ text: word, parent });
+                        group.words.push({ text: tok, parent });
                     }
                 }
             });
         });
 
-        lineGroups.sort((a, b) => a.top - b.top);
+        if (isVertical) {
+            // Right-to-left columns
+            lineGroups.sort((a, b) => b.coord - a.coord);
+        } else {
+            // Top-to-bottom lines
+            lineGroups.sort((a, b) => a.coord - b.coord);
+        }
 
         lineGroups.forEach(group => {
             const lineSegments: RichTextSegment[] = [];
@@ -467,10 +493,12 @@ export function extractDomRenderedLines(container: HTMLElement | null): RichText
                     currentSeg.color === color &&
                     currentSeg.font === font
                 ) {
-                    currentSeg.text += ' ' + w.text;
+                    const sep = isVertical ? '' : ' ';
+                    currentSeg.text += sep + w.text;
                 } else {
+                    const sep = (lineSegments.length > 0 && !isVertical) ? ' ' : '';
                     currentSeg = {
-                        text: (lineSegments.length > 0 ? ' ' : '') + w.text,
+                        text: sep + w.text,
                         bold,
                         italic,
                         underline,
@@ -484,7 +512,7 @@ export function extractDomRenderedLines(container: HTMLElement | null): RichText
             });
 
             if (lineSegments.length > 0) {
-                if (lineSegments[0].text.startsWith(' ')) {
+                if (!isVertical && lineSegments[0].text.startsWith(' ')) {
                     lineSegments[0].text = lineSegments[0].text.trimStart();
                 }
                 resultLines.push(lineSegments);

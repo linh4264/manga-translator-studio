@@ -324,4 +324,35 @@ test('Font Defaults - Batch Font Operations and Instant Search Filtering for Lar
     assert.strictEqual(listContainer.querySelectorAll('[data-action="delete-custom-font"]').length, 40);
 });
 
+test('Font Defaults - Preserves Vietnamese & Unicode Font Names with Case-Insensitive Matching', async () => {
+    const { uploadCustomFonts } = await import('../../../src/ui/font-ui.ts');
+    const { getAllFontFamiliesFromDB, getFontBlobFromDB, ensureCustomFontLoaded } = await import('../../../src/core/state.ts');
+
+    const fakeFiles = [
+        new File(['font binary 1'], 'UVN Thư Pháp 1.ttf', { type: 'font/ttf' }),
+        new File(['font binary 2'], '01. Hùng Lân - Comic.otf', { type: 'font/otf' }),
+        new File(['font binary 3'], 'LIT-Zombie_Guts.woff2', { type: 'font/woff2' }),
+        new File(['image content'], 'invalid_image.png', { type: 'image/png' })
+    ];
+
+    await uploadCustomFonts(fakeFiles);
+
+    const families = await getAllFontFamiliesFromDB();
+    assert.strictEqual(families.includes('UVN Thư Pháp 1'), true);
+    assert.strictEqual(families.includes('01. Hùng Lân - Comic'), true);
+    assert.strictEqual(families.includes('LIT-Zombie_Guts'), true);
+    assert.strictEqual(families.includes('invalid_image'), false);
+
+    // Test case-insensitive and quote-stripped font blob retrieval
+    const blob1 = await getFontBlobFromDB("'UVN Thư Pháp 1'");
+    assert.notStrictEqual(blob1, null);
+
+    const blob2 = await getFontBlobFromDB('lit-zombie guts');
+    assert.notStrictEqual(blob2, null);
+
+    const loaded = await ensureCustomFontLoaded('01. Hùng Lân - Comic');
+    assert.strictEqual(loaded, true);
+});
+
+
 

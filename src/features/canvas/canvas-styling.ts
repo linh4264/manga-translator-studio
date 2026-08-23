@@ -488,6 +488,8 @@ export function syncActiveBlockStyle(property: string, value: any): void {
             } else if (property === 'shadowColor') {
                 b.style.shadowColorHex = String(value).toUpperCase();
             } else if (property === 'fontFamily') {
+                b.style.fontFamily = value;
+                b.style.font = value;
                 const fontCustom = globalState.fontSpecificMetrics?.[value];
                 if (fontCustom) {
                     if (fontCustom.fontSize !== undefined) {
@@ -513,6 +515,21 @@ export function syncActiveBlockStyle(property: string, value: any): void {
         if (property === 'fontSize') {
             if (elements.lblFontSize) elements.lblFontSize.innerText = `${value}px`;
             if (elements.styleFontSize) elements.styleFontSize.value = value;
+        } else if (property === 'fontFamily') {
+            import('../../core/state').then(({ ensureCustomFontLoaded }) => {
+                ensureCustomFontLoaded(value).then(loaded => {
+                    if (loaded) {
+                        targetBlocks.forEach(b => {
+                            b.maskCache = null;
+                            b.autoFitCache = null;
+                            if (isBlockAutoFit(b)) {
+                                autoFitBlock(b);
+                            }
+                        });
+                        requestOverlayRender();
+                    }
+                }).catch(() => {});
+            });
         } else if (property === 'bgOpacity') {
             if (elements.lblBgOpacity) elements.lblBgOpacity.innerText = `${value}%`;
         } else if (property === 'padding') {

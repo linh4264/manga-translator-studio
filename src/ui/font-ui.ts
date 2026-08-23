@@ -276,24 +276,39 @@ export async function registerCustomFont(family: string, blob: Blob): Promise<vo
 
 export async function uploadCustomFonts(files: FileList | File[]): Promise<void> {
     if (!files || files.length === 0) return;
-    showToast(`Đang nạp ${files.length} phông chữ tùy chỉnh...`, "info");
+    showToast(`Đang xử lý ${files.length} phông chữ tùy chỉnh...`, "info");
 
-    const { saveFontsBatchToDB, getAllFontFamiliesFromDB } = await import('../core/state');
+    const { saveFontsBatchToDB, ensureCustomFontLoaded } = await import('../core/state');
     const fontBatch: Array<{ family: string; blob: Blob }> = [];
+    const validExtensions = ['.ttf', '.otf', '.woff', '.woff2', '.ttc'];
 
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const cleanName = file.name.replace(/\.[^/.]+$/, '').trim();
-        const family = cleanName.replace(/[^a-zA-Z0-9\s_-]/g, ' ').replace(/\s+/g, ' ').trim() || 'CustomFont';
+        const fileName = file.name || '';
+        const lastDotIdx = fileName.lastIndexOf('.');
+        const ext = lastDotIdx !== -1 ? fileName.substring(lastDotIdx).toLowerCase() : '';
+        if (!validExtensions.includes(ext)) {
+            console.warn(`Bỏ qua file không phải định dạng font hợp lệ: ${fileName}`);
+            continue;
+        }
+
+        const cleanName = fileName.replace(/\.[^/.]+$/, '').trim();
+        const family = cleanName.replace(/['"\\;{}]/g, '').replace(/\s+/g, ' ').trim() || `CustomFont_${i + 1}`;
         if (!family) continue;
         fontBatch.push({ family, blob: file });
     }
 
-    if (fontBatch.length === 0) return;
+    if (fontBatch.length === 0) {
+        showToast("Không tìm thấy file phông chữ hợp lệ (.ttf, .otf, .woff, .woff2, .ttc).", "warning");
+        return;
+    }
 
     try {
         await saveFontsBatchToDB(fontBatch);
         await populateCustomFontsDropdown();
+        // Eagerly register first batch into memory
+        const topFonts = fontBatch.slice(0, 20);
+        await Promise.all(topFonts.map(f => ensureCustomFontLoaded(f.family)));
         showToast(`Tải thành công ${fontBatch.length} phông chữ mới!`, "success");
         requestOverlayRender();
     } catch (err) {
@@ -301,5 +316,6 @@ export async function uploadCustomFonts(files: FileList | File[]): Promise<void>
         showToast("Lỗi khi lưu phông chữ vào hệ thống.", "error");
     }
 }
+
 
 

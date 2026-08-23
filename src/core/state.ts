@@ -851,14 +851,35 @@ export function getAllFontFamiliesFromDB(): Promise<string[]> {
 
 export function getFontBlobFromDB(family: string): Promise<Blob | null> {
     if (!dbInstance || !family) return Promise.resolve(null);
+    const cleanFamily = String(family).replace(/^['"]|['"]$/g, '').trim();
     return new Promise((resolve) => {
         try {
             const transaction = dbInstance!.transaction([STORE_FONTS], 'readonly');
             const store = transaction.objectStore(STORE_FONTS);
-            const request = store.get(family);
+            const request = store.get(cleanFamily);
             request.onsuccess = () => {
                 const result = request.result;
-                resolve(result?.blob || null);
+                if (result?.blob) {
+                    resolve(result.blob);
+                    return;
+                }
+                // Fallback: case-insensitive & normalized search
+                const allKeysReq = store.getAllKeys();
+                allKeysReq.onsuccess = () => {
+                    const normTarget = cleanFamily.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
+                    const matchedKey = (allKeysReq.result || []).find(k => {
+                        const strK = String(k);
+                        return strK.toLowerCase().replace(/[\s_-]+/g, ' ').trim() === normTarget;
+                    });
+                    if (matchedKey) {
+                        const fallbackReq = store.get(matchedKey);
+                        fallbackReq.onsuccess = () => resolve(fallbackReq.result?.blob || null);
+                        fallbackReq.onerror = () => resolve(null);
+                    } else {
+                        resolve(null);
+                    }
+                };
+                allKeysReq.onerror = () => resolve(null);
             };
             request.onerror = () => resolve(null);
         } catch (e) {
@@ -1192,22 +1213,79 @@ export async function generateAndSaveThumbnailForPage(page: any): Promise<void> 
 const loadedCustomFontFamilies = new Set<string>();
 let customFontsLoadingPromise: Promise<void> | null = null;
 let customFontsLoadedOnce = false;
+const customFontBlobUrls = new Map<string, string>();
+let customFontsStyleTag: HTMLStyleElement | null = null;
+
+function injectFontFaceCSS(family: string, blob: Blob): void {
+    if (typeof document === 'undefined' || !document.head) return;
+    try {
+        if (!customFontsStyleTag) {
+            customFontsStyleTag = document.getElementById('dynamic-custom-fonts-style') as HTMLStyleElement;
+            if (!customFontsStyleTag) {
+                customFontsStyleTag = document.createElement('style');
+                customFontsStyleTag.id = 'dynamic-custom-fonts-style';
+                document.head.appendChild(customFontsStyleTag);
+            }
+        }
+        let blobUrl = customFontBlobUrls.get(family);
+        if (!blobUrl && typeof URL !== 'undefined' && URL.createObjectURL) {
+            try {
+                blobUrl = URL.createObjectURL(blob);
+                customFontBlobUrls.set(family, blobUrl);
+            } catch {}
+        }
+        if (blobUrl) {
+            const rule = `@font-face { font-family: '${family}'; src: url('${blobUrl}'); font-display: swap; }\n`;
+            if (!customFontsStyleTag.textContent?.includes(`'${family}'`)) {
+                customFontsStyleTag.appendChild(document.createTextNode(rule));
+            }
+        }
+    } catch (e) {
+        console.warn('Lỗi inject font CSS:', e);
+    }
+}
 
 export async function ensureCustomFontLoaded(family: string): Promise<boolean> {
-    if (!family || loadedCustomFontFamilies.has(family)) return true;
+    if (!family) return false;
+    const cleanFamily = String(family).replace(/^['"]|['"]$/g, '').trim();
+    if (!cleanFamily) return false;
+    if (loadedCustomFontFamilies.has(cleanFamily)) return true;
+
     try {
-        const blob = await getFontBlobFromDB(family);
+        const blob = await getFontBlobFromDB(cleanFamily);
         if (!blob) return false;
-        const buffer = await blob.arrayBuffer();
-        const fontFace = new FontFace(family, buffer);
-        await fontFace.load();
-        if (typeof document !== 'undefined' && document.fonts) {
-            (document.fonts as any).add(fontFace);
+
+        injectFontFaceCSS(cleanFamily, blob);
+
+        if (typeof FontFace !== 'undefined') {
+            let loadedFace: FontFace | null = null;
+            const buffer = typeof (blob as any).arrayBuffer === 'function'
+                ? await (blob as any).arrayBuffer()
+                : new ArrayBuffer(8);
+
+            try {
+                const fontFace = new FontFace(cleanFamily, buffer);
+                loadedFace = await fontFace.load();
+            } catch (bufErr) {
+                if (typeof URL !== 'undefined' && URL.createObjectURL) {
+                    try {
+                        const blobUrl = customFontBlobUrls.get(cleanFamily) || URL.createObjectURL(blob);
+                        customFontBlobUrls.set(cleanFamily, blobUrl);
+                        const fontFace = new FontFace(cleanFamily, `url("${blobUrl}")`);
+                        loadedFace = await fontFace.load();
+                    } catch {}
+                }
+            }
+
+            if (loadedFace && typeof document !== 'undefined' && document.fonts) {
+                (document.fonts as any).add(loadedFace);
+            }
         }
-        loadedCustomFontFamilies.add(family);
+
+        loadedCustomFontFamilies.add(cleanFamily);
         return true;
     } catch (e) {
-        console.warn(`Không thể nạp phông chữ "${family}":`, e);
+        console.warn(`Không thể nạp phông chữ "${cleanFamily}":`, e);
         return false;
     }
 }

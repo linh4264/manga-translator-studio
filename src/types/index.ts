@@ -11,6 +11,7 @@ export interface BoundingBox {
 
 export interface BlockStyle {
     fontFamily: string;
+    font?: string;
     fontSize: number;
     baseFontSize?: number;
     lineHeight?: number;

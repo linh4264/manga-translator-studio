@@ -461,6 +461,16 @@ export function syncSettingsUI(): void {
     const storedPdfQuality = localStorage.getItem('manga_pdf_quality') || globalState.pdfQuality || 'hd';
     globalState.pdfQuality = storedPdfQuality;
     if (exportPdfQualitySelect) exportPdfQualitySelect.value = storedPdfQuality;
+
+    const exportEngineSelect = document.getElementById('export-engine-select') as HTMLSelectElement | null;
+    const storedEngine = localStorage.getItem('manga_export_engine') || 'dom';
+    if (exportEngineSelect) exportEngineSelect.value = storedEngine;
+}
+
+export function updateExportEngine(val: string): void {
+    const engine = val === 'canvas2d' ? 'canvas2d' : 'dom';
+    safeSetLocalStorage('manga_export_engine', engine);
+    showToast(engine === 'dom' ? "Đã chuyển sang cơ chế xuất DOM Mirror (Khớp 100% DOM)" : "Đã chuyển sang cơ chế Canvas 2D", "info");
 }
 
 export async function openSettingsModal(): Promise<void> {
@@ -505,7 +515,10 @@ export function updateDefaultTypeFont(type: string, value: string): void {
     if (cleanType === 'dialogue') {
         globalState.defaultDialogueFont = value;
         globalState.defaultFont = value;
-        if (globalState.globalStyle) globalState.globalStyle.fontFamily = value;
+        if (globalState.globalStyle) {
+            globalState.globalStyle.fontFamily = value;
+            globalState.globalStyle.font = value;
+        }
         safeSetLocalStorage('manga_default_dialogue_font', value);
         safeSetLocalStorage('manga_default_font', value);
         const legacyEl = document.getElementById('default-font') as HTMLSelectElement | null;
@@ -529,18 +542,22 @@ export function updateDefaultTypeFont(type: string, value: string): void {
         if (sfxEl) sfxEl.value = value;
     }
 
-    if (globalState.pages && Array.isArray(globalState.pages)) {
-        globalState.pages.forEach(p => {
-            if (p && p.blocks) {
-                p.blocks.forEach(b => {
-                    b.autoFitCache = null;
-                    b.maskCache = null;
+    import('../core/state').then(({ ensureCustomFontLoaded }) => {
+        ensureCustomFontLoaded(value).then(() => {
+            if (globalState.pages && Array.isArray(globalState.pages)) {
+                globalState.pages.forEach(p => {
+                    if (p && p.blocks) {
+                        p.blocks.forEach(b => {
+                            b.autoFitCache = null;
+                            b.maskCache = null;
+                        });
+                        markPageAutoFitDirty(p);
+                    }
                 });
-                markPageAutoFitDirty(p);
             }
-        });
-    }
-    requestOverlayRender();
+            requestOverlayRender();
+        }).catch(() => {});
+    });
 }
 
 export function getActiveTypographyTargetFont(): string {
@@ -560,6 +577,12 @@ export function onTypographyTargetFontChange(fontFamily: string): void {
         select.value = fontFamily;
     }
     const selectedText = (select && select.options && select.selectedIndex >= 0 && select.options[select.selectedIndex]?.textContent) || fontFamily;
+
+    if (fontFamily && fontFamily !== '__global__' && !fontFamily.startsWith('font-')) {
+        import('../core/state').then(({ ensureCustomFontLoaded }) => {
+            ensureCustomFontLoaded(fontFamily).catch(() => {});
+        });
+    }
 
     if (!globalState.fontSpecificMetrics) {
         globalState.fontSpecificMetrics = {};

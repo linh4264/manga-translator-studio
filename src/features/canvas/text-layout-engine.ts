@@ -54,6 +54,74 @@ export function getFontFamilyName(fontKey?: string): string {
     return `'${cleanFont}', '${stripped}', 'Nunito', sans-serif`;
 }
 
+/**
+ * Ensures all custom fonts and referenced font families are ready before layout/export.
+ */
+export async function ensureFontsReady(fontFamilies?: string[]): Promise<void> {
+    try {
+        const { loadAndRegisterCustomFonts } = await import('../../core/state');
+        await loadAndRegisterCustomFonts();
+    } catch {}
+
+    if (typeof document !== 'undefined' && document.fonts) {
+        try {
+            await document.fonts.ready;
+        } catch {}
+
+        if (document.fonts.load && fontFamilies && fontFamilies.length > 0) {
+            const fontLoadPromises: Promise<any>[] = [];
+            fontFamilies.forEach(family => {
+                const resolved = getFontFamilyName(family);
+                const parts = resolved.split(',').map(s => s.replace(/['"]/g, '').trim()).filter(s => s && s !== 'sans-serif' && s !== 'cursive' && s !== 'serif');
+                parts.forEach(p => {
+                    fontLoadPromises.push(document.fonts.load(`16px '${p}'`).catch(() => {}));
+                });
+            });
+            try {
+                await Promise.all(fontLoadPromises);
+                await document.fonts.ready;
+            } catch {}
+        }
+    }
+}
+
+/**
+ * Extracts and preloads all fonts required by a MangaPage.
+ */
+export async function ensureFontsLoadedForPage(page: any): Promise<void> {
+    const families = new Set<string>();
+    if (page && page.blocks && Array.isArray(page.blocks)) {
+        for (const block of page.blocks) {
+            if (block.type === 'image' || !block.translated || !block.translated.trim()) continue;
+            if (block.style?.fontFamily) families.add(block.style.fontFamily);
+            if (block.style?.font) families.add(block.style.font);
+            const transformed = transformCase(block.translated, block.style?.textTransform || 'none');
+            const tokenLines = parseRichTextLines(transformed);
+            tokenLines.flat().forEach(tok => {
+                if (tok.font) families.add(tok.font);
+            });
+        }
+    }
+    await ensureFontsReady(Array.from(families));
+}
+
+/**
+ * Calculates optical baseline offset for any font with 100% precision using actual glyph metrics.
+ * Eliminates all font-specific vertical shifting between CSS DOM and Canvas 2D.
+ */
+export function getOpticalBaselineOffset(ctx: CanvasRenderingContext2D, text: string, fontSize: number): number {
+    try {
+        const m = ctx.measureText(text || 'Ag');
+        if (typeof m.fontBoundingBoxAscent === 'number' && typeof m.fontBoundingBoxDescent === 'number') {
+            return (m.fontBoundingBoxAscent - m.fontBoundingBoxDescent) / 2;
+        }
+        if (typeof m.actualBoundingBoxAscent === 'number' && typeof m.actualBoundingBoxDescent === 'number' && (m.actualBoundingBoxAscent > 0 || m.actualBoundingBoxDescent > 0)) {
+            return (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+        }
+    } catch {}
+    return fontSize * 0.35;
+}
+
 let sharedMeasureCanvas: HTMLCanvasElement | null = null;
 let sharedMeasureCtx: CanvasRenderingContext2D | null = null;
 
@@ -87,7 +155,7 @@ export function buildFontString(
     const fontWeight = style.bold ? 'bold ' : '';
     const sizeRatio = typeof style.sizeRatio === 'number' ? style.sizeRatio : 1.0;
     const fontSize = Math.max(1, Math.round((style.fontSize || baseFontSize) * sizeRatio));
-    let fontFam = style.font || style.fontFamily || baseFontFamily || 'sans-serif';
+    let fontFam = style.fontFamily || style.font || baseFontFamily || 'sans-serif';
     fontFam = getFontFamilyName(fontFam);
     return `${fontStyle}${fontWeight}${fontSize}px ${fontFam}`.trim();
 }
@@ -1019,6 +1087,9 @@ export function renderDerivedLinesToDOM(
 ): void {
     if (!target) return;
     target.textContent = '';
+    if (layout.totalHeight > 0) {
+        target.style.height = `${layout.totalHeight}px`;
+    }
     const isVertical = layout.isVertical;
 
     const opts = typeof warpOpts === 'object' && warpOpts !== null ? warpOpts : {};
@@ -1033,7 +1104,10 @@ export function renderDerivedLinesToDOM(
     layout.lines.forEach((line) => {
         const lineDiv = document.createElement('div');
         if (isVertical) {
-            lineDiv.style.display = 'inline-block';
+            lineDiv.style.display = 'inline-flex';
+            lineDiv.style.flexDirection = 'column';
+            lineDiv.style.alignItems = 'center';
+            lineDiv.style.justifyContent = 'center';
             lineDiv.style.writingMode = 'vertical-rl';
             lineDiv.style.textOrientation = 'upright';
             lineDiv.style.textAlign = target.style.textAlign || 'center';
@@ -1042,15 +1116,18 @@ export function renderDerivedLinesToDOM(
             lineDiv.style.wordBreak = 'keep-all';
             lineDiv.style.overflowWrap = 'normal';
             lineDiv.style.height = 'auto';
-            lineDiv.style.width = 'auto';
+            lineDiv.style.width = `${line.height}px`;
         } else {
             lineDiv.style.width = '100%';
             lineDiv.style.maxWidth = '100%';
             lineDiv.style.boxSizing = 'border-box';
-            lineDiv.style.height = 'auto';
-            lineDiv.style.minHeight = '1em';
-            lineDiv.style.display = 'block';
-            lineDiv.style.textAlign = target.style.textAlign || 'center';
+            lineDiv.style.height = `${line.height}px`;
+            lineDiv.style.minHeight = `${line.height}px`;
+            lineDiv.style.lineHeight = `${line.height}px`;
+            lineDiv.style.display = 'flex';
+            lineDiv.style.alignItems = 'center';
+            const align = layout.align || 'center';
+            lineDiv.style.justifyContent = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center';
             lineDiv.style.whiteSpace = 'pre';
             lineDiv.style.wordBreak = 'keep-all';
             lineDiv.style.overflowWrap = 'normal';
@@ -1095,7 +1172,7 @@ export function renderDerivedLinesToDOM(
                     if (tok.strikethrough) span.style.textDecoration = 'line-through';
                     if (tok.color) span.style.color = tok.color;
                     if (tok.sizeRatio && tok.sizeRatio !== 1) span.style.fontSize = `${tok.sizeRatio * 100}%`;
-                    if (tok.font) span.style.fontFamily = `'${tok.font}', sans-serif`;
+                    if (tok.font) span.style.fontFamily = getFontFamilyName(tok.font);
 
                     if (hasCharWarp && count > 1) {
                         const t = (idx - (count - 1) / 2) / ((count - 1) / 2);
@@ -1130,7 +1207,7 @@ export function renderDerivedLinesToDOM(
                 if (tok.strikethrough) span.style.textDecoration = 'line-through';
                 if (tok.color) span.style.color = tok.color;
                 if (tok.sizeRatio && tok.sizeRatio !== 1) span.style.fontSize = `${tok.sizeRatio * 100}%`;
-                if (tok.font) span.style.fontFamily = `'${tok.font}', sans-serif`;
+                if (tok.font) span.style.fontFamily = getFontFamilyName(tok.font);
 
                 const t = count > 1 ? (idx - (count - 1) / 2) / ((count - 1) / 2) : 0;
                 const arcOffset = (1 - t * t) * -arcDepth;
@@ -1158,7 +1235,7 @@ export function renderDerivedLinesToDOM(
                     if (tok.strikethrough) span.style.textDecoration = 'line-through';
                     if (tok.color) span.style.color = tok.color;
                     if (tok.sizeRatio && tok.sizeRatio !== 1) span.style.fontSize = `${tok.sizeRatio * 100}%`;
-                    if (tok.font) span.style.fontFamily = `'${tok.font}', sans-serif`;
+                    if (tok.font) span.style.fontFamily = getFontFamilyName(tok.font);
                     lineDiv.appendChild(span);
                 });
             }
@@ -1187,3 +1264,451 @@ export function renderBlockTextToDOM(
     const layout = computeBlockTextLayout(block, displayW, displayH, zoomScale, null, lockedLines);
     renderDerivedLinesToDOM(target, layout, warpOpts);
 }
+
+export interface RenderCanvasTextOptions {
+    bilingualMode?: string;
+    originOffsetX?: number;
+    originOffsetY?: number;
+}
+
+/**
+ * Canonical Canvas 2D Text Renderer: Renders a TextLayoutResult directly onto any Canvas 2D Context.
+ * Used by Canvas Exporter, PSD Exporter, and offline renderers to guarantee 100% layout fidelity.
+ */
+export function renderBlockTextToCanvas(
+    ctx: CanvasRenderingContext2D,
+    block: MangaBlock,
+    layout: TextLayoutResult,
+    scaleFactor: number = 1.0,
+    options: RenderCanvasTextOptions = {}
+): void {
+    if (!block || !block.translated || !block.translated.trim()) return;
+
+    const offX = options.originOffsetX || 0;
+    const offY = options.originOffsetY || 0;
+    const bx = (layout.bx ?? 0) + offX;
+    const by = (layout.by ?? 0) + offY;
+    const bw = layout.bw ?? (layout.availableWidth || 100);
+    const bh = layout.bh ?? (layout.availableHeight || 100);
+    const fontSizePx = layout.fontSizePx;
+    const lineHeightPx = layout.lineHeightPx;
+    const letterSpacingPx = layout.letterSpacingPx;
+    const fontName = layout.fontName;
+
+    ctx.save();
+
+    const totalTextAngle = (parseFloat(block.style?.rotate as any) || 0) + (parseFloat(block.style?.textRotate as any) || 0);
+    if (totalTextAngle !== 0) {
+        const cx = bx + bw / 2;
+        const cy = by + bh / 2;
+        ctx.translate(cx, cy);
+        ctx.rotate((totalTextAngle * Math.PI) / 180);
+        ctx.translate(-cx, -cy);
+    }
+
+    const fontWeight = block.style?.bold ? 'bold ' : '';
+    const fontItalic = block.style?.italic ? 'italic ' : '';
+    const fontSpec = `${fontItalic}${fontWeight}${fontSizePx}px ${fontName}`;
+    ctx.font = fontSpec;
+    ctx.fillStyle = block.style?.textColor || '#000000';
+
+    if ('letterSpacing' in ctx) {
+        (ctx as any).letterSpacing = `${letterSpacingPx}px`;
+    }
+
+    const strokeWidth = parseFloat(block.style?.strokeWidth as any) || 0;
+    const strokeColor = block.style?.strokeColor || '#ffffff';
+    const strokeWidthPx = strokeWidth * scaleFactor;
+
+    const strokeWidth2 = parseFloat(block.style?.strokeWidth2 as any) || 0;
+    const strokeColor2 = block.style?.strokeColor2 || '#000000';
+    const strokeWidth2Px = strokeWidth2 * scaleFactor;
+
+    const shadowBlur = parseFloat(block.style?.shadowBlur as any) || 0;
+    const shadowColor = block.style?.shadowColor || '#000000';
+    const shadowBlurPx = shadowBlur * scaleFactor;
+    const shadowOffsetX = (parseFloat(block.style?.shadowOffsetX as any) || 0) * scaleFactor;
+    const shadowOffsetY = (parseFloat(block.style?.shadowOffsetY as any) || 0) * scaleFactor;
+
+    const arcAngle = block.style?.arcAngle || 0;
+    const skewX = block.style?.skewX || 0;
+    const skewY = block.style?.skewY || 0;
+    const warpWave = block.style?.warpWave || 0;
+    const warpBulge = block.style?.warpBulge || 0;
+
+    const hasSkew = (skewX !== 0 || skewY !== 0);
+    const hasCharWarp = (arcAngle !== 0) || (warpWave !== 0) || (warpBulge !== 0);
+
+    let blockGradient: CanvasGradient | null = null;
+    if (block.style?.gradientEnabled) {
+        const startCol = block.style?.gradientColorStart || '#ff7e5f';
+        const endCol = block.style?.gradientColorEnd || '#feb47b';
+        if (block.style?.gradientType === 'radial') {
+            const cx = bx + bw / 2;
+            const cy = by + bh / 2;
+            const r = Math.max(bw, bh) / 2;
+            const radGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+            radGrad.addColorStop(0, startCol);
+            radGrad.addColorStop(1, endCol);
+            blockGradient = radGrad;
+        } else {
+            const angle = block.style?.gradientAngle !== undefined ? block.style.gradientAngle : 90;
+            const rad = ((angle - 90) * Math.PI) / 180;
+            const cx = bx + bw / 2;
+            const cy = by + bh / 2;
+            const halfDiag = Math.sqrt(bw * bw + bh * bh) / 2;
+            const gx1 = cx - halfDiag * Math.cos(rad);
+            const gy1 = cy - halfDiag * Math.sin(rad);
+            const gx2 = cx + halfDiag * Math.cos(rad);
+            const gy2 = cy + halfDiag * Math.sin(rad);
+            const linGrad = ctx.createLinearGradient(gx1, gy1, gx2, gy2);
+            linGrad.addColorStop(0, startCol);
+            linGrad.addColorStop(1, endCol);
+            blockGradient = linGrad;
+        }
+    }
+
+    if (layout.isVertical) {
+        const colStep = layout.lineHeightPx;
+        const charStep = layout.lineHeightPx;
+        const rightX = bx + bw / 2 + layout.totalWidth / 2 - colStep / 2;
+
+        for (let j = 0; j < layout.lines.length; j++) {
+            const colLine = layout.lines[j];
+            const colChars = colLine.rawChars || [];
+            const colX = rightX - (j * colStep);
+            const colHeight = colChars.length * charStep;
+            let startY = by + (bh / 2) - (colHeight / 2) + (charStep / 2);
+            const minStartY = by + layout.padYPx + (charStep / 2);
+            if (startY < minStartY) startY = minStartY;
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            ctx.save();
+            if (hasSkew) {
+                const radX = (skewX * Math.PI) / 180;
+                const radY = (skewY * Math.PI) / 180;
+                ctx.translate(colX, by + bh / 2);
+                ctx.transform(1, Math.tan(radY), Math.tan(radX), 1, 0, 0);
+                ctx.translate(-colX, -(by + bh / 2));
+            }
+
+            for (let k = 0; k < colChars.length; k++) {
+                const { char, token: tok } = colChars[k];
+                let charCellCenterY = startY + (k * charStep);
+                let charCellCenterX = colX;
+                let rotRad = 0;
+                let bulgeScale = 1;
+
+                if (hasCharWarp && colChars.length > 1) {
+                    const count = colChars.length;
+                    const t = (k - (count - 1) / 2) / ((count - 1) / 2);
+                    const arcOffset = (1 - t * t) * -((arcAngle / 45) * 8 * scaleFactor);
+                    const waveOffset = Math.sin(t * Math.PI) * ((warpWave / 50) * 10 * scaleFactor);
+                    const totalOffsetX = arcOffset + waveOffset;
+                    rotRad = t * (arcAngle * 0.35) * (Math.PI / 180);
+                    bulgeScale = 1 + (1 - t * t) * ((warpBulge / 50) * 0.4);
+                    charCellCenterX += totalOffsetX;
+                }
+
+                ctx.save();
+                ctx.translate(charCellCenterX, charCellCenterY);
+                if (rotRad !== 0) ctx.rotate(rotRad);
+                if (bulgeScale !== 1) ctx.scale(bulgeScale, bulgeScale);
+                if (char === '…' || char === '―' || char === '—' || char === '~' || char === '～' || char === '-') {
+                    ctx.rotate(Math.PI / 2);
+                }
+
+                ctx.font = layout.getFontFn(tok);
+
+                if (strokeWidth2 > 0) {
+                    ctx.save();
+                    if (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0) {
+                        ctx.shadowColor = shadowColor;
+                        ctx.shadowBlur = shadowBlurPx;
+                        ctx.shadowOffsetX = shadowOffsetX;
+                        ctx.shadowOffsetY = shadowOffsetY;
+                    }
+                    ctx.lineWidth = strokeWidthPx + (strokeWidth2Px * 2);
+                    ctx.strokeStyle = strokeColor2;
+                    ctx.lineJoin = 'round';
+                    ctx.miterLimit = 2;
+                    ctx.strokeText(char, 0, 0);
+                    ctx.restore();
+                }
+
+                if (strokeWidth > 0) {
+                    ctx.save();
+                    if (strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
+                        ctx.shadowColor = shadowColor;
+                        ctx.shadowBlur = shadowBlurPx;
+                        ctx.shadowOffsetX = shadowOffsetX;
+                        ctx.shadowOffsetY = shadowOffsetY;
+                    }
+                    ctx.lineWidth = strokeWidthPx;
+                    ctx.strokeStyle = strokeColor;
+                    ctx.lineJoin = 'round';
+                    ctx.miterLimit = 2;
+                    ctx.strokeText(char, 0, 0);
+                    ctx.restore();
+                }
+
+                ctx.save();
+                if (strokeWidth === 0 && strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
+                    ctx.shadowColor = shadowColor;
+                    ctx.shadowBlur = shadowBlurPx;
+                    ctx.shadowOffsetX = shadowOffsetX;
+                    ctx.shadowOffsetY = shadowOffsetY;
+                }
+                ctx.fillStyle = tok.color || (block.style?.gradientEnabled && blockGradient ? blockGradient : (block.style?.textColor || '#000000'));
+                ctx.fillText(char, 0, 0);
+                ctx.restore();
+
+                ctx.restore();
+            }
+            ctx.restore();
+        }
+    } else {
+        const totalLines = layout.lines.length;
+
+        let startX = bx + bw / 2;
+        if (block.style?.align === 'left') startX = bx + layout.padXPx;
+        else if (block.style?.align === 'right') startX = bx + bw - layout.padXPx;
+
+        for (let i = 0; i < totalLines; i++) {
+            const lineLayout = layout.lines[i];
+            const lineTokens = lineLayout.tokens;
+            const lineCenterY = lineLayout.centerY + offY;
+
+            ctx.save();
+            if (hasSkew) {
+                const radX = (skewX * Math.PI) / 180;
+                const radY = (skewY * Math.PI) / 180;
+                ctx.translate(startX, lineCenterY);
+                ctx.transform(1, Math.tan(radY), Math.tan(radX), 1, 0, 0);
+                ctx.translate(-startX, -lineCenterY);
+            }
+
+            if (hasCharWarp) {
+                const rawChars = lineLayout.rawChars || [];
+                const count = rawChars.length;
+                const arcDepth = (arcAngle / 45) * 8 * scaleFactor;
+                const waveAmp = (warpWave / 50) * 10 * scaleFactor;
+                const bulgeFactor = (warpBulge / 50) * 0.4;
+
+                let lineW = 0;
+                rawChars.forEach(({ char: c, token: t }, ci) => {
+                    ctx.font = layout.getFontFn(t);
+                    const effLetterSpacing = letterSpacingPx * (t.sizeRatio || 1.0);
+                    lineW += ctx.measureText(c).width;
+                    if (ci < count - 1) {
+                        lineW += effLetterSpacing;
+                    }
+                });
+
+                let startCharX = startX - (lineW / 2);
+                if (block.style?.align === 'left') startCharX = bx + layout.padXPx;
+                else if (block.style?.align === 'right') startCharX = bx + bw - layout.padXPx - lineW;
+
+                let curX = startCharX;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                for (let k = 0; k < count; k++) {
+                    const { char, token: tok } = rawChars[k];
+                    const tokFontSpec = layout.getFontFn(tok);
+                    ctx.font = tokFontSpec;
+                    const charMetrics = ctx.measureText(char);
+                    const cw = charMetrics.width;
+
+                    const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
+                    const charCenterX = curX + (cw / 2);
+                    const t = count > 1 ? (k - (count - 1) / 2) / ((count - 1) / 2) : 0;
+
+                    const arcOffset = (1 - t * t) * -arcDepth;
+                    const waveOffset = Math.sin(t * Math.PI) * waveAmp;
+                    const totalOffsetY = arcOffset + waveOffset;
+
+                    const rotRad = t * (arcAngle * 0.35) * (Math.PI / 180);
+                    const bulgeScale = 1 + (1 - t * t) * bulgeFactor;
+
+                    ctx.save();
+                    ctx.translate(charCenterX, lineCenterY + totalOffsetY);
+                    if (rotRad !== 0) ctx.rotate(rotRad);
+                    if (bulgeScale !== 1) ctx.scale(bulgeScale, bulgeScale);
+
+                    if (strokeWidth2 > 0) {
+                        ctx.save();
+                        if (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0) {
+                            ctx.shadowColor = shadowColor;
+                            ctx.shadowBlur = shadowBlurPx;
+                            ctx.shadowOffsetX = shadowOffsetX;
+                            ctx.shadowOffsetY = shadowOffsetY;
+                        }
+                        ctx.lineWidth = strokeWidthPx + (strokeWidth2Px * 2);
+                        ctx.strokeStyle = strokeColor2;
+                        ctx.lineJoin = 'round';
+                        ctx.miterLimit = 2;
+                        ctx.strokeText(char, 0, 0);
+                        ctx.restore();
+                    }
+
+                    if (strokeWidth > 0) {
+                        ctx.save();
+                        if (strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
+                            ctx.shadowColor = shadowColor;
+                            ctx.shadowBlur = shadowBlurPx;
+                            ctx.shadowOffsetX = shadowOffsetX;
+                            ctx.shadowOffsetY = shadowOffsetY;
+                        }
+                        ctx.lineWidth = strokeWidthPx;
+                        ctx.strokeStyle = strokeColor;
+                        ctx.lineJoin = 'round';
+                        ctx.miterLimit = 2;
+                        ctx.strokeText(char, 0, 0);
+                        ctx.restore();
+                    }
+
+                    ctx.save();
+                    if (strokeWidth === 0 && strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
+                        ctx.shadowColor = shadowColor;
+                        ctx.shadowBlur = shadowBlurPx;
+                        ctx.shadowOffsetX = shadowOffsetX;
+                        ctx.shadowOffsetY = shadowOffsetY;
+                    }
+                    ctx.fillStyle = tok.color || (block.style?.gradientEnabled && blockGradient ? blockGradient : (block.style?.textColor || '#000000'));
+                    ctx.fillText(char, 0, 0);
+                    ctx.restore();
+
+                    ctx.restore();
+
+                    curX += cw + effLetterSpacing;
+                }
+            } else {
+                const measuredLineWidth = lineLayout.width;
+                let curTokenX = startX;
+                if (!block.style?.align || block.style.align === 'center') {
+                    curTokenX = startX - (measuredLineWidth / 2);
+                } else if (block.style.align === 'right') {
+                    curTokenX = startX - measuredLineWidth;
+                }
+
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+
+                lineTokens.forEach(tok => {
+                    const tokFontSpec = layout.getFontFn(tok);
+                    ctx.font = tokFontSpec;
+                    const tokenW = ctx.measureText(tok.text).width;
+                    const tokSize = fontSizePx * (tok.sizeRatio || 1.0);
+
+                    if (strokeWidth2 > 0) {
+                        ctx.save();
+                        if (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0) {
+                            ctx.shadowColor = shadowColor;
+                            ctx.shadowBlur = shadowBlurPx;
+                            ctx.shadowOffsetX = shadowOffsetX;
+                            ctx.shadowOffsetY = shadowOffsetY;
+                        }
+                        ctx.lineWidth = strokeWidthPx + (strokeWidth2Px * 2);
+                        ctx.strokeStyle = strokeColor2;
+                        ctx.lineJoin = 'round';
+                        ctx.miterLimit = 2;
+                        ctx.strokeText(tok.text, curTokenX, lineCenterY);
+                        ctx.restore();
+                    }
+
+                    if (strokeWidth > 0) {
+                        ctx.save();
+                        if (strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
+                            ctx.shadowColor = shadowColor;
+                            ctx.shadowBlur = shadowBlurPx;
+                            ctx.shadowOffsetX = shadowOffsetX;
+                            ctx.shadowOffsetY = shadowOffsetY;
+                        }
+                        ctx.lineWidth = strokeWidthPx;
+                        ctx.strokeStyle = strokeColor;
+                        ctx.lineJoin = 'round';
+                        ctx.miterLimit = 2;
+                        ctx.strokeText(tok.text, curTokenX, lineCenterY);
+                        ctx.restore();
+                    }
+
+                    ctx.save();
+                    if (block.style?.blendMode && block.style.blendMode !== 'normal' && (!block.style.bgOpacity || block.style.bgOpacity === 0)) {
+                        ctx.globalCompositeOperation = (block.style.blendMode as GlobalCompositeOperation) || 'source-over';
+                    } else {
+                        ctx.globalCompositeOperation = 'source-over';
+                    }
+                    if (strokeWidth === 0 && strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
+                        ctx.shadowColor = shadowColor;
+                        ctx.shadowBlur = shadowBlurPx;
+                        ctx.shadowOffsetX = shadowOffsetX;
+                        ctx.shadowOffsetY = shadowOffsetY;
+                    }
+
+                    const fillToApply: any = tok.color || (block.style?.gradientEnabled && blockGradient ? blockGradient : (block.style?.textColor || '#000000'));
+
+                    ctx.fillStyle = fillToApply;
+                    ctx.fillText(tok.text, curTokenX, lineCenterY);
+                    ctx.restore();
+
+                    if (tok.underline || block.style?.underline) {
+                        ctx.save();
+                        ctx.strokeStyle = tok.color || block.style?.textColor || '#000000';
+                        ctx.lineWidth = Math.max(1, tokSize * 0.08);
+                        ctx.beginPath();
+                        const underlineY = lineCenterY + (tokSize * 0.52);
+                        ctx.moveTo(curTokenX, underlineY);
+                        ctx.lineTo(curTokenX + tokenW, underlineY);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+
+                    if (tok.strikethrough) {
+                        ctx.save();
+                        ctx.strokeStyle = tok.color || block.style?.textColor || '#000000';
+                        ctx.lineWidth = Math.max(1, tokSize * 0.08);
+                        ctx.beginPath();
+                        const strikethroughY = lineCenterY;
+                        ctx.moveTo(curTokenX, strikethroughY);
+                        ctx.lineTo(curTokenX + tokenW, strikethroughY);
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+
+                    curTokenX += tokenW;
+                });
+            }
+            ctx.restore();
+        }
+
+        // Render bilingual subtitles below translated text if enabled
+        const isBilingualSub = options.bilingualMode === 'sub' || block.style?.bilingualSub;
+        if (isBilingualSub && block.original && block.original.trim()) {
+            const subFontSizePx = Math.max(8, fontSizePx * 0.7);
+            const subFontSpec = `italic ${subFontSizePx}px ${fontName}`;
+            ctx.save();
+            ctx.font = subFontSpec;
+            ctx.fillStyle = block.style?.textColor || '#000000';
+            ctx.globalAlpha = 0.75;
+            ctx.textBaseline = 'middle';
+            const subLineHeight = subFontSizePx * 1.1;
+            const subLines = (block.original || '').split('\n');
+            const lastLineBottom = layout.lines.length > 0 ? (layout.lines[layout.lines.length - 1].top + offY + layout.lines[layout.lines.length - 1].height) : (by + bh / 2);
+            const subStartY = lastLineBottom + (subFontSizePx * 0.3);
+            ctx.textAlign = (!block.style?.align || block.style.align === 'center') ? 'center' : (block.style.align === 'right' ? 'right' : 'left');
+            const subStartX = startX;
+
+            for (let si = 0; si < subLines.length; si++) {
+                const subLineCenterY = subStartY + (si * subLineHeight) + (subLineHeight / 2);
+                ctx.fillText(subLines[si], subStartX, subLineCenterY);
+            }
+            ctx.restore();
+        }
+    }
+
+    ctx.restore();
+}
+

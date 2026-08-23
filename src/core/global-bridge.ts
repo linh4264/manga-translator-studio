@@ -191,6 +191,7 @@ export function initGlobalBridge(): void {
         updateApiEndpoint: settingsUI.updateApiEndpoint,
         updateExportFormat: settingsUI.updateExportFormat,
         updateExportPdfQuality: settingsUI.updateExportPdfQuality,
+        updateExportEngine: settingsUI.updateExportEngine,
         updatePipelineMode: settingsUI.updatePipelineMode,
         updateOcrModel: settingsUI.updateOcrModel,
         updateTranslationModel: settingsUI.updateTranslationModel,

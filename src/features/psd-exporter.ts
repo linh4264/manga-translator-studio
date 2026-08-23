@@ -7,7 +7,7 @@
  */
 
 import { MangaPage, MangaBlock } from '../types/index';
-import { computeBlockTextLayout } from './canvas/text-layout-engine';
+import { computeBlockTextLayout, renderBlockTextToCanvas, ensureFontsLoadedForPage } from './canvas/text-layout-engine';
 import { getExportScale } from './canvas/canvas-exporter';
 
 export async function createMangaPSD(page: MangaPage, originalImgEl: HTMLImageElement, eraserCanvas?: HTMLCanvasElement | null): Promise<Blob> {
@@ -17,6 +17,8 @@ export async function createMangaPSD(page: MangaPage, originalImgEl: HTMLImageEl
 
     const width = originalImgEl.naturalWidth || originalImgEl.width || 800;
     const height = originalImgEl.naturalHeight || originalImgEl.height || 1200;
+
+    await ensureFontsLoadedForPage(page);
 
     // 1. Prepare Original Raw Canvas
     const rawCanvas = document.createElement('canvas');
@@ -95,103 +97,11 @@ export async function createMangaPSD(page: MangaPage, originalImgEl: HTMLImageEl
                     tCtx.globalAlpha = 1.0;
                 }
 
-                const strokeWidth = parseFloat(block.style?.strokeWidth as any) || 0;
-                const strokeColor = block.style?.strokeColor || '#ffffff';
-                const strokeWidthPx = strokeWidth * scaleFactor;
-
-                const strokeWidth2 = parseFloat(block.style?.strokeWidth2 as any) || 0;
-                const strokeColor2 = block.style?.strokeColor2 || '#000000';
-                const strokeWidth2Px = strokeWidth2 * scaleFactor;
-
-                if (layout.isVertical) {
-                    const colStep = layout.lineHeightPx;
-                    const charStep = layout.lineHeightPx;
-                    const rightX = bw / 2 + layout.totalWidth / 2 - colStep / 2;
-
-                    for (let j = 0; j < layout.lines.length; j++) {
-                        const colLine = layout.lines[j];
-                        const colChars = colLine.rawChars || [];
-                        const colX = rightX - (j * colStep);
-                        const colHeight = colChars.length * charStep;
-                        let startY = (bh / 2) - (colHeight / 2) + (charStep / 2);
-                        const minStartY = layout.padYPx + (charStep / 2);
-                        if (startY < minStartY) startY = minStartY;
-
-                        tCtx.textAlign = 'center';
-                        tCtx.textBaseline = 'middle';
-
-                        for (let k = 0; k < colChars.length; k++) {
-                            const { char, token: tok } = colChars[k];
-                            const charCenterY = startY + (k * charStep);
-                            tCtx.save();
-                            tCtx.translate(colX, charCenterY);
-                            if (char === '…' || char === '―' || char === '—' || char === '~' || char === '～' || char === '-') {
-                                tCtx.rotate(Math.PI / 2);
-                            }
-                            tCtx.font = layout.getFontFn(tok);
-
-                            if (strokeWidth2 > 0) {
-                                tCtx.lineWidth = strokeWidthPx + (strokeWidth2Px * 2);
-                                tCtx.strokeStyle = strokeColor2;
-                                tCtx.lineJoin = 'round';
-                                tCtx.strokeText(char, 0, 0);
-                            }
-                            if (strokeWidth > 0) {
-                                tCtx.lineWidth = strokeWidthPx;
-                                tCtx.strokeStyle = strokeColor;
-                                tCtx.lineJoin = 'round';
-                                tCtx.strokeText(char, 0, 0);
-                            }
-                            tCtx.fillStyle = tok.color || block.style?.textColor || '#000000';
-                            tCtx.fillText(char, 0, 0);
-                            tCtx.restore();
-                        }
-                    }
-                } else {
-                    let startX = bw / 2;
-                    if (block.style?.align === 'left') startX = layout.padXPx;
-                    else if (block.style?.align === 'right') startX = bw - layout.padXPx;
-
-                    for (let i = 0; i < layout.lines.length; i++) {
-                        const lineLayout = layout.lines[i];
-                        const lineTokens = lineLayout.tokens;
-                        const lineCenterY = (lineLayout.centerY - layout.by!);
-
-                        const measuredLineWidth = lineLayout.width;
-                        let curTokenX = startX;
-                        if (!block.style?.align || block.style?.align === 'center') {
-                            curTokenX = startX - (measuredLineWidth / 2);
-                        } else if (block.style?.align === 'right') {
-                            curTokenX = startX - measuredLineWidth;
-                        }
-
-                        tCtx.textAlign = 'left';
-                        tCtx.textBaseline = 'middle';
-
-                        lineTokens.forEach(tok => {
-                            const tokFontSpec = layout.getFontFn(tok);
-                            tCtx.font = tokFontSpec;
-                            const tokenW = tCtx.measureText(tok.text).width;
-
-                            if (strokeWidth2 > 0) {
-                                tCtx.lineWidth = strokeWidthPx + (strokeWidth2Px * 2);
-                                tCtx.strokeStyle = strokeColor2;
-                                tCtx.lineJoin = 'round';
-                                tCtx.strokeText(tok.text, curTokenX, lineCenterY);
-                            }
-                            if (strokeWidth > 0) {
-                                tCtx.lineWidth = strokeWidthPx;
-                                tCtx.strokeStyle = strokeColor;
-                                tCtx.lineJoin = 'round';
-                                tCtx.strokeText(tok.text, curTokenX, lineCenterY);
-                            }
-                            tCtx.fillStyle = tok.color || block.style?.textColor || '#000000';
-                            tCtx.fillText(tok.text, curTokenX, lineCenterY);
-
-                            curTokenX += tokenW;
-                        });
-                    }
-                }
+                // Text Layer rendering via shared canonical canvas text renderer
+                renderBlockTextToCanvas(tCtx, block, layout, scaleFactor, {
+                    originOffsetX: -(layout.bx || 0),
+                    originOffsetY: -(layout.by || 0)
+                });
 
                 return {
                     name: `Text ${idx + 1}: ${(block.translated || '').slice(0, 16)}`,

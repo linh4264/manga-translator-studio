@@ -13,6 +13,8 @@ export {
     renderDerivedLinesToDOM,
     renderBlockTextToDOM,
     getFontFamilyName,
+    buildFontString,
+    BUILTIN_FONT_MAP,
     wrapParagraphCanva
 } from './text-layout-engine';
 export type {
@@ -21,7 +23,7 @@ export type {
     LayoutLine,
     LayoutLineRect
 } from './text-layout-engine';
-import { renderBlockTextToDOM, computeBlockTextLayout } from './text-layout-engine';
+import { renderBlockTextToDOM, computeBlockTextLayout, getFontFamilyName } from './text-layout-engine';
 
 
 export let overlayRenderRafId: any = null;
@@ -281,6 +283,7 @@ export function renderOverlays(
                 coverMaskContent.className = `${isBuiltInFont ? fontStyle : ''} pointer-events-none`;
             }
 
+            coverMaskContent.style.fontFamily = getFontFamilyName(fontStyle);
             const currentMaskShape = block.style.maskShape || 'bubble-fit';
             let hasBubbleFitMask = false;
 
@@ -304,17 +307,11 @@ export function renderOverlays(
 
             if (!hasBubbleFitMask) {
                 coverMaskContent.style.backgroundImage = 'none';
-                const hexBgColor = block.style.bgColor || '#ffffff';
-                const alpha = (block.style.bgOpacity !== undefined ? block.style.bgOpacity : 100) / 100;
-                coverMaskContent.style.backgroundColor = convertHexToRGBA(hexBgColor, alpha);
-
-                if (currentMaskShape === 'ellipse') {
-                    coverMaskContent.style.borderRadius = '50%';
-                } else if (currentMaskShape === 'rounded') {
-                    coverMaskContent.style.borderRadius = '12px';
-                } else {
-                    coverMaskContent.style.borderRadius = '0px';
-                }
+                coverMaskContent.style.backgroundColor = block.style.bgColor || '#FFFFFF';
+                const opacity = (block.style.bgOpacity !== undefined ? block.style.bgOpacity : 100) / 100;
+                coverMaskContent.style.opacity = `${opacity}`;
+                const rad = block.style.borderRadius !== undefined ? block.style.borderRadius : 4;
+                coverMaskContent.style.borderRadius = `${rad}px`;
             }
         }
 
@@ -322,15 +319,16 @@ export function renderOverlays(
             coversLayer!.appendChild(coverEl);
         }
 
-        // 2. Texts Layer Node Reconciliation
-        let bubble = (Array.from(textsLayer!.children).find((c: any) => c.id === bubbleId) ||
+        // 2. Text/Content Layer Node Reconciliation
+        let bubble = (Array.from(textsLayer!.children).find((b: any) => b.id === bubbleId) ||
             textsLayer!.querySelector(`#${bubbleId}`)) as HTMLElement | null;
         let isNewBubble = false;
         if (!bubble) {
             bubble = document.createElement('div');
             bubble.id = bubbleId;
+            bubble.setAttribute('data-darkreader-ignore', 'true');
             bubble.style.position = 'absolute';
-            bubble.style.backgroundColor = 'transparent';
+            bubble.style.cursor = 'move';
             isNewBubble = true;
         }
 
@@ -338,6 +336,10 @@ export function renderOverlays(
         bubble.style.left = `${block.box.x}%`;
         bubble.style.width = `${block.box.w}%`;
         bubble.style.height = `${block.box.h}%`;
+        bubble.setAttribute('data-block-id', block.id);
+
+        const isSelected = (block.id === globalState.selectedBlockId || (globalState.selectedBlockIds && globalState.selectedBlockIds.includes(block.id))) && !isMirror;
+        bubble.className = `bubble-overlay ${isSelected ? 'active' : ''}`;
 
         if (block.style.rotate) {
             bubble.style.transform = `rotate(${block.style.rotate}deg)`;
@@ -345,14 +347,9 @@ export function renderOverlays(
             bubble.style.transform = '';
         }
 
-        const isSelected = (block.id === globalState.selectedBlockId || (globalState.selectedBlockIds && globalState.selectedBlockIds.includes(block.id))) && !isMirror;
-        bubble.className = `bubble-overlay ${isSelected ? 'active' : ''}`;
         bubble.style.display = 'flex';
         bubble.style.alignItems = 'center';
-        if (block.style.vertical) {
-            bubble.style.justifyContent = 'center';
-            bubble.style.alignItems = 'center';
-        } else if (block.style.align === 'left') {
+        if (block.style.align === 'left') {
             bubble.style.justifyContent = 'flex-start';
         } else if (block.style.align === 'right') {
             bubble.style.justifyContent = 'flex-end';
@@ -360,15 +357,13 @@ export function renderOverlays(
             bubble.style.justifyContent = 'center';
         }
 
-        let maskContent = bubble.querySelector(':scope > .mask-content-container') as HTMLElement | null;
+        let maskContent = bubble.firstElementChild as HTMLElement | null;
         if (!maskContent) {
             maskContent = document.createElement('div');
-            maskContent.className = 'mask-content-container';
+            maskContent.setAttribute('data-darkreader-ignore', 'true');
             maskContent.style.position = 'relative';
-            maskContent.style.overflow = 'hidden';
             maskContent.style.boxSizing = 'border-box';
-            maskContent.style.backgroundColor = 'transparent';
-            maskContent.style.backgroundImage = 'none';
+            maskContent.style.overflow = 'visible';
             bubble.appendChild(maskContent);
         }
 
@@ -400,12 +395,7 @@ export function renderOverlays(
                 maskContent.className = `mask-content-container ${isBuiltInFont ? fontStyle : ''} pointer-events-none`;
             }
 
-            if (!isBuiltInFont) {
-                maskContent.style.fontFamily = `'${fontStyle}', sans-serif`;
-            } else {
-                maskContent.style.fontFamily = '';
-            }
-
+            maskContent.style.fontFamily = getFontFamilyName(fontStyle);
             maskContent.style.wordBreak = 'keep-all';
             maskContent.style.overflowWrap = 'break-word';
             maskContent.style.hyphens = 'none';
@@ -712,121 +702,6 @@ export function convertHexToRGBA(hex: string, alpha: number): string {
     const b = parseInt(hex.substring(4, 6), 16);
     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
-
-export function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-    if (!text) return [];
-    const rawLines = text.split('\n');
-    const resultLines: string[] = [];
-
-    for (const line of rawLines) {
-        const trimmed = line.trim();
-        if (!trimmed) {
-            resultLines.push('');
-            continue;
-        }
-
-        const spaceTokens = trimmed.split(/\s+/);
-        const words: string[] = [];
-
-        for (const token of spaceTokens) {
-            if (!token) continue;
-            const parts = token.split(/([-–—])/);
-            let subWord = '';
-            for (let p = 0; p < parts.length; p++) {
-                const part = parts[p];
-                if (!part) continue;
-                subWord += part;
-                if (part === '-' || part === '–' || part === '—' || p === parts.length - 1) {
-                    words.push(subWord);
-                    subWord = '';
-                }
-            }
-        }
-
-        if (words.length === 0) continue;
-
-        let currentLine = words[0];
-
-        for (let i = 1; i < words.length; i++) {
-            const word = words[i];
-            const needsSpace = !currentLine.endsWith('-') && !currentLine.endsWith('–') && !currentLine.endsWith('—');
-            const testLine = needsSpace ? currentLine + ' ' + word : currentLine + word;
-            const measureLine = stripRichTextTags(testLine);
-
-            if (ctx.measureText(measureLine).width <= maxWidth) {
-                currentLine = testLine;
-            } else {
-                resultLines.push(currentLine);
-                currentLine = word;
-            }
-        }
-        if (currentLine) {
-            resultLines.push(currentLine);
-        }
-    }
-    return resultLines;
-}
-
-export interface MeasuredWordToken {
-    text: string;
-    raw: string;
-    width: number;
-    style: {
-        font?: string | null;
-        fontFamily?: string | null;
-        fontSize?: number;
-        sizeRatio?: number;
-        bold?: boolean;
-        italic?: boolean;
-        underline?: boolean;
-        strikethrough?: boolean;
-        color?: string | null;
-    };
-    spaceWidth: number;
-}
-
-let measureCanvas: HTMLCanvasElement | null = null;
-let measureCtx: CanvasRenderingContext2D | null = null;
-
-export function getMeasureContext(): CanvasRenderingContext2D | null {
-    if (!measureCtx && typeof document !== 'undefined') {
-        try {
-            measureCanvas = document.createElement('canvas');
-            measureCtx = measureCanvas.getContext('2d');
-        } catch (e) {
-            measureCtx = null;
-        }
-    }
-    return measureCtx;
-}
-
-export const BUILTIN_FONT_MAP: Record<string, string> = {
-    'font-comic': "'Patrick Hand', 'Pangolin', cursive",
-    'font-manga': "'Nunito', sans-serif",
-    'font-vietnamese': "'Be Vietnam Pro', 'Inter', sans-serif",
-    'font-comicneue': "'Comic Neue', cursive",
-    'font-impact': "'Bangers', cursive",
-    'font-marker': "'Permanent Marker', cursive",
-    'font-bungee': "'Bungee', cursive",
-    'font-caveat': "'Caveat', cursive",
-    'font-tech': "'Chakra Petch', sans-serif",
-    'font-condensed': "'Saira Condensed', sans-serif",
-    'font-sans': 'sans-serif'
-};
-
-export function buildFontString(style: any = {}, baseFontSize: number = 16, baseFontFamily: string = 'sans-serif'): string {
-    const fontStyle = style.italic ? 'italic ' : 'normal ';
-    const fontWeight = style.bold ? 'bold ' : 'normal ';
-    const sizeRatio = typeof style.sizeRatio === 'number' ? style.sizeRatio : 1.0;
-    const fontSize = Math.max(1, Math.round((style.fontSize || baseFontSize) * sizeRatio));
-    let fontFam = style.font || style.fontFamily || baseFontFamily || 'sans-serif';
-    if (BUILTIN_FONT_MAP[fontFam]) {
-        fontFam = BUILTIN_FONT_MAP[fontFam];
-    }
-    return `${fontStyle}${fontWeight}${fontSize}px ${fontFam}`.trim();
-}
-
-
 
 export function startInlineEditing(block: MangaBlock, bubble: HTMLElement, maskContent: HTMLElement, innerTextDiv: HTMLElement): void {
     if (!block || block.type === 'image') return;
