@@ -1,6 +1,6 @@
 import { selectPage } from './pages-ui';
 import { globalState, markPageAutoFitDirty } from '../core/state';
-import { VALID_MODEL_IDS, CUSTOM_MODEL_VALUE, DEFAULT_MODEL, DEFAULT_OCR_MODEL, DEFAULT_TRANSLATION_MODEL } from '../config/constants';
+import { VALID_MODEL_IDS, VALID_OCR_MODEL_IDS, CUSTOM_MODEL_VALUE, DEFAULT_MODEL, DEFAULT_OCR_MODEL, DEFAULT_TRANSLATION_MODEL } from '../config/constants';
 import { elements } from '../core/elements';
 import { showToast } from '../core/utils';
 import { safeSetLocalStorage } from '../core/utils/storage';
@@ -153,13 +153,13 @@ export function updateAllModelDropdowns(fetchedModels: string[] = []): void {
             case "gemini-2.5-pro":
                 return role === 'trans' ? "Gemini 2.5 Pro (Khuyên dùng: Văn phong dịch xuất sắc)" : "Gemini 2.5 Pro (Chất lượng cao nhất)";
             case "gemini-3.1-flash-lite":
-                return "Gemini 3.1 Flash-Lite (Đời mới, tối ưu tốc độ)";
+                return role === 'ocr' ? "Gemini 3.1 Flash-Lite (Đời mới, siêu tốc)" : "Gemini 3.1 Flash-Lite (Đời mới, tối ưu tốc độ)";
             case "gemini-3.1-pro-preview":
                 return "Gemini 3.1 Pro Preview (Chuyên sâu ngữ cảnh)";
             case "gemini-2.0-flash":
                 return "Gemini 2.0 Flash (Ổn định)";
             case "gemini-2.0-flash-lite":
-                return "Gemini 2.0 Flash-Lite (Tiết kiệm)";
+                return role === 'ocr' ? "Gemini 2.0 Flash-Lite (Tiết kiệm quota)" : "Gemini 2.0 Flash-Lite (Tiết kiệm)";
             case "gemini-1.5-flash":
                 return "Gemini 1.5 Flash (Truyền thống)";
             case "gemini-1.5-pro":
@@ -173,7 +173,11 @@ export function updateAllModelDropdowns(fetchedModels: string[] = []): void {
         const currentOcr = globalState.ocrModel || DEFAULT_OCR_MODEL;
         ocrSelect.innerHTML = "";
 
-        sortedModels.forEach(modelId => {
+        // Model 1 (OCR & Vision) ONLY allows flash-lite models
+        const ocrModels = sortedModels.filter(modelId => modelId.toLowerCase().includes('flash-lite') || modelId.toLowerCase().includes('lite'));
+        const finalOcrModels = ocrModels.length > 0 ? ocrModels : VALID_OCR_MODEL_IDS;
+
+        finalOcrModels.forEach(modelId => {
             const opt = document.createElement('option');
             opt.value = modelId;
             opt.textContent = getFriendlyName(modelId, 'ocr');
@@ -185,17 +189,25 @@ export function updateAllModelDropdowns(fetchedModels: string[] = []): void {
         customOpt.textContent = "✍️ Tự nhập model OCR tùy chỉnh...";
         ocrSelect.appendChild(customOpt);
 
-        if (allModelsSet.has(currentOcr)) {
+        if (finalOcrModels.includes(currentOcr)) {
             ocrSelect.value = currentOcr;
             const customInput = document.getElementById('custom-ocr-model-input');
             if (customInput) customInput.classList.add('hidden');
-        } else {
+        } else if (currentOcr.toLowerCase().includes('flash-lite') || currentOcr.toLowerCase().includes('lite')) {
+            ocrSelect.value = currentOcr;
+            const customInput = document.getElementById('custom-ocr-model-input');
+            if (customInput) customInput.classList.add('hidden');
+        } else if (currentOcr === CUSTOM_MODEL_VALUE) {
             ocrSelect.value = CUSTOM_MODEL_VALUE;
             const customInput = document.getElementById('custom-ocr-model-input') as HTMLInputElement | null;
-            if (customInput) {
-                customInput.classList.remove('hidden');
-                customInput.value = currentOcr;
-            }
+            if (customInput) customInput.classList.remove('hidden');
+        } else {
+            // Default to flash-lite if previous model was non-flash-lite (e.g. gemini-2.5-flash)
+            ocrSelect.value = DEFAULT_OCR_MODEL;
+            globalState.ocrModel = DEFAULT_OCR_MODEL;
+            safeSetLocalStorage('gemini_manga_ocr_model', DEFAULT_OCR_MODEL);
+            const customInput = document.getElementById('custom-ocr-model-input');
+            if (customInput) customInput.classList.add('hidden');
         }
     }
 

@@ -3,7 +3,7 @@ import { BlockStyle } from '../types/index';
 
 export const DEFAULT_PIPELINE_MODE = "two-step"; // 'two-step' | 'single-step'
 export const DEFAULT_MODEL = "gemini-2.5-flash";
-export const DEFAULT_OCR_MODEL = "gemini-2.5-flash";
+export const DEFAULT_OCR_MODEL = "gemini-2.5-flash-lite";
 export const DEFAULT_TRANSLATION_MODEL = "gemini-2.5-pro";
 export const DEFAULT_INPAINT_METHOD = "patchmatch";
 export const CUSTOM_MODEL_VALUE = "__custom__";
@@ -18,10 +18,9 @@ export const VALID_MODEL_IDS: string[] = [
 ];
 
 export const VALID_OCR_MODEL_IDS: string[] = [
-    "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
     "gemini-3.1-flash-lite",
-    "gemini-1.5-flash"
+    "gemini-2.0-flash-lite"
 ];
 
 export const VALID_TRANSLATION_MODEL_IDS: string[] = [

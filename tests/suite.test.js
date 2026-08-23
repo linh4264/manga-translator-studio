@@ -265,14 +265,14 @@ test('2-Step Dedicated AI Pipeline Configuration and State', async () => {
     const { globalState } = await import('../src/core/state.ts');
 
     assert.strictEqual(DEFAULT_PIPELINE_MODE, 'two-step', 'Default pipeline mode must be two-step');
-    assert.strictEqual(DEFAULT_OCR_MODEL, 'gemini-2.5-flash', 'Default OCR model must be gemini-2.5-flash');
+    assert.strictEqual(DEFAULT_OCR_MODEL, 'gemini-2.5-flash-lite', 'Default OCR model must be gemini-2.5-flash-lite');
     assert.strictEqual(DEFAULT_TRANSLATION_MODEL, 'gemini-2.5-pro', 'Default translation model must be gemini-2.5-pro');
 
     assert.ok(VALID_OCR_MODEL_IDS.includes(DEFAULT_OCR_MODEL), 'Default OCR model must be in VALID_OCR_MODEL_IDS');
     assert.ok(VALID_TRANSLATION_MODEL_IDS.includes(DEFAULT_TRANSLATION_MODEL), 'Default translation model must be in VALID_TRANSLATION_MODEL_IDS');
 
     assert.strictEqual(globalState.translationPipelineMode, 'two-step', 'globalState must initialize with two-step pipeline mode');
-    assert.strictEqual(globalState.ocrModel, 'gemini-2.5-flash', 'globalState must initialize with gemini-2.5-flash as OCR model');
+    assert.strictEqual(globalState.ocrModel, 'gemini-2.5-flash-lite', 'globalState must initialize with gemini-2.5-flash-lite as OCR model');
     assert.strictEqual(globalState.translationModel, 'gemini-2.5-pro', 'globalState must initialize with gemini-2.5-pro as Translation model');
 });
 
