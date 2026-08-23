@@ -22,10 +22,10 @@
     "start": "node server/server.js"
   },
   "devDependencies": {
-    "@types/node": "^20.12.7",
-    "typescript": "^5.4.5",
-    "vite": "^5.2.11",
-    "vitest": "^1.6.0"
+    "@types/node": "^20.17.0",
+    "typescript": "^5.7.3",
+    "vite": "^5.4.14",
+    "vitest": "^2.1.9"
   },
   "keywords": [
     "manga",
