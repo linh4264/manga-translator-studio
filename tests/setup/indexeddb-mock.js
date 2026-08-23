@@ -82,6 +82,14 @@ export function createMockIndexedDB() {
                                                 if (allReq.onsuccess) allReq.onsuccess({ target: allReq });
                                             }, 0);
                                             return allReq;
+                                        },
+                                        getAllKeys() {
+                                            const keysReq = { result: [], onsuccess: null, onerror: null };
+                                            setTimeout(() => {
+                                                keysReq.result = Array.from(store.keys());
+                                                if (keysReq.onsuccess) keysReq.onsuccess({ target: keysReq });
+                                            }, 0);
+                                            return keysReq;
                                         }
                                     };
                                 }

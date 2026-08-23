@@ -11,34 +11,98 @@ const FONT_SELECT_IDS = [
 ];
 
 let isFontDelegationInit = false;
+let currentCustomFamilies: string[] = [];
+let customFontsSearchQuery = '';
+let customFontsVisibleCount = 40;
+
 function initFontDelegationOnce(container: HTMLElement): void {
     if (isFontDelegationInit) return;
     container.addEventListener('click', (e) => {
         const target = e.target as HTMLElement | null;
-        const btn = target?.closest('[data-action="delete-custom-font"]') as HTMLElement | null;
-        if (btn?.dataset.family) {
-            deleteCustomFont(btn.dataset.family);
+        const delBtn = target?.closest('[data-action="delete-custom-font"]') as HTMLElement | null;
+        if (delBtn?.dataset.family) {
+            deleteCustomFont(delBtn.dataset.family);
+            return;
+        }
+
+        const loadMoreBtn = target?.closest('[data-action="load-more-custom-fonts"]') as HTMLElement | null;
+        if (loadMoreBtn) {
+            loadMoreCustomFonts();
         }
     });
     isFontDelegationInit = true;
 }
 
-function appendCustomFontToSelect(selectEl: HTMLSelectElement | null, family: string): void {
-    if (!selectEl) return;
-    const exists = Array.from(selectEl.options).some(opt => opt.value === family);
-    if (!exists) {
-        const opt = document.createElement('option');
-        opt.value = family;
-        opt.textContent = `${family} (Tùy chỉnh)`;
-        opt.setAttribute('data-custom', 'true');
-        selectEl.appendChild(opt);
+export function onSearchCustomFonts(query: string): void {
+    customFontsSearchQuery = (query || '').trim().toLowerCase();
+    customFontsVisibleCount = 40;
+    renderCustomFontsListRows();
+}
+
+export function loadMoreCustomFonts(): void {
+    customFontsVisibleCount += 50;
+    renderCustomFontsListRows();
+}
+
+function renderCustomFontsListRows(): void {
+    const listContainer = document.getElementById('custom-fonts-list');
+    const countBadge = document.getElementById('custom-fonts-count');
+    if (!listContainer) return;
+
+    if (countBadge) {
+        countBadge.textContent = String(currentCustomFamilies.length);
     }
+
+    if (currentCustomFamilies.length === 0) {
+        listContainer.innerHTML = `<div class="text-center py-4 text-slate-500 text-xs italic">Chưa có phông chữ tùy chỉnh nào.</div>`;
+        return;
+    }
+
+    const filtered = customFontsSearchQuery
+        ? currentCustomFamilies.filter(f => f.toLowerCase().includes(customFontsSearchQuery))
+        : currentCustomFamilies;
+
+    if (filtered.length === 0) {
+        listContainer.innerHTML = `<div class="text-center py-4 text-slate-500 text-xs italic">Không tìm thấy phông chữ phù hợp với "${escapeHTML(customFontsSearchQuery)}".</div>`;
+        return;
+    }
+
+    const visibleItems = filtered.slice(0, customFontsVisibleCount);
+    const hasMore = filtered.length > customFontsVisibleCount;
+
+    const rowsHtml = visibleItems.map(family => {
+        const safeFamily = escapeHTML(family);
+        return `
+            <div class="bg-slate-900 border border-slate-800 rounded-lg p-2 flex items-center justify-between gap-2 hover:border-slate-700 transition-all">
+                <div class="min-w-0 flex-1">
+                    <p class="text-xs font-bold text-indigo-300 truncate">${safeFamily}</p>
+                    <p class="text-[9px] text-slate-500 font-mono">Tùy chỉnh</p>
+                </div>
+                <button data-family="${safeFamily}" data-action="delete-custom-font"
+                    class="px-2 py-1 rounded bg-red-950/40 hover:bg-red-900 border border-red-500/30 text-red-300 text-[10px] font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                    title="Xóa phông chữ này">
+                    <i class="fa-solid fa-trash-can text-[9px]"></i> Xóa
+                </button>
+            </div>
+        `;
+    }).join('');
+
+    const loadMoreHtml = hasMore ? `
+        <div class="pt-1 pb-0.5 text-center">
+            <button type="button" data-action="load-more-custom-fonts"
+                class="w-full py-1.5 bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 hover:border-indigo-500/40 text-slate-300 hover:text-white rounded-lg text-xs font-medium transition-all cursor-pointer">
+                Hiển thị thêm (${visibleItems.length}/${filtered.length} phông)...
+            </button>
+        </div>
+    ` : '';
+
+    listContainer.innerHTML = rowsHtml + loadMoreHtml;
 }
 
 export async function populateCustomFontsDropdown(): Promise<void> {
     try {
-        const { getAllFontsFromDB } = await import('../core/state');
-        const fonts = await getAllFontsFromDB();
+        const { getAllFontFamiliesFromDB } = await import('../core/state');
+        const families = await getAllFontFamiliesFromDB();
 
         FONT_SELECT_IDS.forEach(id => {
             const fontSelect = document.getElementById(id) as HTMLSelectElement | null;
@@ -47,9 +111,17 @@ export async function populateCustomFontsDropdown(): Promise<void> {
             const customOptions = fontSelect.querySelectorAll('option[data-custom="true"]');
             customOptions.forEach(opt => opt.remove());
 
-            fonts.forEach((font: any) => {
-                appendCustomFontToSelect(fontSelect, font.family);
-            });
+            if (families.length > 0) {
+                const frag = document.createDocumentFragment();
+                families.forEach(family => {
+                    const opt = document.createElement('option');
+                    opt.value = family;
+                    opt.textContent = `${family} (Tùy chỉnh)`;
+                    opt.setAttribute('data-custom', 'true');
+                    frag.appendChild(opt);
+                });
+                fontSelect.appendChild(frag);
+            }
         });
 
         const typoSelect = document.getElementById('typography-target-font') as HTMLSelectElement | null;
@@ -58,62 +130,44 @@ export async function populateCustomFontsDropdown(): Promise<void> {
         const typoOptgroup = document.getElementById('typography-custom-fonts-optgroup');
         if (typoOptgroup) {
             typoOptgroup.replaceChildren();
-            fonts.forEach((font: any) => {
-                const opt = document.createElement('option');
-                opt.value = font.family;
-                opt.textContent = `${font.family} (Tùy chỉnh)`;
-                opt.setAttribute('data-custom', 'true');
-                typoOptgroup.appendChild(opt);
-            });
+            if (families.length > 0) {
+                const frag = document.createDocumentFragment();
+                families.forEach(family => {
+                    const opt = document.createElement('option');
+                    opt.value = family;
+                    opt.textContent = `${family} (Tùy chỉnh)`;
+                    opt.setAttribute('data-custom', 'true');
+                    frag.appendChild(opt);
+                });
+                typoOptgroup.appendChild(frag);
+            }
         }
 
         if (typoSelect && prevTypoVal) {
             typoSelect.value = prevTypoVal;
         }
 
-        await renderCustomFontsListUI(fonts);
+        await renderCustomFontsListUI(families);
     } catch (e) {
         console.error("Lỗi nạp phông chữ tùy chỉnh từ DB:", e);
     }
 }
 
-export async function renderCustomFontsListUI(fontsParam: any[] | null = null): Promise<void> {
+export async function renderCustomFontsListUI(familiesParam: string[] | null = null): Promise<void> {
     const listContainer = document.getElementById('custom-fonts-list');
-    const countBadge = document.getElementById('custom-fonts-count');
     if (!listContainer) return;
 
     initFontDelegationOnce(listContainer);
 
     try {
-        let fonts = fontsParam;
-        if (!fonts) {
-            const { getAllFontsFromDB } = await import('../core/state');
-            fonts = await getAllFontsFromDB();
+        if (familiesParam) {
+            currentCustomFamilies = Array.isArray(familiesParam) ? familiesParam : [];
+        } else {
+            const { getAllFontFamiliesFromDB } = await import('../core/state');
+            currentCustomFamilies = await getAllFontFamiliesFromDB();
         }
 
-        if (countBadge) countBadge.textContent = String(fonts?.length || 0);
-
-        if (!fonts || fonts.length === 0) {
-            listContainer.innerHTML = `<div class="text-center py-4 text-slate-500 text-xs italic">Chưa có phông chữ tùy chỉnh nào.</div>`;
-            return;
-        }
-
-        listContainer.innerHTML = fonts.map(font => {
-            const safeFamily = escapeHTML(font.family);
-            return `
-                <div class="bg-slate-900 border border-slate-800 rounded-lg p-2 flex items-center justify-between gap-2 hover:border-slate-700 transition-all">
-                    <div class="min-w-0 flex-1">
-                        <p class="text-xs font-bold text-indigo-300 truncate" style="font-family: '${safeFamily}', sans-serif;">${safeFamily}</p>
-                        <p class="text-[9px] text-slate-500 font-mono">Tùy chỉnh</p>
-                    </div>
-                    <button data-family="${safeFamily}" data-action="delete-custom-font"
-                        class="px-2 py-1 rounded bg-red-950/40 hover:bg-red-900 border border-red-500/30 text-red-300 text-[10px] font-semibold flex items-center gap-1 transition-all cursor-pointer"
-                        title="Xóa phông chữ này">
-                        <i class="fa-solid fa-trash-can text-[9px]"></i> Xóa
-                    </button>
-                </div>
-            `;
-        }).join('');
+        renderCustomFontsListRows();
     } catch (err) {
         console.error("Lỗi render danh sách Font:", err);
     }
@@ -142,7 +196,9 @@ export async function deleteCustomFont(family: string): Promise<void> {
         const typoOpt = document.querySelector(`#typography-custom-fonts-optgroup option[value="${family}"]`);
         if (typoOpt) typoOpt.remove();
 
-        await renderCustomFontsListUI();
+        currentCustomFamilies = currentCustomFamilies.filter(f => f !== family);
+        renderCustomFontsListRows();
+
         requestOverlayRender();
         showToast(`Đã xóa phông chữ "${family}" thành công!`, "info");
     } catch (err: any) {
@@ -152,14 +208,14 @@ export async function deleteCustomFont(family: string): Promise<void> {
 }
 
 export async function deleteAllCustomFonts(): Promise<void> {
-    const { getAllFontsFromDB, clearAllFontsFromDB } = await import('../core/state');
-    const fonts = await getAllFontsFromDB();
-    if (!fonts || fonts.length === 0) {
+    const { getAllFontFamiliesFromDB, clearAllFontsFromDB } = await import('../core/state');
+    const families = await getAllFontFamiliesFromDB();
+    if (!families || families.length === 0) {
         showToast("Không có phông chữ tùy chỉnh nào để xóa.", "info");
         return;
     }
 
-    if (!confirm(`Bạn có chắc chắn muốn xóa TOÀN BỘ ${fonts.length} phông chữ tùy chỉnh khỏi ứng dụng?\nThao tác này không thể hoàn tác.`)) {
+    if (!confirm(`Bạn có chắc chắn muốn xóa TOÀN BỘ ${families.length} phông chữ tùy chỉnh khỏi ứng dụng?\nThao tác này không thể hoàn tác.`)) {
         return;
     }
 
@@ -184,9 +240,11 @@ export async function deleteAllCustomFonts(): Promise<void> {
             onTypographyTargetFontChange('__global__');
         }
 
-        await renderCustomFontsListUI([]);
+        currentCustomFamilies = [];
+        renderCustomFontsListRows();
+
         requestOverlayRender();
-        showToast(`Đã xóa sạch toàn bộ ${fonts.length} phông chữ tùy chỉnh thành công!`, "success");
+        showToast(`Đã xóa sạch toàn bộ ${families.length} phông chữ tùy chỉnh thành công!`, "success");
     } catch (err: any) {
         console.error("Lỗi xóa toàn bộ phông chữ:", err);
         showToast(`Không thể xóa phông chữ: ${err.message}`, "error");
@@ -195,14 +253,21 @@ export async function deleteAllCustomFonts(): Promise<void> {
 
 export async function registerCustomFont(family: string, blob: Blob): Promise<void> {
     try {
-        const buffer = await blob.arrayBuffer();
-        const fontFace = new FontFace(family, buffer);
-        const loadedFace = await fontFace.load();
-        document.fonts.add(loadedFace);
+        const { ensureCustomFontLoaded } = await import('../core/state');
+        await ensureCustomFontLoaded(family);
 
         FONT_SELECT_IDS.forEach(id => {
             const fontSelect = document.getElementById(id) as HTMLSelectElement | null;
-            appendCustomFontToSelect(fontSelect, family);
+            if (fontSelect) {
+                const exists = Array.from(fontSelect.options).some(opt => opt.value === family);
+                if (!exists) {
+                    const opt = document.createElement('option');
+                    opt.value = family;
+                    opt.textContent = `${family} (Tùy chỉnh)`;
+                    opt.setAttribute('data-custom', 'true');
+                    fontSelect.appendChild(opt);
+                }
+            }
         });
     } catch (err) {
         console.error(`Không thể đăng ký phông chữ ${family}:`, err);
@@ -211,30 +276,30 @@ export async function registerCustomFont(family: string, blob: Blob): Promise<vo
 
 export async function uploadCustomFonts(files: FileList | File[]): Promise<void> {
     if (!files || files.length === 0) return;
-    showToast("Đang nạp phông chữ tùy chỉnh...", "info");
+    showToast(`Đang nạp ${files.length} phông chữ tùy chỉnh...`, "info");
 
-    const { saveFontToDB } = await import('../core/state');
-    let loadedCount = 0;
+    const { saveFontsBatchToDB, getAllFontFamiliesFromDB } = await import('../core/state');
+    const fontBatch: Array<{ family: string; blob: Blob }> = [];
 
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const cleanName = file.name.replace(/\.[^/.]+$/, '').trim();
         const family = cleanName.replace(/[^a-zA-Z0-9\s_-]/g, ' ').replace(/\s+/g, ' ').trim() || 'CustomFont';
         if (!family) continue;
-
-        try {
-            await saveFontToDB(family, file);
-            await registerCustomFont(family, file);
-            loadedCount++;
-        } catch (err) {
-            console.error(`Lỗi lưu font ${file.name}:`, err);
-        }
+        fontBatch.push({ family, blob: file });
     }
 
-    if (loadedCount > 0) {
-        await renderCustomFontsListUI();
-        showToast(`Tải thành công ${loadedCount} phông chữ mới!`, "success");
+    if (fontBatch.length === 0) return;
+
+    try {
+        await saveFontsBatchToDB(fontBatch);
+        await populateCustomFontsDropdown();
+        showToast(`Tải thành công ${fontBatch.length} phông chữ mới!`, "success");
         requestOverlayRender();
+    } catch (err) {
+        console.error("Lỗi tải lên danh sách phông chữ:", err);
+        showToast("Lỗi khi lưu phông chữ vào hệ thống.", "error");
     }
 }
+
 

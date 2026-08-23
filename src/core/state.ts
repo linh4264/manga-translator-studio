@@ -823,25 +823,130 @@ export function clearProjectDB(): Promise<void> {
 }
 
 // --- CUSTOM FONTS DATABASE OPERATIONS ---
+let cachedCustomFontNames: string[] | null = null;
+
+export function invalidateCustomFontCache(): void {
+    cachedCustomFontNames = null;
+}
+
+export function getAllFontFamiliesFromDB(): Promise<string[]> {
+    if (cachedCustomFontNames) return Promise.resolve(cachedCustomFontNames);
+    if (!dbInstance) return Promise.resolve([]);
+    return new Promise((resolve) => {
+        try {
+            const transaction = dbInstance!.transaction([STORE_FONTS], 'readonly');
+            const store = transaction.objectStore(STORE_FONTS);
+            const request = store.getAllKeys();
+            request.onsuccess = () => {
+                const keys = (request.result || []).map(k => String(k));
+                cachedCustomFontNames = keys;
+                resolve(keys);
+            };
+            request.onerror = () => resolve([]);
+        } catch (e) {
+            resolve([]);
+        }
+    });
+}
+
+export function getFontBlobFromDB(family: string): Promise<Blob | null> {
+    if (!dbInstance || !family) return Promise.resolve(null);
+    return new Promise((resolve) => {
+        try {
+            const transaction = dbInstance!.transaction([STORE_FONTS], 'readonly');
+            const store = transaction.objectStore(STORE_FONTS);
+            const request = store.get(family);
+            request.onsuccess = () => {
+                const result = request.result;
+                resolve(result?.blob || null);
+            };
+            request.onerror = () => resolve(null);
+        } catch (e) {
+            resolve(null);
+        }
+    });
+}
+
 export function getAllFontsFromDB(): Promise<any[]> {
     if (!dbInstance) return Promise.resolve([]);
     return new Promise((resolve, reject) => {
-        const transaction = dbInstance!.transaction([STORE_FONTS], 'readonly');
-        const store = transaction.objectStore(STORE_FONTS);
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result || []);
-        request.onerror = (e: any) => reject(e.target.error);
+        try {
+            const transaction = dbInstance!.transaction([STORE_FONTS], 'readonly');
+            const store = transaction.objectStore(STORE_FONTS);
+            const request = store.getAll();
+            request.onsuccess = () => resolve(request.result || []);
+            request.onerror = (e: any) => reject(e.target.error);
+        } catch (e) {
+            reject(e);
+        }
     });
 }
 
 export function saveFontToDB(family: string, blob: Blob): Promise<void> {
+    invalidateCustomFontCache();
     if (!dbInstance) return Promise.resolve();
     return new Promise((resolve, reject) => {
-        const transaction = dbInstance!.transaction([STORE_FONTS], 'readwrite');
-        const store = transaction.objectStore(STORE_FONTS);
-        const request = store.put({ family, blob });
-        request.onsuccess = () => resolve();
-        request.onerror = (e: any) => reject(e.target.error);
+        try {
+            const transaction = dbInstance!.transaction([STORE_FONTS], 'readwrite');
+            const store = transaction.objectStore(STORE_FONTS);
+            const request = store.put({ family, blob });
+            request.onsuccess = () => {
+                invalidateCustomFontCache();
+                resolve();
+            };
+            request.onerror = (e: any) => reject(e.target.error);
+        } catch (e) {
+            reject(e);
+        }
+    });
+}
+
+export function saveFontsBatchToDB(fontList: Array<{ family: string; blob: Blob }>): Promise<void> {
+    invalidateCustomFontCache();
+    if (!dbInstance || !fontList || fontList.length === 0) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        try {
+            const transaction = dbInstance!.transaction([STORE_FONTS], 'readwrite');
+            const store = transaction.objectStore(STORE_FONTS);
+            let settled = false;
+            let pendingCount = fontList.length;
+
+            const finish = () => {
+                if (!settled) {
+                    settled = true;
+                    invalidateCustomFontCache();
+                    resolve();
+                }
+            };
+
+            transaction.oncomplete = finish;
+            transaction.onerror = (e: any) => {
+                if (!settled) {
+                    settled = true;
+                    reject(e.target?.error || e);
+                }
+            };
+
+            fontList.forEach(item => {
+                const req = store.put({ family: item.family, blob: item.blob });
+                if (req) {
+                    req.onsuccess = () => {
+                        pendingCount--;
+                        if (pendingCount <= 0) {
+                            finish();
+                        }
+                    };
+                    req.onerror = (e: any) => {
+                        if (!settled) {
+                            settled = true;
+                            reject(e.target?.error || e);
+                        }
+                    };
+                }
+            });
+        } catch (e) {
+            reject(e);
+        }
     });
 }
 
@@ -1088,6 +1193,25 @@ const loadedCustomFontFamilies = new Set<string>();
 let customFontsLoadingPromise: Promise<void> | null = null;
 let customFontsLoadedOnce = false;
 
+export async function ensureCustomFontLoaded(family: string): Promise<boolean> {
+    if (!family || loadedCustomFontFamilies.has(family)) return true;
+    try {
+        const blob = await getFontBlobFromDB(family);
+        if (!blob) return false;
+        const buffer = await blob.arrayBuffer();
+        const fontFace = new FontFace(family, buffer);
+        await fontFace.load();
+        if (typeof document !== 'undefined' && document.fonts) {
+            (document.fonts as any).add(fontFace);
+        }
+        loadedCustomFontFamilies.add(family);
+        return true;
+    } catch (e) {
+        console.warn(`Không thể nạp phông chữ "${family}":`, e);
+        return false;
+    }
+}
+
 export async function loadAndRegisterCustomFonts(forceReload = false): Promise<void> {
     if (customFontsLoadedOnce && !forceReload) {
         return;
@@ -1098,61 +1222,65 @@ export async function loadAndRegisterCustomFonts(forceReload = false): Promise<v
 
     customFontsLoadingPromise = (async () => {
         try {
-            const fonts = await getAllFontsFromDB();
-            let newlyRegistered = 0;
+            const families = await getAllFontFamiliesFromDB();
+            if (!families || families.length === 0) {
+                customFontsLoadedOnce = true;
+                return;
+            }
 
-            // Auto-deduplicate font records in IndexedDB if legacy versions exist with different casing or underscores
-            const seenNormalizedMap = new Map<string, any>();
-            const duplicatesToDelete: string[] = [];
+            // 1. Identify active fonts needed immediately
+            const neededFonts = new Set<string>();
+            if (globalState.defaultFont) neededFonts.add(globalState.defaultFont);
+            if (globalState.defaultDialogueFont) neededFonts.add(globalState.defaultDialogueFont);
+            if (globalState.defaultNarrationFont) neededFonts.add(globalState.defaultNarrationFont);
+            if (globalState.defaultThoughtFont) neededFonts.add(globalState.defaultThoughtFont);
+            if (globalState.defaultSfxFont) neededFonts.add(globalState.defaultSfxFont);
 
-            for (const fontEntry of fonts) {
-                if (!fontEntry || !fontEntry.family) continue;
-                const normKey = fontEntry.family.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
-
-                if (seenNormalizedMap.has(normKey)) {
-                    const existing = seenNormalizedMap.get(normKey);
-                    // Keep the entry that has richer metadata (e.g. font-matcher profile) or valid blob
-                    if (!existing.weightGrade && fontEntry.weightGrade) {
-                        duplicatesToDelete.push(existing.family);
-                        seenNormalizedMap.set(normKey, fontEntry);
-                    } else {
-                        duplicatesToDelete.push(fontEntry.family);
+            if (globalState.pages && Array.isArray(globalState.pages)) {
+                globalState.pages.forEach(p => {
+                    if (p && p.blocks) {
+                        p.blocks.forEach((b: any) => {
+                            if (b.style?.fontFamily) neededFonts.add(b.style.fontFamily);
+                            if (b.style?.font) neededFonts.add(b.style.font);
+                        });
                     }
+                });
+            }
+
+            // Immediately load active fonts
+            for (const font of neededFonts) {
+                if (families.includes(font)) {
+                    await ensureCustomFontLoaded(font);
+                }
+            }
+
+            // 2. Lazily load remaining custom fonts in background idle batches so UI never blocks
+            const remainingFonts = families.filter(f => !neededFonts.has(f) && !loadedCustomFontFamilies.has(f));
+            if (remainingFonts.length > 0) {
+                const loadNextBatch = (startIndex: number) => {
+                    const batchSize = 10;
+                    const batch = remainingFonts.slice(startIndex, startIndex + batchSize);
+                    if (batch.length === 0) return;
+
+                    Promise.all(batch.map(f => ensureCustomFontLoaded(f))).catch(() => {});
+
+                    if (startIndex + batchSize < remainingFonts.length) {
+                        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+                            (window as any).requestIdleCallback(() => loadNextBatch(startIndex + batchSize), { timeout: 1000 });
+                        } else {
+                            setTimeout(() => loadNextBatch(startIndex + batchSize), 60);
+                        }
+                    }
+                };
+
+                if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+                    (window as any).requestIdleCallback(() => loadNextBatch(0), { timeout: 1000 });
                 } else {
-                    seenNormalizedMap.set(normKey, fontEntry);
+                    setTimeout(() => loadNextBatch(0), 100);
                 }
             }
 
-            // Remove duplicates from IndexedDB in the background
-            if (duplicatesToDelete.length > 0) {
-                console.log(`Phát hiện ${duplicatesToDelete.length} phông chữ bị trùng lặp (do định dạng tên gạch dưới / khoảng trắng). Đang tự động dọn dẹp...`);
-                for (const dupFamily of duplicatesToDelete) {
-                    await deleteFontFromDB(dupFamily).catch(() => {});
-                }
-            }
-
-            const uniqueFonts = Array.from(seenNormalizedMap.values());
-
-            for (const fontEntry of uniqueFonts) {
-                if (!fontEntry?.family || loadedCustomFontFamilies.has(fontEntry.family)) {
-                    continue;
-                }
-
-                try {
-                    const buffer = await fontEntry.blob.arrayBuffer();
-                    const fontFace = new FontFace(fontEntry.family, buffer);
-                    await fontFace.load();
-                    (document.fonts as any).add(fontFace);
-                    loadedCustomFontFamilies.add(fontEntry.family);
-                    newlyRegistered++;
-                } catch (fontErr) {
-                    console.warn(`Không thể tải phông chữ "${fontEntry.family}":`, fontErr);
-                }
-            }
             customFontsLoadedOnce = true;
-            if (newlyRegistered > 0 || duplicatesToDelete.length > 0) {
-                console.log(`Đã nạp ${uniqueFonts.length} phông chữ tùy chỉnh từ IndexedDB (đã loại bỏ trùng lặp).`);
-            }
         } catch (err) {
             console.error("Lỗi tải phông chữ tùy chỉnh:", err);
         } finally {
@@ -1164,37 +1292,49 @@ export async function loadAndRegisterCustomFonts(forceReload = false): Promise<v
 }
 
 export async function deleteFontFromDB(family: string): Promise<boolean> {
+    invalidateCustomFontCache();
     return new Promise((resolve, reject) => {
         if (!dbInstance) {
             reject(new Error("Cơ sở dữ liệu chưa sẵn sàng."));
             return;
         }
-        const tx = dbInstance.transaction([STORE_FONTS], 'readwrite');
-        const store = tx.objectStore(STORE_FONTS);
-        const req = store.delete(family);
-        req.onsuccess = () => {
-            loadedCustomFontFamilies.delete(family);
-            resolve(true);
-        };
-        req.onerror = (e: any) => reject(e.target.error);
+        try {
+            const tx = dbInstance.transaction([STORE_FONTS], 'readwrite');
+            const store = tx.objectStore(STORE_FONTS);
+            const req = store.delete(family);
+            req.onsuccess = () => {
+                loadedCustomFontFamilies.delete(family);
+                invalidateCustomFontCache();
+                resolve(true);
+            };
+            req.onerror = (e: any) => reject(e.target.error);
+        } catch (e) {
+            reject(e);
+        }
     });
 }
 
 export async function clearAllFontsFromDB(): Promise<boolean> {
+    invalidateCustomFontCache();
     return new Promise((resolve, reject) => {
         if (!dbInstance) {
             reject(new Error("Cơ sở dữ liệu chưa sẵn sàng."));
             return;
         }
-        const tx = dbInstance.transaction([STORE_FONTS], 'readwrite');
-        const store = tx.objectStore(STORE_FONTS);
-        const req = store.clear();
-        req.onsuccess = () => {
-            loadedCustomFontFamilies.clear();
-            customFontsLoadedOnce = true;
-            resolve(true);
-        };
-        req.onerror = (e: any) => reject(e.target.error);
+        try {
+            const tx = dbInstance.transaction([STORE_FONTS], 'readwrite');
+            const store = tx.objectStore(STORE_FONTS);
+            const req = store.clear();
+            req.onsuccess = () => {
+                loadedCustomFontFamilies.clear();
+                customFontsLoadedOnce = true;
+                invalidateCustomFontCache();
+                resolve(true);
+            };
+            req.onerror = (e: any) => reject(e.target.error);
+        } catch (e) {
+            reject(e);
+        }
     });
 }
 

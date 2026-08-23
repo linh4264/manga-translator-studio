@@ -219,6 +219,8 @@ export function initGlobalBridge(): void {
         deleteCustomFont: fontUI.deleteCustomFont,
         deleteAllCustomFonts: fontUI.deleteAllCustomFonts,
         renderCustomFontsListUI: fontUI.renderCustomFontsListUI,
+        onSearchCustomFonts: fontUI.onSearchCustomFonts,
+        loadMoreCustomFonts: fontUI.loadMoreCustomFonts,
 
         // Inpainting & Eraser
         autoCleanActiveBlock: inpainting.autoCleanActiveBlock,

@@ -141,6 +141,32 @@ export function setupBrowserEnvironment() {
             set innerHTML(val) {
                 children.length = 0;
                 explicitTextContent = String(val ?? '');
+                const tagRegex = /<([a-z0-9-]+)([^>]*)>([\s\S]*?)<\/\1>|<([a-z0-9-]+)([^>]*)\/?>/gi;
+                let match;
+                while ((match = tagRegex.exec(explicitTextContent)) !== null) {
+                    const tag = match[1] || match[4];
+                    const rawAttrs = match[2] || match[5] || '';
+                    const inner = match[3] || '';
+                    const child = createMockElement(tag);
+
+                    const attrRegex = /([a-z0-9_-]+)(?:=["']([^"']*)["'])?/gi;
+                    let attrMatch;
+                    while ((attrMatch = attrRegex.exec(rawAttrs)) !== null) {
+                        const attrName = attrMatch[1];
+                        const attrVal = attrMatch[2] !== undefined ? attrMatch[2] : '';
+                        if (attrName === 'id') child.id = attrVal;
+                        else if (attrName === 'class') {
+                            attrVal.split(/\s+/).filter(Boolean).forEach(c => child.classList.add(c));
+                        } else if (attrName.startsWith('data-')) {
+                            child.dataset[attrName.slice(5)] = attrVal;
+                        }
+                        child.setAttribute(attrName, attrVal);
+                    }
+                    if (inner) child.innerHTML = inner;
+                    child.parentElement = element;
+                    child.parentNode = element;
+                    children.push(child);
+                }
             },
             parentElement: null,
             parentNode: null,
@@ -223,11 +249,23 @@ export function setupBrowserEnvironment() {
             }),
             querySelector: (sel) => {
                 const cleanSel = String(sel || '').trim();
+                const matchesSel = (node) => {
+                    if (cleanSel.startsWith('#')) return node.id === cleanSel.slice(1);
+                    if (cleanSel.startsWith('.')) return node.classList && node.classList.contains(cleanSel.slice(1));
+                    if (cleanSel.startsWith('[') && cleanSel.endsWith(']')) {
+                        const attrExp = cleanSel.slice(1, -1);
+                        if (attrExp.includes('=')) {
+                            const [k, rawV] = attrExp.split('=');
+                            const v = rawV.replace(/['"]/g, '');
+                            return node.getAttribute(k) === v || (node.dataset && node.dataset[k.replace('data-', '')] === v);
+                        }
+                        return node.hasAttribute(attrExp);
+                    }
+                    return cleanSel.toUpperCase() === node.tagName;
+                };
                 const findMatch = (node) => {
                     for (const child of node.children || []) {
-                        if (cleanSel.startsWith('#') && child.id === cleanSel.slice(1)) return child;
-                        if (cleanSel.startsWith('.') && child.classList && child.classList.contains(cleanSel.slice(1))) return child;
-                        if (cleanSel.toUpperCase() === child.tagName) return child;
+                        if (matchesSel(child)) return child;
                         const sub = findMatch(child);
                         if (sub) return sub;
                     }
@@ -238,11 +276,23 @@ export function setupBrowserEnvironment() {
             querySelectorAll: (sel) => {
                 const cleanSel = String(sel || '').trim();
                 const results = [];
+                const matchesSel = (node) => {
+                    if (cleanSel.startsWith('#')) return node.id === cleanSel.slice(1);
+                    if (cleanSel.startsWith('.')) return node.classList && node.classList.contains(cleanSel.slice(1));
+                    if (cleanSel.startsWith('[') && cleanSel.endsWith(']')) {
+                        const attrExp = cleanSel.slice(1, -1);
+                        if (attrExp.includes('=')) {
+                            const [k, rawV] = attrExp.split('=');
+                            const v = rawV.replace(/['"]/g, '');
+                            return node.getAttribute(k) === v || (node.dataset && node.dataset[k.replace('data-', '')] === v);
+                        }
+                        return node.hasAttribute(attrExp);
+                    }
+                    return cleanSel.toUpperCase() === node.tagName;
+                };
                 const findMatches = (node) => {
                     for (const child of node.children || []) {
-                        if (cleanSel.startsWith('#') && child.id === cleanSel.slice(1)) results.push(child);
-                        else if (cleanSel.startsWith('.') && child.classList && child.classList.contains(cleanSel.slice(1))) results.push(child);
-                        else if (cleanSel.toUpperCase() === child.tagName) results.push(child);
+                        if (matchesSel(child)) results.push(child);
                         findMatches(child);
                     }
                 };

@@ -279,3 +279,49 @@ test('Font Defaults - Modifying font metrics actively updates matching canvas bl
     assert.strictEqual(testBlock2.style.letterSpacing, 0);
 });
 
+test('Font Defaults - Batch Font Operations and Instant Search Filtering for Large Font Libraries', async () => {
+    const { saveFontsBatchToDB, getAllFontFamiliesFromDB, clearAllFontsFromDB } = await import('../../../src/core/state.ts');
+    const { renderCustomFontsListUI, onSearchCustomFonts } = await import('../../../src/ui/font-ui.ts');
+
+    await clearAllFontsFromDB();
+
+    // Create 60 test fonts
+    const batch = [];
+    for (let i = 1; i <= 60; i++) {
+        batch.push({
+            family: `MangaFont_${i.toString().padStart(3, '0')}`,
+            blob: new Blob([`font_${i}`], { type: 'font/ttf' })
+        });
+    }
+
+    await saveFontsBatchToDB(batch);
+
+    const families = await getAllFontFamiliesFromDB();
+    assert.strictEqual(families.length, 60);
+
+    document.body.innerHTML = `
+        <span id="custom-fonts-count">0</span>
+        <div id="custom-fonts-list"></div>
+    `;
+
+    await renderCustomFontsListUI(families);
+
+    const listContainer = document.getElementById('custom-fonts-list');
+    const countBadge = document.getElementById('custom-fonts-count');
+
+    assert.strictEqual(countBadge.textContent, '60');
+    // Initially renders 40 items + load more button
+    assert.strictEqual(listContainer.querySelectorAll('[data-action="delete-custom-font"]').length, 40);
+    assert.strictEqual(listContainer.querySelectorAll('[data-action="load-more-custom-fonts"]').length, 1);
+
+    // Search filter
+    onSearchCustomFonts('045');
+    assert.strictEqual(listContainer.querySelectorAll('[data-action="delete-custom-font"]').length, 1);
+    assert.strictEqual(listContainer.textContent.includes('MangaFont_045'), true);
+
+    // Reset search
+    onSearchCustomFonts('');
+    assert.strictEqual(listContainer.querySelectorAll('[data-action="delete-custom-font"]').length, 40);
+});
+
+
