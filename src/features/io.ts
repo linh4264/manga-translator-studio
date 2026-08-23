@@ -108,6 +108,8 @@ export async function compressAndResizeImage(img: HTMLImageElement, originalName
 
     const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob((resultBlob) => {
+            canvas.width = 0;
+            canvas.height = 0;
             if (resultBlob) {
                 resolve(resultBlob);
             } else {

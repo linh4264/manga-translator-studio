@@ -863,6 +863,8 @@ export async function runBatchTranslation(): Promise<void> {
                 }
             } catch (e) {
                 console.error("Background batch translation error on page:", i, e);
+            } finally {
+                garbageCollectPageCaches();
             }
         }
     }
@@ -875,6 +877,7 @@ export async function runBatchTranslation(): Promise<void> {
         }
     }
 
+    garbageCollectPageCaches();
     setIsBatchTranslating(false);
     uiUpdatePageListUI();
     uiUpdateBackgroundTaskOverlay(false);

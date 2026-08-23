@@ -352,12 +352,6 @@ function clonePageForHistory(page: any): any {
         apiWidth: page.apiWidth,
         apiHeight: page.apiHeight,
         status: page.status,
-        file: page.file || null,
-        originalFile: page.originalFile || null,
-        thumbnailBlob: page.thumbnailBlob || null,
-        thumbnailSrc: page.thumbnailSrc || null,
-        src: page.src || null,
-        apiSrc: page.apiSrc || null,
         eraserLayerBlob: page.eraserLayerBlob || null,
         autoFitRevision: page.autoFitRevision || 0,
         blocks: cloneBlocksForHistory(page.blocks)
@@ -413,9 +407,6 @@ export function applyStateFromSnapshot(snapshot: any): void {
             page.height = savedPage.height || page.height;
             page.apiWidth = savedPage.apiWidth || page.apiWidth;
             page.apiHeight = savedPage.apiHeight || page.apiHeight;
-            page.file = savedPage.file || page.file;
-            page.originalFile = savedPage.originalFile || page.originalFile;
-            page.thumbnailBlob = savedPage.thumbnailBlob || page.thumbnailBlob;
             page.eraserLayerBlob = savedPage.eraserLayerBlob || null;
             page.blocks = cloneBlocksForHistory(savedPage.blocks);
             page.autoFitRevision = (page.autoFitRevision || 0) + 1;
@@ -428,10 +419,10 @@ export function applyStateFromSnapshot(snapshot: any): void {
                 apiWidth: savedPage.apiWidth || savedPage.width || 800,
                 apiHeight: savedPage.apiHeight || savedPage.height || 1200,
                 status: savedPage.status || 'draft',
-                file: savedPage.file || null,
-                originalFile: savedPage.originalFile || null,
-                thumbnailBlob: savedPage.thumbnailBlob || null,
-                thumbnailSrc: savedPage.thumbnailSrc || null,
+                file: null,
+                originalFile: null,
+                thumbnailBlob: null,
+                thumbnailSrc: null,
                 src: null,
                 apiSrc: null,
                 eraserLayerBlob: savedPage.eraserLayerBlob || null,
@@ -1074,31 +1065,49 @@ export async function generateAndSaveThumbnailForPage(page: any): Promise<void> 
 }
 
 const loadedCustomFontFamilies = new Set<string>();
+let customFontsLoadingPromise: Promise<void> | null = null;
+let customFontsLoadedOnce = false;
 
-export async function loadAndRegisterCustomFonts(): Promise<void> {
-    try {
-        const fonts = await getAllFontsFromDB();
-        for (const fontEntry of fonts) {
-            if (!fontEntry?.family || loadedCustomFontFamilies.has(fontEntry.family)) {
-                continue;
-            }
-
-            try {
-                const buffer = await fontEntry.blob.arrayBuffer();
-                const fontFace = new FontFace(fontEntry.family, buffer);
-                await fontFace.load();
-                (document.fonts as any).add(fontFace);
-                loadedCustomFontFamilies.add(fontEntry.family);
-            } catch (fontErr) {
-                console.warn(`Không thể tải phông chữ "${fontEntry.family}":`, fontErr);
-            }
-        }
-        if (fonts.length > 0) {
-            console.log(`Đã tải ${fonts.length} phông chữ tùy chỉnh từ IndexedDB.`);
-        }
-    } catch (err) {
-        console.error("Lỗi tải phông chữ tùy chỉnh:", err);
+export async function loadAndRegisterCustomFonts(forceReload = false): Promise<void> {
+    if (customFontsLoadedOnce && !forceReload) {
+        return;
     }
+    if (customFontsLoadingPromise) {
+        return customFontsLoadingPromise;
+    }
+
+    customFontsLoadingPromise = (async () => {
+        try {
+            const fonts = await getAllFontsFromDB();
+            let newlyRegistered = 0;
+            for (const fontEntry of fonts) {
+                if (!fontEntry?.family || loadedCustomFontFamilies.has(fontEntry.family)) {
+                    continue;
+                }
+
+                try {
+                    const buffer = await fontEntry.blob.arrayBuffer();
+                    const fontFace = new FontFace(fontEntry.family, buffer);
+                    await fontFace.load();
+                    (document.fonts as any).add(fontFace);
+                    loadedCustomFontFamilies.add(fontEntry.family);
+                    newlyRegistered++;
+                } catch (fontErr) {
+                    console.warn(`Không thể tải phông chữ "${fontEntry.family}":`, fontErr);
+                }
+            }
+            customFontsLoadedOnce = true;
+            if (newlyRegistered > 0) {
+                console.log(`Đã nạp thành công ${newlyRegistered} phông chữ tùy chỉnh từ IndexedDB.`);
+            }
+        } catch (err) {
+            console.error("Lỗi tải phông chữ tùy chỉnh:", err);
+        } finally {
+            customFontsLoadingPromise = null;
+        }
+    })();
+
+    return customFontsLoadingPromise;
 }
 
 export async function deleteFontFromDB(family: string): Promise<boolean> {

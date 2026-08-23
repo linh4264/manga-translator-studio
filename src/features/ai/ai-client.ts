@@ -103,8 +103,9 @@ export async function ensurePageImageData(page?: MangaPage): Promise<ImageData |
     }
 
     if (page.src || (page.file && typeof URL !== 'undefined' && URL.createObjectURL)) {
+        let createdBlobUrl: string | null = null;
         try {
-            const srcUrl = page.src || URL.createObjectURL(page.file as Blob);
+            const srcUrl = page.src || (createdBlobUrl = URL.createObjectURL(page.file as Blob));
             const img = new Image();
             img.crossOrigin = 'anonymous';
             img.src = srcUrl;
@@ -117,13 +118,21 @@ export async function ensurePageImageData(page?: MangaPage): Promise<ImageData |
             canvas.width = img.width;
             canvas.height = img.height;
             const ctx = canvas.getContext('2d');
+            let data: ImageData | null = null;
             if (ctx) {
                 ctx.drawImage(img, 0, 0);
-                const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                data = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 page.imageDataCache = data;
-                return data;
             }
-        } catch (e) { }
+            canvas.width = 0;
+            canvas.height = 0;
+            return data;
+        } catch (e) {
+        } finally {
+            if (createdBlobUrl) {
+                URL.revokeObjectURL(createdBlobUrl);
+            }
+        }
     }
 
     return null;
