@@ -512,13 +512,6 @@ export function toggleMobileActiveOrientation(): void {
     requestOverlayRender();
 }
 
-export function balanceMobileActiveDiamond(): void {
-    if (globalState.activePageIndex === -1 || !globalState.selectedBlockId) return;
-    import('../features/canvas/canvas-styling').then(m => {
-        (m as any).batchDiamondBalanceSelectedBlocks?.();
-    });
-}
-
 export function deleteMobileActiveBlock(): void {
     if (globalState.activePageIndex === -1 || !globalState.selectedBlockId) return;
     import('../features/canvas/canvas-actions').then(m => {

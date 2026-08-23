@@ -610,21 +610,26 @@ test('Studio Pro Phase 1: Rich Text Tokenizer and Styling', async () => {
     assert.ok(container.children[0].children.length >= 3);
 });
 
-// 23. Studio Pro Phase 1: Diamond / Oval Word Wrapping & Canvas Exporter
-test('Studio Pro Phase 1: Diamond / Oval Word Wrapping', async () => {
-    const { wrapCanvasText, wrapCanvasDiamondText } = await import('../src/features/canvas/canvas-renderer.ts');
-
-    const mockCtx = {
-        measureText: (str) => ({ width: str.length * 8 })
-    };
+// 23. Studio Pro: Paragraph Word Wrapping & Canvas Layout
+test('Studio Pro: Paragraph Word Wrapping and Canvas Layout Engine', async () => {
+    const { computeBlockTextLayout, wrapParagraphCanva } = await import('../src/features/canvas/text-layout-engine.ts');
+    const { parseRichTextLines } = await import('../src/core/utils.ts');
 
     const text = 'Một hai ba bốn năm sáu bảy tám chín mười mười một mười hai';
-    const rectLines = wrapCanvasText(mockCtx, text, 150);
-    const diamondLines = wrapCanvasDiamondText(mockCtx, text, 200, 200, 20);
+    const tokens = parseRichTextLines(text, {})[0];
+    const lines = wrapParagraphCanva(tokens, 150, 16, 0, 'sans-serif', null);
 
-    assert.ok(Array.isArray(rectLines), 'Rect wrap must return array of lines');
-    assert.ok(Array.isArray(diamondLines), 'Diamond wrap must return array of lines');
-    assert.ok(diamondLines.length >= 2, 'Diamond wrap should produce balanced lines');
+    assert.ok(Array.isArray(lines), 'wrapParagraphCanva must return array of lines');
+    assert.ok(lines.length >= 2, 'Should wrap into multiple lines when exceeding available width');
+
+    const block = {
+        translated: text,
+        box: { x: 10, y: 10, w: 20, h: 20 },
+        style: { fontSize: 16, fontFamily: 'font-manga' }
+    };
+    const layout = computeBlockTextLayout(block, 800, 1200, 1);
+    assert.ok(Array.isArray(layout.lines), 'Layout lines must be an array');
+    assert.ok(layout.lines.length >= 2, 'Block layout should wrap into lines');
 });
 
 

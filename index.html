@@ -339,12 +339,6 @@
 
                 <!-- Utilities -->
                 <div class="grid grid-cols-2 gap-1.5 border-t border-slate-800/60 pt-2">
-                    <button onclick="batchDiamondBalanceAllPages()"
-                        class="h-8 px-2 rounded-xl bg-slate-900 hover:bg-cyan-950/50 hover:border-cyan-500/40 border border-slate-800 text-slate-300 hover:text-cyan-300 text-[11px] font-semibold flex items-center gap-2 transition-all cursor-pointer"
-                        title="Cân đối dòng tất cả các ô thoại">
-                        <i class="fa-solid fa-align-center text-cyan-400 text-xs"></i>
-                        <span>Cân dòng</span>
-                    </button>
                     <button id="btn-bilingual-toggle-quick" onclick="toggleQuickBilingualMode()"
                         class="h-8 px-2 rounded-xl bg-slate-900 hover:bg-indigo-950/50 hover:border-indigo-500/40 border border-slate-800 text-slate-300 hover:text-indigo-300 text-[11px] font-semibold flex items-center gap-2 transition-all cursor-pointer"
                         title="Bật/Tắt hiển thị Song ngữ">
@@ -1358,9 +1352,6 @@
                                 <button type="button" onclick="applyRichSizeToSelection(130)"
                                     class="px-1 h-5 rounded flex items-center justify-center text-[9px] font-bold text-indigo-300 hover:text-white hover:bg-indigo-950 transition-all cursor-pointer"
                                     title="Phóng to từ chọn +30%">A+</button>
-                                <button type="button" onclick="toggleDiamondWrapActiveBlock()"
-                                    class="px-1.5 h-5 rounded flex items-center justify-center text-[9px] font-bold text-teal-300 hover:text-white hover:bg-teal-950 transition-all cursor-pointer"
-                                    title="Cân đối các dòng chữ"><i class="fa-solid fa-align-center text-[8px]"></i></button>
                                 <button type="button" onclick="clearRichFormattingFromSelection()"
                                     class="w-5 h-5 rounded flex items-center justify-center text-[9px] text-slate-400 hover:text-red-300 hover:bg-slate-800 transition-all cursor-pointer"
                                     title="Xóa định dạng Rich Text">🧹</button>
@@ -1389,13 +1380,6 @@
                         </div>
 
                         <div class="flex flex-wrap items-center gap-1 mt-1.5 pt-1.5 border-t border-slate-900">
-                            <!-- Smart Balance Button -->
-                            <button onclick="applyDiamondFormat()"
-                                class="text-[10px] bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-400 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1 cursor-pointer"
-                                title="Tự động cân đối các dòng chữ">
-                                <i class="fa-solid fa-align-center text-[9px]"></i> Cân dòng
-                            </button>
-
                             <!-- Speak Active Block Button -->
                             <button data-action="speakActiveBlock" onclick="speakActiveBlock()"
                                 class="text-[10px] bg-sky-600/20 hover:bg-sky-600 border border-sky-500/30 text-sky-300 hover:text-white px-2 py-1 rounded transition-all font-semibold flex items-center gap-1 cursor-pointer"
@@ -1974,22 +1958,9 @@
                     </label>
 
                     <div class="grid grid-cols-2 gap-1.5">
-                        <!-- Diamond Format -->
-                        <button onclick="applyDiamondFormat()"
-                            class="p-2 rounded-lg bg-slate-900 hover:bg-indigo-950/70 border border-slate-800 hover:border-indigo-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm"
-                            title="Tự động bẻ dòng hình quả trám / bầu dục, chống rớt từ đơn">
-                            <span
-                                class="w-6 h-6 rounded bg-indigo-500/20 text-indigo-300 flex items-center justify-center text-xs font-bold shrink-0">💎</span>
-                            <div class="min-w-0">
-                                <div class="text-[11px] font-bold text-slate-200 group-hover:text-indigo-300 truncate">
-                                    Cân chữ Diamond</div>
-                                <div class="text-[9px] text-slate-500 truncate">Chống rớt từ đơn</div>
-                            </div>
-                        </button>
-
                         <!-- Clean Manga Typo -->
                         <button onclick="cleanActiveBlockPunctuation()"
-                            class="p-2 rounded-lg bg-slate-900 hover:bg-emerald-950/70 border border-slate-800 hover:border-emerald-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm"
+                            class="col-span-2 p-2 rounded-lg bg-slate-900 hover:bg-emerald-950/70 border border-slate-800 hover:border-emerald-500/50 text-left transition-all group flex items-center gap-2 cursor-pointer shadow-sm"
                             title="Chuẩn hóa dấu câu Manga (..., ?!, --, ~)">
                             <span
                                 class="w-6 h-6 rounded bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-xs font-bold shrink-0">✨</span>
@@ -4046,11 +4017,11 @@
                         <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
                             <div class="flex items-center gap-2 text-sm font-bold text-amber-400">
                                 <i class="fa-solid fa-font"></i>
-                                <span>3. Typesetting & Cân đối Diamond</span>
+                                <span>3. Typesetting & Bố cục nâng cao</span>
                             </div>
                             <p class="text-xs text-slate-300 leading-relaxed">
                                 Hỗ trợ chữ dọc (Vertical RL), phông chữ tùy chỉnh (Upload Font ttf/woff2), khớp mặt nạ
-                                bong bóng (Bubble-fit mask) và tự động cân đối bố cục kim cương 1-click.
+                                bong bóng (Bubble-fit mask) và tự động ngắt dòng thông minh.
                             </p>
                         </div>
 
@@ -4319,14 +4290,6 @@
                 class="h-8 px-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all">
                 <i class="fa-solid fa-arrows-up-down text-[10px] text-indigo-400"></i>
                 <span id="mobile-quick-orientation-text">Dọc/Ngang</span>
-            </button>
-
-            <!-- Line Balance -->
-            <button onclick="balanceMobileActiveDiamond()"
-                class="h-8 px-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 text-xs font-semibold flex items-center gap-1.5 active:scale-95 transition-all"
-                title="Tự động cân đối các dòng chữ">
-                <i class="fa-solid fa-align-center text-[10px] text-cyan-400"></i>
-                <span>Cân dòng</span>
             </button>
 
             <!-- Open Full Style Drawer Trigger -->

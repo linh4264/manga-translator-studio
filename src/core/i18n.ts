@@ -9,7 +9,6 @@ export const i18nDict: Record<string, Record<string, string>> = {
         "image-source-sub": "Tải truyện và quản lý trang bên dưới",
         "settings-btn": "Cài đặt",
         "find-replace-btn": "Tìm & Thay thế",
-        "diamond-balance-btn": "Cân đối dòng",
         "upload-title": "Tải ảnh Manga lên",
         "upload-sub": "Hỗ trợ chọn hoặc thả nhiều ảnh cùng lúc",
         "page-list-label": "Danh sách trang",
@@ -128,7 +127,6 @@ export const i18nDict: Record<string, Record<string, string>> = {
 
         // Tooltip Titles
         "title-find-replace": "Tìm & Thay thế từ ngữ",
-        "title-diamond-balance": "Cân đối Diamond tất cả các trang",
         "title-bilingual-toggle": "Bật/Tắt hiển thị Song ngữ",
         "title-audio-toggle": "Phát/Dừng Audio Drama (Kịch truyền thanh)",
         "title-lorebook": "Lorebook từ vựng & Nhân vật",
@@ -191,7 +189,6 @@ export const i18nDict: Record<string, Record<string, string>> = {
         "image-source-sub": "Load manga and manage pages below",
         "settings-btn": "Settings",
         "find-replace-btn": "Find & Replace",
-        "diamond-balance-btn": "Diamond Balance",
         "upload-title": "Upload Manga Images",
         "upload-sub": "Select or drag multiple images at once",
         "page-list-label": "Page List",
@@ -310,7 +307,6 @@ export const i18nDict: Record<string, Record<string, string>> = {
 
         // Tooltip Titles
         "title-find-replace": "Find & Replace text",
-        "title-diamond-balance": "Diamond balance all pages",
         "title-bilingual-toggle": "Toggle Bilingual display mode",
         "title-audio-toggle": "Play/Stop Audio Drama",
         "title-lorebook": "Lorebook and Characters",

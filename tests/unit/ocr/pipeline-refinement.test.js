@@ -1,7 +1,7 @@
 import { test } from 'vitest';
 import assert from 'node:assert';
 import { extractTextAnchor, refineAiBlockBox, detectSpeechBubbleAtPoint, mergeOverlappingAiBlocks } from '../../../src/features/ocr/ocr-service.ts';
-import { balanceTextToDiamond, measureWordTokens } from '../../../src/features/canvas/canvas-renderer.ts';
+import { computeBlockTextLayout } from '../../../src/features/canvas/text-layout-engine.ts';
 import { autoMatchBlockStyle } from '../../../src/features/canvas/canvas-styling.ts';
 import { getDefaultFontForBlockType } from '../../../src/features/ai/story-memory.ts';
 
@@ -146,37 +146,28 @@ test('Pipeline Refinement - CASE C3: Bubble detection in pure dark area returns 
 });
 
 // =========================================================================
-// ISSUE 3: Final Style & Font Before Diamond Measurement (CASE D)
+// ISSUE 3: Final Style & Font Layout Measurement (CASE D)
 // =========================================================================
-test('Pipeline Refinement - CASE D: Diamond line partition is based on final font, not default font', () => {
+test('Pipeline Refinement - CASE D: Text layout measurement is based on final font, not default font', () => {
     const text = 'Đây là một câu thoại có độ dài trung bình trong manga';
 
-    // Measure tokens with standard font vs wide/bold font
-    const defaultStyle = { fontFamily: 'font-manga', fontSize: 18, bold: false };
-    const wideStyle = { fontFamily: 'font-impact', fontSize: 24, bold: true, letterSpacing: 2 };
+    const defaultBlock = {
+        translated: text,
+        box: { x: 10, y: 10, w: 30, h: 20 },
+        style: { fontFamily: 'font-manga', fontSize: 18, bold: false }
+    };
+    const wideBlock = {
+        translated: text,
+        box: { x: 10, y: 10, w: 30, h: 20 },
+        style: { fontFamily: 'font-impact', fontSize: 24, bold: true, letterSpacing: 2 }
+    };
 
-    const defaultTokens = measureWordTokens(text, defaultStyle);
-    const wideTokens = measureWordTokens(text, wideStyle);
+    const defaultLayout = computeBlockTextLayout(defaultBlock, 800, 1200, 1);
+    const wideLayout = computeBlockTextLayout(wideBlock, 800, 1200, 1);
 
-    const defaultTotalWidth = defaultTokens.reduce((sum, t) => sum + t.width, 0);
-    const wideTotalWidth = wideTokens.reduce((sum, t) => sum + t.width, 0);
-
-    // Wide/impact font must measure wider than default
-    assert.ok(wideTotalWidth > defaultTotalWidth * 1.2, 'Wide font must have substantially greater measured width');
-
-    // Balance text into a fixed box with defaultStyle vs wideStyle
-    const boxW = 200;
-    const boxH = 200;
-    const defaultBalanced = balanceTextToDiamond(text, boxW, boxH, defaultStyle);
-    const wideBalanced = balanceTextToDiamond(text, boxW, boxH, wideStyle);
-
-    assert.ok(defaultBalanced, 'Default balanced text must not be empty');
-    assert.ok(wideBalanced, 'Wide balanced text must not be empty');
-
-    // When measured with the final wide font, line wrapping occurs differently than with default font
-    const defaultLines = defaultBalanced.split('\n');
-    const wideLines = wideBalanced.split('\n');
-    assert.ok(wideLines.length >= defaultLines.length, 'Wider font should result in equal or more wrapped lines for the same box');
+    assert.ok(wideLayout.textWidth > defaultLayout.textWidth, 'Wide font must have greater measured text width');
+    assert.ok(defaultLayout.lines.length >= 1, 'Default text layout must produce lines');
+    assert.ok(wideLayout.lines.length >= 1, 'Wide text layout must produce lines');
 });
 
 // =========================================================================

@@ -1,7 +1,7 @@
 import { globalState, pushStateToHistory, savePageToDB, debounceSavePage, uiUpdateActiveBlockEditor, markPageAutoFitDirty, PRO_STYLE_PRESETS } from '../../core/state';
 import { elements } from '../../core/elements';
 import { showToast, setMultilineText, cleanMangaPunctuation } from '../../core/utils';
-import { requestOverlayRender, balanceTextToDiamond, balanceSingleParagraphToBox, getReferenceDisplayDimensions } from './canvas-renderer';
+import { requestOverlayRender, getReferenceDisplayDimensions } from './canvas-renderer';
 import { computeBlockTextLayout, renderBlockTextToDOM } from './text-layout-engine';
 import { updateFloatingToolbarPosition } from './canvas-interactions';
 import { MangaBlock, MangaPage, BlockStyle } from '../../types/index';
@@ -22,29 +22,11 @@ export function isBlockAutoFit(block?: MangaBlock | null): boolean {
     return globalState.autoFitEnabled;
 }
 
-export const DIAMOND_REFLOW_THRESHOLDS = {
-    MIN_LINE_UTILIZATION: 0.55,
-    MIN_WORD_COUNT: 4,
-    MAX_ASPECT_LINE_DEVIATION: 1.5,
-};
-
-export function shouldReflowDiamond(
-    _block: MangaBlock,
-    _finalFontSize: number,
-    _maxAllowedWidth: number,
-    _maxAllowedHeight: number,
-    _targetWidth: number,
-    _targetHeight: number
-): boolean {
-    return false;
-}
-
 export function autoFitBlock(
     block: MangaBlock,
     customImgElement: HTMLImageElement | null = null,
     _forceExportScale: number = 1,
-    targetPage: MangaPage | null = null,
-    allowDiamondReflow: boolean = true
+    targetPage: MangaPage | null = null
 ): void {
     if (!block || !block.box || !block.style) return;
     if (!isBlockAutoFit(block)) return;
@@ -87,7 +69,6 @@ export function autoFitBlock(
     }
 
     const fontStyle = block.style.fontFamily || globalState.defaultFont || 'font-manga';
-    const isDiamondWrap = !!block.style.diamondWrap;
     const isVertical = !!block.style.vertical;
     const isBold = !!block.style.bold;
     const isItalic = !!block.style.italic;
@@ -107,7 +88,7 @@ export function autoFitBlock(
 
     const quantWidth = Math.round(displayWidth / 2) * 2;
     const quantHeight = Math.round(displayHeight / 2) * 2;
-    const cacheKey = `${block.translated}_${block.box.w}_${block.box.h}_${fontStyle}_${baseFontSize}_${isDiamondWrap}_${block.style.padding}_${strokeWidth}_${strokeWidth2}_${isVertical}_${isBold}_${isItalic}_${isUnderline}_${lineHeight}_${letterSpacing}_${textTransform}_${align}_${maskShape}_${arcAngle}_${skewX}_${skewY}_${warpWave}_${warpBulge}_${quantWidth}_${quantHeight}`;
+    const cacheKey = `${block.translated}_${block.box.w}_${block.box.h}_${fontStyle}_${baseFontSize}_${block.style.padding}_${strokeWidth}_${strokeWidth2}_${isVertical}_${isBold}_${isItalic}_${isUnderline}_${lineHeight}_${letterSpacing}_${textTransform}_${align}_${maskShape}_${arcAngle}_${skewX}_${skewY}_${warpWave}_${warpBulge}_${quantWidth}_${quantHeight}`;
 
     if (block.autoFitCache && block.autoFitCache.key === cacheKey) {
         block.style.fontSize = block.autoFitCache.fontSize;
@@ -1011,31 +992,5 @@ export function toggleSelectedBlocksOrientation(): void {
     savePageToDB(page);
 
     showToast(`🔠 Đã chuyển ${targetBlocks.length} ô sang kiểu chữ ${newVertical ? 'Dọc' : 'Ngang'}!`, 'success');
-}
-
-export function batchDiamondBalanceSelectedBlocks(): void {
-    if (globalState.activePageIndex === -1) return;
-    const page = globalState.pages[globalState.activePageIndex];
-    if (!page || !page.blocks) return;
-
-    const targetIds = (globalState.selectedBlockIds && globalState.selectedBlockIds.length > 0)
-        ? globalState.selectedBlockIds
-        : (globalState.selectedBlockId ? [globalState.selectedBlockId] : []);
-
-    if (targetIds.length === 0) return;
-
-    pushStateToHistory();
-    import('./canvas-renderer').then(r => {
-        targetIds.forEach(id => {
-            const block = page.blocks.find(b => b.id === id);
-            if (block && block.type !== 'image') {
-                r.balanceBlockDiamond?.(block);
-            }
-        });
-        requestOverlayRender();
-        uiUpdateActiveBlockEditor();
-        savePageToDB(page);
-        showToast(`Đã cân đối dòng cho ${targetIds.length} ô thoại!`, 'success');
-    });
 }
 

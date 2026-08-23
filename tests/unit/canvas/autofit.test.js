@@ -7,7 +7,7 @@ import {
     autoFitBlock,
     autoFitAllBlocksOnPage
 } from '../../../src/features/canvas/canvas-styling.ts';
-import { balanceTextToBox } from '../../../src/features/canvas/canvas-renderer.ts';
+import { computeBlockTextLayout } from '../../../src/features/canvas/text-layout-engine.ts';
 import { globalState } from '../../../src/core/state.ts';
 
 test('Canvas AutoFit - Toggle and Override Precedence', () => {
@@ -61,9 +61,8 @@ test('Canvas AutoFit - Strict Manual Font Preservation During Batch Auto-Fit', (
     assert.strictEqual(mockPage.blocks[1].style.autoFit, false);
 });
 
-test('Default Style - diamondWrap defaults to false and fontSize defaults to 17', () => {
+test('Default Style - fontSize defaults to 17', () => {
     import('../../../src/config/constants.ts').then(({ DEFAULT_BLOCK_STYLE }) => {
-        assert.strictEqual(DEFAULT_BLOCK_STYLE.diamondWrap, false, 'DEFAULT_BLOCK_STYLE.diamondWrap must be false');
         assert.strictEqual(DEFAULT_BLOCK_STYLE.fontSize, 17, 'DEFAULT_BLOCK_STYLE.fontSize must be 17');
     });
 });
@@ -99,29 +98,19 @@ test('Canvas AutoFit & Manual Line Breaks - Multi-line manual breaks scale font 
     assert.strictEqual(multiLineBlock.translated, 'Đây là một\ncâu thoại dài\ncần được hiển thị', 'Manual line breaks must be strictly preserved');
 });
 
-test('Standard Balanced Line Wrap - balanceTextToBox breaks unbroken sentences into balanced lines for box aspect', () => {
-    // Tall bubble aspect (150px x 280px) with 8 words sentence
+test('Paragraph Layout & AutoFit - AutoFit scales font size to fit box bounds', () => {
     const text = 'Thế này thì còn ý nghĩa gì nữa chứ.';
-    const balanced = balanceTextToBox(text, 150, 280, { fontFamily: 'font-manga', fontSize: 16 });
-
-    assert.ok(balanced.includes('\n'), 'Sentence must be broken into multiple lines');
-    const lines = balanced.split('\n');
-    assert.ok(lines.length >= 2 && lines.length <= 4, `Should be broken into 2-4 lines, got ${lines.length}`);
-
-    // Verify all original words are preserved
-    const wordsInLines = lines.flatMap(l => l.split(' '));
-    assert.strictEqual(wordsInLines.join(' '), text);
-
-    // AutoFit on balanced text produces a readable font size (> 12px) instead of collapsing
     const block = {
         id: 'b_user_case',
         type: 'dialogue',
-        translated: balanced,
+        translated: text,
         box: { x: 20, y: 20, w: 20, h: 40 },
-        style: { fontFamily: 'font-manga', fontSize: 14 }
+        style: { fontFamily: 'font-manga', fontSize: 18, baseFontSize: 18 }
     };
     autoFitBlock(block);
     assert.ok(block.style.fontSize >= 12, `Font size should be readable (>=12px), got ${block.style.fontSize}px`);
+    const layout = computeBlockTextLayout(block, 800, 1200, 1);
+    assert.ok(layout.lines.length >= 1, 'Should compute layout lines');
 });
 
 

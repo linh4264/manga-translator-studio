@@ -8,11 +8,7 @@ import {
     getFontFamilyName,
     renderPageToCanvas2D
 } from '../../../src/features/canvas/canvas-exporter.ts';
-import {
-    balanceBlockDiamond,
-    balanceTextToDiamond,
-    computeBlockTextLayout
-} from '../../../src/features/canvas/canvas-renderer.ts';
+import { computeBlockTextLayout } from '../../../src/features/canvas/text-layout-engine.ts';
 import { autoFitBlock } from '../../../src/features/canvas/canvas-styling.ts';
 import { parseRichTextLines } from '../../../src/core/utils.ts';
 import { globalState } from '../../../src/core/state.ts';
@@ -28,7 +24,7 @@ function createMockPage(block, naturalW = 1600, naturalH = 2400, displayW = 800)
     return page;
 }
 
-test('CASE A — Diamond: Editor 4 lines Diamond exports with exact same 4 lines', () => {
+test('CASE A — Multi-line: Editor 4 lines exports with exact same 4 lines', () => {
     const text = 'Tôi không biết.\nNhưng có lẽ...\nanh ấy đã đúng\nvề mọi chuyện.';
     const block = {
         id: 'b_case_a',
@@ -38,7 +34,6 @@ test('CASE A — Diamond: Editor 4 lines Diamond exports with exact same 4 lines
         box: { x: 10, y: 10, w: 20, h: 20 },
         style: {
             fontSize: 16,
-            diamondWrap: true,
             fontFamily: 'font-manga',
             lineHeight: 1.15
         }
@@ -264,7 +259,6 @@ test('CASE J — Pure Rendering: Export does not mutate block properties', async
         box: { x: 15, y: 15, w: 25, h: 25 },
         style: {
             fontSize: 18,
-            diamondWrap: true,
             fontFamily: 'font-manga'
         },
         autoFitCache: { key: 'sample_key', fontSize: 18 }
@@ -280,12 +274,11 @@ test('CASE J — Pure Rendering: Export does not mutate block properties', async
     // Block properties must remain 100% untouched
     assert.strictEqual(block.translated, originalBlockSnapshot.translated, 'Export must not mutate block.translated');
     assert.strictEqual(block.style.fontSize, originalBlockSnapshot.style.fontSize, 'Export must not mutate block.style.fontSize');
-    assert.strictEqual(block.style.diamondWrap, originalBlockSnapshot.style.diamondWrap, 'Export must not mutate block.style.diamondWrap');
     assert.deepStrictEqual(block.box, originalBlockSnapshot.box, 'Export must not mutate block.box');
     assert.deepStrictEqual(block.autoFitCache, originalBlockSnapshot.autoFitCache, 'Export must not mutate block.autoFitCache');
 });
 
-test('CASE K — Clean Text: Diamond balance on italic / thought block does not inject [i] tags', () => {
+test('CASE K — Clean Text: Layout rendering on italic / thought block does not inject [i] tags', () => {
     const rawThought = 'Vì lúc đó ngượng lắm mà...!';
     const thoughtBlock = {
         id: 'b_thought_clean',
@@ -297,13 +290,13 @@ test('CASE K — Clean Text: Diamond balance on italic / thought block does not 
             fontFamily: 'font-comicneue',
             italic: true,
             bold: false,
-            diamondWrap: true,
             maskShape: 'bubble-fit'
         }
     };
 
-    balanceBlockDiamond(thoughtBlock);
+    const layout = computeBlockTextLayout(thoughtBlock, 800, 1200, 1);
 
+    assert.ok(layout.lines.length >= 1, 'Layout should have lines');
     assert.ok(!thoughtBlock.translated.includes('[i]'), 'Translated text must not contain [i] tags');
     assert.ok(!thoughtBlock.translated.includes('[/i]'), 'Translated text must not contain [/i] tags');
     assert.ok(thoughtBlock.translated.includes('Vì lúc đó') || thoughtBlock.translated.includes('ngượng'), 'Content must be preserved');

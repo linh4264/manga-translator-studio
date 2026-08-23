@@ -20,7 +20,7 @@ import {
     updateActiveBlockEditor, restoreBackgroundForBlock, restoreOriginalBackground,
     syncTextColorHex, syncBgColorHex, syncStrokeColorHex, syncShadowColorHex,
     setBilingualMode, setActiveBlockGender, setBlockType,
-    insertRichTextTag, applyRichColorToSelection, applyRichSizeToSelection, clearRichFormattingFromSelection, toggleDiamondWrapActiveBlock,
+    insertRichTextTag, applyRichColorToSelection, applyRichSizeToSelection, clearRichFormattingFromSelection,
     toggleGradientEnabled, syncGradientStartHex, syncGradientEndHex, updateGradientAngle
 } from './block-editor-ui';
 

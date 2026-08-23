@@ -18,7 +18,7 @@ import {
 import { elements } from '../../core/elements';
 import { showToast } from '../../core/utils';
 import { refineAiBlockBox, mergeOverlappingAiBlocks, extractTextAnchor } from '../ocr/ocr-service';
-import { requestOverlayRender, autoMatchBlockStyle, autoFitBlock, isBlockAutoFit, balanceTextToDiamond, balanceTextToBox, getReferenceDisplayDimensions } from '../canvas/canvas-service';
+import { requestOverlayRender, autoMatchBlockStyle, autoFitBlock, isBlockAutoFit, getReferenceDisplayDimensions } from '../canvas/canvas-service';
 import { getConfiguredApiEndpoint, getGeminiGenerateContentUrl } from './ai-config';
 import {
     cancelTranslationFlag,
@@ -242,7 +242,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 "- Do not use the bubble center when text is offset inside the bubble.",
                 "- Do not use the center of the empty bubble area.",
                 "- For SFX outside bubbles, use the center of the visible glyphs.",
-                "- SINGLE CONTINUOUS LINE: Keep translated text as a single complete sentence/paragraph without manual newline characters (\\n). The layout engine automatically balances line wrapping to fit the speech bubble.",
+                "- TEXT FORMAT: Keep translated text natural. The layout engine automatically wraps lines to fit the speech bubble.",
                 `Translate to short, natural ${targetLangName} that matches the scene and speaker relationship.`,
                 `Maintain character voice, ${pronounTerm} consistency, and terminology across the page, allowing natural shifts if emotions or interpersonal dynamics change.`,
                 ctx.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",

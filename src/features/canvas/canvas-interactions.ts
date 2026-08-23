@@ -1,7 +1,7 @@
 import { globalState, pushStateToHistory, savePageToDB, uiUpdateActiveBlockEditor, uiUpdateSplitView } from '../../core/state';
 import { elements } from '../../core/elements';
 import { DEFAULT_VERTICAL_WRITING_MODE, DEFAULT_BLOCK_SIZE_PX } from '../../config/constants';
-import { requestOverlayRender, balanceTextToDiamond, balanceSingleParagraphToBox, balanceTextToBox, getReferenceDisplayDimensions } from './canvas-renderer';
+import { requestOverlayRender, getReferenceDisplayDimensions } from './canvas-renderer';
 import { renderBlockTextToDOM } from './text-layout-engine';
 import { autoFitBlock, isBlockAutoFit, copiedStyle } from './canvas-styling';
 import { showToast, setMultilineText } from '../../core/utils';
@@ -237,7 +237,7 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
                 const { width: displayW, height: displayH } = getReferenceDisplayDimensions(activePage, imgEl);
 
                 if (isBlockAutoFit(block)) {
-                    autoFitBlock(block, null, 1, null, false);
+                    autoFitBlock(block, null, 1, null);
                     const zoomScale = (globalState.zoom || 100) / 100;
                     const maskElem = blockElem?.firstElementChild as HTMLElement | null;
                     if (maskElem) {

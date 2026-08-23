@@ -53,7 +53,6 @@ export function initGlobalBridge(): void {
         triggerMobileQuickEdit: layoutUI.triggerMobileQuickEdit,
         changeMobileActiveFontSize: layoutUI.changeMobileActiveFontSize,
         toggleMobileActiveOrientation: layoutUI.toggleMobileActiveOrientation,
-        balanceMobileActiveDiamond: layoutUI.balanceMobileActiveDiamond,
         deleteMobileActiveBlock: layoutUI.deleteMobileActiveBlock,
         setRightTab: layoutUI.setRightTab,
         setViewMode: layoutUI.setViewMode,
@@ -103,7 +102,6 @@ export function initGlobalBridge(): void {
         applyRichColorToSelection: blockEditorUI.applyRichColorToSelection,
         applyRichSizeToSelection: blockEditorUI.applyRichSizeToSelection,
         clearRichFormattingFromSelection: blockEditorUI.clearRichFormattingFromSelection,
-        toggleDiamondWrapActiveBlock: blockEditorUI.toggleDiamondWrapActiveBlock,
 
         // Canvas & Transformations
         toggleBlockAutoFit: canvasService.toggleBlockAutoFit,
@@ -134,7 +132,6 @@ export function initGlobalBridge(): void {
         applyCurrentStyleToAllPages: canvasService.applyCurrentStyleToAllPages,
         alignActiveBlockPosition: canvasService.alignActiveBlockPosition,
         toggleSelectedBlocksOrientation: canvasService.toggleSelectedBlocksOrientation,
-        batchDiamondBalanceSelectedBlocks: canvasService.batchDiamondBalanceSelectedBlocks,
         normalizeAllBlocksToHorizontal: canvasService.normalizeAllBlocksToHorizontal,
         duplicateActiveBlock: canvasService.duplicateActiveBlock,
         toggleActiveBlockOrientation: canvasService.toggleActiveBlockOrientation,
@@ -144,8 +141,6 @@ export function initGlobalBridge(): void {
         triggerReplaceImageBlock: canvasService.triggerReplaceImageBlock,
         handleReplaceImageBlockSelect: canvasService.handleReplaceImageBlockSelect,
         deleteActiveBlock: canvasService.deleteActiveBlock,
-        applyDiamondFormat: canvasService.applyDiamondFormat,
-        batchDiamondBalanceAllPages: canvasService.batchDiamondBalanceAllPages,
         selectBlock: canvasService.selectBlock,
         selectAllBlocksOnPage: canvasService.selectAllBlocksOnPage,
         syncActiveBlockStyle: canvasService.syncActiveBlockStyle,

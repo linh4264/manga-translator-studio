@@ -627,13 +627,3 @@ export function clearRichFormattingFromSelection(): void {
     }
 }
 
-export function toggleDiamondWrapActiveBlock(): void {
-    const activeBlock = getActiveBlock();
-    if (!activeBlock) return;
-    activeBlock.autoFitCache = null;
-    activeBlock.maskCache = null;
-
-    import('../features/canvas/canvas-renderer').then(m => m.applyDiamondFormat());
-    showToast("Đã cân đối dòng cho ô thoại", "info");
-}
-

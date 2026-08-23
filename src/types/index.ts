@@ -59,7 +59,6 @@ export interface BlockStyle {
     gradientColorEnd?: string;
     gradientAngle?: number;
     blendMode?: string;
-    diamondWrap?: boolean;
 }
 
 export interface MangaBlock {
