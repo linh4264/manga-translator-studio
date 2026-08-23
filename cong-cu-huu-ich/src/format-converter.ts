@@ -4,6 +4,7 @@
 
 import { formatFileSize, getTargetFormatExt, openPreviewModal } from './common';
 import type { ConvertItem } from './types';
+import JSZip from 'jszip';
 
 let convertList: ConvertItem[] = [];
 let isConverting = false;

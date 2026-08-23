@@ -4,6 +4,8 @@
 
 import { formatFileSize, getTargetFormatExt, openPreviewModal } from './common';
 import type { PdfBlobItem } from './types';
+import * as pdfjsLib from 'pdfjs-dist';
+import JSZip from 'jszip';
 
 let pdfDoc: any = null;
 let pdfName = '';
@@ -14,7 +16,7 @@ let isPdfRendering = false;
 
 export function initPdfWorker(): void {
     try {
-        if (typeof pdfjsLib !== 'undefined') {
+        if (pdfjsLib && pdfjsLib.GlobalWorkerOptions) {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         }
     } catch (err) {
@@ -202,24 +204,42 @@ export async function renderPdfPages(): Promise<void> {
             card.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-md flex flex-col p-3 hover:border-slate-700 transition-all";
             card.innerHTML = `
                 <div class="relative group cursor-pointer overflow-hidden rounded-xl bg-slate-950/60 border border-slate-855 flex items-center justify-center min-h-[160px]">
-                    <img src="${blobUrl}" class="max-h-60 object-contain rounded transition-transform group-hover:scale-105" alt="Trang ${pageNum}">
+                    <img class="max-h-60 object-contain rounded transition-transform group-hover:scale-105">
                     <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-sans text-xs gap-1.5 font-bold">
                         <i class="fa-solid fa-magnifying-glass-plus"></i> Phóng to xem
                     </div>
                 </div>
                 <div class="flex flex-col gap-2 mt-3 pt-2.5 border-t border-slate-800">
                     <div class="flex items-center justify-between text-xs font-bold text-slate-200">
-                        <span class="text-indigo-400 font-mono">Trang ${pageNum}</span>
-                        <span class="text-[11px] text-slate-400 font-normal font-mono">${Math.round(vp.width)}x${Math.round(vp.height)}px</span>
+                        <span class="text-indigo-400 font-mono pdf-page-label"></span>
+                        <span class="text-[11px] text-slate-400 font-normal font-mono pdf-page-size"></span>
                     </div>
                     <div class="flex items-center justify-between text-[10px] text-slate-400">
-                        <span class="text-slate-300 font-mono font-semibold">${sizeStr}</span>
-                        <a href="${blobUrl}" download="${targetFilename}" class="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white font-bold transition-all flex items-center gap-1.5 shadow-sm">
-                            <i class="fa-solid fa-download"></i> Tải .${ext.toUpperCase()}
+                        <span class="text-slate-300 font-mono font-semibold pdf-file-size"></span>
+                        <a class="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white font-bold transition-all flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-download"></i> <span class="pdf-download-label"></span>
                         </a>
                     </div>
                 </div>
             `;
+            const imgEl = card.querySelector('img');
+            if (imgEl) {
+                imgEl.src = blobUrl;
+                imgEl.alt = `Trang ${pageNum}`;
+            }
+            const pageLabelEl = card.querySelector('.pdf-page-label');
+            if (pageLabelEl) pageLabelEl.textContent = `Trang ${pageNum}`;
+            const pageSizeEl = card.querySelector('.pdf-page-size');
+            if (pageSizeEl) pageSizeEl.textContent = `${Math.round(vp.width)}x${Math.round(vp.height)}px`;
+            const fileSizeEl = card.querySelector('.pdf-file-size');
+            if (fileSizeEl) fileSizeEl.textContent = sizeStr;
+            const dlLabelEl = card.querySelector('.pdf-download-label');
+            if (dlLabelEl) dlLabelEl.textContent = `Tải .${ext.toUpperCase()}`;
+            const dlLink = card.querySelector('a');
+            if (dlLink) {
+                dlLink.setAttribute('href', blobUrl);
+                dlLink.setAttribute('download', targetFilename);
+            }
             const previewTarget = card.querySelector('.relative.group');
             if (previewTarget) {
                 previewTarget.addEventListener('click', () => openPreviewModal(blobUrl));

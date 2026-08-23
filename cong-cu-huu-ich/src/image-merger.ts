@@ -64,10 +64,10 @@ export function renderMergeList(): void {
         row.className = "flex items-center justify-between bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-xs font-mono";
         row.innerHTML = `
             <div class="flex items-center gap-3">
-                <span class="text-indigo-400 font-bold">#${idx+1}</span>
-                <img src="${item.img.src}" class="w-10 h-10 object-contain rounded bg-slate-900 border border-slate-800">
-                <span class="text-slate-200 font-bold truncate max-w-xs">${item.name}</span>
-                <span class="text-slate-400">(${item.img.naturalWidth}x${item.img.naturalHeight}px)</span>
+                <span class="text-indigo-400 font-bold merge-order"></span>
+                <img class="w-10 h-10 object-contain rounded bg-slate-900 border border-slate-800">
+                <span class="text-slate-200 font-bold truncate max-w-xs merge-name"></span>
+                <span class="text-slate-400 merge-size"></span>
             </div>
             <div class="flex items-center gap-1.5">
                 <button data-action="move-up" ${origIndex === 0 ? 'disabled class="opacity-30"' : ''} class="px-2 py-1 rounded bg-slate-850 hover:bg-slate-800 text-slate-300" title="Di chuyển lên"><i class="fa-solid fa-arrow-up"></i></button>
@@ -75,6 +75,14 @@ export function renderMergeList(): void {
                 <button data-action="delete" class="px-2 py-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20" title="Xóa"><i class="fa-solid fa-trash"></i></button>
             </div>
         `;
+        const orderEl = row.querySelector('.merge-order');
+        if (orderEl) orderEl.textContent = `#${idx + 1}`;
+        const imgEl = row.querySelector('img');
+        if (imgEl) imgEl.src = item.img.src;
+        const nameEl = row.querySelector('.merge-name');
+        if (nameEl) nameEl.textContent = item.name;
+        const sizeEl = row.querySelector('.merge-size');
+        if (sizeEl) sizeEl.textContent = `(${item.img.naturalWidth}x${item.img.naturalHeight}px)`;
 
         const btnUp = row.querySelector('[data-action="move-up"]');
         if (btnUp && origIndex > 0) {

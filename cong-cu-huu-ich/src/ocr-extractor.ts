@@ -12,19 +12,19 @@ export async function runOcrExtraction(): Promise<void> {
 
     if (statusBar) {
         statusBar.classList.remove('hidden');
-        statusBar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang khởi tạo trí tuệ nhân tạo OCR (${lang})...`;
+        statusBar.textContent = `Đang khởi tạo trí tuệ nhân tạo OCR (${lang})...`;
     }
 
     try {
         const worker = await Tesseract.createWorker(lang);
-        if (statusBar) statusBar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang quét và bóc tách chữ từ ảnh...`;
+        if (statusBar) statusBar.textContent = 'Đang quét và bóc tách chữ từ ảnh...';
         const ret = await worker.recognize(ocrFileBlob);
         if (resultText) resultText.value = ret.data.text;
-        if (statusBar) statusBar.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Đã trích xuất thành công ${ret.data.words.length} từ!`;
+        if (statusBar) statusBar.textContent = `Đã trích xuất thành công ${ret.data.words.length} từ!`;
         await worker.terminate();
     } catch (err: any) {
         console.error("OCR Error:", err);
-        if (statusBar) statusBar.innerHTML = `<i class="fa-solid fa-circle-exclamation text-red-400"></i> Lỗi nhận diện OCR: ${err?.message || err}`;
+        if (statusBar) statusBar.textContent = 'Lỗi nhận diện OCR. Vui lòng thử lại với ảnh khác.';
     }
 }
 

@@ -31,6 +31,8 @@ import { normalizeAiBlockBox } from './ocr/ocr-service';
 import { getTranslationContext } from './ai/ai-state';
 import { getCharacterDossier, getLorebook, setCharacterDossier, setLorebook } from './dossier-lorebook';
 import { MangaPage } from '../types/index';
+import JSZip from 'jszip';
+import { jsPDF as JsPDFClass } from 'jspdf';
 
 
 export function getPageExportMimeType(page: MangaPage): { mimeType: string; quality?: number; ext: string } {
@@ -460,10 +462,8 @@ export async function runBatchExport(): Promise<void> {
             updateProcessingOverlay(true, "Đang nén dữ liệu...", "Đang tạo file .zip tải về...", 95);
 
             let zipBlob: Blob;
-            const JSZipClass = typeof window !== 'undefined' ? window.JSZip : undefined;
-
-            if (JSZipClass) {
-                const zip = new JSZipClass();
+            if (typeof window !== 'undefined') {
+                const zip = new JSZip();
                 filesToZip.forEach(f => zip.file(f.name, f.blob));
                 zipBlob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
             } else if (typeof Worker !== 'undefined') {
@@ -487,8 +487,7 @@ export async function runBatchExport(): Promise<void> {
                     worker.postMessage({
                         type: 'CREATE_ZIP',
                         files: filesToZip,
-                        options: { compression: 'STORE' },
-                        jszipUrl: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'
+                        options: { compression: 'STORE' }
                     });
                 });
             } else {
@@ -533,9 +532,8 @@ export async function runPdfExport(): Promise<void> {
     commitActiveEditingState();
     await saveEraserDrawingToPage();
 
-    const jsPDFClass = typeof window !== 'undefined' ? ((window.jspdf && window.jspdf.jsPDF) || window.jsPDF) : undefined;
-    if (!jsPDFClass) {
-        showToast("Thư viện jsPDF chưa sẵn sàng. Vui lòng tải lại trang.", "error");
+    if (typeof window === 'undefined') {
+        showToast("Không thể tạo PDF trong môi trường hiện tại.", "error");
         return;
     }
 
@@ -587,7 +585,7 @@ export async function runPdfExport(): Promise<void> {
             const orientation = naturalW > naturalH ? 'landscape' : 'portrait';
 
             if (!pdf) {
-                pdf = new jsPDFClass({
+                pdf = new JsPDFClass({
                     orientation: orientation,
                     unit: 'px',
                     format: [naturalW, naturalH]

@@ -4,6 +4,7 @@
 
 import { openPreviewModal } from './common';
 import type { CompressItem } from './types';
+import JSZip from 'jszip';
 
 let compressList: CompressItem[] = [];
 let isCompressing = false;

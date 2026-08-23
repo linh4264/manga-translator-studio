@@ -31,6 +31,11 @@ let fontMatchImgDataUrl = '';
 let currentTop3Matches: CustomFontItem[] = [];
 let customFontsList: CustomFontItem[] = [];
 let liveUpdateDebounceTimer: any = null;
+let runtimeGeminiApiKey = '';
+
+function escapeCssSingleQuoted(value: string): string {
+    return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
 
 export function getEffectiveFontLibrary(): CustomFontItem[] {
     return customFontsList;
@@ -1362,11 +1367,7 @@ export async function runAiGenreAnalysis(): Promise<void> {
     const model = getEffectiveFontMatchModel();
     const apiKeyInput = document.getElementById('fontmatch-api-key') as HTMLInputElement | null;
     let apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
-    if (!apiKey) {
-        apiKey = localStorage.getItem('gemini_manga_api_key') ||
-            localStorage.getItem('gemini_api_key') ||
-            localStorage.getItem('manga_gemini_key') || '';
-    }
+    if (!apiKey) apiKey = runtimeGeminiApiKey;
 
     const loadingBtn = document.getElementById('btn-run-genre-ai');
     if (loadingBtn) loadingBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Đang phân tích phong cách...';
@@ -1605,9 +1606,7 @@ export function updateFontMatchModelDropdown(fetchedModels: string[] = []): void
 
 export async function fetchFontMatchModels(isManual: boolean = false): Promise<void> {
     const apiKeyInput = document.getElementById('fontmatch-api-key') as HTMLInputElement | null;
-    let apiKey = (apiKeyInput ? apiKeyInput.value.trim() : '') ||
-        localStorage.getItem('gemini_manga_api_key') ||
-        localStorage.getItem('gemini_api_key') || '';
+    const apiKey = (apiKeyInput ? apiKeyInput.value.trim() : '') || runtimeGeminiApiKey;
 
     if (!apiKey) {
         updateFontMatchModelDropdown(cachedGeminiModels);
@@ -1870,22 +1869,8 @@ export async function runFontMatchAnalysis(): Promise<void> {
     const contextTag = (document.getElementById('fontmatch-context-select') as HTMLSelectElement)?.value || 'auto';
     const apiKeyInput = document.getElementById('fontmatch-api-key') as HTMLInputElement | null;
     let apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
-    if (!apiKey) {
-        apiKey = localStorage.getItem('gemini_manga_api_key') ||
-            localStorage.getItem('gemini_api_key') ||
-            localStorage.getItem('manga_gemini_key') || '';
-    }
-    if (apiKeyInput && apiKey && !apiKeyInput.value) {
-        apiKeyInput.value = apiKey;
-    }
-
-    if (apiKey) {
-        try {
-            localStorage.setItem('gemini_manga_api_key', apiKey);
-            localStorage.setItem('gemini_api_key', apiKey);
-            localStorage.setItem('manga_gemini_key', apiKey);
-        } catch (e) { }
-    }
+    if (!apiKey) apiKey = runtimeGeminiApiKey;
+    if (apiKey) runtimeGeminiApiKey = apiKey;
 
     const emptyState = document.getElementById('fontmatch-empty-state');
     if (emptyState) emptyState.classList.add('hidden');
@@ -2820,7 +2805,7 @@ export function updateDynamicFontFaceStyles(): void {
                 fontBlobUrlsMap.set(f.name, URL.createObjectURL(f.blob));
             }
             const url = fontBlobUrlsMap.get(f.name);
-            const safeName = f.name.replace(/'/g, "\\'");
+            const safeName = escapeCssSingleQuoted(f.name);
             css += `
 @font-face {
     font-family: '${safeName}';
@@ -4020,27 +4005,53 @@ export function updateActiveFilterTagsUI(): void {
 
     if (activeChips.length === 0) {
         container.classList.add('hidden');
-        container.innerHTML = '';
+        container.replaceChildren();
         return;
     }
 
     container.classList.remove('hidden');
-    container.innerHTML = `
-        <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="text-[11px] text-slate-400 font-bold flex items-center gap-1">
-                <i class="fa-solid fa-filter text-indigo-400 text-[10px]"></i> Đang lọc (${activeChips.length}):
-            </span>
-            ${activeChips.map(c => `
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[10px] font-bold">
-                    ${c.label}
-                    <button type="button" onclick="${c.onRemove}" class="hover:text-white ml-0.5"><i class="fa-solid fa-xmark text-[9px]"></i></button>
-                </span>
-            `).join('')}
-            <button type="button" onclick="resetCustomFontFilters()" class="text-[10px] text-red-400 hover:text-red-300 font-bold ml-1 underline cursor-pointer">
-                Xóa tất cả lọc
-            </button>
-        </div>
-    `;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex items-center gap-1.5 flex-wrap';
+
+    const title = document.createElement('span');
+    title.className = 'text-[11px] text-slate-400 font-bold flex items-center gap-1';
+    const titleIcon = document.createElement('i');
+    titleIcon.className = 'fa-solid fa-filter text-indigo-400 text-[10px]';
+    title.appendChild(titleIcon);
+    title.append(` Đang lọc (${activeChips.length}):`);
+    wrapper.appendChild(title);
+
+    activeChips.forEach((c) => {
+        const chip = document.createElement('span');
+        chip.className = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[10px] font-bold';
+        chip.append(c.label);
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'hover:text-white ml-0.5';
+        btn.setAttribute('aria-label', `Xóa bộ lọc ${c.label}`);
+        const icon = document.createElement('i');
+        icon.className = 'fa-solid fa-xmark text-[9px]';
+        btn.appendChild(icon);
+
+        if (c.onRemove === "setCustomFontCategoryFilter('all')") btn.onclick = () => setCustomFontCategoryFilter('all');
+        else if (c.onRemove === "setCustomFontWeightFilter('all')") btn.onclick = () => setCustomFontWeightFilter('all');
+        else if (c.onRemove === "setCustomFontWidthFilter('all')") btn.onclick = () => setCustomFontWidthFilter('all');
+        else if (c.onRemove === "setCustomFontSlantFilter('all')") btn.onclick = () => setCustomFontSlantFilter('all');
+        else if (c.onRemove === "setCustomFontCaseFilter('all')") btn.onclick = () => setCustomFontCaseFilter('all');
+
+        chip.appendChild(btn);
+        wrapper.appendChild(chip);
+    });
+
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'text-[10px] text-red-400 hover:text-red-300 font-bold ml-1 underline cursor-pointer';
+    resetBtn.textContent = 'Xóa tất cả lọc';
+    resetBtn.onclick = () => resetCustomFontFilters();
+    wrapper.appendChild(resetBtn);
+
+    container.replaceChildren(wrapper);
 }
 
 export function updateCustomFontFilterCountsUI(): void {
@@ -4218,7 +4229,7 @@ export function renderCustomFontsUI(): void {
         const card = document.createElement('div');
         card.className = "bg-slate-950 border border-slate-855 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-md hover:border-slate-700 transition-all";
 
-        const safeName = font.name.replace(/'/g, "\\'");
+        const safeName = escapeCssSingleQuoted(font.name);
         const weightGrade = font.weightGrade || determineWeightGrade(font.weightScore || 0.5);
         const widthGrade = font.widthGrade || 'Normal';
         const slantGrade = font.slantGrade || 'Upright';
@@ -4322,7 +4333,7 @@ export function openFontMorphologyModal(fontName: string): void {
     let fontItem = customFontsList.find(f => f.name === fontName);
     const morphology = (fontItem && fontItem.morphology) ? fontItem.morphology : analyzeFontMorphology(fontName);
 
-    const safeName = fontName.replace(/'/g, "\\'");
+    const safeName = escapeCssSingleQuoted(fontName);
     const weightList: FontWeightGrade[] = ['Thin', 'Light', 'Regular', 'Medium', 'SemiBold', 'Bold', 'Black'];
     const widthList: FontWidthGrade[] = ['Condensed', 'Normal', 'Wide'];
     const slantList: FontSlantGrade[] = ['Upright', 'Italic', 'Oblique'];
@@ -4481,29 +4492,19 @@ export function initFontMatcherModule(): void {
         generateAndDisplayFontSet('romance');
     });
 
-    const savedKey = localStorage.getItem('gemini_manga_api_key') ||
-        localStorage.getItem('gemini_api_key') ||
-        localStorage.getItem('manga_gemini_key') || '';
     const keyInput = document.getElementById('fontmatch-api-key') as HTMLInputElement | null;
-    if (keyInput && savedKey) {
-        keyInput.value = savedKey;
-    }
+    if (keyInput) runtimeGeminiApiKey = keyInput.value.trim();
 
     updateFontMatchModelDropdown(cachedGeminiModels);
 
-    if (savedKey) {
+    if (runtimeGeminiApiKey) {
         fetchFontMatchModels(false);
     }
 
     if (keyInput) {
         keyInput.addEventListener('input', (e: Event) => {
             const target = e.target as HTMLInputElement;
-            const k = target.value.trim();
-            try {
-                localStorage.setItem('gemini_manga_api_key', k);
-                localStorage.setItem('gemini_api_key', k);
-                localStorage.setItem('manga_gemini_key', k);
-            } catch (err) { }
+            runtimeGeminiApiKey = target.value.trim();
         });
     }
 

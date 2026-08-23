@@ -4,6 +4,7 @@
 
 import { formatFileSize, getTargetFormatExt, openPreviewModal } from './common';
 import type { SliceItem } from './types';
+import JSZip from 'jszip';
 
 let sliceImg: HTMLImageElement | null = null;
 let sliceFile: File | null = null;
@@ -302,24 +303,42 @@ export async function processSlicing(): Promise<void> {
         card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col justify-between text-xs font-mono shadow-md hover:border-slate-700 transition-all";
         card.innerHTML = `
             <div class="relative group cursor-pointer overflow-hidden rounded-xl bg-slate-950/60 border border-slate-855 flex items-center justify-center min-h-[140px]">
-                <img src="${objectUrl}" class="max-h-48 object-contain rounded transition-transform group-hover:scale-105" alt="Slice ${i+1}">
+                <img class="max-h-48 object-contain rounded transition-transform group-hover:scale-105">
                 <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-sans text-xs gap-1.5 font-bold">
                     <i class="fa-solid fa-magnifying-glass-plus"></i> Phóng to xem
                 </div>
             </div>
             <div class="flex flex-col gap-2 mt-3 pt-2.5 border-t border-slate-800">
                 <div class="flex items-center justify-between text-xs font-bold text-slate-200">
-                    <span class="text-indigo-400">Mảnh #${partIdx} / ${String(numSlices).padStart(2,'0')}</span>
-                    <span class="text-[11px] text-slate-400 font-normal font-mono">${W}x${sh}px</span>
+                    <span class="text-indigo-400 slice-meta"></span>
+                    <span class="text-[11px] text-slate-400 font-normal font-mono slice-size"></span>
                 </div>
                 <div class="flex items-center justify-between text-[10px] text-slate-400">
-                    <span class="text-slate-300 font-bold">${sizeFormatted}</span>
-                    <a href="${objectUrl}" download="${targetFilename}" class="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white font-bold transition-all flex items-center gap-1.5 shadow-sm">
-                        <i class="fa-solid fa-download"></i> Tải .${ext.toUpperCase()}
+                    <span class="text-slate-300 font-bold slice-file-size"></span>
+                    <a class="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white font-bold transition-all flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-download"></i> <span class="slice-download-label"></span>
                     </a>
                 </div>
             </div>
         `;
+        const previewImg = card.querySelector('img');
+        if (previewImg) {
+            previewImg.src = objectUrl;
+            previewImg.alt = `Slice ${i + 1}`;
+        }
+        const metaEl = card.querySelector('.slice-meta');
+        if (metaEl) metaEl.textContent = `Mảnh #${partIdx} / ${String(numSlices).padStart(2, '0')}`;
+        const sizeEl = card.querySelector('.slice-size');
+        if (sizeEl) sizeEl.textContent = `${W}x${sh}px`;
+        const fileSizeEl = card.querySelector('.slice-file-size');
+        if (fileSizeEl) fileSizeEl.textContent = sizeFormatted;
+        const dlLabelEl = card.querySelector('.slice-download-label');
+        if (dlLabelEl) dlLabelEl.textContent = `Tải .${ext.toUpperCase()}`;
+        const dlLink = card.querySelector('a');
+        if (dlLink) {
+            dlLink.setAttribute('href', objectUrl);
+            dlLink.setAttribute('download', targetFilename);
+        }
         const previewTarget = card.querySelector('.relative.group');
         if (previewTarget) {
             previewTarget.addEventListener('click', () => openPreviewModal(objectUrl));
