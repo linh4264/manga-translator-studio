@@ -2,7 +2,7 @@
  * Module 5: Format Converter (PNG ↔ JPG ↔ WEBP) (TypeScript)
  */
 
-import { formatFileSize, getTargetFormatExt, openPreviewModal } from './common';
+import { formatFileSize, getTargetFormatExt, openPreviewModal, escapeHTML } from './common';
 import type { ConvertItem } from './types';
 
 let convertList: ConvertItem[] = [];
@@ -132,13 +132,13 @@ export async function processConvertBatch(): Promise<void> {
             </div>
             <div class="flex flex-col gap-1.5 mt-2.5 pt-2 border-t border-slate-800">
                 <div class="flex items-center justify-between gap-2">
-                    <span class="truncate font-bold text-slate-200 text-[11px]" title="${origName}">${origName}</span>
-                    <span class="${sizeBadgeClass} text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800">${sizeDiffStr}</span>
+                    <span class="truncate font-bold text-slate-200 text-[11px]" title="${escapeHTML(origName)}">${escapeHTML(origName)}</span>
+                    <span class="${sizeBadgeClass} text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800">${escapeHTML(sizeDiffStr)}</span>
                 </div>
                 <div class="flex items-center justify-between text-[10px] text-slate-400">
                     <span>${formatFileSize(item.originalSize)} ➔ <strong class="text-indigo-300">${formatFileSize(blob ? blob.size : 0)}</strong></span>
-                    <a href="${item.objectUrl}" download="${targetFilename}" class="px-2 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 hover:border-transparent text-indigo-300 hover:text-white font-bold transition-colors flex items-center gap-1">
-                        <i class="fa-solid fa-download"></i> .${ext.toUpperCase()}
+                    <a href="${item.objectUrl}" download="${escapeHTML(targetFilename)}" class="px-2 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 hover:border-transparent text-indigo-300 hover:text-white font-bold transition-colors flex items-center gap-1">
+                        <i class="fa-solid fa-download"></i> .${escapeHTML(ext.toUpperCase())}
                     </a>
                 </div>
             </div>
@@ -154,7 +154,7 @@ export async function processConvertBatch(): Promise<void> {
     }
 
     if (statusBadge) {
-        statusBadge.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Đã đổi ${convertList.length} ảnh sang .${ext.toUpperCase()}`;
+        statusBadge.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Đã đổi ${convertList.length} ảnh sang .${escapeHTML(ext.toUpperCase())}`;
     }
     isConverting = false;
 }

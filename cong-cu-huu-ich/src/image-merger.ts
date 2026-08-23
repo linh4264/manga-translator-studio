@@ -3,6 +3,7 @@
  */
 
 import type { MergeImageItem } from './types';
+import { escapeHTML } from './common';
 
 let mergeImgs: MergeImageItem[] = [];
 
@@ -66,7 +67,7 @@ export function renderMergeList(): void {
             <div class="flex items-center gap-3">
                 <span class="text-indigo-400 font-bold">#${idx+1}</span>
                 <img src="${item.img.src}" class="w-10 h-10 object-contain rounded bg-slate-900 border border-slate-800">
-                <span class="text-slate-200 font-bold truncate max-w-xs">${item.name}</span>
+                <span class="text-slate-200 font-bold truncate max-w-xs">${escapeHTML(item.name)}</span>
                 <span class="text-slate-400">(${item.img.naturalWidth}x${item.img.naturalHeight}px)</span>
             </div>
             <div class="flex items-center gap-1.5">

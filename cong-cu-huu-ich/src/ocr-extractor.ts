@@ -2,6 +2,8 @@
  * Module 7: OCR Text Extractor (Tesseract.js) (TypeScript)
  */
 
+import { escapeHTML } from './common';
+
 let ocrFileBlob: File | null = null;
 
 export async function runOcrExtraction(): Promise<void> {
@@ -12,7 +14,7 @@ export async function runOcrExtraction(): Promise<void> {
 
     if (statusBar) {
         statusBar.classList.remove('hidden');
-        statusBar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang khởi tạo trí tuệ nhân tạo OCR (${lang})...`;
+        statusBar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang khởi tạo trí tuệ nhân tạo OCR (${escapeHTML(lang)})...`;
     }
 
     try {
@@ -24,7 +26,7 @@ export async function runOcrExtraction(): Promise<void> {
         await worker.terminate();
     } catch (err: any) {
         console.error("OCR Error:", err);
-        if (statusBar) statusBar.innerHTML = `<i class="fa-solid fa-circle-exclamation text-red-400"></i> Lỗi nhận diện OCR: ${err?.message || err}`;
+        if (statusBar) statusBar.innerHTML = `<i class="fa-solid fa-circle-exclamation text-red-400"></i> Lỗi nhận diện OCR: ${escapeHTML(err?.message || String(err))}`;
     }
 }
 

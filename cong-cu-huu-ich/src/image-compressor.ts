@@ -2,7 +2,7 @@
  * Module 4: Batch Image Compressor (TypeScript)
  */
 
-import { openPreviewModal } from './common';
+import { openPreviewModal, escapeHTML } from './common';
 import type { CompressItem } from './types';
 
 let compressList: CompressItem[] = [];
@@ -160,13 +160,13 @@ export async function processCompressBatch(): Promise<void> {
             </div>
             <div class="flex flex-col gap-1.5 mt-2.5 pt-2 border-t border-slate-800">
                 <div class="flex items-center justify-between text-xs font-bold text-slate-200">
-                    <span class="truncate max-w-[140px]" title="${item.file.name}">${item.file.name}</span>
-                    <span class="text-emerald-400 font-mono font-bold">-${savedPercent}%</span>
+                    <span class="truncate max-w-[140px]" title="${escapeHTML(item.file.name)}">${escapeHTML(item.file.name)}</span>
+                    <span class="text-emerald-400 font-mono font-bold">-${escapeHTML(savedPercent)}%</span>
                 </div>
                 <div class="flex items-center justify-between text-[10px] text-slate-400">
                     <span>${(item.originalSize / 1024).toFixed(1)} KB ➔ <strong class="text-indigo-300">${(item.compressedSize / 1024).toFixed(1)} KB</strong></span>
-                    <a href="${item.objectUrl}" download="${targetFilename}" class="px-2 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white font-bold transition-colors flex items-center gap-1">
-                        <i class="fa-solid fa-download"></i> .${ext.toUpperCase()}
+                    <a href="${item.objectUrl}" download="${escapeHTML(targetFilename)}" class="px-2 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white font-bold transition-colors flex items-center gap-1">
+                        <i class="fa-solid fa-download"></i> .${escapeHTML(ext.toUpperCase())}
                     </a>
                 </div>
             </div>

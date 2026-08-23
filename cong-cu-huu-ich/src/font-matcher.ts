@@ -2,7 +2,7 @@
  * Module 8: Manga Font Matcher & Recommender (AI Vision & Custom Font Repository) (TypeScript)
  */
 
-import { formatFileSize, openPreviewModal } from './common';
+import { formatFileSize, openPreviewModal, escapeHTML, escapeCssFontFamily, safeSetLocalStorage } from './common';
 import type {
     FontCategory,
     FontStyleType,
@@ -1646,9 +1646,7 @@ export async function fetchFontMatchModels(isManual: boolean = false): Promise<v
 
             if (geminiModels.length > 0) {
                 cachedGeminiModels = geminiModels;
-                try {
-                    localStorage.setItem('gemini_cached_models', JSON.stringify(geminiModels));
-                } catch (e) { }
+                safeSetLocalStorage('gemini_cached_models', geminiModels);
                 updateFontMatchModelDropdown(geminiModels);
                 if (isManual) {
                     alert(`Đã nạp và cập nhật thành công ${geminiModels.length} mô hình từ Google Gemini API!`);
@@ -1880,11 +1878,9 @@ export async function runFontMatchAnalysis(): Promise<void> {
     }
 
     if (apiKey) {
-        try {
-            localStorage.setItem('gemini_manga_api_key', apiKey);
-            localStorage.setItem('gemini_api_key', apiKey);
-            localStorage.setItem('manga_gemini_key', apiKey);
-        } catch (e) { }
+        safeSetLocalStorage('gemini_manga_api_key', apiKey);
+        safeSetLocalStorage('gemini_api_key', apiKey);
+        safeSetLocalStorage('manga_gemini_key', apiKey);
     }
 
     const emptyState = document.getElementById('fontmatch-empty-state');
@@ -2592,7 +2588,7 @@ export function renderTop3FontCards(top3: CustomFontItem[]): void {
                     ${rankBadge}
                     <div>
                         <h4 class="text-sm font-bold text-slate-100 flex items-center gap-1.5">
-                            <span>${item.name}</span>
+                            <span>${escapeHTML(item.name)}</span>
                             ${typeBadge}
                         </h4>
                     </div>
@@ -2820,7 +2816,7 @@ export function updateDynamicFontFaceStyles(): void {
                 fontBlobUrlsMap.set(f.name, URL.createObjectURL(f.blob));
             }
             const url = fontBlobUrlsMap.get(f.name);
-            const safeName = f.name.replace(/'/g, "\\'");
+            const safeName = escapeCssFontFamily(f.name);
             css += `
 @font-face {
     font-family: '${safeName}';
@@ -4001,21 +3997,21 @@ export function updateActiveFilterTagsUI(): void {
     const container = document.getElementById('fontmatch-active-filters-box');
     if (!container) return;
 
-    const activeChips: { label: string; onRemove: string }[] = [];
+    const activeChips: { label: string; action: () => void }[] = [];
     if (customFontCategoryFilter !== 'all') {
-        activeChips.push({ label: `Thể loại: ${getCategoryLabel(customFontCategoryFilter)}`, onRemove: `setCustomFontCategoryFilter('all')` });
+        activeChips.push({ label: `Thể loại: ${getCategoryLabel(customFontCategoryFilter)}`, action: () => setCustomFontCategoryFilter('all') });
     }
     if (customFontWeightFilter !== 'all') {
-        activeChips.push({ label: `Weight: ${customFontWeightFilter}`, onRemove: `setCustomFontWeightFilter('all')` });
+        activeChips.push({ label: `Weight: ${customFontWeightFilter}`, action: () => setCustomFontWeightFilter('all') });
     }
     if (customFontWidthFilter !== 'all') {
-        activeChips.push({ label: `Width: ${customFontWidthFilter}`, onRemove: `setCustomFontWidthFilter('all')` });
+        activeChips.push({ label: `Width: ${customFontWidthFilter}`, action: () => setCustomFontWidthFilter('all') });
     }
     if (customFontSlantFilter !== 'all') {
-        activeChips.push({ label: `Slant: ${customFontSlantFilter}`, onRemove: `setCustomFontSlantFilter('all')` });
+        activeChips.push({ label: `Slant: ${customFontSlantFilter}`, action: () => setCustomFontSlantFilter('all') });
     }
     if (customFontCaseFilter !== 'all') {
-        activeChips.push({ label: `Case: ${customFontCaseFilter}`, onRemove: `setCustomFontCaseFilter('all')` });
+        activeChips.push({ label: `Case: ${customFontCaseFilter}`, action: () => setCustomFontCaseFilter('all') });
     }
 
     if (activeChips.length === 0) {
@@ -4025,22 +4021,41 @@ export function updateActiveFilterTagsUI(): void {
     }
 
     container.classList.remove('hidden');
-    container.innerHTML = `
-        <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="text-[11px] text-slate-400 font-bold flex items-center gap-1">
-                <i class="fa-solid fa-filter text-indigo-400 text-[10px]"></i> Đang lọc (${activeChips.length}):
-            </span>
-            ${activeChips.map(c => `
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[10px] font-bold">
-                    ${c.label}
-                    <button type="button" onclick="${c.onRemove}" class="hover:text-white ml-0.5"><i class="fa-solid fa-xmark text-[9px]"></i></button>
-                </span>
-            `).join('')}
-            <button type="button" onclick="resetCustomFontFilters()" class="text-[10px] text-red-400 hover:text-red-300 font-bold ml-1 underline cursor-pointer">
-                Xóa tất cả lọc
-            </button>
-        </div>
-    `;
+    container.innerHTML = '';
+
+    const wrap = document.createElement('div');
+    wrap.className = "flex items-center gap-1.5 flex-wrap";
+
+    const labelSpan = document.createElement('span');
+    labelSpan.className = "text-[11px] text-slate-400 font-bold flex items-center gap-1";
+    labelSpan.innerHTML = `<i class="fa-solid fa-filter text-indigo-400 text-[10px]"></i> Đang lọc (${activeChips.length}):`;
+    wrap.appendChild(labelSpan);
+
+    activeChips.forEach(c => {
+        const chip = document.createElement('span');
+        chip.className = "inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-[10px] font-bold";
+        
+        const txt = document.createTextNode(c.label + ' ');
+        chip.appendChild(txt);
+
+        const btn = document.createElement('button');
+        btn.type = "button";
+        btn.className = "hover:text-white ml-0.5 cursor-pointer";
+        btn.innerHTML = '<i class="fa-solid fa-xmark text-[9px]"></i>';
+        btn.addEventListener('click', c.action);
+        chip.appendChild(btn);
+
+        wrap.appendChild(chip);
+    });
+
+    const resetBtn = document.createElement('button');
+    resetBtn.type = "button";
+    resetBtn.className = "text-[10px] text-red-400 hover:text-red-300 font-bold ml-1 underline cursor-pointer";
+    resetBtn.textContent = "Xóa tất cả lọc";
+    resetBtn.addEventListener('click', resetCustomFontFilters);
+    wrap.appendChild(resetBtn);
+
+    container.appendChild(wrap);
 }
 
 export function updateCustomFontFilterCountsUI(): void {
@@ -4218,7 +4233,7 @@ export function renderCustomFontsUI(): void {
         const card = document.createElement('div');
         card.className = "bg-slate-950 border border-slate-855 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-md hover:border-slate-700 transition-all";
 
-        const safeName = font.name.replace(/'/g, "\\'");
+        const safeName = escapeCssFontFamily(font.name);
         const weightGrade = font.weightGrade || determineWeightGrade(font.weightScore || 0.5);
         const widthGrade = font.widthGrade || 'Normal';
         const slantGrade = font.slantGrade || 'Upright';
@@ -4227,9 +4242,9 @@ export function renderCustomFontsUI(): void {
         card.innerHTML = `
             <div class="flex items-center justify-between pb-2 border-b border-slate-850">
                 <div class="overflow-hidden pr-2">
-                    <h4 class="text-xs font-bold text-slate-200 truncate" title="${font.name}">${font.name}</h4>
+                    <h4 class="text-xs font-bold text-slate-200 truncate" title="${escapeHTML(font.name)}">${escapeHTML(font.name)}</h4>
                     <div class="flex items-center gap-1.5 flex-wrap mt-0.5">
-                        <span class="text-[10px] text-indigo-300 font-semibold">${getCategoryLabel(font.category)}</span>
+                        <span class="text-[10px] text-indigo-300 font-semibold">${escapeHTML(getCategoryLabel(font.category))}</span>
                         <span class="text-[9px] text-slate-500 font-mono">• ${formatFileSize(font.size)}</span>
                     </div>
                 </div>
@@ -4245,17 +4260,17 @@ export function renderCustomFontsUI(): void {
 
             <!-- Typography 4-Dimensional Badges -->
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-center">
-                <span class="px-1.5 py-0.5 rounded-md text-[9.5px] font-bold border ${getWeightBadgeColor(weightGrade)}" title="Độ đậm: ${weightGrade}">
-                    ${weightGrade}
+                <span class="px-1.5 py-0.5 rounded-md text-[9.5px] font-bold border ${getWeightBadgeColor(weightGrade)}" title="Độ đậm: ${escapeHTML(weightGrade)}">
+                    ${escapeHTML(weightGrade)}
                 </span>
-                <span class="px-1.5 py-0.5 rounded-md text-[9.5px] font-bold border ${getWidthBadgeColor(widthGrade)}" title="Chiều ngang: ${widthGrade}">
-                    ${widthGrade}
+                <span class="px-1.5 py-0.5 rounded-md text-[9.5px] font-bold border ${getWidthBadgeColor(widthGrade)}" title="Chiều ngang: ${escapeHTML(widthGrade)}">
+                    ${escapeHTML(widthGrade)}
                 </span>
-                <span class="px-1.5 py-0.5 rounded-md text-[9.5px] font-bold border ${getSlantBadgeColor(slantGrade)}" title="Dáng nghiêng: ${slantGrade}">
-                    ${slantGrade}
+                <span class="px-1.5 py-0.5 rounded-md text-[9.5px] font-bold border ${getSlantBadgeColor(slantGrade)}" title="Dáng nghiêng: ${escapeHTML(slantGrade)}">
+                    ${escapeHTML(slantGrade)}
                 </span>
-                <span class="px-1.5 py-0.5 rounded-md text-[9.5px] font-bold border ${getCaseBadgeColor(caseGrade)}" title="Kiểu chữ: ${caseGrade}">
-                    ${caseGrade}
+                <span class="px-1.5 py-0.5 rounded-md text-[9.5px] font-bold border ${getCaseBadgeColor(caseGrade)}" title="Kiểu chữ: ${escapeHTML(caseGrade)}">
+                    ${escapeHTML(caseGrade)}
                 </span>
             </div>
 
@@ -4322,7 +4337,7 @@ export function openFontMorphologyModal(fontName: string): void {
     let fontItem = customFontsList.find(f => f.name === fontName);
     const morphology = (fontItem && fontItem.morphology) ? fontItem.morphology : analyzeFontMorphology(fontName);
 
-    const safeName = fontName.replace(/'/g, "\\'");
+    const safeName = escapeCssFontFamily(fontName);
     const weightList: FontWeightGrade[] = ['Thin', 'Light', 'Regular', 'Medium', 'SemiBold', 'Bold', 'Black'];
     const widthList: FontWidthGrade[] = ['Condensed', 'Normal', 'Wide'];
     const slantList: FontSlantGrade[] = ['Upright', 'Italic', 'Oblique'];
@@ -4499,11 +4514,9 @@ export function initFontMatcherModule(): void {
         keyInput.addEventListener('input', (e: Event) => {
             const target = e.target as HTMLInputElement;
             const k = target.value.trim();
-            try {
-                localStorage.setItem('gemini_manga_api_key', k);
-                localStorage.setItem('gemini_api_key', k);
-                localStorage.setItem('manga_gemini_key', k);
-            } catch (err) { }
+            safeSetLocalStorage('gemini_manga_api_key', k);
+            safeSetLocalStorage('gemini_api_key', k);
+            safeSetLocalStorage('manga_gemini_key', k);
         });
     }
 

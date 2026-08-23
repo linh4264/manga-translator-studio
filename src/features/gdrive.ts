@@ -154,20 +154,42 @@ export async function loadGDriveFolders(): Promise<void> {
         const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&orderBy=name&pageSize=100`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        let html = '<option value="">📁 Google Drive gốc (Root)</option>';
+
+        folderSelect.innerHTML = '';
+        const rootOpt = document.createElement('option');
+        rootOpt.value = '';
+        rootOpt.textContent = '📁 Google Drive gốc (Root)';
+        folderSelect.appendChild(rootOpt);
+
+        let foundSelected = !selectedFolderId;
+
         if (response.ok) {
             const data = await response.json();
             const folders = data.files || [];
             folders.forEach((f: any) => {
-                const isSel = f.id === selectedFolderId ? 'selected' : '';
-                html += `<option value="${f.id}" ${isSel}>📁 ${escapeHTML(f.name)}</option>`;
+                const opt = document.createElement('option');
+                opt.value = f.id;
+                opt.textContent = `📁 ${f.name || ''}`;
+                if (f.id === selectedFolderId) {
+                    opt.selected = true;
+                    foundSelected = true;
+                }
+                folderSelect.appendChild(opt);
             });
         }
-        if (selectedFolderId && !html.includes(`value="${selectedFolderId}"`)) {
-            html += `<option value="${selectedFolderId}" selected>📁 Tùy chỉnh (ID: ${selectedFolderId.slice(0, 8)}...)</option>`;
+
+        if (selectedFolderId && !foundSelected) {
+            const customOpt = document.createElement('option');
+            customOpt.value = selectedFolderId;
+            customOpt.selected = true;
+            customOpt.textContent = `📁 Tùy chỉnh (ID: ${selectedFolderId.slice(0, 8)}...)`;
+            folderSelect.appendChild(customOpt);
         }
-        html += '<option value="__add_custom__">+ Dán Link / ID Thư Mục Khác...</option>';
-        folderSelect.innerHTML = html;
+
+        const addCustomOpt = document.createElement('option');
+        addCustomOpt.value = '__add_custom__';
+        addCustomOpt.textContent = '+ Dán Link / ID Thư Mục Khác...';
+        folderSelect.appendChild(addCustomOpt);
     } catch (err) {
         console.warn("Lỗi tải danh sách thư mục GDrive:", err);
     }

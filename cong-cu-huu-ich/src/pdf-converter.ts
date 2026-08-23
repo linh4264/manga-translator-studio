@@ -2,7 +2,7 @@
  * Module 1: PDF to PNG / Image Converter (TypeScript)
  */
 
-import { formatFileSize, getTargetFormatExt, openPreviewModal } from './common';
+import { formatFileSize, getTargetFormatExt, openPreviewModal, escapeHTML } from './common';
 import type { PdfBlobItem } from './types';
 
 let pdfDoc: any = null;
@@ -202,20 +202,20 @@ export async function renderPdfPages(): Promise<void> {
             card.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-md flex flex-col p-3 hover:border-slate-700 transition-all";
             card.innerHTML = `
                 <div class="relative group cursor-pointer overflow-hidden rounded-xl bg-slate-950/60 border border-slate-855 flex items-center justify-center min-h-[160px]">
-                    <img src="${blobUrl}" class="max-h-60 object-contain rounded transition-transform group-hover:scale-105" alt="Trang ${pageNum}">
+                    <img src="${blobUrl}" class="max-h-60 object-contain rounded transition-transform group-hover:scale-105" alt="Trang ${escapeHTML(pageNum)}">
                     <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-sans text-xs gap-1.5 font-bold">
                         <i class="fa-solid fa-magnifying-glass-plus"></i> Phóng to xem
                     </div>
                 </div>
                 <div class="flex flex-col gap-2 mt-3 pt-2.5 border-t border-slate-800">
                     <div class="flex items-center justify-between text-xs font-bold text-slate-200">
-                        <span class="text-indigo-400 font-mono">Trang ${pageNum}</span>
-                        <span class="text-[11px] text-slate-400 font-normal font-mono">${Math.round(vp.width)}x${Math.round(vp.height)}px</span>
+                        <span class="text-indigo-400 font-mono">Trang ${escapeHTML(pageNum)}</span>
+                        <span class="text-[11px] text-slate-400 font-normal font-mono">${escapeHTML(Math.round(vp.width))}x${escapeHTML(Math.round(vp.height))}px</span>
                     </div>
                     <div class="flex items-center justify-between text-[10px] text-slate-400">
-                        <span class="text-slate-300 font-mono font-semibold">${sizeStr}</span>
-                        <a href="${blobUrl}" download="${targetFilename}" class="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white font-bold transition-all flex items-center gap-1.5 shadow-sm">
-                            <i class="fa-solid fa-download"></i> Tải .${ext.toUpperCase()}
+                        <span class="text-slate-300 font-mono font-semibold">${escapeHTML(sizeStr)}</span>
+                        <a href="${blobUrl}" download="${escapeHTML(targetFilename)}" class="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white font-bold transition-all flex items-center gap-1.5 shadow-sm">
+                            <i class="fa-solid fa-download"></i> Tải .${escapeHTML(ext.toUpperCase())}
                         </a>
                     </div>
                 </div>
@@ -231,7 +231,7 @@ export async function renderPdfPages(): Promise<void> {
     }
 
     if (pdfRenderToken === currentToken) {
-        if (status) status.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Đã xuất ${pdfBlobsMap.size} trang (.${ext.toUpperCase()})`;
+        if (status) status.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Đã xuất ${pdfBlobsMap.size} trang (.${escapeHTML(ext.toUpperCase())})`;
         if (progCont) progCont.classList.add('hidden');
         isPdfRendering = false;
     }

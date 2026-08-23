@@ -2,6 +2,30 @@
  * Common utilities and helpers for Cong Cu Huu Ich (TypeScript)
  */
 
+export function escapeHTML(value: any): string {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+export function escapeCssFontFamily(name: string): string {
+    return String(name ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"');
+}
+
+export function safeSetLocalStorage(key: string, value: any): void {
+    try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+            window.localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+        }
+    } catch { }
+}
+
 export function formatFileSize(bytes?: number): string {
     if (!bytes || bytes <= 0) return '0 B';
     const k = 1024;
