@@ -1,7 +1,7 @@
 import { globalState, savePageToDB } from '../core/state';
 import { elements } from '../core/elements';
 import { showToast, stripRichTextTags } from '../core/utils';
-import { requestOverlayRender, syncActiveBlockStyle, isBlockAutoFit } from '../features/canvas/canvas-service';
+import { requestOverlayRender, syncActiveBlockStyle, syncActiveBlockTranslation, isBlockAutoFit } from '../features/canvas/canvas-service';
 import { saveEraserDrawingToPage } from '../features/inpainting';
 import { MangaBlock, BlockStyle } from '../types/index';
 import { renderQuickPresetsBar } from './preset-ui';
@@ -316,17 +316,18 @@ function syncBlockStyleInputs(block: MangaBlock): void {
 function syncColorAndOpacityInputs(block: MangaBlock): void {
     if (!block.style) block.style = {} as BlockStyle;
 
-    const textColor = block.style.textColor || '#ffffff';
-    const bgColor = block.style.bgColor || '#000000';
+    const textColor = block.style.textColor || '#000000';
+    const bgColor = block.style.bgColor || '#ffffff';
     const strokeColor = block.style.strokeColor || '#ffffff';
     const strokeColor2 = block.style.strokeColor2 || '#000000';
     const shadowColor = block.style.shadowColor || '#000000';
 
-    const textColorHex = block.style.textColorHex || textColor.toUpperCase();
-    const bgColorHex = block.style.bgColorHex || bgColor.toUpperCase();
-    const strokeColorHex = block.style.strokeColorHex || strokeColor.toUpperCase();
-    const strokeColor2Hex = block.style.strokeColor2Hex || strokeColor2.toUpperCase();
-    const shadowColorHex = block.style.shadowColorHex || shadowColor.toUpperCase();
+    const formatHex = (c: string) => c.startsWith('#') ? c.toUpperCase() : ('#' + c).toUpperCase();
+    const textColorHex = formatHex(textColor);
+    const bgColorHex = formatHex(bgColor);
+    const strokeColorHex = formatHex(strokeColor);
+    const strokeColor2Hex = formatHex(strokeColor2);
+    const shadowColorHex = formatHex(shadowColor);
 
     const bgOpacity = block.style.bgOpacity !== undefined ? block.style.bgOpacity : 100;
     const padding = block.style.padding !== undefined ? block.style.padding : 4;
@@ -589,7 +590,7 @@ export function insertRichTextTag(openTag: string, closeTag: string): void {
     const newVal = val.substring(0, start) + replacement + val.substring(end);
     textarea.value = newVal;
 
-    import('../features/canvas/canvas-styling').then(m => m.syncActiveBlockTranslation(newVal));
+    syncActiveBlockTranslation(newVal);
 
     textarea.focus();
     textarea.setSelectionRange(start + openTag.length, start + openTag.length + selected.length);
@@ -615,13 +616,13 @@ export function clearRichFormattingFromSelection(): void {
     if (start === end) {
         const cleaned = stripRichTextTags(val);
         textarea.value = cleaned;
-        import('../features/canvas/canvas-styling').then(m => m.syncActiveBlockTranslation(cleaned));
+        syncActiveBlockTranslation(cleaned);
     } else {
         const selected = val.substring(start, end);
         const cleanedPart = stripRichTextTags(selected);
         const newVal = val.substring(0, start) + cleanedPart + val.substring(end);
         textarea.value = newVal;
-        import('../features/canvas/canvas-styling').then(m => m.syncActiveBlockTranslation(newVal));
+        syncActiveBlockTranslation(newVal);
         textarea.focus();
         textarea.setSelectionRange(start, start + cleanedPart.length);
     }

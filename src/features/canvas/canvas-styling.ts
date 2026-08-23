@@ -477,6 +477,17 @@ export function syncActiveBlockStyle(property: string, value: any): void {
             if (property === 'fontSize') {
                 b.style.baseFontSize = value;
             }
+            if (property === 'textColor') {
+                b.style.textColorHex = String(value).toUpperCase();
+            } else if (property === 'bgColor') {
+                b.style.bgColorHex = String(value).toUpperCase();
+            } else if (property === 'strokeColor') {
+                b.style.strokeColorHex = String(value).toUpperCase();
+            } else if (property === 'strokeColor2') {
+                b.style.strokeColor2Hex = String(value).toUpperCase();
+            } else if (property === 'shadowColor') {
+                b.style.shadowColorHex = String(value).toUpperCase();
+            }
             b.maskCache = null;
             b.autoFitCache = null;
 
@@ -552,44 +563,7 @@ export function syncActiveBlockTranslation(val: string): void {
             autoFitBlock(block);
         }
 
-        const overlayElem = document.getElementById(block.id);
-        if (overlayElem) {
-            const textContainer = overlayElem.querySelector('div > div') as HTMLElement | null;
-            if (textContainer) {
-                const imgEl = elements.mangaBgImage;
-                const { width: displayW, height: displayH } = getReferenceDisplayDimensions(page, imgEl);
-                const zoomScale = (globalState.zoom || 100) / 100;
-                renderBlockTextToDOM(textContainer, block, displayW, displayH, zoomScale);
-            }
-            if (autoFitActive) {
-                const maskElem = overlayElem.firstElementChild as HTMLElement | null;
-                const zoomScale = (globalState.zoom || 100) / 100;
-                if (maskElem) {
-                    maskElem.style.fontSize = `${(block.style.fontSize || 17) * zoomScale}px`;
-                }
-                const isAutoFit = isBlockAutoFit(block);
-                if (elements.lblFontSize) elements.lblFontSize.innerText = `${block.style.fontSize}px${isAutoFit ? ' (Auto)' : ''}`;
-                if (elements.styleFontSize) elements.styleFontSize.value = String(block.style.fontSize || 17);
-            }
-        }
-
-        if (globalState.viewMode === 'split') {
-            const cloneOverlay = document.getElementById(`mirror-${block.id}`);
-            if (cloneOverlay) {
-                const cloneTextContainer = cloneOverlay.querySelector('div > div') as HTMLElement | null;
-                if (cloneTextContainer) {
-                    const imgEl = elements.mangaBgImage;
-                    const { width: displayW, height: displayH } = getReferenceDisplayDimensions(page, imgEl);
-                    renderBlockTextToDOM(cloneTextContainer, block, displayW, displayH, 1);
-                }
-                if (autoFitActive) {
-                    const cloneMask = cloneOverlay.firstElementChild as HTMLElement | null;
-                    if (cloneMask) {
-                        cloneMask.style.fontSize = `${block.style.fontSize}px`;
-                    }
-                }
-            }
-        }
+        requestOverlayRender();
         debounceSavePage(page);
     }
 }
