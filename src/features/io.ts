@@ -459,39 +459,54 @@ export async function runBatchExport(): Promise<void> {
         if (successCount > 0) {
             updateProcessingOverlay(true, "Đang nén dữ liệu...", "Đang tạo file .zip tải về...", 95);
 
-            let zipBlob: Blob;
-            const JSZipClass = typeof window !== 'undefined' ? window.JSZip : undefined;
+            let zipBlob: Blob | null = null;
+            const JSZipGlobal = (typeof window !== 'undefined' && typeof (window as any).JSZip === 'function')
+                ? (window as any).JSZip
+                : (typeof JSZip === 'function' ? JSZip : undefined);
 
-            if (JSZipClass) {
-                const zip = new JSZipClass();
+            if (JSZipGlobal) {
+                const zip = new JSZipGlobal();
                 filesToZip.forEach(f => zip.file(f.name, f.blob));
                 zipBlob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
             } else if (typeof Worker !== 'undefined') {
-                zipBlob = await new Promise<Blob>((resolve, reject) => {
-                    const worker = new Worker(new URL('../workers/zip-worker.ts', import.meta.url), { type: 'module' });
-                    worker.onmessage = (e) => {
-                        if (e.data.type === 'DONE') {
-                            resolve(e.data.zipBlob);
+                try {
+                    zipBlob = await new Promise<Blob>((resolve, reject) => {
+                        const worker = new Worker(new URL('../workers/zip-worker.ts', import.meta.url), { type: 'module' });
+                        worker.onmessage = (e) => {
+                            if (e.data.type === 'DONE') {
+                                resolve(e.data.zipBlob);
+                                worker.terminate();
+                            } else if (e.data.type === 'ERROR') {
+                                reject(new Error(e.data.message));
+                                worker.terminate();
+                            } else if (e.data.type === 'PROGRESS') {
+                                updateProcessingOverlay(true, "Đang đóng gói file ZIP...", `Đang lưu file: ${e.data.fileName} (${e.data.current}/${e.data.total})`, e.data.progress);
+                            }
+                        };
+                        worker.onerror = (err) => {
+                            reject(err);
                             worker.terminate();
-                        } else if (e.data.type === 'ERROR') {
-                            reject(new Error(e.data.message));
-                            worker.terminate();
-                        } else if (e.data.type === 'PROGRESS') {
-                            updateProcessingOverlay(true, "Đang đóng gói file ZIP...", `Đang lưu file: ${e.data.fileName} (${e.data.current}/${e.data.total})`, e.data.progress);
-                        }
-                    };
-                    worker.onerror = (err) => {
-                        reject(err);
-                        worker.terminate();
-                    };
-                    worker.postMessage({
-                        type: 'CREATE_ZIP',
-                        files: filesToZip,
-                        options: { compression: 'STORE' },
-                        jszipUrl: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js'
+                        };
+                        worker.postMessage({
+                            type: 'CREATE_ZIP',
+                            files: filesToZip,
+                            options: { compression: 'STORE' }
+                        });
                     });
-                });
-            } else {
+                } catch (workerErr) {
+                    console.warn("Worker ZIP thất bại, thử nạp lại JSZip trên main thread:", workerErr);
+                    const fallbackJSZip = (typeof window !== 'undefined' ? (window as any).JSZip : undefined) || (typeof JSZip === 'function' ? JSZip : null);
+                    if (fallbackJSZip) {
+                        const zip = new fallbackJSZip();
+                        filesToZip.forEach(f => zip.file(f.name, f.blob));
+                        zipBlob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+                    } else {
+                        throw workerErr;
+                    }
+                }
+            }
+
+            if (!zipBlob) {
                 throw new Error("Thư viện nén ZIP chưa sẵn sàng.");
             }
 

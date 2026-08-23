@@ -26,7 +26,12 @@ export async function runOcrExtraction(): Promise<void> {
         await worker.terminate();
     } catch (err: any) {
         console.error("OCR Error:", err);
-        if (statusBar) statusBar.innerHTML = `<i class="fa-solid fa-circle-exclamation text-red-400"></i> Lỗi nhận diện OCR: ${escapeHTML(err?.message || String(err))}`;
+        if (statusBar) {
+            statusBar.innerHTML = '<i class="fa-solid fa-circle-exclamation text-red-400"></i> ';
+            const msgSpan = document.createElement('span');
+            msgSpan.textContent = `Lỗi nhận diện OCR: ${err?.message || String(err)}`;
+            statusBar.appendChild(msgSpan);
+        }
     }
 }
 

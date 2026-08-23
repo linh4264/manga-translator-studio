@@ -364,7 +364,11 @@ export async function loadGDriveProjectList(): Promise<void> {
         }).join('');
     } catch (e: any) {
         console.error("GDrive List Error:", e);
-        listContainer.innerHTML = `<div class="text-center py-4 text-red-400 text-xs">Lỗi Google Drive: ${escapeHTML(e.message)}</div>`;
+        listContainer.innerHTML = '';
+        const errDiv = document.createElement('div');
+        errDiv.className = "text-center py-4 text-red-400 text-xs";
+        errDiv.textContent = `Lỗi Google Drive: ${e?.message || String(e)}`;
+        listContainer.appendChild(errDiv);
     }
 }
 
