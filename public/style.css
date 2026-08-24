@@ -306,10 +306,6 @@ body.space-panning *,
     -webkit-user-select: none !important;
 }
 
-.hidden {
-    display: none !important;
-}
-
 /* Manga Canvas Container & Overlays */
 .manga-container {
     position: relative;
@@ -323,6 +319,13 @@ body.space-panning *,
     max-width: max-content !important;
     display: inline-block;
     flex-shrink: 0 !important;
+}
+
+.manga-container.hidden,
+#manga-canvas-container.hidden,
+#workspace-split-wrapper.hidden,
+#workspace-empty-state.hidden {
+    display: none !important;
 }
 
 .bubble-overlay {
@@ -396,6 +399,10 @@ body.space-panning *,
     border-radius: 10px !important;
     backdrop-filter: blur(12px) !important;
     animation: popInFloating 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#canvas-floating-toolbar.hidden {
+    display: none !important;
 }
 
 #canvas-floating-toolbar button {
