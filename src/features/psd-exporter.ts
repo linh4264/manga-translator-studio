@@ -10,13 +10,13 @@ import { MangaPage, MangaBlock } from '../types/index';
 import { computeBlockTextLayout, renderBlockTextToCanvas, ensureFontsLoadedForPage } from './canvas/text-layout-engine';
 import { getExportScale } from './canvas/canvas-exporter';
 
-export async function createMangaPSD(page: MangaPage, originalImgEl: HTMLImageElement, eraserCanvas?: HTMLCanvasElement | null): Promise<Blob> {
-    if (!page || !originalImgEl) {
+export async function createMangaPSD(page: MangaPage, originalImgEl?: HTMLImageElement | null, eraserCanvas?: HTMLCanvasElement | null): Promise<Blob> {
+    if (!page) {
         throw new Error("Không có dữ liệu trang manga để xuất PSD.");
     }
 
-    const width = originalImgEl.naturalWidth || originalImgEl.width || 800;
-    const height = originalImgEl.naturalHeight || originalImgEl.height || 1200;
+    const width = originalImgEl?.naturalWidth || originalImgEl?.width || page.width || 800;
+    const height = originalImgEl?.naturalHeight || originalImgEl?.height || page.height || 1200;
 
     await ensureFontsLoadedForPage(page);
 
@@ -26,7 +26,9 @@ export async function createMangaPSD(page: MangaPage, originalImgEl: HTMLImageEl
     rawCanvas.height = height;
     const rawCtx = rawCanvas.getContext('2d');
     if (!rawCtx) throw new Error("Không thể tạo 2D context");
-    rawCtx.drawImage(originalImgEl, 0, 0, width, height);
+    if (originalImgEl) {
+        rawCtx.drawImage(originalImgEl, 0, 0, width, height);
+    }
 
     // 2. Prepare Clean / Inpaint Canvas
     const cleanCanvas = document.createElement('canvas');

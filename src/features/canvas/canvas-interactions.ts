@@ -41,10 +41,11 @@ export function startBlockDrag(e: any, block: MangaBlock): void {
     selectBlock(block.id, isMulti);
 
     const activePage = globalState.pages[globalState.activePageIndex];
-    const isGroupDrag = activePage && globalState.selectedBlockIds && globalState.selectedBlockIds.length > 1 && globalState.selectedBlockIds.includes(block.id);
+    const selectedIds = globalState.selectedBlockIds || [];
+    const isGroupDrag = activePage && selectedIds.length > 1 && selectedIds.includes(block.id);
 
-    const groupStartCoords = isGroupDrag
-        ? globalState.selectedBlockIds.map(id => {
+    const groupStartCoords = (isGroupDrag && activePage)
+        ? selectedIds.map(id => {
             const b = activePage.blocks.find(bk => bk.id === id);
             return { id, x: b?.box?.x || 0, y: b?.box?.y || 0, w: b?.box?.w || 0, h: b?.box?.h || 0 };
         })
@@ -336,10 +337,10 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
 }
 
 export function updateBlockSelectionDOM(): void {
-    if (!globalState.selectedBlockIds) globalState.selectedBlockIds = [];
+    const selectedIds = globalState.selectedBlockIds || [];
     const overlays = document.querySelectorAll('.bubble-overlay');
     overlays.forEach(el => {
-        if (globalState.selectedBlockIds.includes(el.id)) {
+        if (selectedIds.includes(el.id)) {
             el.classList.add('active');
         } else {
             el.classList.remove('active');

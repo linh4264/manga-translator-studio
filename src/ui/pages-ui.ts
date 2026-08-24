@@ -299,7 +299,7 @@ export function updatePageListUI(): void {
                 </button>
             </div>
         `;
-        elements.pagesList.appendChild(pageItem);
+        if (elements.pagesList) elements.pagesList.appendChild(pageItem);
     });
 
     import('./layout-ui').then(m => m.updateStepperUI());

@@ -252,7 +252,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
 
             const selectedModel = aiConfig.selectedModel;
             let apiUrl = '';
-            let requestBody = null;
+            let requestBody = '';
 
             if (isOpenAiFormat) {
                 apiUrl = `${endpoint.replace(/\/$/, '')}/chat/completions`;

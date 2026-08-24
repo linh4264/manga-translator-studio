@@ -11,7 +11,7 @@
     "noEmit": true,
     "allowJs": true,
     "checkJs": false,
-    "strict": false,
+    "strict": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,

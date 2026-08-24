@@ -413,10 +413,10 @@ export function syncActiveBlockStyle(property: string, value: any): void {
     const page = globalState.pages[globalState.activePageIndex];
     if (!page) return;
     const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
-
     if (block) {
-        const targetBlocks = (globalState.selectedBlockIds && globalState.selectedBlockIds.length > 1)
-            ? page.blocks.filter(b => globalState.selectedBlockIds.includes(b.id))
+        const selectedIds = globalState.selectedBlockIds || [];
+        const targetBlocks = (selectedIds.length > 1)
+            ? page.blocks.filter(b => selectedIds.includes(b.id))
             : [block];
 
         if (property === 'fontSize') {

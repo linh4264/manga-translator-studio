@@ -379,7 +379,7 @@ export function extractDomRenderedLines(container: HTMLElement | null): RichText
     if (lineDivs.length === 0) return null;
 
     // Check if element is attached to DOM with client rects
-    const firstRect = lineDivs[0].getBoundingClientRect ? lineDivs[0].getBoundingClientRect() : null;
+    const firstRect = typeof lineDivs[0].getBoundingClientRect === 'function' ? lineDivs[0].getBoundingClientRect() : null;
     const isMeasuringRects = firstRect && (firstRect.width > 0 || firstRect.height > 0 || firstRect.top !== 0);
     if (!isMeasuringRects && lineDivs[0].offsetTop === 0 && lineDivs[0].offsetWidth === 0) {
         return null;
@@ -612,7 +612,7 @@ export {
     parseGeminiJsonText
 } from './utils/json';
 
-export async function waitForImageReady(imgElement: HTMLImageElement | null, targetSrc?: string): Promise<void> {
+export async function waitForImageReady(imgElement: HTMLImageElement | null, targetSrc?: string | null): Promise<void> {
     if (!imgElement) return;
     if (imgElement.complete && imgElement.naturalWidth > 0 && (!targetSrc || imgElement.dataset.loadedSrc === targetSrc || imgElement.src.includes(targetSrc))) {
         try {

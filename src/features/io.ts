@@ -477,10 +477,11 @@ export async function runBatchExport(options?: BatchExportOptions): Promise<void
                     });
                 } else if (page.src) {
                     img = new Image();
+                    const targetSrc = page.src;
                     await new Promise((resolve, reject) => {
                         img!.onload = resolve;
                         img!.onerror = () => reject(new Error("Không thể tải ảnh offscreen."));
-                        img!.src = page.src;
+                        img!.src = targetSrc;
                     });
                 }
 
@@ -662,10 +663,11 @@ export async function runPdfExport(options?: PdfExportOptions): Promise<void> {
                 });
             } else if (page.src) {
                 img = new Image();
+                const targetSrc = page.src;
                 await new Promise((resolve, reject) => {
                     img!.onload = resolve;
                     img!.onerror = () => reject(new Error("Không thể tải ảnh offscreen."));
-                    img!.src = page.src;
+                    img!.src = targetSrc;
                 });
             }
 
@@ -915,7 +917,7 @@ export function parseTxtBlocksSection(sectionText: string): any[] {
             commitCurrentBlock();
             const bIdx = parseInt(legacyLineMatch[1], 10) - 1;
             const tag = legacyLineMatch[2] || '';
-            let speaker = null;
+            let speaker: string | null = null;
             let type = 'dialogue';
             if (tag.toLowerCase().startsWith('nhân vật:') || tag.toLowerCase().startsWith('speaker:')) {
                 speaker = tag.replace(/^(?:nhân vật|speaker):\s*/i, '').trim();

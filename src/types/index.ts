@@ -62,6 +62,14 @@ export interface BlockStyle {
     blendMode?: string;
 }
 
+export interface AutoFitCache {
+    key: string;
+    fontSize: number;
+    baseFontSize?: number;
+    textWidth?: number;
+    textHeight?: number;
+}
+
 export interface MangaBlock {
     id: string;
     type: 'dialogue' | 'narration' | 'thought' | 'sfx' | 'image' | 'other';
@@ -79,7 +87,7 @@ export interface MangaBlock {
     textHeight?: number;
     positionKnown?: boolean;
     maskCache?: any;
-    autoFitCache?: any;
+    autoFitCache?: AutoFitCache | null;
     _derivedLines?: any;
     _derivedLinesCache?: any;
     imageUrl?: string;
@@ -106,6 +114,14 @@ export interface MangaPage {
     imageDataCache?: ImageData | null;
     lastDisplayWidth?: number;
     autoFitRevision?: number;
+}
+
+export interface HistorySnapshot {
+    pagesState: MangaPage[];
+    activePageIndex: number;
+    selectedBlockId: string | null;
+    selectedBlockIds: string[];
+    timestamp?: number;
 }
 
 export interface AudioSettings {
@@ -183,7 +199,7 @@ export interface GlobalState {
     pages: MangaPage[];
     activePageIndex: number;
     selectedBlockId: string | null;
-    selectedBlockIds?: string[];
+    selectedBlockIds: string[];
     viewMode: 'overlay' | 'split' | 'original';
     zoom: number;
     activeTab: 'edit' | 'style';
@@ -220,6 +236,13 @@ export interface GlobalState {
     globalStyle: BlockStyle;
     audioSettings?: AudioSettings;
     customStylePresets?: CustomStylePreset[];
+    fontSpecificMetrics?: Record<string, any>;
+    inpaintMethod?: string;
+    customInpaintEndpoint?: string;
+    fontLibrary?: any[];
+    dossierLorebookTab?: string;
+    toeicTab?: string;
+    isMobileHandMode?: boolean;
 }
 
 export interface OcrBoundingBox {
@@ -238,6 +261,58 @@ export interface TranslationResultItem {
     target?: string;
 }
 
+export interface ProjectBackupBlock {
+    id: string;
+    type: 'dialogue' | 'narration' | 'thought' | 'sfx' | 'image' | 'other';
+    imageUrl?: string | null;
+    original: string;
+    translated: string;
+    box: BoundingBox;
+    style: Partial<BlockStyle>;
+    speaker?: string;
+    target?: string;
+    vertical?: boolean;
+    textAnchor?: { x: number; y: number };
+}
+
+export interface ProjectBackupPage {
+    id: string;
+    name: string;
+    status: 'draft' | 'queued' | 'processing' | 'done' | 'error';
+    src?: string | null;
+    width?: number;
+    height?: number;
+    apiWidth?: number;
+    apiHeight?: number;
+    eraserLayerBlob?: Blob | null;
+    blocks: ProjectBackupBlock[];
+}
+
+export interface ProjectBackupData {
+    version: string;
+    exportedAt: string;
+    settings: {
+        sourceLanguage?: string;
+        targetLanguage?: string;
+        comicUniverse?: string;
+        comicGenres?: string[];
+        comicTone?: string;
+        defaultFont?: string;
+        defaultFontSize?: number;
+        defaultLineHeight?: number;
+        defaultLetterSpacing?: number;
+        autoFitEnabled?: boolean;
+        preserveNames?: boolean;
+        glossaryNames?: string;
+        pronounMatrix?: string;
+        translationContextPrompt?: string;
+        [key: string]: any;
+    };
+    characterDossier?: CharacterDossierEntry[];
+    lorebook?: LorebookEntry[];
+    pages: ProjectBackupPage[];
+}
+
 declare global {
     interface Window {
         EyeDropper?: new () => { open: () => Promise<{ sRGBHex: string }> };
@@ -249,5 +324,3 @@ declare global {
         google?: any;
     }
 }
-
-

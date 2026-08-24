@@ -389,7 +389,7 @@ export function speakActiveBlock(): void {
     utterance.onend = () => clearSpeakingHighlights();
     utterance.onerror = () => clearSpeakingHighlights();
 
-    synthesis.speak(utterance);
+    if (synthesis) synthesis.speak(utterance);
     showToast(`🔊 Đang đọc ô thoại: "${block.translated.slice(0, 25)}..."`, "info");
 }
 

@@ -17,7 +17,7 @@ import {
     COMIC_TONE_PRESETS,
     DEFAULT_TYPE_FONTS
 } from '../config/constants';
-import { MangaBlock, MangaPage, BlockStyle, GlobalState } from '../types/index';
+import { MangaBlock, MangaPage, BlockStyle, GlobalState, HistorySnapshot } from '../types/index';
 import { safeSetLocalStorage } from './utils/storage';
 
 export {
@@ -46,13 +46,13 @@ export function isFlash31LiteModel(modelId?: string): boolean {
     return String(modelId || '') === 'gemini-3.1-flash-lite';
 }
 
-export let undoStack: any[] = [];
-export let redoStack: any[] = [];
+export let undoStack: HistorySnapshot[] = [];
+export let redoStack: HistorySnapshot[] = [];
 
 // Callbacks to decouple UI updates from state logic
 let onUndoRedoChange: (() => void) | null = null;
-let onPageListChange: ((page?: any) => void) | null = null;
-let onSnapshotRestored: ((snapshot: any) => void) | null = null;
+let onPageListChange: ((page?: MangaPage) => void) | null = null;
+let onSnapshotRestored: ((snapshot: HistorySnapshot) => void) | null = null;
 
 /**
  * UI Event Dispatchers
@@ -91,19 +91,19 @@ export function uiSetRightTab(tab: string): void { globalBus.publish(stateEvents
 
 export function registerStateCallbacks(callbacks: {
     onUndoRedoChange?: () => void;
-    onPageListChange?: (page?: any) => void;
-    onSnapshotRestored?: (snapshot: any) => void;
+    onPageListChange?: (page?: MangaPage) => void;
+    onSnapshotRestored?: (snapshot: HistorySnapshot) => void;
 }): void {
     if (callbacks.onUndoRedoChange) onUndoRedoChange = callbacks.onUndoRedoChange;
     if (callbacks.onPageListChange) onPageListChange = callbacks.onPageListChange;
     if (callbacks.onSnapshotRestored) onSnapshotRestored = callbacks.onSnapshotRestored;
 }
 
-export function markPageAutoFitDirty(page: any): void {
+export function markPageAutoFitDirty(page: MangaPage | null | undefined): void {
     if (!page) return;
     page.autoFitRevision = (page.autoFitRevision || 0) + 1;
     if (page.blocks && Array.isArray(page.blocks)) {
-        page.blocks.forEach((b: any) => {
+        page.blocks.forEach((b: MangaBlock) => {
             if (b) {
                 b.autoFitCache = null;
                 b.maskCache = null;
@@ -112,7 +112,7 @@ export function markPageAutoFitDirty(page: any): void {
     }
 }
 
-export const globalState: GlobalState & Record<string, any> = {
+export const globalState: GlobalState = {
     apiKey: '',
     aiProvider: 'gemini', // 'gemini' | 'claude' | 'openai' | 'custom'
     apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta', // Base URL for Gemini-compatible APIs
@@ -267,14 +267,15 @@ export function initializeStateFromStorage(): void {
     Object.entries(keysToLoad).forEach(([storageKey, stateKey]) => {
         const val = localStorage.getItem(storageKey);
         if (val !== null) {
+            const key = stateKey as keyof GlobalState;
             if (stateKey === 'autoFitEnabled' || stateKey === 'preserveNames') {
-                globalState[stateKey] = val === 'true';
+                (globalState as any)[key] = val === 'true';
             } else if (stateKey === 'apiDelay' || stateKey === 'maxRetries') {
-                globalState[stateKey] = parseInt(val, 10);
+                (globalState as any)[key] = parseInt(val, 10);
             } else if (stateKey === 'ocrEnhanceEnabled') {
-                try { globalState[stateKey] = JSON.parse(val); } catch (e) { globalState[stateKey] = true; }
+                try { (globalState as any)[key] = JSON.parse(val); } catch (e) { (globalState as any)[key] = true; }
             } else if (stateKey === 'audioSettings') {
-                try { globalState[stateKey] = JSON.parse(val); } catch (e) { console.error("Lỗi parse audioSettings:", e); }
+                try { (globalState as any)[key] = JSON.parse(val); } catch (e) { console.error("Lỗi parse audioSettings:", e); }
             } else if (stateKey === 'defaultDialogueFont' || stateKey === 'defaultFont') {
                 globalState.defaultDialogueFont = val;
                 globalState.defaultFont = val;
@@ -298,7 +299,7 @@ export function initializeStateFromStorage(): void {
                     if (globalState.globalStyle) globalState.globalStyle.letterSpacing = num;
                 }
             } else {
-                globalState[stateKey] = val;
+                (globalState as any)[key] = val;
             }
         }
     });
@@ -330,10 +331,10 @@ export function initializeStateFromStorage(): void {
     const savedGenrePreset = localStorage.getItem('gemini_manga_translation_genre_preset');
     if (savedGenrePreset !== null) {
         try {
-            const savedPresets = savedGenrePreset.startsWith('[')
+            const savedPresets: string[] = savedGenrePreset.startsWith('[')
                 ? JSON.parse(savedGenrePreset)
-                : savedGenrePreset.split(',').map(item => item.trim()).filter(Boolean);
-            const validPresets = savedPresets.filter(item => TRANSLATION_GENRE_PRESETS[item] !== undefined);
+                : savedGenrePreset.split(',').map((item: string) => item.trim()).filter(Boolean);
+            const validPresets = savedPresets.filter((item: string) => TRANSLATION_GENRE_PRESETS[item] !== undefined);
             if (validPresets.length > 0) {
                 globalState.translationGenrePresets = validPresets;
             }
@@ -344,16 +345,16 @@ export function initializeStateFromStorage(): void {
 }
 
 // Helper to deep clone block array for Undo/Redo history snapshots
-function cloneBlocksForHistory(blocks: any[]): any[] {
+function cloneBlocksForHistory(blocks: MangaBlock[]): MangaBlock[] {
     if (!Array.isArray(blocks)) return [];
-    return blocks.map((block: any) => ({
+    return blocks.map((block: MangaBlock) => ({
         id: block.id,
         type: block.type || 'dialogue',
-        imageUrl: block.imageUrl || null,
+        imageUrl: block.imageUrl || undefined,
         original: block.original || '',
         translated: block.translated || '',
         box: block.box ? { ...block.box } : { x: 0, y: 0, w: 10, h: 10 },
-        style: block.style ? { ...block.style } : {},
+        style: block.style ? { ...block.style } : ({} as BlockStyle),
         speaker: block.speaker !== undefined ? block.speaker : undefined,
         target: block.target !== undefined ? block.target : undefined,
         vertical: block.vertical !== undefined ? block.vertical : undefined,
@@ -363,7 +364,7 @@ function cloneBlocksForHistory(blocks: any[]): any[] {
     }));
 }
 
-function clonePageForHistory(page: any): any {
+function clonePageForHistory(page: MangaPage): MangaPage {
     return {
         id: page.id,
         name: page.name || 'Page',
@@ -372,7 +373,15 @@ function clonePageForHistory(page: any): any {
         apiWidth: page.apiWidth,
         apiHeight: page.apiHeight,
         status: page.status,
+        file: page.file || null,
+        originalFile: page.originalFile || null,
         eraserLayerBlob: page.eraserLayerBlob || null,
+        thumbnailBlob: page.thumbnailBlob || null,
+        thumbnailSrc: page.thumbnailSrc || null,
+        src: page.src || null,
+        apiSrc: page.apiSrc || null,
+        imageDataCache: page.imageDataCache || null,
+        lastDisplayWidth: page.lastDisplayWidth,
         autoFitRevision: page.autoFitRevision || 0,
         blocks: cloneBlocksForHistory(page.blocks)
     };
@@ -380,7 +389,7 @@ function clonePageForHistory(page: any): any {
 
 // --- UNDO / REDO CONTROLLERS ---
 export function pushStateToHistory(): void {
-    const currentState = globalState.pages.map((page: any) => clonePageForHistory(page));
+    const currentState = globalState.pages.map((page: MangaPage) => clonePageForHistory(page));
 
     undoStack.push({
         pagesState: currentState,
@@ -403,22 +412,22 @@ export function clearHistory(): void {
     if (onUndoRedoChange) onUndoRedoChange();
 }
 
-export function applyStateFromSnapshot(snapshot: any): void {
+export function applyStateFromSnapshot(snapshot: HistorySnapshot | any): void {
     if (!snapshot || !Array.isArray(snapshot.pagesState)) return;
 
-    const snapshotPageIds = new Set(snapshot.pagesState.map((sp: any) => sp.id));
+    const snapshotPageIds = new Set(snapshot.pagesState.map((sp: MangaPage) => sp.id));
 
     // 1. Remove pages from DB that are not in snapshot
-    const pagesToDelete = globalState.pages.filter((p: any) => !snapshotPageIds.has(p.id));
-    pagesToDelete.forEach((p: any) => {
+    const pagesToDelete = globalState.pages.filter((p: MangaPage) => !snapshotPageIds.has(p.id));
+    pagesToDelete.forEach((p: MangaPage) => {
         deletePageFromDB(p.id);
     });
 
     // 2. Restore or update all pages from snapshot
-    const existingPagesMap = new Map(globalState.pages.map((p: any) => [p.id, p]));
-    const restoredPages: any[] = [];
+    const existingPagesMap = new Map(globalState.pages.map((p: MangaPage) => [p.id, p]));
+    const restoredPages: MangaPage[] = [];
 
-    snapshot.pagesState.forEach((savedPage: any) => {
+    snapshot.pagesState.forEach((savedPage: MangaPage) => {
         let page = existingPagesMap.get(savedPage.id);
         if (page) {
             page.name = savedPage.name || page.name;
@@ -445,6 +454,7 @@ export function applyStateFromSnapshot(snapshot: any): void {
                 thumbnailSrc: null,
                 src: null,
                 apiSrc: null,
+                imageDataCache: null,
                 eraserLayerBlob: savedPage.eraserLayerBlob || null,
                 blocks: cloneBlocksForHistory(savedPage.blocks),
                 autoFitRevision: 1
@@ -486,7 +496,7 @@ export function applyStateFromSnapshot(snapshot: any): void {
 
 export function executeUndo(): void {
     if (undoStack.length === 0) return;
-    const currentState = globalState.pages.map((page: any) => clonePageForHistory(page));
+    const currentState = globalState.pages.map((page: MangaPage) => clonePageForHistory(page));
 
     redoStack.push({
         pagesState: currentState,
@@ -496,12 +506,14 @@ export function executeUndo(): void {
     });
 
     const previous = undoStack.pop();
-    applyStateFromSnapshot(previous);
+    if (previous) {
+        applyStateFromSnapshot(previous);
+    }
 }
 
 export function executeRedo(): void {
     if (redoStack.length === 0) return;
-    const currentState = globalState.pages.map((page: any) => clonePageForHistory(page));
+    const currentState = globalState.pages.map((page: MangaPage) => clonePageForHistory(page));
 
     undoStack.push({
         pagesState: currentState,
@@ -511,7 +523,9 @@ export function executeRedo(): void {
     });
 
     const next = redoStack.pop();
-    applyStateFromSnapshot(next);
+    if (next) {
+        applyStateFromSnapshot(next);
+    }
 }
 
 // --- INDEXEDDB PERSISTENCE MANAGER FOR AUTO-SAVE & RESTORE ---
@@ -579,14 +593,14 @@ export function initDB(): Promise<IDBDatabase> {
     });
 }
 
-export function savePageToDB(page: any): Promise<void> {
+export function savePageToDB(page: MangaPage | null | undefined): Promise<void> {
     if (!dbInstance || !page || !page.id) return Promise.resolve();
     return new Promise((resolve, reject) => {
         try {
             const transaction = dbInstance!.transaction([STORE_PAGES], 'readwrite');
             const store = transaction.objectStore(STORE_PAGES);
 
-            const cleanBlocks = (page.blocks || []).map((block: any) => {
+            const cleanBlocks = (page.blocks || []).map((block: MangaBlock) => {
                 const cleanBlock: any = {
                     id: block.id,
                     type: block.type || 'dialogue',
@@ -633,7 +647,7 @@ export function savePageToDB(page: any): Promise<void> {
     });
 }
 
-export function debounceSavePage(page: any): void {
+export function debounceSavePage(page: MangaPage | null | undefined): void {
     clearTimeout(savePageDebounceTimer);
     savePageDebounceTimer = setTimeout(() => {
         pushStateToHistory();
@@ -721,7 +735,7 @@ export function deleteMetaFromDB(key: string): Promise<boolean> {
     });
 }
 
-export async function loadProjectFromDB(): Promise<{ pages: any[]; activePageIndex: number } | null> {
+export async function loadProjectFromDB(): Promise<{ pages: MangaPage[]; activePageIndex: number } | null> {
     if (!dbInstance) return null;
 
     let meta: any = null;
@@ -742,7 +756,7 @@ export async function loadProjectFromDB(): Promise<{ pages: any[]; activePageInd
         if (meta.lorebook) globalState.lorebook = meta.lorebook;
     }
 
-    let rawPages: any[] = [];
+    let rawPages: MangaPage[] = [];
     try {
         rawPages = await new Promise((resolve) => {
             const tx = dbInstance!.transaction([STORE_PAGES], 'readonly');
@@ -759,8 +773,8 @@ export async function loadProjectFromDB(): Promise<{ pages: any[]; activePageInd
         return null;
     }
 
-    const pagesMap = new Map(rawPages.map((p: any) => [p.id, p]));
-    const pages: any[] = [];
+    const pagesMap = new Map(rawPages.map((p: MangaPage) => [p.id, p]));
+    const pages: MangaPage[] = [];
 
     if (meta && Array.isArray(meta.pageIds) && meta.pageIds.length > 0) {
         for (const id of meta.pageIds) {
@@ -797,7 +811,7 @@ export async function loadProjectFromDB(): Promise<{ pages: any[]; activePageInd
         }
 
         if (p.blocks) {
-            p.blocks.forEach((block: any) => {
+            p.blocks.forEach((block: MangaBlock) => {
                 delete block.maskCache;
                 delete block.autoFitCache;
             });
@@ -1047,12 +1061,12 @@ export async function createThumbnail(file: Blob, maxDim: number = 120): Promise
  * Guarantees that editor, canvas export, PSD export, and batch export all use the exact same image source and resolution.
  * Primary source of truth is always page.originalFile if present; fallback to page.file.
  */
-export function getPageCanonicalFile(page: any): Blob | File | null {
+export function getPageCanonicalFile(page: MangaPage | null | undefined): Blob | File | null {
     if (!page) return null;
     return page.originalFile || page.file || null;
 }
 
-export async function activatePage(page: any): Promise<void> {
+export async function activatePage(page: MangaPage | null | undefined): Promise<void> {
     if (!page) return;
 
     if (!page.src) {
@@ -1110,7 +1124,7 @@ export function _loadPageBlobFromDB(pageId: string): Promise<any> {
     });
 }
 
-export async function getPageDataURL(page: any): Promise<string | null> {
+export async function getPageDataURL(page: MangaPage | null | undefined): Promise<string | null> {
     if (!page) return null;
 
     let blob = page.originalFile || page.file;
@@ -1158,7 +1172,7 @@ export async function getPageDataURL(page: any): Promise<string | null> {
     return null;
 }
 
-export function deactivatePage(page: any): void {
+export function deactivatePage(page: MangaPage | null | undefined): void {
     if (!page) return;
     if (page.originalFile) revokeSafeMediaUrl(page.originalFile);
     if (page.file) revokeSafeMediaUrl(page.file);
@@ -1172,7 +1186,7 @@ export function deactivatePage(page: any): void {
     page.apiSrc = null;
     page.imageDataCache = null;
     if (page.blocks) {
-        page.blocks.forEach((b: any) => {
+        page.blocks.forEach((b: MangaBlock) => {
             b.maskCache = null;
         });
     }
@@ -1182,14 +1196,14 @@ export function garbageCollectPageCaches(previewCurrentPage: number | null = nul
     const activePage = globalState.pages[globalState.activePageIndex];
     const previewPage = previewCurrentPage !== null ? globalState.pages[previewCurrentPage] : null;
 
-    globalState.pages.forEach((p: any) => {
+    globalState.pages.forEach((p: MangaPage) => {
         if (p !== activePage && p !== previewPage) {
             deactivatePage(p);
         }
     });
 }
 
-export async function generateAndSaveThumbnailForPage(page: any): Promise<void> {
+export async function generateAndSaveThumbnailForPage(page: MangaPage): Promise<void> {
     if (page.thumbnailBlob) return;
     try {
         const fileToUse = page.file || page.originalFile;

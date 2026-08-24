@@ -36,7 +36,7 @@ export function getGDriveAccessToken(): string {
 export async function getProjectBackupJSON(): Promise<any> {
     if (globalState.pages.length === 0) return null;
     const ctx = getTranslationContext();
-    const pagesData = [];
+    const pagesData: any[] = [];
     for (const page of globalState.pages) {
         const imgDataURL = await getPageDataURL(page);
         pagesData.push({
