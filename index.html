@@ -650,8 +650,8 @@
                         <span class="text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-widest shrink-0">Ảnh
                             Gốc</span>
                         <img id="split-original-img" src=""
-                            class="block border border-slate-800 rounded shadow-2xl h-[calc(100%-1.5rem)] w-auto max-w-none select-none"
-                            alt="Original Original">
+                            class="block border border-slate-800 rounded shadow-2xl h-[calc(100%-1.5rem)] w-auto max-w-none select-none pointer-events-none"
+                            alt="">
                     </div>
                     <!-- Right: Editor (Active canvas) -->
                     <div class="flex flex-col items-center h-full min-h-0">
@@ -663,8 +663,8 @@
 
                 <!-- Main Work Canvas Container (For Overlay or standard view) -->
                 <div id="manga-canvas-container" class="manga-container hidden m-auto" data-darkreader-ignore="true">
-                    <img id="manga-bg-image" src="" alt="Manga Page"
-                        class="block h-full w-auto max-w-none select-none rounded" pointer-events="none">
+                    <img id="manga-bg-image" src="" alt=""
+                        class="block h-full w-auto max-w-none select-none rounded pointer-events-none">
                     <canvas id="eraser-canvas"
                         class="absolute inset-0 w-full h-full rounded pointer-events-none z-10"></canvas>
                     <canvas id="patch-preview-canvas"

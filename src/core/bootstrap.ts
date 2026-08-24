@@ -234,6 +234,15 @@ export async function initApplication(): Promise<void> {
             await selectPage(globalState.activePageIndex);
 
             showToast("Đã khôi phục phiên làm việc trước đó!", "success");
+        } else {
+            const container = document.getElementById('manga-canvas-container');
+            const split = document.getElementById('workspace-split-wrapper');
+            const empty = document.getElementById('workspace-empty-state');
+            const floatingToolbar = document.getElementById('canvas-floating-toolbar');
+            if (container) container.classList.add('hidden');
+            if (split) split.classList.add('hidden');
+            if (empty) empty.classList.remove('hidden');
+            if (floatingToolbar) floatingToolbar.classList.add('hidden');
         }
 
         // 3. KHÔI PHỤC THƯ MỤC LIÊN KẾT Ổ CỨNG

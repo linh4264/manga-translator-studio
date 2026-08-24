@@ -1388,6 +1388,7 @@ export async function clearCurrentProject(): Promise<void> {
     if (elements.mangaCanvasContainer) elements.mangaCanvasContainer.classList.add('hidden');
     if (elements.workspaceSplitWrapper) elements.workspaceSplitWrapper.classList.add('hidden');
     if (elements.workspaceEmptyState) elements.workspaceEmptyState.classList.remove('hidden');
+    if (elements.canvasFloatingToolbar) elements.canvasFloatingToolbar.classList.add('hidden');
 
     if (elements.btnActiveTranslate) elements.btnActiveTranslate.disabled = true;
     if (elements.btnAiErasePage) elements.btnAiErasePage.disabled = true;

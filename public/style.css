@@ -306,6 +306,10 @@ body.space-panning *,
     -webkit-user-select: none !important;
 }
 
+.hidden {
+    display: none !important;
+}
+
 /* Manga Canvas Container & Overlays */
 .manga-container {
     position: relative;
@@ -317,7 +321,7 @@ body.space-panning *,
     max-height: 100%;
     width: max-content !important;
     max-width: max-content !important;
-    display: inline-block !important;
+    display: inline-block;
     flex-shrink: 0 !important;
 }
 
