@@ -118,6 +118,8 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
         isBackgroundMode ? progressVal : 20
     );
 
+    let activeStep = "Xử lý ảnh ban đầu";
+
     try {
         if (cancelTranslationFlag) {
             page.status = 'draft';
@@ -179,6 +181,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
             if (hasExistingBlocks) {
                 detectedRawBlocks = page.blocks;
             } else {
+                activeStep = "Quét OCR phát hiện thoại";
                 updateProgressMsg(
                     "Bước 1/2: Đang quét khung thoại & chữ gốc...",
                     `Trang ${pageIndex + 1}/${totalPages}: Sử dụng ${ocrModelToUse} (Vision)...`,
@@ -205,6 +208,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                     id: `p${pageIndex + 1}_b${bIdx + 1}`
                 }));
 
+                activeStep = "Dịch ngữ cảnh văn học";
                 updateProgressMsg(
                     "Bước 2/2: Đang dịch ngữ cảnh văn học...",
                     `Trang ${pageIndex + 1}/${totalPages}: Sử dụng ${transModelToUse} (Text Only)...`,
@@ -327,6 +331,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 });
             }
 
+            activeStep = "Dịch toàn diện trực tiếp";
             const data = await executeAiJsonRequestWithRetry({
                 apiUrl,
                 headers: requestHeaders,
@@ -352,6 +357,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
             })));
         }
 
+        activeStep = "Bố cục & Canh chỉnh bong bóng";
         updateProgressMsg(
             "Đang dựng bản dịch...",
             `Trang ${pageIndex + 1}/${totalPages}: Đang tính toán tỷ lệ bong bóng thoại...`,
@@ -365,11 +371,12 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
         const imgEl = elements.mangaBgImage;
         const imgW = (pageImageData && pageImageData.width > 0)
             ? pageImageData.width
-            : ((imgEl && imgEl.naturalWidth > 0) ? imgEl.naturalWidth : 800);
+            : ((imgEl && imgEl.naturalWidth > 0 && pageIndex === globalState.activePageIndex) ? imgEl.naturalWidth : 800);
         const imgH = (pageImageData && pageImageData.height > 0)
             ? pageImageData.height
-            : ((imgEl && imgEl.naturalHeight > 0) ? imgEl.naturalHeight : 1200);
+            : ((imgEl && imgEl.naturalHeight > 0 && pageIndex === globalState.activePageIndex) ? imgEl.naturalHeight : 1200);
 
+        const isVerticalTarget = ['ja', 'zh', 'ko'].includes(targetLang);
         page.blocks = (finalBlocks || []).map((b, idx) => {
             const blockType = b.type || 'dialogue';
             const textAnchor = b.textAnchor || extractTextAnchor(b.box);
@@ -377,7 +384,6 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 ? { ...DEFAULT_AI_BLOCK_BOX }
                 : refineAiBlockBox(b.box, pageImageData, globalState.selectedModel, blockType);
 
-            const isVerticalTarget = ['ja', 'zh', 'ko'].includes(targetLang);
             const blockVertical = isVerticalTarget
                 ? (typeof b.vertical === 'boolean' ? b.vertical : ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true))
                 : false;
@@ -446,6 +452,8 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
             }
         });
         page.status = 'done';
+        page.lastError = null;
+        page.failedStep = null;
         recordPageToStoryMemory(pageIndex, page.blocks);
         uiUpdatePageListUI();
         savePageToDB(page);
@@ -466,14 +474,12 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
 
         if (cancelTranslationFlag) {
             page.status = 'draft';
+            page.lastError = "Tiến trình đã bị dừng bởi người dùng.";
+            page.failedStep = activeStep;
             uiUpdatePageListUI();
             savePageToDB(page);
             return false;
         }
-
-        page.status = 'error';
-        uiUpdatePageListUI();
-        savePageToDB(page);
 
         const isTimeout = error.name === 'AbortError' || error.name === 'TimeoutError' || (error.message && (error.message.includes('Timeout') || error.message.includes('aborted') || error.message.includes('AbortError')));
         let errorMessage = "Đã xảy ra lỗi không xác định.";
@@ -487,7 +493,13 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
             errorMessage = error.message || error.statusText || JSON.stringify(error);
         }
 
-        showToast(`Lỗi khi dịch trang ${pageIndex + 1}: ${errorMessage}`, "error");
+        page.status = 'error';
+        page.lastError = errorMessage;
+        page.failedStep = activeStep;
+        uiUpdatePageListUI();
+        savePageToDB(page);
+
+        showToast(`Lỗi khi dịch trang ${pageIndex + 1} [Bước: ${activeStep}]: ${errorMessage}`, "error");
         return false;
     } finally {
         if (!isBackgroundMode) {
@@ -670,9 +682,11 @@ export async function runBatchTranslation(): Promise<void> {
                         });
 
                         savePageToDB(page);
-                    } catch (ocrErr) {
+                    } catch (ocrErr: any) {
                         console.error(`Lỗi OCR ở trang ${pageIndex + 1}:`, ocrErr);
                         page.status = 'error';
+                        page.failedStep = "Quét OCR Vision";
+                        page.lastError = ocrErr?.message || "Lỗi quét OCR";
                         savePageToDB(page);
                     }
                 }
@@ -781,6 +795,8 @@ export async function runBatchTranslation(): Promise<void> {
                                 });
 
                                 p.status = 'done';
+                                p.lastError = null;
+                                p.failedStep = null;
                                 recordPageToStoryMemory(i, p.blocks);
                                 savePageToDB(p);
                             }
@@ -794,6 +810,8 @@ export async function runBatchTranslation(): Promise<void> {
                             const p = globalState.pages[i];
                             if (p.status === 'queued') {
                                 p.status = (p.blocks && p.blocks.length > 0) ? 'draft' : 'error';
+                                p.failedStep = "Dịch gộp Chapter";
+                                p.lastError = transErr?.message || "Lỗi dịch gộp Chapter";
                                 savePageToDB(p);
                             }
                         });
@@ -803,6 +821,8 @@ export async function runBatchTranslation(): Promise<void> {
                         const p = globalState.pages[i];
                         if (p.status === 'queued') {
                             p.status = 'done';
+                            p.lastError = null;
+                            p.failedStep = null;
                             savePageToDB(p);
                         }
                     });

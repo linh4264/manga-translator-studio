@@ -475,6 +475,7 @@ export async function runBatchExport(options?: BatchExportOptions): Promise<void
     globalState.selectedBlockId = null;
 
     const filesToZip: Array<{ name: string; blob: Blob }> = [];
+    const failedPages: Array<{ index: number; name: string; error: string }> = [];
     let successCount = 0;
 
     try {
@@ -532,7 +533,8 @@ export async function runBatchExport(options?: BatchExportOptions): Promise<void
                 successCount++;
             } catch (err: any) {
                 console.error(`Lỗi kết xuất tại trang ${i + 1}:`, err);
-                showToast(`Lỗi kết xuất trang ${i + 1}: ${err.message}`, "error");
+                failedPages.push({ index: i + 1, name: page.name || `page_${i + 1}`, error: err?.message || 'Lỗi không xác định' });
+                showToast(`Lỗi kết xuất trang ${i + 1} (${page.name}): ${err.message}`, "error");
             }
         }
 
@@ -605,9 +607,15 @@ export async function runBatchExport(options?: BatchExportOptions): Promise<void
             document.body.removeChild(tempDownloadLink);
             setTimeout(() => URL.revokeObjectURL(zipDownloadUrl), 1000);
 
-            showToast(`Tải xuống tệp ZIP thành công! Đã nén ${successCount} trang.`, "success");
+            if (failedPages.length > 0) {
+                const failedStr = failedPages.map(f => `Trang ${f.index}`).join(', ');
+                showToast(`Đã xuất ZIP thành công ${successCount}/${totalToExport} trang! (${failedPages.length} trang bị lỗi: ${failedStr})`, "warn");
+            } else {
+                showToast(`Tải xuống tệp ZIP thành công! Đã nén đầy đủ ${successCount} trang.`, "success");
+            }
         } else {
-            showToast("Không có trang nào được xuất thành công.", "error");
+            const failedStr = failedPages.map(f => `Trang ${f.index} (${f.error})`).join('; ');
+            showToast(`Xuất ZIP thất bại: 0/${totalToExport} trang thành công. Chi tiết: ${failedStr}`, "error");
         }
     } catch (err: any) {
         console.error("Lỗi xuất ZIP:", err);
@@ -659,6 +667,9 @@ export async function runPdfExport(options?: PdfExportOptions): Promise<void> {
 
     updateProcessingOverlay(true, "Đang khởi tạo PDF...", "Đang thiết lập trang truyện...", 5);
 
+    const failedPdfPages: Array<{ index: number; name: string; error: string }> = [];
+    let pdfPagesRendered = 0;
+
     try {
         let pdf: any = null;
         const totalPages = targetIndices.length;
@@ -674,77 +685,94 @@ export async function runPdfExport(options?: PdfExportOptions): Promise<void> {
             const progressVal = Math.round((currentCount / totalPages) * 90);
             updateProcessingOverlay(true, `Đang ghép PDF (${currentCount}/${totalPages})`, `Trang: ${escapeHTML(page.name)}`, progressVal);
 
-            let img: HTMLImageElement | null = null;
-            let blobUrl: string | null = null;
-            const pageFile = page.originalFile || page.file;
+            try {
+                let img: HTMLImageElement | null = null;
+                let blobUrl: string | null = null;
+                const pageFile = page.originalFile || page.file;
 
-            if (pageFile) {
-                img = new Image();
-                blobUrl = URL.createObjectURL(pageFile as Blob);
-                await new Promise((resolve, reject) => {
-                    img!.onload = resolve;
-                    img!.onerror = () => reject(new Error("Không thể tải ảnh offscreen."));
-                    img!.src = blobUrl!;
-                });
-            } else if (page.src) {
-                img = new Image();
-                const targetSrc = page.src;
-                await new Promise((resolve, reject) => {
-                    img!.onload = resolve;
-                    img!.onerror = () => reject(new Error("Không thể tải ảnh offscreen."));
-                    img!.src = targetSrc;
-                });
-            }
+                if (pageFile) {
+                    img = new Image();
+                    blobUrl = URL.createObjectURL(pageFile as Blob);
+                    await new Promise((resolve, reject) => {
+                        img!.onload = resolve;
+                        img!.onerror = () => reject(new Error("Không thể tải ảnh offscreen."));
+                        img!.src = blobUrl!;
+                    });
+                } else if (page.src) {
+                    img = new Image();
+                    const targetSrc = page.src;
+                    await new Promise((resolve, reject) => {
+                        img!.onload = resolve;
+                        img!.onerror = () => reject(new Error("Không thể tải ảnh offscreen."));
+                        img!.src = targetSrc;
+                    });
+                }
 
-            const canvas = await renderPageToCanvas2D(page, img);
-            if (blobUrl) URL.revokeObjectURL(blobUrl);
+                const canvas = await renderPageToCanvas2D(page, img);
+                if (blobUrl) URL.revokeObjectURL(blobUrl);
 
-            const pdfQualityMode = options?.quality || globalState.pdfQuality || 'hd';
-            let imgData: string;
-            let imgFormat = 'JPEG';
-            if (pdfQualityMode === 'max') {
-                imgData = canvas.toDataURL('image/png');
-                imgFormat = 'PNG';
-            } else if (pdfQualityMode === 'standard') {
-                imgData = canvas.toDataURL('image/jpeg', 0.90);
-                imgFormat = 'JPEG';
-            } else {
-                imgData = canvas.toDataURL('image/jpeg', 0.98);
-                imgFormat = 'JPEG';
-            }
+                const pdfQualityMode = options?.quality || globalState.pdfQuality || 'hd';
+                let imgData: string;
+                let imgFormat = 'JPEG';
+                if (pdfQualityMode === 'max') {
+                    imgData = canvas.toDataURL('image/png');
+                    imgFormat = 'PNG';
+                } else if (pdfQualityMode === 'standard') {
+                    imgData = canvas.toDataURL('image/jpeg', 0.90);
+                    imgFormat = 'JPEG';
+                } else {
+                    imgData = canvas.toDataURL('image/jpeg', 0.98);
+                    imgFormat = 'JPEG';
+                }
 
-            const naturalW = canvas.width || 800;
-            const naturalH = canvas.height || 1200;
-            const orientation = naturalW > naturalH ? 'landscape' : 'portrait';
+                const naturalW = canvas.width || 800;
+                const naturalH = canvas.height || 1200;
+                const orientation = naturalW > naturalH ? 'landscape' : 'portrait';
 
-            if (!pdf) {
-                pdf = new jsPDFClass({
-                    orientation: orientation,
-                    unit: 'px',
-                    format: [naturalW, naturalH]
-                });
-                pdf.addImage(imgData, imgFormat, 0, 0, naturalW, naturalH);
-            } else {
-                pdf.addPage([naturalW, naturalH], orientation);
-                pdf.addImage(imgData, imgFormat, 0, 0, naturalW, naturalH);
-            }
+                if (!pdf) {
+                    pdf = new jsPDFClass({
+                        orientation: orientation,
+                        unit: 'px',
+                        format: [naturalW, naturalH]
+                    });
+                    pdf.addImage(imgData, imgFormat, 0, 0, naturalW, naturalH);
+                } else {
+                    pdf.addPage([naturalW, naturalH], orientation);
+                    pdf.addImage(imgData, imgFormat, 0, 0, naturalW, naturalH);
+                }
 
-            if (canvas) {
-                canvas.width = 0;
-                canvas.height = 0;
+                if (canvas) {
+                    canvas.width = 0;
+                    canvas.height = 0;
+                }
+                pdfPagesRendered++;
+            } catch (pageErr: any) {
+                console.error(`Lỗi render trang ${i + 1} vào PDF:`, pageErr);
+                failedPdfPages.push({ index: i + 1, name: page.name || `page_${i + 1}`, error: pageErr?.message || 'Lỗi kết xuất' });
+                showToast(`Lỗi ghép PDF trang ${i + 1} (${page.name}): ${pageErr.message}`, "warn");
             }
         }
 
-        updateProcessingOverlay(true, "Đang hoàn tất PDF...", "Đang lưu file về máy...", 98);
+        if (pdfPagesRendered > 0 && pdf) {
+            updateProcessingOverlay(true, "Đang hoàn tất PDF...", "Đang lưu file về máy...", 98);
 
-        const defaultPdfName = `Manga_Chapter_${Date.now()}.pdf`;
-        let finalPdfName = options?.filename?.trim() || defaultPdfName;
-        if (!finalPdfName.toLowerCase().endsWith('.pdf')) {
-            finalPdfName += '.pdf';
+            const defaultPdfName = `Manga_Chapter_${Date.now()}.pdf`;
+            let finalPdfName = options?.filename?.trim() || defaultPdfName;
+            if (!finalPdfName.toLowerCase().endsWith('.pdf')) {
+                finalPdfName += '.pdf';
+            }
+
+            pdf.save(finalPdfName);
+            if (failedPdfPages.length > 0) {
+                const failedStr = failedPdfPages.map(f => `Trang ${f.index}`).join(', ');
+                showToast(`Đã xuất PDF thành công ${pdfPagesRendered}/${totalPages} trang! (Cảnh báo: ${failedPdfPages.length} trang bị lỗi: ${failedStr})`, "warn");
+            } else {
+                showToast("Đã xuất thành công toàn bộ chương truyện ra file PDF!", "success");
+            }
+        } else {
+            const failedStr = failedPdfPages.map(f => `Trang ${f.index} (${f.error})`).join('; ');
+            showToast(`Xuất PDF thất bại: 0/${totalPages} trang thành công. Chi tiết: ${failedStr}`, "error");
         }
-
-        pdf.save(finalPdfName);
-        showToast("Đã xuất thành công toàn bộ chương truyện ra file PDF!", "success");
     } catch (err: any) {
         console.error("Lỗi xuất PDF:", err);
         showToast(`Lỗi khi xuất PDF: ${err.message}`, "error");

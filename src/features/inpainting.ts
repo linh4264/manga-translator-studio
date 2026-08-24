@@ -1598,25 +1598,41 @@ export async function aiSmartInpaintBlock(_mode: string = 'local'): Promise<void
             height: cropH,
             options: { patchRadius: 4, maskDilate: 1 }
         });
+        let usedFallback = false;
         if (outputImageData) {
             tempCtx.putImageData(outputImageData, 0, 0);
             ctx.drawImage(tempCanvas, cropX, cropY);
         } else {
+            usedFallback = true;
             await cleanMangaBackgroundArtText(tempCtx, cropW, cropH);
             ctx.drawImage(tempCanvas, cropX, cropY);
         }
-    } catch (pmErr) {
+        
+        block.style.bgOpacity = 0;
+        block.maskCache = null;
+
+        saveEraserDrawingToPage();
+        requestOverlayRender();
+        uiUpdateActiveBlockEditor();
+
+        if (usedFallback) {
+            showToast("Hoa văn ô thoại được xử lý bằng bộ lọc làm sạch Telea dự phòng.", "info");
+        } else {
+            showToast('✨ Đã khôi phục hoàn hảo kết cấu trame & hoa văn nền manga!', 'success');
+        }
+    } catch (pmErr: any) {
         console.warn("PatchMatch smart inpaint fallback:", pmErr);
         await cleanMangaBackgroundArtText(tempCtx, cropW, cropH);
         ctx.drawImage(tempCanvas, cropX, cropY);
-    }
-    block.style.bgOpacity = 0;
-    block.maskCache = null;
 
-    saveEraserDrawingToPage();
-    requestOverlayRender();
-    uiUpdateActiveBlockEditor();
-    showToast('✨ Đã khôi phục hoàn hảo kết cấu trame & hoa văn nền manga!', 'success');
+        block.style.bgOpacity = 0;
+        block.maskCache = null;
+
+        saveEraserDrawingToPage();
+        requestOverlayRender();
+        uiUpdateActiveBlockEditor();
+        showToast(`Không thể chạy PatchMatch (${pmErr?.message || 'Lỗi thuật toán'}) → Đã chuyển sang làm sạch Telea dự phòng.`, "warn");
+    }
 }
 
 export async function activateEyedropper(): Promise<void> {

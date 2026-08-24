@@ -263,7 +263,9 @@ export function updatePageListUI(): void {
         } else if (page.status === 'done') {
             statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500 text-white border border-black shadow-[1.5px_1.5px_0px_#000] flex items-center gap-1 shrink-0"><i class="fa-solid fa-check text-[9px] text-yellow-300"></i> H.thành</span>`;
         } else if (page.status === 'error') {
-            statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-600 text-white border border-black shadow-[1.5px_1.5px_0px_#000]">Lỗi</span>`;
+            const errorTooltip = page.lastError ? escapeHTML(page.lastError) : 'Lỗi trong quá trình dịch';
+            const stepLabel = page.failedStep ? ` [${escapeHTML(page.failedStep)}]` : '';
+            statusBadge = `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-600 text-white border border-black shadow-[1.5px_1.5px_0px_#000] flex items-center gap-1 cursor-help shrink-0" title="Chi tiết lỗi: ${errorTooltip}"><i class="fa-solid fa-triangle-exclamation text-[8px]"></i> Lỗi${stepLabel}</span>`;
         }
 
         const pageItem = document.createElement('div');
@@ -291,8 +293,8 @@ export function updatePageListUI(): void {
                 <button data-action="replace-bg-page" data-index="${index}" title="Đổi ảnh gốc (Giữ nguyên ô thoại)" class="w-6 h-6 rounded bg-slate-900 hover:bg-amber-500 border border-black text-slate-300 hover:text-white flex items-center justify-center transition-all">
                     <i class="fa-solid fa-file-image text-[10px]"></i>
                 </button>
-                <button data-action="translate-page" data-index="${index}" title="Dịch trang này" class="w-6 h-6 rounded bg-slate-900 hover:bg-sky-500 border border-black text-slate-300 hover:text-white flex items-center justify-center transition-all">
-                    <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
+                <button data-action="translate-page" data-index="${index}" title="${page.status === 'error' ? 'Thử dịch lại trang này' : 'Dịch trang này'}" class="w-6 h-6 rounded bg-slate-900 ${page.status === 'error' ? 'hover:bg-red-500 text-red-300' : 'hover:bg-sky-500 text-slate-300'} border border-black hover:text-white flex items-center justify-center transition-all">
+                    <i class="fa-solid ${page.status === 'error' ? 'fa-rotate-right' : 'fa-wand-magic-sparkles'} text-[10px]"></i>
                 </button>
                 <button data-action="remove-page" data-index="${index}" title="Xóa" class="w-6 h-6 rounded bg-slate-900 hover:bg-red-500 border border-black text-slate-300 hover:text-white flex items-center justify-center transition-all">
                     <i class="fa-solid fa-trash-can text-[10px]"></i>

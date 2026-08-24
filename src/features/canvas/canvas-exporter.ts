@@ -170,7 +170,7 @@ export async function renderPageToCanvas2DDirect(page: MangaPage, bgImageOverrid
 
     if (!imgElement || !imgElement.naturalWidth || !imgElement.naturalHeight) {
         if (createdBlobUrl) URL.revokeObjectURL(createdBlobUrl);
-        throw new Error("Dữ liệu ảnh gốc chưa sẵn sàng.");
+        throw new Error(`Trang "${page.name || page.id}" không có dữ liệu ảnh gốc hợp lệ để kết xuất.`);
     }
 
     const W = imgElement.naturalWidth;

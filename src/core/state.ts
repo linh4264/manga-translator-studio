@@ -19,6 +19,7 @@ import {
 } from '../config/constants';
 import { MangaBlock, MangaPage, BlockStyle, GlobalState, HistorySnapshot } from '../types/index';
 import { safeSetLocalStorage } from './utils/storage';
+import { showToast } from './utils';
 
 export {
     DEFAULT_MODEL,
@@ -1224,7 +1225,7 @@ export async function generateAndSaveThumbnailForPage(page: MangaPage): Promise<
     }
 }
 
-const loadedCustomFontFamilies = new Set<string>();
+export const loadedCustomFontFamilies = new Set<string>();
 let customFontsLoadingPromise: Promise<void> | null = null;
 let customFontsLoadedOnce = false;
 const customFontBlobUrls = new Map<string, string>();
@@ -1259,15 +1260,24 @@ function injectFontFaceCSS(family: string, blob: Blob): void {
     }
 }
 
-export async function ensureCustomFontLoaded(family: string): Promise<boolean> {
+export const failedCustomFontFamilies: Set<string> = new Set<string>();
+
+export async function ensureCustomFontLoaded(family: string, notifyUser = false): Promise<boolean> {
     if (!family) return false;
     const cleanFamily = String(family).replace(/^['"]|['"]$/g, '').trim();
     if (!cleanFamily) return false;
     if (loadedCustomFontFamilies.has(cleanFamily)) return true;
+    if (failedCustomFontFamilies.has(cleanFamily)) return false;
 
     try {
         const blob = await getFontBlobFromDB(cleanFamily);
-        if (!blob) return false;
+        if (!blob) {
+            failedCustomFontFamilies.add(cleanFamily);
+            if (notifyUser) {
+                showToast(`Phông chữ "${cleanFamily}" không tìm thấy trong bộ nhớ → đang dùng phông chữ dự phòng.`, "warn");
+            }
+            return false;
+        }
 
         injectFontFaceCSS(cleanFamily, blob);
 
@@ -1287,7 +1297,9 @@ export async function ensureCustomFontLoaded(family: string): Promise<boolean> {
                         customFontBlobUrls.set(cleanFamily, blobUrl);
                         const fontFace = new FontFace(cleanFamily, `url("${blobUrl}")`);
                         loadedFace = await fontFace.load();
-                    } catch {}
+                    } catch (urlErr) {
+                        console.warn(`Lỗi nạp font qua blob URL "${cleanFamily}":`, urlErr);
+                    }
                 }
             }
 
@@ -1298,8 +1310,12 @@ export async function ensureCustomFontLoaded(family: string): Promise<boolean> {
 
         loadedCustomFontFamilies.add(cleanFamily);
         return true;
-    } catch (e) {
+    } catch (e: any) {
+        failedCustomFontFamilies.add(cleanFamily);
         console.warn(`Không thể nạp phông chữ "${cleanFamily}":`, e);
+        if (notifyUser) {
+            showToast(`Phông chữ "${cleanFamily}" không thể nạp (${e?.message || 'Lỗi font'}) → đang dùng phông chữ dự phòng.`, "warn");
+        }
         return false;
     }
 }
@@ -1342,7 +1358,7 @@ export async function loadAndRegisterCustomFonts(forceReload = false): Promise<v
             // Immediately load active fonts
             for (const font of neededFonts) {
                 if (families.includes(font)) {
-                    await ensureCustomFontLoaded(font);
+                    await ensureCustomFontLoaded(font, true);
                 }
             }
 
@@ -1354,7 +1370,9 @@ export async function loadAndRegisterCustomFonts(forceReload = false): Promise<v
                     const batch = remainingFonts.slice(startIndex, startIndex + batchSize);
                     if (batch.length === 0) return;
 
-                    Promise.all(batch.map(f => ensureCustomFontLoaded(f))).catch(() => {});
+                    Promise.all(batch.map(f => ensureCustomFontLoaded(f, false))).catch((batchErr) => {
+                        console.warn("Lỗi nạp batch font tùy chỉnh:", batchErr);
+                    });
 
                     if (startIndex + batchSize < remainingFonts.length) {
                         if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
@@ -1373,8 +1391,9 @@ export async function loadAndRegisterCustomFonts(forceReload = false): Promise<v
             }
 
             customFontsLoadedOnce = true;
-        } catch (err) {
+        } catch (err: any) {
             console.error("Lỗi tải phông chữ tùy chỉnh:", err);
+            showToast(`Lỗi khi tải kho phông chữ: ${err.message}`, "error");
         } finally {
             customFontsLoadingPromise = null;
         }

@@ -61,12 +61,16 @@ export async function ensureFontsReady(fontFamilies?: string[]): Promise<void> {
     try {
         const { loadAndRegisterCustomFonts } = await import('../../core/state');
         await loadAndRegisterCustomFonts();
-    } catch {}
+    } catch (fontRegErr) {
+        console.warn("Không thể nạp toàn bộ danh mục phông chữ tùy chỉnh:", fontRegErr);
+    }
 
     if (typeof document !== 'undefined' && document.fonts) {
         try {
             await document.fonts.ready;
-        } catch {}
+        } catch (readyErr) {
+            console.warn("document.fonts.ready thất bại:", readyErr);
+        }
 
         if (document.fonts.load && fontFamilies && fontFamilies.length > 0) {
             const fontLoadPromises: Promise<any>[] = [];
@@ -74,13 +78,17 @@ export async function ensureFontsReady(fontFamilies?: string[]): Promise<void> {
                 const resolved = getFontFamilyName(family);
                 const parts = resolved.split(',').map(s => s.replace(/['"]/g, '').trim()).filter(s => s && s !== 'sans-serif' && s !== 'cursive' && s !== 'serif');
                 parts.forEach(p => {
-                    fontLoadPromises.push(document.fonts.load(`16px '${p}'`).catch(() => {}));
+                    fontLoadPromises.push(document.fonts.load(`16px '${p}'`).catch((loadErr) => {
+                        console.warn(`Phông chữ "${p}" không thể nạp qua document.fonts.load, chuyển sang font fallback:`, loadErr);
+                    }));
                 });
             });
             try {
                 await Promise.all(fontLoadPromises);
                 await document.fonts.ready;
-            } catch {}
+            } catch (pAllErr) {
+                console.warn("Chờ nạp danh sách phông chữ hoàn tất có lỗi:", pAllErr);
+            }
         }
     }
 }

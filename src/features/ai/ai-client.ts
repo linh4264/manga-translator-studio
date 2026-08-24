@@ -241,10 +241,22 @@ export async function executeAiJsonRequestWithRetry<T = any>(
                     const errorJson = await response.json();
                     errorDetail = errorJson.error?.message || errorJson.message || "";
                 } catch (e) { }
+
+                let contextualHint = "";
+                if (response.status === 401 || response.status === 403) {
+                    contextualHint = " - API Key không hợp lệ hoặc thiếu quyền";
+                } else if (response.status === 429) {
+                    contextualHint = " - Đã vượt giới hạn Quota / Rate Limit";
+                } else if (response.status === 404) {
+                    contextualHint = " - Không tìm thấy Model hoặc Endpoint";
+                } else if (response.status >= 500) {
+                    contextualHint = " - Máy chủ AI tạm thời quá tải";
+                }
+
                 const statusError: any = new Error(
                     errorDetail
-                        ? `Lỗi ${errorLabel} (${response.status}): ${errorDetail}`
-                        : `Lỗi ${errorLabel}: ${response.status}`
+                        ? `Lỗi ${errorLabel} (HTTP ${response.status}${contextualHint}): ${errorDetail}`
+                        : `Lỗi ${errorLabel}: HTTP ${response.status}${contextualHint}`
                 );
                 statusError.status = response.status;
                 throw statusError;

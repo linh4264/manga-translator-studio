@@ -103,6 +103,8 @@ export interface MangaPage {
     apiWidth?: number;
     apiHeight?: number;
     status: 'draft' | 'queued' | 'processing' | 'done' | 'error';
+    lastError?: string | null;
+    failedStep?: string | null;
     blocks: MangaBlock[];
     file: Blob | null;
     originalFile: Blob | null;
