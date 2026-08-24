@@ -2,7 +2,7 @@
  * Module 1: PDF to PNG / Image Converter (TypeScript)
  */
 
-import { formatFileSize, getTargetFormatExt, openPreviewModal, escapeHTML } from './common';
+import { formatFileSize, getTargetFormatExt, openPreviewModal, escapeHTML, ensurePdfJsLoaded, ensureJSZipLoaded } from './common';
 import type { PdfBlobItem } from './types';
 
 let pdfDoc: any = null;
@@ -12,11 +12,9 @@ let pdfRenderToken = 0;
 let pdfRenderDebounce: any = null;
 let isPdfRendering = false;
 
-export function initPdfWorker(): void {
+export async function initPdfWorker(): Promise<void> {
     try {
-        if (typeof pdfjsLib !== 'undefined') {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        }
+        await ensurePdfJsLoaded();
     } catch (err) {
         console.warn("Lỗi cấu hình PDF Worker:", err);
     }
@@ -49,27 +47,44 @@ export function resetPdfConverter(): void {
 }
 
 export function parsePageRange(rangeStr: string, totalPages: number): number[] {
-    if (!rangeStr || !rangeStr.trim()) {
-        return Array.from({ length: totalPages }, (_, i) => i + 1);
+    if (!rangeStr || !rangeStr.trim() || totalPages <= 0) {
+        return Array.from({ length: Math.max(0, totalPages) }, (_, i) => i + 1);
     }
     const pages = new Set<number>();
-    const parts = rangeStr.split(/[,;\s]+/);
-    for (const part of parts) {
-        if (!part.trim()) continue;
-        if (part.includes('-')) {
-            const [startStr, endStr] = part.split('-');
-            const start = parseInt(startStr, 10);
-            const end = parseInt(endStr, 10);
+    const tokens = rangeStr.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+    for (const token of tokens) {
+        // Form "-3" -> pages 1 to 3
+        const upToMatch = token.match(/^-(?:to)?(\d+)$/i);
+        if (upToMatch) {
+            const end = Math.min(totalPages, Math.max(1, parseInt(upToMatch[1], 10)));
+            for (let p = 1; p <= end; p++) pages.add(p);
+            continue;
+        }
+
+        // Form "8-" -> pages 8 to totalPages
+        const fromMatch = token.match(/^(\d+)-$/);
+        if (fromMatch) {
+            const start = Math.min(totalPages, Math.max(1, parseInt(fromMatch[1], 10)));
+            for (let p = start; p <= totalPages; p++) pages.add(p);
+            continue;
+        }
+
+        // Form "2-5" or "5-2"
+        const rangeMatch = token.match(/^(\d+)\s*-\s*(\d+)$/);
+        if (rangeMatch) {
+            const start = parseInt(rangeMatch[1], 10);
+            const end = parseInt(rangeMatch[2], 10);
             if (!isNaN(start) && !isNaN(end)) {
                 const min = Math.max(1, Math.min(start, end));
                 const max = Math.min(totalPages, Math.max(start, end));
                 for (let p = min; p <= max; p++) pages.add(p);
             }
-        } else {
-            const p = parseInt(part, 10);
-            if (!isNaN(p) && p >= 1 && p <= totalPages) {
-                pages.add(p);
-            }
+            continue;
+        }
+
+        const p = parseInt(token, 10);
+        if (!isNaN(p) && p >= 1 && p <= totalPages) {
+            pages.add(p);
         }
     }
     const result = Array.from(pages).sort((a, b) => a - b);
@@ -83,7 +98,6 @@ export async function handlePdfFileSelect(file: File): Promise<void> {
         return;
     }
 
-    initPdfWorker();
     resetPdfConverter();
     pdfName = file.name;
     const nameEl = document.getElementById('pdf-name');
@@ -92,11 +106,17 @@ export async function handlePdfFileSelect(file: File): Promise<void> {
         nameEl.title = file.name;
     }
     const status = document.getElementById('pdf-status');
-    if (status) status.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i> Đang đọc tệp PDF...`;
+    if (status) status.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i> Đang khởi tạo bộ đọc PDF...`;
 
     try {
+        const pdfjs = await ensurePdfJsLoaded();
+        if (!pdfjs) {
+            throw new Error("Không thể khởi tạo thư viện đọc PDF.");
+        }
+
+        if (status) status.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-indigo-400"></i> Đang đọc cấu trúc tệp PDF...`;
         const buffer = await file.arrayBuffer();
-        const loadingTask = pdfjsLib.getDocument({
+        const loadingTask = pdfjs.getDocument({
             data: new Uint8Array(buffer),
             cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
             cMapPacked: true,
@@ -111,9 +131,10 @@ export async function handlePdfFileSelect(file: File): Promise<void> {
         const panelEl = document.getElementById('pdf-panel');
         if (panelEl) panelEl.classList.remove('hidden');
 
-        renderPdfPages();
+        await renderPdfPages();
     } catch (err: any) {
         console.error("Lỗi nạp PDF:", err);
+        if (status) status.innerHTML = `<i class="fa-solid fa-circle-exclamation text-rose-400"></i> Lỗi nạp PDF`;
         alert("Không thể đọc tệp PDF này. Tệp có thể bị hỏng hoặc có mật khẩu bảo vệ.\nChi tiết: " + (err?.message || err));
         resetPdfConverter();
     }
@@ -176,15 +197,23 @@ export async function renderPdfPages(): Promise<void> {
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            await page.render({
+            const renderTask = page.render({
                 canvasContext: ctx,
-                viewport: vp,
-                background: 'rgb(255, 255, 255)'
-            }).promise;
+                viewport: vp
+            });
+            await renderTask.promise;
 
             if (pdfRenderToken !== currentToken) return;
 
-            const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, format, quality));
+            let blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, format, quality));
+            
+            // Fallback if toBlob returns null on certain canvas configurations
+            if (!blob) {
+                const dataUrl = canvas.toDataURL(format, quality);
+                const res = await fetch(dataUrl);
+                blob = await res.blob();
+            }
+
             const blobUrl = blob ? URL.createObjectURL(blob) : '';
             const targetFilename = `${baseName}_trang_${String(pageNum).padStart(3, '0')}.${ext}`;
             const sizeStr = formatFileSize(blob ? blob.size : 0);
@@ -245,16 +274,21 @@ export async function downloadPdfZip(): Promise<void> {
 
     const btn = document.getElementById('btn-pdf-zip');
     const origHtml = btn ? btn.innerHTML : '';
-    if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang nén ZIP...`;
+    if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang chuẩn bị ZIP...`;
 
     try {
-        const zip = new JSZip();
+        const JSZipClass = await ensureJSZipLoaded();
+        if (!JSZipClass) {
+            throw new Error("Không thể khởi tạo thư viện nén ZIP.");
+        }
+        const zip = new JSZipClass();
         pdfBlobsMap.forEach((item) => {
             if (item.blob) {
                 zip.file(item.filename, item.blob);
             }
         });
 
+        if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang nén ZIP...`;
         const content = await zip.generateAsync({ type: 'blob' }, (metadata: any) => {
             if (btn && metadata.percent) {
                 btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Nén ZIP ${Math.round(metadata.percent)}%...`;
@@ -279,7 +313,7 @@ export async function downloadPdfZip(): Promise<void> {
 }
 
 export function initPdfConverter(): void {
-    initPdfWorker();
+    initPdfWorker().catch(() => {});
     const fileInput = document.getElementById('pdf-file');
     if (fileInput) {
         fileInput.addEventListener('change', async (e: Event) => {

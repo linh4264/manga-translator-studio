@@ -2,7 +2,7 @@
  * Module 5: Format Converter (PNG ↔ JPG ↔ WEBP) (TypeScript)
  */
 
-import { formatFileSize, getTargetFormatExt, openPreviewModal, escapeHTML } from './common';
+import { formatFileSize, getTargetFormatExt, openPreviewModal, escapeHTML, ensureJSZipLoaded } from './common';
 import type { ConvertItem } from './types';
 
 let convertList: ConvertItem[] = [];
@@ -167,7 +167,12 @@ export async function downloadConvertedZip(): Promise<void> {
         return;
     }
 
-    const zip = new JSZip();
+    const JSZipClass = await ensureJSZipLoaded();
+    if (!JSZipClass) {
+        alert("Không thể nạp thư viện nén ZIP.");
+        return;
+    }
+    const zip = new JSZipClass();
     validItems.forEach(item => {
         if (item.convertedBlob) {
             const base = item.file.name.replace(/\.[^/.]+$/, '');

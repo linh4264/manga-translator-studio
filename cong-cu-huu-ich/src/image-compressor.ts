@@ -2,7 +2,7 @@
  * Module 4: Batch Image Compressor (TypeScript)
  */
 
-import { openPreviewModal, escapeHTML } from './common';
+import { openPreviewModal, escapeHTML, ensureJSZipLoaded } from './common';
 import type { CompressItem } from './types';
 
 let compressList: CompressItem[] = [];
@@ -194,7 +194,12 @@ export async function downloadCompressedZip(): Promise<void> {
         return;
     }
 
-    const zip = new JSZip();
+    const JSZipClass = await ensureJSZipLoaded();
+    if (!JSZipClass) {
+        alert("Không thể nạp thư viện nén ZIP.");
+        return;
+    }
+    const zip = new JSZipClass();
     const format = (document.getElementById('compress-format') as HTMLSelectElement)?.value || 'image/webp';
     const ext = format === 'image/webp' ? 'webp' : format === 'image/png' ? 'png' : 'jpg';
 

@@ -134,3 +134,99 @@ export function setupDragAndDrop(dropzoneId: string, inputId: string, onFilesDro
         }
     }, false);
 }
+
+/**
+ * Dynamically loads an external script from URL with Promise resolution
+ */
+export function loadScript(src: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+        if (typeof document === 'undefined') {
+            resolve();
+            return;
+        }
+        const existing = document.querySelector(`script[src="${src}"]`);
+        if (existing) {
+            resolve();
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = src;
+        script.crossOrigin = 'anonymous';
+        script.onload = () => resolve();
+        script.onerror = (err) => reject(new Error(`Failed to load script: ${src}`));
+        document.head.appendChild(script);
+    });
+}
+
+/**
+ * Ensures PDF.js library is loaded and configured with worker and fallbacks
+ */
+export async function ensurePdfJsLoaded(): Promise<any> {
+    const scope: any = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null);
+    if (!scope) return null;
+
+    const getLib = () => scope.pdfjsLib || scope['pdfjs-dist/build/pdf'];
+    const configureWorker = (lib: any) => {
+        if (lib && lib.GlobalWorkerOptions && !lib.GlobalWorkerOptions.workerSrc) {
+            lib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
+    };
+
+    let lib = getLib();
+    if (lib) {
+        configureWorker(lib);
+        return lib;
+    }
+
+    const cdnSources = [
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+        'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
+        'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js'
+    ];
+
+    for (const src of cdnSources) {
+        try {
+            await loadScript(src);
+            lib = getLib();
+            if (lib) {
+                configureWorker(lib);
+                return lib;
+            }
+        } catch {
+            // Fallback to next CDN
+        }
+    }
+
+    throw new Error("Không thể tải thư viện PDF.js. Vui lòng kiểm tra kết nối mạng của bạn.");
+}
+
+/**
+ * Ensures JSZip library is loaded with multi-CDN fallback
+ */
+export async function ensureJSZipLoaded(): Promise<any> {
+    const scope: any = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null);
+    if (!scope) return null;
+
+    if (typeof scope.JSZip !== 'undefined') {
+        return scope.JSZip;
+    }
+
+    const cdnSources = [
+        'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+        'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+        'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'
+    ];
+
+    for (const src of cdnSources) {
+        try {
+            await loadScript(src);
+            if (typeof scope.JSZip !== 'undefined') {
+                return scope.JSZip;
+            }
+        } catch {
+            // Fallback to next CDN
+        }
+    }
+
+    throw new Error("Không thể tải thư viện JSZip. Vui lòng kiểm tra kết nối mạng của bạn.");
+}

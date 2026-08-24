@@ -2,7 +2,7 @@
  * Module 2: Vertical Image Slicer (Webtoon & Smart Gap) (TypeScript)
  */
 
-import { formatFileSize, getTargetFormatExt, openPreviewModal, escapeHTML } from './common';
+import { formatFileSize, getTargetFormatExt, openPreviewModal, escapeHTML, ensureJSZipLoaded } from './common';
 import type { SliceItem } from './types';
 
 let sliceImg: HTMLImageElement | null = null;
@@ -344,7 +344,11 @@ export async function downloadSlicedZip(): Promise<void> {
     if (btn) btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang nén ZIP...`;
 
     try {
-        const zip = new JSZip();
+        const JSZipClass = await ensureJSZipLoaded();
+        if (!JSZipClass) {
+            throw new Error("Không thể nạp thư viện nén ZIP.");
+        }
+        const zip = new JSZipClass();
         validItems.forEach(item => {
             if (item.blob) {
                 zip.file(item.filename, item.blob);

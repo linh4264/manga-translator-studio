@@ -28,8 +28,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Be+Vietnam+Pro:ital,wght@0,400;0,600;0,700;1,400&family=Bungee&family=Caveat:wght@600;700&family=Chakra+Petch:wght@400;600;700&family=Comic+Neue:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700;800&family=Nunito:ital,wght@0,400;0,700;0,800;1,400&family=Pangolin&family=Patrick+Hand&family=Permanent+Marker&family=Saira+Condensed:wght@400;700&display=swap" rel="stylesheet">
 
     <!-- Third-party Client-Side Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" integrity="sha512-t+WmCPdHQA9VMWCOwfNT5ReU+/5kWGEgk18t5UUE0cjP644iA05x5JKlu6MbB6B599605K9EVyY/GZ36g8G+yA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha512-XMVd28F1oH/O71fKEP83v3P6TScCE3NWOfW4P87EkPnMr9iP40xKTeGY442yHxYV1G02J2Fj5Av7Ujg85V5WrQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" crossorigin="anonymous"></script>
 
     <!-- Custom CSS Styles -->
@@ -136,20 +136,20 @@
                         <div class="flex flex-col gap-1">
                             <label class="text-[11px] font-bold text-slate-400">Độ phân giải (DPI)</label>
                             <select id="pdf-scale" onchange="renderPdfPagesDebounced()" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-                                <option value="1.0">72 DPI (Tiêu chuẩn 1x)</option>
-                                <option value="1.5">110 DPI (HD 1.5x)</option>
-                                <option value="2.0" selected>150 DPI (Full HD 2x - Khuyên dùng)</option>
-                                <option value="3.0">225 DPI (2K 3x - Siêu nét)</option>
-                                <option value="4.0">300 DPI (4K 4x - Bản in)</option>
+                                <option value="1.0">72 DPI (Tiêu chuẩn 1x • Rất nhẹ)</option>
+                                <option value="1.5">110 DPI (HD 1.5x • Cân bằng)</option>
+                                <option value="2.0" selected>150 DPI (Full HD 2x • Chuẩn nét)</option>
+                                <option value="3.0">225 DPI (2K 3x • Siêu nét)</option>
+                                <option value="4.0">300 DPI (4K 4x • Bản in Ultra HD)</option>
                             </select>
                         </div>
 
                         <div class="flex flex-col gap-1">
                             <label class="text-[11px] font-bold text-slate-400">Định dạng ảnh xuất</label>
                             <select id="pdf-format" onchange="onPdfFormatChange()" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
-                                <option value="image/png" selected>PNG (Gốc nét 100%)</option>
-                                <option value="image/webp">WEBP (Tối ưu - Nhẹ & Nét)</option>
-                                <option value="image/jpeg">JPG (Tiêu chuẩn)</option>
+                                <option value="image/png" selected>PNG (Nét 100% Gốc • ~2-5 MB/trang)</option>
+                                <option value="image/webp">WEBP (Siêu tối ưu • ~200 KB/trang)</option>
+                                <option value="image/jpeg">JPG (Tiêu chuẩn • ~300-500 KB/trang)</option>
                             </select>
                         </div>
 
