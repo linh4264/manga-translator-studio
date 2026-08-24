@@ -105,23 +105,6 @@ export async function ensureFontsLoadedForPage(page: any): Promise<void> {
     await ensureFontsReady(Array.from(families));
 }
 
-/**
- * Calculates optical baseline offset for any font with 100% precision using actual glyph metrics.
- * Eliminates all font-specific vertical shifting between CSS DOM and Canvas 2D.
- */
-export function getOpticalBaselineOffset(ctx: CanvasRenderingContext2D, text: string, fontSize: number): number {
-    try {
-        const m = ctx.measureText(text || 'Ag');
-        if (typeof m.fontBoundingBoxAscent === 'number' && typeof m.fontBoundingBoxDescent === 'number') {
-            return (m.fontBoundingBoxAscent - m.fontBoundingBoxDescent) / 2;
-        }
-        if (typeof m.actualBoundingBoxAscent === 'number' && typeof m.actualBoundingBoxDescent === 'number' && (m.actualBoundingBoxAscent > 0 || m.actualBoundingBoxDescent > 0)) {
-            return (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
-        }
-    } catch {}
-    return fontSize * 0.35;
-}
-
 let sharedMeasureCanvas: HTMLCanvasElement | null = null;
 let sharedMeasureCtx: CanvasRenderingContext2D | null = null;
 
@@ -137,6 +120,42 @@ export function getSharedMeasureContext(): CanvasRenderingContext2D | null {
         }
     }
     return null;
+}
+
+const fontBaselineCache = new Map<string, number>();
+
+/**
+ * Calculates optical baseline offset for any font with 100% precision using intrinsic font metrics (OS/2 table).
+ * Eliminates all font-specific vertical shifting between CSS DOM and Canvas 2D.
+ */
+export function getFontBaselineOffset(ctx: CanvasRenderingContext2D | null, fontSpec: string, fontSize: number): number {
+    if (fontBaselineCache.has(fontSpec)) {
+        return fontBaselineCache.get(fontSpec)!;
+    }
+    let offset = fontSize * 0.35;
+    const measureCtx = ctx || getSharedMeasureContext();
+    if (measureCtx) {
+        try {
+            measureCtx.save();
+            measureCtx.font = fontSpec;
+            const m = measureCtx.measureText('MgyÅ');
+            if (typeof m.fontBoundingBoxAscent === 'number' && typeof m.fontBoundingBoxDescent === 'number' && (m.fontBoundingBoxAscent > 0 || m.fontBoundingBoxDescent > 0)) {
+                offset = (m.fontBoundingBoxAscent - m.fontBoundingBoxDescent) / 2;
+            } else if (typeof m.actualBoundingBoxAscent === 'number' && typeof m.actualBoundingBoxDescent === 'number' && (m.actualBoundingBoxAscent > 0 || m.actualBoundingBoxDescent > 0)) {
+                offset = (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+            }
+            measureCtx.restore();
+        } catch {}
+    }
+    fontBaselineCache.set(fontSpec, offset);
+    return offset;
+}
+
+export function getOpticalBaselineOffset(ctx: CanvasRenderingContext2D, fontOrText: string, fontSize: number): number {
+    if (ctx && ctx.font) {
+        return getFontBaselineOffset(ctx, ctx.font, fontSize);
+    }
+    return getFontBaselineOffset(ctx, fontOrText, fontSize);
 }
 
 export function buildFontString(
@@ -828,8 +847,7 @@ export function computeTextLayout(
 
         columnData.forEach(({ lineToks, rawChars }, colIdx) => {
             const colHeight = rawChars.length * charStep;
-            let colStartY = (boxH / 2) - (colHeight / 2);
-            if (colStartY < padYPx) colStartY = padYPx;
+            const colStartY = (boxH / 2) - (colHeight / 2);
             const colTop = colStartY;
             const colCenterY = (boxH / 2); // Exact vertical center of the box
             const colLeft = (boxW / 2) + (totalWidth / 2) - ((colIdx + 1) * colStep);
@@ -935,8 +953,7 @@ export function computeTextLayout(
     const totalWidth = maxLineWidth;
     const totalHeight = lineMeasurements.length * lineHeightPx;
 
-    let startY = (boxH / 2) - (totalHeight / 2);
-    if (startY < padYPx) startY = padYPx;
+    const startY = (boxH / 2) - (totalHeight / 2);
 
     lineMeasurements.forEach(({ lineToks, lineWidth, rawChars }, i) => {
         const lineTop = startY + (i * lineHeightPx);
@@ -1146,6 +1163,9 @@ export function renderDerivedLinesToDOM(
     if (layout.totalHeight > 0) {
         target.style.height = `${layout.totalHeight}px`;
     }
+    if (layout.fontSizePx > 0) {
+        target.style.fontSize = `${layout.fontSizePx}px`;
+    }
     const isVertical = layout.isVertical;
 
     const opts = typeof warpOpts === 'object' && warpOpts !== null ? warpOpts : {};
@@ -1159,6 +1179,7 @@ export function renderDerivedLinesToDOM(
 
     layout.lines.forEach((line) => {
         const lineDiv = document.createElement('div');
+        lineDiv.style.fontSize = `${layout.fontSizePx}px`;
         if (isVertical) {
             lineDiv.style.display = 'inline-flex';
             lineDiv.style.flexDirection = 'column';
@@ -1434,9 +1455,7 @@ export function renderBlockTextToCanvas(
             const colChars = colLine.rawChars || [];
             const colX = rightX - (j * colStep);
             const colHeight = colChars.length * charStep;
-            let startY = by + (bh / 2) - (colHeight / 2) + (charStep / 2);
-            const minStartY = by + layout.padYPx + (charStep / 2);
-            if (startY < minStartY) startY = minStartY;
+            const startY = by + (bh / 2) - (colHeight / 2) + (charStep / 2);
 
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
@@ -1452,6 +1471,7 @@ export function renderBlockTextToCanvas(
 
             for (let k = 0; k < colChars.length; k++) {
                 const { char, token: tok } = colChars[k];
+                const transformedChar = transformCase(char, block.style?.textTransform || 'none');
                 let charCellCenterY = startY + (k * charStep);
                 let charCellCenterX = colX;
                 let rotRad = 0;
@@ -1472,7 +1492,7 @@ export function renderBlockTextToCanvas(
                 ctx.translate(charCellCenterX, charCellCenterY);
                 if (rotRad !== 0) ctx.rotate(rotRad);
                 if (bulgeScale !== 1) ctx.scale(bulgeScale, bulgeScale);
-                if (char === '…' || char === '―' || char === '—' || char === '~' || char === '～' || char === '-') {
+                if (transformedChar === '…' || transformedChar === '―' || transformedChar === '—' || transformedChar === '~' || transformedChar === '～' || transformedChar === '-') {
                     ctx.rotate(Math.PI / 2);
                 }
 
@@ -1490,7 +1510,7 @@ export function renderBlockTextToCanvas(
                     ctx.strokeStyle = strokeColor2;
                     ctx.lineJoin = 'round';
                     ctx.miterLimit = 2;
-                    ctx.strokeText(char, 0, 0);
+                    ctx.strokeText(transformedChar, 0, 0);
                     ctx.restore();
                 }
 
@@ -1506,7 +1526,7 @@ export function renderBlockTextToCanvas(
                     ctx.strokeStyle = strokeColor;
                     ctx.lineJoin = 'round';
                     ctx.miterLimit = 2;
-                    ctx.strokeText(char, 0, 0);
+                    ctx.strokeText(transformedChar, 0, 0);
                     ctx.restore();
                 }
 
@@ -1518,7 +1538,7 @@ export function renderBlockTextToCanvas(
                     ctx.shadowOffsetY = shadowOffsetY;
                 }
                 ctx.fillStyle = tok.color || (block.style?.gradientEnabled && blockGradient ? blockGradient : (block.style?.textColor || '#000000'));
-                ctx.fillText(char, 0, 0);
+                ctx.fillText(transformedChar, 0, 0);
                 ctx.restore();
 
                 ctx.restore();
@@ -1555,9 +1575,10 @@ export function renderBlockTextToCanvas(
 
                 let lineW = 0;
                 rawChars.forEach(({ char: c, token: t }, ci) => {
+                    const transformedC = transformCase(c, block.style?.textTransform || 'none');
                     ctx.font = layout.getFontFn(t);
                     const effLetterSpacing = letterSpacingPx * (t.sizeRatio || 1.0);
-                    lineW += ctx.measureText(c).width;
+                    lineW += ctx.measureText(transformedC).width;
                     if (ci < count - 1) {
                         lineW += effLetterSpacing;
                     }
@@ -1569,14 +1590,17 @@ export function renderBlockTextToCanvas(
 
                 let curX = startCharX;
                 ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
+                ctx.textBaseline = 'alphabetic';
 
                 for (let k = 0; k < count; k++) {
                     const { char, token: tok } = rawChars[k];
+                    const transformedChar = transformCase(char, block.style?.textTransform || 'none');
                     const tokFontSpec = layout.getFontFn(tok);
                     ctx.font = tokFontSpec;
-                    const charMetrics = ctx.measureText(char);
+                    const charMetrics = ctx.measureText(transformedChar);
                     const cw = charMetrics.width;
+                    const tokSize = fontSizePx * (tok.sizeRatio || 1.0);
+                    const baselineOffset = getFontBaselineOffset(ctx, tokFontSpec, tokSize);
 
                     const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
                     const charCenterX = curX + (cw / 2);
@@ -1606,7 +1630,7 @@ export function renderBlockTextToCanvas(
                         ctx.strokeStyle = strokeColor2;
                         ctx.lineJoin = 'round';
                         ctx.miterLimit = 2;
-                        ctx.strokeText(char, 0, 0);
+                        ctx.strokeText(transformedChar, 0, baselineOffset);
                         ctx.restore();
                     }
 
@@ -1622,7 +1646,7 @@ export function renderBlockTextToCanvas(
                         ctx.strokeStyle = strokeColor;
                         ctx.lineJoin = 'round';
                         ctx.miterLimit = 2;
-                        ctx.strokeText(char, 0, 0);
+                        ctx.strokeText(transformedChar, 0, baselineOffset);
                         ctx.restore();
                     }
 
@@ -1634,7 +1658,7 @@ export function renderBlockTextToCanvas(
                         ctx.shadowOffsetY = shadowOffsetY;
                     }
                     ctx.fillStyle = tok.color || (block.style?.gradientEnabled && blockGradient ? blockGradient : (block.style?.textColor || '#000000'));
-                    ctx.fillText(char, 0, 0);
+                    ctx.fillText(transformedChar, 0, baselineOffset);
                     ctx.restore();
 
                     ctx.restore();
@@ -1651,13 +1675,16 @@ export function renderBlockTextToCanvas(
                 }
 
                 ctx.textAlign = 'left';
-                ctx.textBaseline = 'middle';
+                ctx.textBaseline = 'alphabetic';
 
                 lineTokens.forEach(tok => {
+                    const transformedTokText = transformCase(tok.text, block.style?.textTransform || 'none');
                     const tokFontSpec = layout.getFontFn(tok);
                     ctx.font = tokFontSpec;
-                    const tokenW = ctx.measureText(tok.text).width;
+                    const tokenW = ctx.measureText(transformedTokText).width;
                     const tokSize = fontSizePx * (tok.sizeRatio || 1.0);
+                    const baselineOffset = getFontBaselineOffset(ctx, tokFontSpec, tokSize);
+                    const tokBaselineY = lineCenterY + baselineOffset;
 
                     if (strokeWidth2 > 0) {
                         ctx.save();
@@ -1671,7 +1698,7 @@ export function renderBlockTextToCanvas(
                         ctx.strokeStyle = strokeColor2;
                         ctx.lineJoin = 'round';
                         ctx.miterLimit = 2;
-                        ctx.strokeText(tok.text, curTokenX, lineCenterY);
+                        ctx.strokeText(transformedTokText, curTokenX, tokBaselineY);
                         ctx.restore();
                     }
 
@@ -1687,7 +1714,7 @@ export function renderBlockTextToCanvas(
                         ctx.strokeStyle = strokeColor;
                         ctx.lineJoin = 'round';
                         ctx.miterLimit = 2;
-                        ctx.strokeText(tok.text, curTokenX, lineCenterY);
+                        ctx.strokeText(transformedTokText, curTokenX, tokBaselineY);
                         ctx.restore();
                     }
 
@@ -1707,7 +1734,7 @@ export function renderBlockTextToCanvas(
                     const fillToApply: any = tok.color || (block.style?.gradientEnabled && blockGradient ? blockGradient : (block.style?.textColor || '#000000'));
 
                     ctx.fillStyle = fillToApply;
-                    ctx.fillText(tok.text, curTokenX, lineCenterY);
+                    ctx.fillText(transformedTokText, curTokenX, tokBaselineY);
                     ctx.restore();
 
                     if (tok.underline || block.style?.underline) {
@@ -1715,7 +1742,7 @@ export function renderBlockTextToCanvas(
                         ctx.strokeStyle = tok.color || block.style?.textColor || '#000000';
                         ctx.lineWidth = Math.max(1, tokSize * 0.08);
                         ctx.beginPath();
-                        const underlineY = lineCenterY + (tokSize * 0.52);
+                        const underlineY = tokBaselineY + (tokSize * 0.14);
                         ctx.moveTo(curTokenX, underlineY);
                         ctx.lineTo(curTokenX + tokenW, underlineY);
                         ctx.stroke();
@@ -1727,7 +1754,7 @@ export function renderBlockTextToCanvas(
                         ctx.strokeStyle = tok.color || block.style?.textColor || '#000000';
                         ctx.lineWidth = Math.max(1, tokSize * 0.08);
                         ctx.beginPath();
-                        const strikethroughY = lineCenterY;
+                        const strikethroughY = tokBaselineY - (tokSize * 0.28);
                         ctx.moveTo(curTokenX, strikethroughY);
                         ctx.lineTo(curTokenX + tokenW, strikethroughY);
                         ctx.stroke();
@@ -1749,8 +1776,9 @@ export function renderBlockTextToCanvas(
             ctx.font = subFontSpec;
             ctx.fillStyle = block.style?.textColor || '#000000';
             ctx.globalAlpha = 0.75;
-            ctx.textBaseline = 'middle';
+            ctx.textBaseline = 'alphabetic';
             const subLineHeight = subFontSizePx * 1.1;
+            const subBaselineOffset = getFontBaselineOffset(ctx, subFontSpec, subFontSizePx);
             const subLines = (block.original || '').split('\n');
             const lastLineBottom = layout.lines.length > 0 ? (layout.lines[layout.lines.length - 1].top + offY + layout.lines[layout.lines.length - 1].height) : (by + bh / 2);
             const subStartY = lastLineBottom + (subFontSizePx * 0.3);
@@ -1759,7 +1787,8 @@ export function renderBlockTextToCanvas(
 
             for (let si = 0; si < subLines.length; si++) {
                 const subLineCenterY = subStartY + (si * subLineHeight) + (subLineHeight / 2);
-                ctx.fillText(subLines[si], subStartX, subLineCenterY);
+                const subLineBaselineY = subLineCenterY + subBaselineOffset;
+                ctx.fillText(subLines[si], subStartX, subLineBaselineY);
             }
             ctx.restore();
         }

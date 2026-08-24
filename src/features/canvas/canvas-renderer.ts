@@ -123,12 +123,8 @@ export function renderOverlays(
     const imgElement = customImgElement || elements.mangaBgImage;
     if (imgElement && imgElement.clientWidth > 0) {
         const zoomScale = (globalState.zoom || 100) / 100;
-        const normalizedWidth = Math.round(imgElement.clientWidth / zoomScale);
-        if (!(page as any).lastDisplayWidth) {
-            (page as any).lastDisplayWidth = normalizedWidth;
-        } else if (Math.abs(zoomScale - 1) < 0.05 && Math.abs((page as any).lastDisplayWidth - normalizedWidth) > 5) {
-            (page as any).lastDisplayWidth = normalizedWidth;
-        }
+        const normalizedWidth = Math.round(imgElement.clientWidth / Math.max(0.01, zoomScale));
+        (page as any).lastDisplayWidth = normalizedWidth;
     }
 
     if (globalState.autoFitEnabled && !isMirror) {
@@ -157,11 +153,17 @@ export function renderOverlays(
     const activeCoverIds = new Set<string>();
     const activeBubbleIds = new Set<string>();
 
-    const naturalW = (imgElement && imgElement.naturalWidth > 0) ? imgElement.naturalWidth : 800;
-    const naturalH = (imgElement && imgElement.naturalHeight > 0) ? imgElement.naturalHeight : 1200;
+    const { width: refW, height: refH } = getReferenceDisplayDimensions(page, imgElement);
+    const naturalW = (imgElement && imgElement.naturalWidth > 0) ? imgElement.naturalWidth : (page?.width || 800);
+    const naturalH = (imgElement && imgElement.naturalHeight > 0) ? imgElement.naturalHeight : (page?.height || 1200);
     const zoomScale = isMirror ? 1 : ((globalState.zoom || 100) / 100);
-    const displayW = isMirror ? naturalW : ((page as any).lastDisplayWidth ? (page as any).lastDisplayWidth * zoomScale : (imgElement && imgElement.clientWidth > 0 ? imgElement.clientWidth : 800));
-    const displayH = isMirror ? naturalH : displayW * (naturalH / Math.max(1, naturalW));
+
+    const currentImgWidth = (imgElement && imgElement.clientWidth > 0) ? imgElement.clientWidth : (refW * zoomScale);
+    const currentImgHeight = (imgElement && imgElement.clientHeight > 0) ? imgElement.clientHeight : (currentImgWidth * (naturalH / Math.max(1, naturalW)));
+
+    const screenScale = isMirror ? forceExportScale : (currentImgWidth / Math.max(1, refW));
+    const displayW = isMirror ? naturalW : currentImgWidth;
+    const displayH = isMirror ? naturalH : currentImgHeight;
 
     page.blocks.forEach((block) => {
         if (!block || !block.box) return;
@@ -401,12 +403,7 @@ export function renderOverlays(
             maskContent.style.hyphens = 'none';
 
             maskContent.style.color = block.style.textColor || '#000000';
-            const zoomScale = isMirror ? 1 : ((globalState.zoom || 100) / 100);
 
-            const displayW = (page as any).lastDisplayWidth ? (page as any).lastDisplayWidth * zoomScale : (imgElement && imgElement.clientWidth > 0 ? imgElement.clientWidth : 800);
-            const naturalW = (imgElement && imgElement.naturalWidth > 0) ? imgElement.naturalWidth : 800;
-            const naturalH = (imgElement && imgElement.naturalHeight > 0) ? imgElement.naturalHeight : 1200;
-            const displayH = displayW * (naturalH / Math.max(1, naturalW));
             const bubblePxW = (block.box.w / 100) * displayW;
             const bubblePxH = (block.box.h / 100) * displayH;
 
@@ -415,35 +412,30 @@ export function renderOverlays(
                     const parts = block.style.padding.trim().split(/\s+/);
                     const pctY = parseFloat(parts[0]) || 9;
                     const pctX = parseFloat(parts[1] || parts[0]) || 12;
-                    const padY = forceExportScale !== 1 ? (bubblePxH * (pctY / 100) * forceExportScale) : (bubblePxH * (pctY / 100));
-                    const padX = forceExportScale !== 1 ? (bubblePxW * (pctX / 100) * forceExportScale) : (bubblePxW * (pctX / 100));
+                    const padY = bubblePxH * (pctY / 100);
+                    const padX = bubblePxW * (pctX / 100);
                     maskContent.style.padding = `${padY}px ${padX}px`;
                 } else if (typeof block.style.padding === 'string') {
                     maskContent.style.padding = block.style.padding;
                 } else if (typeof block.style.padding === 'number') {
-                    const displayPadding = forceExportScale !== 1 ? (block.style.padding * forceExportScale) : (block.style.padding * zoomScale);
+                    const displayPadding = block.style.padding * screenScale;
                     maskContent.style.padding = `${displayPadding}px`;
                 } else {
-                    const displayPadding = forceExportScale !== 1 ? (4 * forceExportScale) : (4 * zoomScale);
+                    const displayPadding = 4 * screenScale;
                     maskContent.style.padding = `${displayPadding}px`;
                 }
             } else {
-                const displayPadding = forceExportScale !== 1 ? (4 * forceExportScale) : (4 * zoomScale);
+                const displayPadding = 4 * screenScale;
                 maskContent.style.padding = `${displayPadding}px`;
             }
 
             maskContent.style.textAlign = block.style.align || 'center';
 
-            let displayFontSize = block.style.fontSize || 17;
-            if (forceExportScale !== 1) {
-                displayFontSize = displayFontSize * forceExportScale;
-            } else {
-                displayFontSize = displayFontSize * zoomScale;
-            }
+            let displayFontSize = (block.style.fontSize || 17) * screenScale;
             maskContent.style.fontSize = `${displayFontSize}px`;
             const currentLineHeight = block.style.lineHeight !== undefined ? block.style.lineHeight : 1.15;
             const currentLetterSpacing = block.style.letterSpacing !== undefined ? block.style.letterSpacing : 0;
-            const displayLetterSpacing = forceExportScale !== 1 ? (currentLetterSpacing * forceExportScale) : (currentLetterSpacing * zoomScale);
+            const displayLetterSpacing = currentLetterSpacing * screenScale;
 
             maskContent.style.lineHeight = `${currentLineHeight}`;
             maskContent.style.letterSpacing = `${displayLetterSpacing}px`;
@@ -570,7 +562,7 @@ export function renderOverlays(
                 letterSpacing: displayLetterSpacing,
                 underline: !!block.style.underline
             };
-            const scaleForLayout = isMirror ? forceExportScale : zoomScale;
+            const scaleForLayout = screenScale;
             renderBlockTextToDOM(innerTextDiv, block, displayW, displayH, scaleForLayout, warpOpts);
 
             if ((globalState.bilingualMode === 'sub' || block.style.bilingualSub) && block.original && block.original.trim()) {
@@ -582,7 +574,7 @@ export function renderOverlays(
                 }
                 origSub.style.color = 'inherit';
                 origSub.style.lineHeight = '1.1';
-                renderBlockTextToDOM(origSub, { ...block, translated: block.original }, displayW, displayH, zoomScale, warpOpts);
+                renderBlockTextToDOM(origSub, { ...block, translated: block.original }, displayW, displayH, screenScale, warpOpts);
             } else {
                 const existingSub = innerTextDiv.querySelector(':scope > .bilingual-sub-line');
                 if (existingSub) existingSub.remove();

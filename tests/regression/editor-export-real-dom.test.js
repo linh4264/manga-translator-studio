@@ -318,3 +318,84 @@ describe('5. Resize Box → Line Break Changes → Export Parity & Cache Invalid
         assert.strictEqual(layoutLarge.lines.length, domContainer.children.length, 'Export lines must match DOM lines after font size change');
     });
 });
+
+describe('6. Vertical Overflow Symmetrical Centering Parity (Editor ↔ Export)', () => {
+    test('When text overflows bounding box vertically, export layout stays symmetrically centered without being pushed down', () => {
+        // Many lines in a short box (overflows vertically)
+        const block = {
+            id: 'b_overflow_vert',
+            type: 'dialogue',
+            translated: 'TỚ ĐÃ\nCÓ KẾ\nSÁCH\nĐỐI\nPHÓ\nVỚI\nNIE-SE\nN RỒI!',
+            box: { x: 20, y: 30, w: 25, h: 10 }, // 10% height = 240px at 2400h (< 384px text height -> overflows)
+            style: {
+                fontSize: 20,
+                fontFamily: 'font-manga',
+                lineHeight: 1.2
+            }
+        };
+
+        const displayW = 800;
+        const displayH = 1200;
+        const exportW = 1600;
+        const exportH = 2400;
+        const scaleFactor = 2.0;
+        const page = createMockPage(block, exportW, exportH, displayW);
+
+        const exportLayout = buildBlockTextLayout(block, exportW, exportH, scaleFactor, null, page);
+        assert.strictEqual(exportLayout.lines.length, 8, 'Should have 8 lines');
+
+        const boxTop = exportLayout.by;
+        const boxHeight = exportLayout.bh;
+        const boxCenterY = boxTop + (boxHeight / 2);
+
+        const firstLineCenterY = exportLayout.lines[0].centerY;
+        const lastLineCenterY = exportLayout.lines[exportLayout.lines.length - 1].centerY;
+        const textBlockCenterY = (firstLineCenterY + lastLineCenterY) / 2;
+
+        // The text block center must match the box center exactly (within 0.01px)
+        assert.ok(
+            Math.abs(textBlockCenterY - boxCenterY) < 0.01,
+            `Text block center (${textBlockCenterY}) must be symmetrically centered on box center (${boxCenterY})`
+        );
+
+        // First line top must extend ABOVE the box top (negative offset relative to box top)
+        assert.ok(
+            exportLayout.lines[0].top < boxTop,
+            `Top line (${exportLayout.lines[0].top}) must overflow above box top (${boxTop}) symmetrically`
+        );
+
+        // Last line bottom must extend BELOW the box bottom by the EXACT SAME amount
+        const topOverflow = boxTop - exportLayout.lines[0].top;
+        const lastLineBottom = exportLayout.lines[exportLayout.lines.length - 1].top + exportLayout.lines[exportLayout.lines.length - 1].height;
+        const bottomOverflow = lastLineBottom - (boxTop + boxHeight);
+
+        assert.ok(
+            Math.abs(topOverflow - bottomOverflow) < 0.01,
+            `Top overflow (${topOverflow}) must equal bottom overflow (${bottomOverflow}) for true flexbox center parity`
+        );
+    });
+
+    test('textTransform: uppercase ensures all tokens are transformed to uppercase in Canvas 2D export', () => {
+        const block = {
+            id: 'b_uppercase_export',
+            type: 'dialogue',
+            translated: 'cậu chẳng\nnghe tớ nói gì\ncả đúng không?',
+            box: { x: 10, y: 10, w: 50, h: 30 },
+            style: {
+                fontSize: 18,
+                fontFamily: 'font-manga',
+                textTransform: 'uppercase'
+            }
+        };
+
+        const page = createMockPage(block, 1600, 2400, 800);
+        const exportLayout = buildBlockTextLayout(block, 1600, 2400, 2.0, null, page);
+
+        // Check each line tokens in layout
+        const linesText = exportLayout.lines.map(l => l.text.toUpperCase());
+        assert.strictEqual(linesText[0], 'CẬU CHẲNG');
+        assert.strictEqual(linesText[1], 'NGHE TỚ NÓI GÌ');
+        assert.strictEqual(linesText[2], 'CẢ ĐÚNG KHÔNG?');
+    });
+});
+

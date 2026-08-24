@@ -38,30 +38,7 @@ export function autoFitBlock(
 
     const page = targetPage || (globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null);
     const imgEl = customImgElement || elements.mangaBgImage;
-    const zoomScale = (globalState.zoom || 100) / 100;
-
-    let displayWidth = (page as any)?.lastDisplayWidth || 0;
-    if (!displayWidth && imgEl && imgEl.clientWidth > 0) {
-        displayWidth = imgEl.clientWidth / zoomScale;
-        if (page) (page as any).lastDisplayWidth = displayWidth;
-    }
-    if (!displayWidth && elements.mangaCanvasContainer && elements.mangaCanvasContainer.clientWidth > 0) {
-        displayWidth = elements.mangaCanvasContainer.clientWidth / zoomScale;
-    }
-    if (!displayWidth && elements.workspaceViewport && elements.workspaceViewport.clientWidth > 0) {
-        displayWidth = Math.min((elements.workspaceViewport.clientWidth - 32) / zoomScale, 1000);
-    }
-    if (!displayWidth) {
-        displayWidth = 800;
-    }
-    if (page && !(page as any).lastDisplayWidth) {
-        (page as any).lastDisplayWidth = displayWidth;
-    }
-
-    const naturalW = (imgEl && imgEl.naturalWidth > 0) ? imgEl.naturalWidth : 800;
-    const naturalH = (imgEl && imgEl.naturalHeight > 0) ? imgEl.naturalHeight : 1200;
-    const aspect = naturalH / Math.max(1, naturalW);
-    const displayHeight = displayWidth * aspect;
+    const { width: displayWidth, height: displayHeight } = getReferenceDisplayDimensions(page, imgEl);
 
     const baseFontSize = block.style.baseFontSize || block.style.fontSize || 16;
     if (!block.style.baseFontSize) {
