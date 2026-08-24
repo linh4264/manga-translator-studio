@@ -998,6 +998,58 @@ export function computeTextLayout(
     };
 }
 
+export interface DerivedLinesCache {
+    key: string;
+    tokens: RichTextSegment[][];
+}
+
+/**
+ * Computes a unique cache key representing all geometry and typography factors
+ * that impact line breaks for a given block.
+ */
+export function computeBlockDerivedLinesKey(block: MangaBlock, displayW: number = 800): string {
+    const bw = Math.round(((block.box?.w || 0) / 100) * displayW * 100) / 100;
+    const bh = Math.round(((block.box?.h || 0) / 100) * displayW * 100) / 100;
+    const style: any = block.style || {};
+    return `${block.translated || ''}|bw:${bw}|bh:${bh}|fz:${style.fontSize || 17}|ff:${style.fontFamily || ''}|ls:${style.letterSpacing || 0}|lh:${style.lineHeight || 1.15}|b:${!!style.bold}|i:${!!style.italic}|tt:${style.textTransform || 'none'}|v:${!!style.vertical}|ms:${style.maskShape || 'bubble-fit'}|p:${style.padding ?? ''}|sw:${style.strokeWidth || 0}|sw2:${style.strokeWidth2 || 0}`;
+}
+
+/**
+ * Retrieves cached derived lines if the cache key matches the block's current state.
+ * Automatically invalidates stale cache if key no longer matches.
+ */
+export function getCachedDerivedLines(block: MangaBlock, displayW: number = 800): RichTextSegment[][] | null {
+    const cache = (block as any)._derivedLinesCache as DerivedLinesCache | undefined;
+    if (cache && typeof cache === 'object' && cache.key) {
+        const currentKey = computeBlockDerivedLinesKey(block, displayW);
+        if (cache.key === currentKey && Array.isArray(cache.tokens) && cache.tokens.length > 0) {
+            return cache.tokens;
+        }
+        // Stale cache -> invalidate
+        (block as any)._derivedLinesCache = null;
+        (block as any)._derivedLines = null;
+        return null;
+    }
+    return null;
+}
+
+/**
+ * Stores derived line tokens with a validation cache key.
+ */
+export function setCachedDerivedLines(block: MangaBlock, tokens: RichTextSegment[][], displayW: number = 800): void {
+    const key = computeBlockDerivedLinesKey(block, displayW);
+    (block as any)._derivedLinesCache = { key, tokens };
+    (block as any)._derivedLines = tokens;
+}
+
+/**
+ * Explicitly invalidates the derived lines cache for a block (e.g. upon user resize/edit).
+ */
+export function invalidateBlockDerivedLines(block: MangaBlock): void {
+    (block as any)._derivedLinesCache = null;
+    (block as any)._derivedLines = null;
+}
+
 /**
  * High-level layout calculator for a MangaBlock within a given display or natural canvas dimension.
  */
@@ -1023,6 +1075,9 @@ export function computeBlockTextLayout(
     if (typeof scaledPadding === 'number') {
         scaledPadding = scaledPadding * scaleFactor;
     }
+
+    const refW = displayW / Math.max(0.0001, scaleFactor);
+    const resolvedLockedLines = lockedLines || getCachedDerivedLines(block, refW) || undefined;
 
     const layout = computeTextLayout({
         text: block.translated || '',
@@ -1050,7 +1105,7 @@ export function computeBlockTextLayout(
         skewY: block.style?.skewY || 0,
         warpWave: block.style?.warpWave || 0,
         warpBulge: block.style?.warpBulge || 0,
-        lockedLines: lockedLines
+        lockedLines: resolvedLockedLines
     }, ctx);
 
     layout.bx = bx;
@@ -1072,7 +1127,8 @@ export function computeBlockTextLayout(
         }
     });
 
-    (block as any)._derivedLines = layout.lines.map(l => l.tokens);
+    // Cache the derived line tokens using key validation
+    setCachedDerivedLines(block, layout.lines.map(l => l.tokens), refW);
 
     return layout;
 }

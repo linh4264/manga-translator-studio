@@ -80,6 +80,8 @@ export interface MangaBlock {
     positionKnown?: boolean;
     maskCache?: any;
     autoFitCache?: any;
+    _derivedLines?: any;
+    _derivedLinesCache?: any;
     imageUrl?: string;
     originalBackgroundBackup?: string;
     vertical?: boolean;

@@ -7,13 +7,26 @@ import {
     renderBlockTextToCanvas,
     ensureFontsLoadedForPage,
     getFontFamilyName,
-    getOpticalBaselineOffset
+    getOpticalBaselineOffset,
+    getCachedDerivedLines,
+    setCachedDerivedLines,
+    invalidateBlockDerivedLines,
+    computeBlockDerivedLinesKey
 } from './text-layout-engine';
 import { MangaPage, MangaBlock } from '../../types/index';
-import type { TextLayoutResult, LayoutLine } from './text-layout-engine';
+import type { TextLayoutResult, LayoutLine, DerivedLinesCache } from './text-layout-engine';
 
-export { getFontFamilyName, getOpticalBaselineOffset, computeBlockTextLayout, renderBlockTextToCanvas };
-export type { TextLayoutResult as BlockTextLayout, LayoutLine as BlockTextLayoutLine };
+export {
+    getFontFamilyName,
+    getOpticalBaselineOffset,
+    computeBlockTextLayout,
+    renderBlockTextToCanvas,
+    getCachedDerivedLines,
+    setCachedDerivedLines,
+    invalidateBlockDerivedLines,
+    computeBlockDerivedLinesKey
+};
+export type { TextLayoutResult as BlockTextLayout, LayoutLine as BlockTextLayoutLine, DerivedLinesCache };
 
 /**
  * Gets reference display dimensions (width & height in editor coordinate system) for a page.
@@ -76,7 +89,7 @@ export function getExportScale(page: MangaPage, naturalWidth: number, imgElement
 
 /**
  * Shared canonical layout representation: Computes exact block layout adhering
- * strictly to the Single Source of Truth layout engine.
+ * strictly to the Single Source of Truth layout engine with key-validated derived lines cache.
  */
 export function buildBlockTextLayout(
     block: MangaBlock,
@@ -86,13 +99,14 @@ export function buildBlockTextLayout(
     ctx?: CanvasRenderingContext2D | null,
     page?: MangaPage | null
 ): TextLayoutResult {
-    let lockedLines: any = (block as any)._derivedLines || null;
+    const { width: refW, height: refH } = page ? getReferenceDisplayDimensions(page) : { width: W / Math.max(0.0001, scaleFactor), height: H / Math.max(0.0001, scaleFactor) };
+    let lockedLines: any = getCachedDerivedLines(block, refW);
 
-    if (!lockedLines && page) {
-        const { width: refW, height: refH } = getReferenceDisplayDimensions(page);
+    if (!lockedLines) {
         const refLayout = computeBlockTextLayout(block, refW, refH, 1.0, ctx);
         if (refLayout && refLayout.lines && refLayout.lines.length > 0) {
             lockedLines = refLayout.lines.map(l => l.tokens);
+            setCachedDerivedLines(block, lockedLines, refW);
         }
     }
 

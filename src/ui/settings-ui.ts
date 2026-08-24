@@ -463,14 +463,14 @@ export function syncSettingsUI(): void {
     if (exportPdfQualitySelect) exportPdfQualitySelect.value = storedPdfQuality;
 
     const exportEngineSelect = document.getElementById('export-engine-select') as HTMLSelectElement | null;
-    const storedEngine = localStorage.getItem('manga_export_engine') || 'dom';
+    const storedEngine = localStorage.getItem('manga_export_engine') || 'unified';
     if (exportEngineSelect) exportEngineSelect.value = storedEngine;
 }
 
 export function updateExportEngine(val: string): void {
-    const engine = val === 'canvas2d' ? 'canvas2d' : 'dom';
+    const engine = val === 'canvas2d' ? 'canvas2d' : 'unified';
     safeSetLocalStorage('manga_export_engine', engine);
-    showToast(engine === 'dom' ? "Đã chuyển sang cơ chế xuất DOM Mirror (Khớp 100% DOM)" : "Đã chuyển sang cơ chế Canvas 2D", "info");
+    showToast(engine === 'unified' ? "Đã bật Unified Layout Engine (Đồng bộ 100% Editor & Export)" : "Đã chuyển sang cơ chế Canvas 2D Direct", "info");
 }
 
 export async function openSettingsModal(): Promise<void> {
