@@ -70,9 +70,9 @@ export async function initApplication(): Promise<void> {
     registerAction('closeSrsReviewModal', () => import('../features/toeic').then(m => m.closeSrsReviewModal()));
     registerAction('openAudioSettingsModal', openAudioSettingsModal);
     registerAction('closeAudioSettingsModal', closeAudioSettingsModal);
-    registerAction('openPreviewMode', openPreviewMode);
-    registerAction('openExportZipPreview', openExportZipPreview);
-    registerAction('openExportPdfPreview', openExportPdfPreview);
+    registerAction('openPreviewMode', () => openPreviewMode());
+    registerAction('openExportZipPreview', () => openExportZipPreview());
+    registerAction('openExportPdfPreview', () => openExportPdfPreview());
     registerAction('closePreviewMode', closePreviewMode);
     registerAction('previewPrevPage', previewPrevPage);
     registerAction('previewNextPage', previewNextPage);
