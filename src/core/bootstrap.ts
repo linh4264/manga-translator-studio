@@ -23,6 +23,8 @@ import { populateCustomFontsDropdown } from '../ui/font-ui';
 import { setBilingualMode } from '../ui/block-editor-ui';
 import {
     openPreviewMode,
+    openExportZipPreview,
+    openExportPdfPreview,
     closePreviewMode,
     previewPrevPage,
     previewNextPage
@@ -69,6 +71,8 @@ export async function initApplication(): Promise<void> {
     registerAction('openAudioSettingsModal', openAudioSettingsModal);
     registerAction('closeAudioSettingsModal', closeAudioSettingsModal);
     registerAction('openPreviewMode', openPreviewMode);
+    registerAction('openExportZipPreview', openExportZipPreview);
+    registerAction('openExportPdfPreview', openExportPdfPreview);
     registerAction('closePreviewMode', closePreviewMode);
     registerAction('previewPrevPage', previewPrevPage);
     registerAction('previewNextPage', previewNextPage);

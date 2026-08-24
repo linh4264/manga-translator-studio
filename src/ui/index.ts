@@ -37,8 +37,13 @@ import {
 } from './settings-ui';
 
 import {
-    previewCurrentPage, openPreviewMode, closePreviewMode,
-    previewKeyHandler, previewPrevPage, previewNextPage, renderPreviewPage
+    previewCurrentPage, previewViewMode, previewZoom, selectedExportPages, activeExportTab,
+    openPreviewMode, openExportZipPreview, openExportPdfPreview, closePreviewMode,
+    previewKeyHandler, previewPrevPage, previewNextPage, previewJumpToPage,
+    setPreviewViewMode, setPreviewZoom, changePreviewZoom, resetPreviewZoom,
+    togglePageExportSelection, selectAllExportPages, deselectAllExportPages,
+    switchPreviewExportTab, executeZipExportFromPreview, executePdfExportFromPreview,
+    executeSinglePageExportFromPreview, copyPreviewPageToClipboard, renderPreviewViewport
 } from './preview-ui';
 
 import { populateCustomFontsDropdown, registerCustomFont, uploadCustomFonts } from './font-ui';
@@ -74,8 +79,13 @@ export {
     saveTranslationGenrePresets, updateTranslationGenrePreset, updateTranslationContextPrompt,
     updateApiDelay, updateMaxRetries, updateAiProvider, updateApiEndpoint,
     updateExportFormat, updateExportPdfQuality,
-    previewCurrentPage, openPreviewMode, closePreviewMode,
-    previewKeyHandler, previewPrevPage, previewNextPage, renderPreviewPage,
+    previewCurrentPage, previewViewMode, previewZoom, selectedExportPages, activeExportTab,
+    openPreviewMode, openExportZipPreview, openExportPdfPreview, closePreviewMode,
+    previewKeyHandler, previewPrevPage, previewNextPage, previewJumpToPage,
+    setPreviewViewMode, setPreviewZoom, changePreviewZoom, resetPreviewZoom,
+    togglePageExportSelection, selectAllExportPages, deselectAllExportPages,
+    switchPreviewExportTab, executeZipExportFromPreview, executePdfExportFromPreview,
+    executeSinglePageExportFromPreview, copyPreviewPageToClipboard, renderPreviewViewport,
     populateCustomFontsDropdown, registerCustomFont, uploadCustomFonts,
     openLorebookModal, closeLorebookModal, switchLorebookTab,
     renderCharacterDossierUI, addCharacterDossierEntry, removeCharacterDossierEntry,

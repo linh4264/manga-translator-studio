@@ -162,11 +162,11 @@
             </button>
 
             <!-- Export Dropdown / Action -->
-            <button id="header-btn-batch-export" onclick="runBatchExport()" disabled
+            <button id="header-btn-batch-export" onclick="openExportZipPreview()" disabled
                 class="h-7 px-2.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-                title="Xuất gói ZIP truyện đã dịch">
+                title="Xem trước và Xuất gói ZIP truyện đã dịch">
                 <i class="fa-solid fa-download text-[11px] text-sky-100"></i>
-                <span class="hidden sm:inline">Xuất ZIP</span>
+                <span class="hidden sm:inline">Xuất</span>
             </button>
 
             <div class="h-3.5 w-px bg-slate-800 mx-0.5"></div>
@@ -300,9 +300,9 @@
 
                 <!-- Secondary Export & View Options -->
                 <div class="grid grid-cols-2 gap-1.5">
-                    <button id="btn-export-pdf" onclick="runPdfExport()" disabled
+                    <button id="btn-export-pdf" onclick="openExportPdfPreview()" disabled
                         class="h-8 px-2 rounded-xl bg-slate-900 hover:bg-emerald-950/50 hover:border-emerald-500/40 border border-slate-800 text-slate-300 hover:text-emerald-300 text-[11px] font-semibold flex items-center gap-2 transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-                        title="Xuất PDF đọc trên máy tính bảng/Kindle">
+                        title="Xem trước và Xuất PDF đọc trên máy tính bảng/Kindle">
                         <i class="fa-solid fa-file-pdf text-emerald-400 text-xs"></i>
                         <span>Xuất PDF</span>
                     </button>
@@ -3808,30 +3808,272 @@
             </div>
         </div>
 
-        <!-- 8. Reader Preview Modal -->
+        <!-- 8. Export & Reader Preview Studio Modal -->
         <div id="preview-modal" class="fixed inset-0 z-[100] hidden">
-            <div class="absolute inset-0 bg-black/95"></div>
-            <div class="relative z-10 h-full flex flex-col">
-                <div
-                    class="flex items-center justify-between px-6 py-3 bg-slate-900/80 border-b border-slate-800 backdrop-blur-md">
-                    <div class="flex items-center gap-3">
-                        <i class="fa-solid fa-book-open text-indigo-400"></i>
-                        <span class="text-sm font-bold text-white">Chế độ Xem trước</span>
-                        <span id="preview-page-indicator" class="text-xs text-slate-400 font-mono">Trang 1/1</span>
+            <div class="absolute inset-0 bg-black/90 backdrop-blur-md" onclick="closePreviewMode()"></div>
+            <div class="relative z-10 h-full w-full flex flex-col bg-slate-950/95" onclick="event.stopPropagation()">
+                <!-- Top Header Navigation & Controls -->
+                <div class="flex items-center justify-between px-4 py-2.5 bg-slate-900/90 border-b border-slate-800 backdrop-blur-md shrink-0 gap-2">
+                    <!-- Left: Title & Page Indicator Badges -->
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-eye text-indigo-400 text-sm"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs sm:text-sm font-bold text-white tracking-wide">Xem trước & Xuất bản</span>
+                                <span id="preview-page-indicator" class="text-[11px] text-indigo-300 font-mono font-bold bg-indigo-950/80 border border-indigo-500/40 px-2 py-0.5 rounded-full">Trang 1/1</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-[10px] text-slate-400 truncate mt-0.5">
+                                <span id="preview-page-name" class="font-mono text-slate-300 truncate max-w-[120px] sm:max-w-[200px]"></span>
+                                <span class="text-slate-600">•</span>
+                                <span id="preview-selected-count-badge" class="text-emerald-400 font-semibold">1/1 trang đã chọn</span>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Center: View Mode Switcher & Zoom Controls -->
                     <div class="flex items-center gap-2">
-                        <button onclick="previewPrevPage()"
-                            class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 transition-colors"><i
-                                class="fa-solid fa-chevron-left"></i> Trước</button>
-                        <button onclick="previewNextPage()"
-                            class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1 transition-colors">Tiếp
-                            <i class="fa-solid fa-chevron-right"></i></button>
+                        <!-- View Mode Switcher -->
+                        <div class="bg-slate-950 p-0.5 rounded-xl border border-slate-800 flex items-center gap-0.5">
+                            <button data-preview-mode="single" onclick="setPreviewViewMode('single')"
+                                class="px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer bg-indigo-600 text-white"
+                                title="Xem chi tiết từng trang">
+                                <i class="fa-regular fa-file-image text-xs"></i>
+                                <span class="hidden md:inline">Trang đơn</span>
+                            </button>
+                            <button data-preview-mode="continuous" onclick="setPreviewViewMode('continuous')"
+                                class="px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer bg-slate-800 text-slate-400 hover:text-slate-200"
+                                title="Cuộn dọc đọc liền mạch (Webtoon)">
+                                <i class="fa-solid fa-arrows-up-down text-xs"></i>
+                                <span class="hidden md:inline">Cuộn dọc</span>
+                            </button>
+                            <button data-preview-mode="grid" onclick="setPreviewViewMode('grid')"
+                                class="px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer bg-slate-800 text-slate-400 hover:text-slate-200"
+                                title="Lưới tổng quan tất cả trang">
+                                <i class="fa-solid fa-table-cells text-xs"></i>
+                                <span class="hidden md:inline">Lưới ảnh</span>
+                            </button>
+                        </div>
+
+                        <!-- Zoom Controls -->
+                        <div class="hidden sm:flex items-center bg-slate-950 rounded-xl border border-slate-800 p-0.5 gap-1">
+                            <button onclick="changePreviewZoom(-0.15)"
+                                class="w-6 h-6 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white text-[10px] flex items-center justify-center transition-all cursor-pointer"
+                                title="Thu nhỏ (-)">
+                                <i class="fa-solid fa-minus"></i>
+                            </button>
+                            <span id="preview-zoom-level" onclick="resetPreviewZoom()"
+                                class="text-[11px] font-mono font-semibold text-slate-300 w-11 text-center cursor-pointer select-none"
+                                title="Bấm để đặt về 100%">100%</span>
+                            <button onclick="changePreviewZoom(0.15)"
+                                class="w-6 h-6 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white text-[10px] flex items-center justify-center transition-all cursor-pointer"
+                                title="Phóng to (+)">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                            <button onclick="resetPreviewZoom()"
+                                class="h-6 px-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white text-[10px] font-semibold transition-all cursor-pointer"
+                                title="Đặt về 100%">
+                                <i class="fa-solid fa-rotate-left"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Navigation & Close -->
+                    <div class="flex items-center gap-1.5">
+                        <label class="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 text-[11px] font-medium cursor-pointer hover:border-slate-700 transition-all select-none mr-1">
+                            <input type="checkbox" id="preview-chk-current-page" onchange="togglePageExportSelection(previewCurrentPage, event)" class="rounded text-indigo-600 focus:ring-0 cursor-pointer">
+                            <span>Xuất trang này</span>
+                        </label>
+
+                        <button id="preview-btn-prev" onclick="previewPrevPage()"
+                            class="h-7 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none text-slate-200 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                            title="Trang trước (Phím mũi tên Trái)">
+                            <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                            <span class="hidden sm:inline">Trước</span>
+                        </button>
+                        <button id="preview-btn-next" onclick="previewNextPage()"
+                            class="h-7 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 disabled:pointer-events-none text-slate-200 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                            title="Trang sau (Phím mũi tên Phải hoặc Phím Cách)">
+                            <span class="hidden sm:inline">Tiếp</span>
+                            <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                        </button>
                         <button onclick="closePreviewMode()"
-                            class="px-3 py-1.5 rounded bg-red-950/60 border border-red-500/30 hover:bg-red-950 text-red-300 text-xs font-bold flex items-center gap-1 transition-colors"><i
-                                class="fa-solid fa-xmark"></i> Đóng</button>
+                            class="h-7 px-2.5 rounded-lg bg-red-950/60 border border-red-500/30 hover:bg-red-900/80 text-red-200 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer ml-1"
+                            title="Đóng xem trước (Phím Esc)">
+                            <i class="fa-solid fa-xmark text-xs"></i>
+                            <span class="hidden sm:inline">Đóng</span>
+                        </button>
                     </div>
                 </div>
-                <div id="preview-body" class="flex-1 overflow-y-auto flex flex-col items-center py-6 gap-1"></div>
+
+                <!-- Main Layout: Viewport + Right Export Controls Panel -->
+                <div class="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+                    <!-- Left: Preview Canvas & Thumbnail Strip -->
+                    <div class="flex-1 flex flex-col overflow-hidden min-h-0 bg-slate-950/90 relative">
+                        <!-- Scrollable Viewport Container -->
+                        <div id="preview-body" class="flex-1 overflow-auto flex flex-col items-center justify-start relative p-2 sm:p-4 custom-scrollbar"></div>
+
+                        <!-- Bottom Thumbnail Strip (Active in Single Page Mode) -->
+                        <div id="preview-thumbnail-strip" class="h-20 bg-slate-900/95 border-t border-slate-800/80 flex items-center gap-2 px-3 overflow-x-auto shrink-0 select-none custom-scrollbar"></div>
+                    </div>
+
+                    <!-- Right: Export Configuration Panel -->
+                    <div class="w-full md:w-80 lg:w-88 bg-slate-900/95 border-t md:border-t-0 md:border-l border-slate-800 flex flex-col shrink-0 overflow-y-auto custom-scrollbar p-4 gap-4 backdrop-blur-md">
+                        <!-- Format Tabs (ZIP / PDF) -->
+                        <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 flex items-center gap-1 shrink-0">
+                            <button id="preview-tab-btn-zip" onclick="switchPreviewExportTab('zip')"
+                                class="flex-1 py-2 text-xs font-bold rounded-lg bg-sky-600 text-white shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                                <i class="fa-solid fa-file-zipper text-xs"></i>
+                                <span>Gói ZIP</span>
+                            </button>
+                            <button id="preview-tab-btn-pdf" onclick="switchPreviewExportTab('pdf')"
+                                class="flex-1 py-2 text-xs font-semibold rounded-lg bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                                <i class="fa-solid fa-file-pdf text-xs text-emerald-400"></i>
+                                <span>Tệp PDF</span>
+                            </button>
+                        </div>
+
+                        <!-- Panel Content 1: ZIP Configuration -->
+                        <div id="preview-panel-zip" class="space-y-4">
+                            <!-- Export Scope Selection -->
+                            <div class="space-y-2">
+                                <label class="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-layer-group text-sky-400 text-xs"></i>
+                                    <span>Phạm vi trang xuất ZIP:</span>
+                                </label>
+                                <div class="space-y-1.5 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 text-xs text-slate-300">
+                                    <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+                                        <input type="radio" name="preview-zip-scope" value="all" checked class="text-sky-600 focus:ring-0">
+                                        <span>Tất cả các trang trong chương</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+                                        <input type="radio" name="preview-zip-scope" value="selected" class="text-sky-600 focus:ring-0">
+                                        <span>Các trang đã tích chọn</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+                                        <input type="radio" name="preview-zip-scope" value="current" class="text-sky-600 focus:ring-0">
+                                        <span>Chỉ trang đang xem hiện tại</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+                                        <input type="radio" name="preview-zip-scope" value="range" class="text-sky-600 focus:ring-0">
+                                        <span>Khoảng trang từ</span>
+                                        <input type="number" id="preview-export-range-start" value="1" min="1" class="w-12 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] text-center text-white focus:outline-none">
+                                        <span>đến</span>
+                                        <input type="number" id="preview-export-range-end" value="1" min="1" class="w-12 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] text-center text-white focus:outline-none">
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Image Format & Quality -->
+                            <div class="grid grid-cols-2 gap-2">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-400">Định dạng ảnh:</label>
+                                    <select id="preview-zip-format" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-200 focus:border-sky-500 focus:outline-none">
+                                        <option value="auto">Tự động (Khuyên dùng)</option>
+                                        <option value="png">PNG (Sắc nét gốc)</option>
+                                        <option value="jpeg">JPEG (Nhẹ nén tốt)</option>
+                                        <option value="webp">WEBP (Tối ưu web)</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-400">Chất lượng nén:</label>
+                                    <select id="preview-zip-quality" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-200 focus:border-sky-500 focus:outline-none">
+                                        <option value="0.95">95% (Chuẩn nét cao)</option>
+                                        <option value="1.0">100% (Gốc không nén)</option>
+                                        <option value="0.85">85% (Tiết kiệm dung lượng)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- ZIP File Name -->
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-slate-400">Tên tệp ZIP tải về:</label>
+                                <div class="relative flex items-center">
+                                    <input type="text" id="preview-zip-filename" placeholder="manga_translated_chapter01"
+                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg py-1.5 px-2.5 text-xs text-slate-200 focus:border-sky-500 focus:outline-none font-mono">
+                                    <span class="absolute right-2.5 text-[10px] text-slate-500 font-mono pointer-events-none">.zip</span>
+                                </div>
+                            </div>
+
+                            <!-- CTA Save ZIP -->
+                            <button id="preview-btn-do-export-zip" onclick="executeZipExportFromPreview()"
+                                class="w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-sky-600/30 transition-all cursor-pointer active:scale-98">
+                                <i class="fa-solid fa-file-zipper text-sm"></i>
+                                <span>Lưu tệp ZIP về máy</span>
+                            </button>
+                        </div>
+
+                        <!-- Panel Content 2: PDF Configuration -->
+                        <div id="preview-panel-pdf" class="space-y-4 hidden">
+                            <!-- Export Scope Selection -->
+                            <div class="space-y-2">
+                                <label class="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-layer-group text-emerald-400 text-xs"></i>
+                                    <span>Phạm vi trang xuất PDF:</span>
+                                </label>
+                                <div class="space-y-1.5 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 text-xs text-slate-300">
+                                    <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+                                        <input type="radio" name="preview-pdf-scope" value="all" checked class="text-emerald-600 focus:ring-0">
+                                        <span>Tất cả các trang trong chương</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+                                        <input type="radio" name="preview-pdf-scope" value="selected" class="text-emerald-600 focus:ring-0">
+                                        <span>Các trang đã tích chọn</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+                                        <input type="radio" name="preview-pdf-scope" value="current" class="text-emerald-600 focus:ring-0">
+                                        <span>Chỉ trang đang xem hiện tại</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- PDF Quality Mode -->
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-slate-400">Chất lượng hình ảnh PDF:</label>
+                                <select id="preview-pdf-quality" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-1.5 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none">
+                                    <option value="hd">Chuẩn HD Siêu nét (JPEG 98% - Khuyên dùng)</option>
+                                    <option value="standard">Tiêu chuẩn (JPEG 90% - Dung lượng nhỏ)</option>
+                                    <option value="max">Sắc nét tối đa (PNG Lossless)</option>
+                                </select>
+                            </div>
+
+                            <!-- PDF File Name -->
+                            <div class="space-y-1">
+                                <label class="text-[10px] font-bold text-slate-400">Tên tệp PDF tải về:</label>
+                                <div class="relative flex items-center">
+                                    <input type="text" id="preview-pdf-filename" placeholder="Manga_Chapter_01"
+                                        class="w-full bg-slate-950 border border-slate-800 rounded-lg py-1.5 px-2.5 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none font-mono">
+                                    <span class="absolute right-2.5 text-[10px] text-slate-500 font-mono pointer-events-none">.pdf</span>
+                                </div>
+                            </div>
+
+                            <!-- CTA Save PDF -->
+                            <button id="preview-btn-do-export-pdf" onclick="executePdfExportFromPreview()"
+                                class="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer active:scale-98">
+                                <i class="fa-solid fa-file-pdf text-sm"></i>
+                                <span>Lưu tệp PDF về máy</span>
+                            </button>
+                        </div>
+
+                        <!-- Quick Single Actions -->
+                        <div class="border-t border-slate-800/80 pt-3 space-y-2 mt-auto">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Hành động nhanh</span>
+                            <button onclick="executeSinglePageExportFromPreview()"
+                                class="w-full py-1.5 px-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-[11px] font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                                title="Tải trực tiếp ảnh trang đang xem về máy">
+                                <i class="fa-solid fa-download text-indigo-400 text-xs"></i>
+                                <span>Lưu ảnh trang đang xem (PNG)</span>
+                            </button>
+                            <button onclick="copyPreviewPageToClipboard()"
+                                class="w-full py-1.5 px-2 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-[11px] font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                                title="Sao chép ảnh trang vào Clipboard để dán trực tiếp">
+                                <i class="fa-regular fa-copy text-sky-400 text-xs"></i>
+                                <span>Sao chép ảnh vào Clipboard</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -4460,14 +4702,14 @@
             </button>
 
             <!-- Export ZIP -->
-            <button onclick="closeMobileMoreMenu(); runBatchExport();"
+            <button onclick="closeMobileMoreMenu(); openExportZipPreview();"
                 class="p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/30 text-slate-200 hover:text-white flex items-center gap-2.5 transition-all active:scale-98">
                 <div class="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
                     <i class="fa-solid fa-download text-xs text-sky-200"></i>
                 </div>
                 <div class="text-left min-w-0">
                     <div class="text-xs font-bold truncate">Xuất ZIP</div>
-                    <div class="text-[9.5px] text-slate-400 truncate">Tải bộ ảnh đã dịch</div>
+                    <div class="text-[9.5px] text-slate-400 truncate">Xem trước & tải bộ ảnh đã dịch</div>
                 </div>
             </button>
 

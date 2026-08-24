@@ -347,13 +347,28 @@ export function initGlobalBridge(): void {
         exportLorebookJSON: lorebookUI.exportLorebookJSON,
         importLorebookJSON: lorebookUI.importLorebookJSON,
 
-        // Preview Mode
+        // Preview & Export Preview Mode
         openPreviewMode: previewUI.openPreviewMode,
+        openExportZipPreview: previewUI.openExportZipPreview,
+        openExportPdfPreview: previewUI.openExportPdfPreview,
         closePreviewMode: previewUI.closePreviewMode,
         previewPrevPage: previewUI.previewPrevPage,
         previewNextPage: previewUI.previewNextPage,
-        previewCurrentPage: previewUI.previewCurrentPage,
-        renderPreviewPage: previewUI.renderPreviewPage,
+        previewJumpToPage: previewUI.previewJumpToPage,
+        setPreviewViewMode: previewUI.setPreviewViewMode,
+        setPreviewZoom: previewUI.setPreviewZoom,
+        changePreviewZoom: previewUI.changePreviewZoom,
+        resetPreviewZoom: previewUI.resetPreviewZoom,
+        togglePageExportSelection: previewUI.togglePageExportSelection,
+        selectAllExportPages: previewUI.selectAllExportPages,
+        deselectAllExportPages: previewUI.deselectAllExportPages,
+        switchPreviewExportTab: previewUI.switchPreviewExportTab,
+        executeZipExportFromPreview: previewUI.executeZipExportFromPreview,
+        executePdfExportFromPreview: previewUI.executePdfExportFromPreview,
+        executeSinglePageExportFromPreview: previewUI.executeSinglePageExportFromPreview,
+        copyPreviewPageToClipboard: previewUI.copyPreviewPageToClipboard,
+        renderPreviewViewport: previewUI.renderPreviewViewport,
+        renderPreviewPage: previewUI.renderPreviewViewport,
 
         // Core State & Utilities
         executeUndo,

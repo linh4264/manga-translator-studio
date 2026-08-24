@@ -138,15 +138,29 @@ export async function renderPageToCanvas2DDirect(page: MangaPage, bgImageOverrid
     let createdBlobUrl: string | null = null;
 
     if (!imgElement || !imgElement.naturalWidth || !imgElement.naturalHeight) {
+        if (!page.originalFile && !page.file && !page.src && page.id) {
+            try {
+                const { activatePage } = await import('../../core/state');
+                await activatePage(page);
+            } catch (e) {
+                console.warn("Could not activate page from DB:", e);
+            }
+        }
         const pageFile = page.originalFile || page.file;
-        const srcToLoad = pageFile ? (createdBlobUrl = URL.createObjectURL(pageFile as Blob)) : page.src;
+        let srcToLoad = pageFile ? (createdBlobUrl = URL.createObjectURL(pageFile as Blob)) : page.src;
+        if (!srcToLoad && page.thumbnailBlob) {
+            srcToLoad = (createdBlobUrl = URL.createObjectURL(page.thumbnailBlob as Blob));
+        } else if (!srcToLoad && page.thumbnailSrc) {
+            srcToLoad = page.thumbnailSrc;
+        }
+
         if (srcToLoad) {
             const offImg = new Image();
             offImg.crossOrigin = 'anonymous';
             await new Promise<void>((resolve) => {
                 offImg.onload = () => resolve();
                 offImg.onerror = () => resolve();
-                offImg.src = srcToLoad;
+                offImg.src = srcToLoad!;
             });
             if (offImg.naturalWidth > 0) {
                 imgElement = offImg;

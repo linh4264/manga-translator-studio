@@ -33,16 +33,37 @@ import { getCharacterDossier, getLorebook, setCharacterDossier, setLorebook } fr
 import { MangaPage } from '../types/index';
 
 
-export function getPageExportMimeType(page: MangaPage): { mimeType: string; quality?: number; ext: string } {
-    const formatOverride = globalState.exportFormat || 'auto';
+export interface BatchExportOptions {
+    startIndex?: number;
+    endIndex?: number;
+    pageIndices?: number[];
+    format?: 'auto' | 'png' | 'jpg' | 'jpeg' | 'webp';
+    quality?: number;
+    filename?: string;
+}
+
+export interface PdfExportOptions {
+    startIndex?: number;
+    endIndex?: number;
+    pageIndices?: number[];
+    quality?: 'hd' | 'standard' | 'max';
+    filename?: string;
+}
+
+export function getPageExportMimeType(
+    page: MangaPage,
+    formatOverrideParam?: string,
+    qualityOverrideParam?: number
+): { mimeType: string; quality?: number; ext: string } {
+    const formatOverride = formatOverrideParam || globalState.exportFormat || 'auto';
     if (formatOverride === 'png') {
         return { mimeType: 'image/png', quality: undefined, ext: 'png' };
     }
-    if (formatOverride === 'jpg') {
-        return { mimeType: 'image/jpeg', quality: 0.92, ext: 'jpg' };
+    if (formatOverride === 'jpg' || formatOverride === 'jpeg') {
+        return { mimeType: 'image/jpeg', quality: qualityOverrideParam !== undefined ? qualityOverrideParam : 0.95, ext: 'jpg' };
     }
     if (formatOverride === 'webp') {
-        return { mimeType: 'image/webp', quality: 0.92, ext: 'webp' };
+        return { mimeType: 'image/webp', quality: qualityOverrideParam !== undefined ? qualityOverrideParam : 0.95, ext: 'webp' };
     }
 
     let mimeType = 'image/png';
@@ -53,22 +74,22 @@ export function getPageExportMimeType(page: MangaPage): { mimeType: string; qual
         const origType = (page.originalFile as any).type;
         if (origType === 'image/jpeg' || origType === 'image/jpg') {
             mimeType = 'image/jpeg';
-            quality = 0.95;
+            quality = qualityOverrideParam !== undefined ? qualityOverrideParam : 0.95;
             ext = 'jpg';
         } else if (origType === 'image/webp') {
             mimeType = 'image/webp';
-            quality = 0.95;
+            quality = qualityOverrideParam !== undefined ? qualityOverrideParam : 0.95;
             ext = 'webp';
         }
     } else if (page.name) {
         const nameLower = page.name.toLowerCase();
         if (nameLower.endsWith('.jpg') || nameLower.endsWith('.jpeg')) {
             mimeType = 'image/jpeg';
-            quality = 0.95;
+            quality = qualityOverrideParam !== undefined ? qualityOverrideParam : 0.95;
             ext = 'jpg';
         } else if (nameLower.endsWith('.webp')) {
             mimeType = 'image/webp';
-            quality = 0.95;
+            quality = qualityOverrideParam !== undefined ? qualityOverrideParam : 0.95;
             ext = 'webp';
         }
     }
@@ -394,15 +415,33 @@ function getExportRange(): { startIndex: number; endIndex: number } {
     return { startIndex, endIndex };
 }
 
-export async function runBatchExport(): Promise<void> {
-    if (globalState.pages.length === 0) return;
+export async function runBatchExport(options?: BatchExportOptions): Promise<void> {
+    if (globalState.pages.length === 0) {
+        showToast("Không có trang truyện nào để xuất ZIP.", "warn");
+        return;
+    }
 
     commitActiveEditingState();
     await saveEraserDrawingToPage();
 
-    const { startIndex, endIndex } = getExportRange();
-    const totalToExport = endIndex - startIndex + 1;
+    let targetIndices: number[] = [];
+    if (options && Array.isArray(options.pageIndices) && options.pageIndices.length > 0) {
+        targetIndices = options.pageIndices.filter(idx => idx >= 0 && idx < globalState.pages.length);
+    } else {
+        const { startIndex, endIndex } = getExportRange();
+        const start = (options && options.startIndex !== undefined) ? options.startIndex : startIndex;
+        const end = (options && options.endIndex !== undefined) ? options.endIndex : endIndex;
+        for (let i = start; i <= end; i++) {
+            if (i >= 0 && i < globalState.pages.length) targetIndices.push(i);
+        }
+    }
 
+    if (targetIndices.length === 0) {
+        showToast("Không có trang nào được chọn để xuất.", "warn");
+        return;
+    }
+
+    const totalToExport = targetIndices.length;
     showToast('Đang khởi động tiến trình đóng gói trang...', 'info');
     const prevPageIndex = globalState.activePageIndex;
     const prevSelectedId = globalState.selectedBlockId;
@@ -414,28 +453,41 @@ export async function runBatchExport(): Promise<void> {
     let successCount = 0;
 
     try {
-        await document.fonts.ready;
-        for (let i = startIndex; i <= endIndex; i++) {
+        if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+            await document.fonts.ready;
+        }
+        for (let seq = 0; seq < targetIndices.length; seq++) {
+            const i = targetIndices[seq];
             const page = globalState.pages[i];
-            const currentCount = i - startIndex + 1;
+            const currentCount = seq + 1;
             updateProcessingOverlay(true, `Kết xuất trang ${currentCount}/${totalToExport}`, `Trang: ${page.name}`, Math.round((currentCount / totalToExport) * 90));
 
             try {
                 const pageFile = page.originalFile || page.file;
-                if (!pageFile) throw new Error("File ảnh không tồn tại.");
+                let img: HTMLImageElement | null = null;
+                let blobUrl: string | null = null;
 
-                const img = new Image();
-                const blobUrl = URL.createObjectURL(pageFile as Blob);
-                await new Promise((resolve, reject) => {
-                    img.onload = resolve;
-                    img.onerror = () => reject(new Error("Không thể tải ảnh offscreen."));
-                    img.src = blobUrl;
-                });
+                if (pageFile) {
+                    img = new Image();
+                    blobUrl = URL.createObjectURL(pageFile as Blob);
+                    await new Promise((resolve, reject) => {
+                        img!.onload = resolve;
+                        img!.onerror = () => reject(new Error("Không thể tải ảnh offscreen."));
+                        img!.src = blobUrl!;
+                    });
+                } else if (page.src) {
+                    img = new Image();
+                    await new Promise((resolve, reject) => {
+                        img!.onload = resolve;
+                        img!.onerror = () => reject(new Error("Không thể tải ảnh offscreen."));
+                        img!.src = page.src;
+                    });
+                }
 
                 const canvas = await renderPageToCanvas2D(page, img);
-                URL.revokeObjectURL(blobUrl);
+                if (blobUrl) URL.revokeObjectURL(blobUrl);
 
-                const { mimeType, quality, ext } = getPageExportMimeType(page);
+                const { mimeType, quality, ext } = getPageExportMimeType(page, options?.format, options?.quality);
 
                 const pageBlob = await new Promise<Blob>((resolve, reject) => {
                     canvas.toBlob((blob) => {
@@ -512,10 +564,16 @@ export async function runBatchExport(): Promise<void> {
                 throw new Error("Thư viện nén ZIP chưa sẵn sàng.");
             }
 
+            const defaultZipName = `manga_studio_translated_${Date.now()}.zip`;
+            let finalZipName = options?.filename?.trim() || defaultZipName;
+            if (!finalZipName.toLowerCase().endsWith('.zip')) {
+                finalZipName += '.zip';
+            }
+
             const zipDownloadUrl = URL.createObjectURL(zipBlob);
             const tempDownloadLink = document.createElement('a');
             tempDownloadLink.href = zipDownloadUrl;
-            tempDownloadLink.download = `manga_studio_translated_${Date.now()}.zip`;
+            tempDownloadLink.download = finalZipName;
             document.body.appendChild(tempDownloadLink);
             tempDownloadLink.click();
             document.body.removeChild(tempDownloadLink);
@@ -529,19 +587,15 @@ export async function runBatchExport(): Promise<void> {
         console.error("Lỗi xuất ZIP:", err);
         showToast(`Lỗi khi xuất ZIP: ${err.message}`, "error");
     } finally {
+        globalState.selectedBlockId = prevSelectedId;
         if (prevPageIndex !== -1 && prevPageIndex < globalState.pages.length) {
-            await selectPage(prevPageIndex);
-            if (globalState.pages[prevPageIndex] && elements.mangaBgImage) {
-                await waitForImageReady(elements.mangaBgImage, globalState.pages[prevPageIndex].src);
-            }
-            globalState.selectedBlockId = prevSelectedId;
-            renderOverlays();
+            selectPage(prevPageIndex);
         }
         updateProcessingOverlay(false);
     }
 }
 
-export async function runPdfExport(): Promise<void> {
+export async function runPdfExport(options?: PdfExportOptions): Promise<void> {
     if (globalState.pages.length === 0) {
         showToast("Không có trang truyện nào để xuất PDF.", "warn");
         return;
@@ -556,6 +610,23 @@ export async function runPdfExport(): Promise<void> {
         return;
     }
 
+    let targetIndices: number[] = [];
+    if (options && Array.isArray(options.pageIndices) && options.pageIndices.length > 0) {
+        targetIndices = options.pageIndices.filter(idx => idx >= 0 && idx < globalState.pages.length);
+    } else {
+        const { startIndex, endIndex } = getExportRange();
+        const start = (options && options.startIndex !== undefined) ? options.startIndex : startIndex;
+        const end = (options && options.endIndex !== undefined) ? options.endIndex : endIndex;
+        for (let i = start; i <= end; i++) {
+            if (i >= 0 && i < globalState.pages.length) targetIndices.push(i);
+        }
+    }
+
+    if (targetIndices.length === 0) {
+        showToast("Không có trang nào được chọn để xuất PDF.", "warn");
+        return;
+    }
+
     const prevPageIndex = globalState.activePageIndex;
     const prevSelectedId = globalState.selectedBlockId;
     globalState.selectedBlockId = null;
@@ -564,28 +635,44 @@ export async function runPdfExport(): Promise<void> {
 
     try {
         let pdf: any = null;
-        const { startIndex, endIndex } = getExportRange();
-        const totalPages = endIndex - startIndex + 1;
+        const totalPages = targetIndices.length;
 
-        for (let i = startIndex; i <= endIndex; i++) {
+        if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+            await document.fonts.ready;
+        }
+
+        for (let seq = 0; seq < targetIndices.length; seq++) {
+            const i = targetIndices[seq];
             const page = globalState.pages[i];
-            const currentCount = i - startIndex + 1;
+            const currentCount = seq + 1;
             const progressVal = Math.round((currentCount / totalPages) * 90);
             updateProcessingOverlay(true, `Đang ghép PDF (${currentCount}/${totalPages})`, `Trang: ${escapeHTML(page.name)}`, progressVal);
 
-            selectPage(i);
-            if (elements.mangaBgImage) {
-                await waitForImageReady(elements.mangaBgImage, page.src);
+            let img: HTMLImageElement | null = null;
+            let blobUrl: string | null = null;
+            const pageFile = page.originalFile || page.file;
+
+            if (pageFile) {
+                img = new Image();
+                blobUrl = URL.createObjectURL(pageFile as Blob);
+                await new Promise((resolve, reject) => {
+                    img!.onload = resolve;
+                    img!.onerror = () => reject(new Error("Không thể tải ảnh offscreen."));
+                    img!.src = blobUrl!;
+                });
+            } else if (page.src) {
+                img = new Image();
+                await new Promise((resolve, reject) => {
+                    img!.onload = resolve;
+                    img!.onerror = () => reject(new Error("Không thể tải ảnh offscreen."));
+                    img!.src = page.src;
+                });
             }
-            await restorePageEraserDrawing(page);
-            renderOverlays();
 
-            await waitForNextPaint();
-            await document.fonts.ready;
+            const canvas = await renderPageToCanvas2D(page, img);
+            if (blobUrl) URL.revokeObjectURL(blobUrl);
 
-            const canvas = await renderPageToCanvas2D(page);
-
-            const pdfQualityMode = globalState.pdfQuality || 'hd';
+            const pdfQualityMode = options?.quality || globalState.pdfQuality || 'hd';
             let imgData: string;
             let imgFormat = 'JPEG';
             if (pdfQualityMode === 'max') {
@@ -622,7 +709,14 @@ export async function runPdfExport(): Promise<void> {
         }
 
         updateProcessingOverlay(true, "Đang hoàn tất PDF...", "Đang lưu file về máy...", 98);
-        pdf.save(`Manga_Chapter_${Date.now()}.pdf`);
+
+        const defaultPdfName = `Manga_Chapter_${Date.now()}.pdf`;
+        let finalPdfName = options?.filename?.trim() || defaultPdfName;
+        if (!finalPdfName.toLowerCase().endsWith('.pdf')) {
+            finalPdfName += '.pdf';
+        }
+
+        pdf.save(finalPdfName);
         showToast("Đã xuất thành công toàn bộ chương truyện ra file PDF!", "success");
     } catch (err: any) {
         console.error("Lỗi xuất PDF:", err);
