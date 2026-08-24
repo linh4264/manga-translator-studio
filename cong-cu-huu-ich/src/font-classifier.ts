@@ -1137,14 +1137,52 @@ export function autoClassifyAndRenderGallery(): void {
 }
 
 /**
- * Saves classified fonts back to IndexedDB asynchronously
+ * Saves classified fonts back to IndexedDB asynchronously (Strictly custom fonts only, clean raw family name)
  */
 export async function saveClassifiedFontsToDB(fonts: CustomFontItem[]): Promise<void> {
     try {
+        const customOnly = (fonts || []).filter(f => f && f.type === 'custom' && f.name && f.blob);
+        if (customOnly.length === 0) return;
+
         const db = await openFontsDB();
         const tx = db.transaction(STORE_FONTS_NAME, 'readwrite');
         const store = tx.objectStore(STORE_FONTS_NAME);
-        fonts.forEach(f => store.put(f));
+
+        customOnly.forEach(f => {
+            const rawFamily = String(f.name || f.family || '')
+                .replace(/^['"]|['"]$/g, '')
+                .replace(/,\s*(sans-serif|serif|cursive|monospace).*$/i, '')
+                .trim();
+            if (!rawFamily) return;
+
+            store.put({
+                family: rawFamily,
+                blob: f.blob,
+                category: f.category,
+                fontStyleType: f.fontStyleType,
+                weightScore: f.weightScore,
+                energyScore: f.energyScore,
+                formalityScore: f.formalityScore,
+                roughnessScore: f.roughnessScore,
+                roundnessScore: f.roundnessScore,
+                handwrittenScore: f.handwrittenScore,
+                isAllCaps: f.isAllCaps,
+                weightGrade: f.weightGrade,
+                widthGrade: f.widthGrade,
+                slantGrade: f.slantGrade,
+                caseGrade: f.caseGrade,
+                slantAngle: f.slantAngle,
+                widthRatio: f.widthRatio,
+                caseRatio: f.caseRatio,
+                morphology: f.morphology,
+                primaryTextType: f.primaryTextType,
+                compatibleTextTypes: f.compatibleTextTypes,
+                primaryTone: f.primaryTone,
+                compatibleTones: f.compatibleTones,
+                classification: f.classification,
+                dateAdded: f.dateAdded || Date.now()
+            });
+        });
     } catch (e) {
         console.warn("Lỗi lưu font classification vào DB:", e);
     }

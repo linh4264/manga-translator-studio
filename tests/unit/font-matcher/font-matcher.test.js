@@ -17,7 +17,10 @@ import {
     generateFontSetFromCustomProfile,
     analyzeGenreWithCanvasHeuristics,
     BUILTIN_MANGA_FONTS,
-    getEffectiveFontLibrary
+    getEffectiveFontLibrary,
+    normalizeFontKey,
+    isFuzzyDuplicate,
+    fastProfileFontFromName
 } from '../../../cong-cu-huu-ich/src/font-matcher';
 
 describe('Manga Font Matcher & Set Recommendation Engine', () => {
@@ -711,6 +714,109 @@ describe('Manga Font Matcher & Set Recommendation Engine', () => {
                 expect(f.widthGrade).toBe('Wide');
                 expect(f.slantGrade).toBe('Oblique');
             });
+        });
+    });
+
+    describe('8. Font Deduplication Engine & Unicode Normalization', () => {
+        test('normalizeFontKey normalizes Vietnamese diacritics, extensions, and special characters', () => {
+            expect(normalizeFontKey('UVN Bão Táp.ttf')).toBe('uvnbaotap');
+            expect(normalizeFontKey('UVN_Bao_Tap.otf')).toBe('uvnbaotap');
+            expect(normalizeFontKey('UVN Bao Tap')).toBe('uvnbaotap');
+            expect(normalizeFontKey('HL Thư Pháp.woff2')).toBe('hlthuphap');
+            expect(normalizeFontKey('HL_Thu_Phap')).toBe('hlthuphap');
+            expect(normalizeFontKey('SVN-Avo.ttf')).toBe('svnavo');
+            expect(normalizeFontKey('SVN_Avo')).toBe('svnavo');
+            expect(normalizeFontKey('SVN Avo')).toBe('svnavo');
+            expect(normalizeFontKey('VNI-Manga')).toBe('vnimanga');
+        });
+
+        test('isFuzzyDuplicate detects skeleton matches from legacy stripped regex names', () => {
+            // 'uvn b o t p' (from stripped accents) vs 'uvnbaotap'
+            const strippedKey = normalizeFontKey('UVN B o T p');
+            const cleanKey = normalizeFontKey('UVN Bão Táp');
+            expect(isFuzzyDuplicate(strippedKey, cleanKey)).toBe(true);
+
+            // 'hl th ph p' vs 'hlthuphap'
+            const strippedHl = normalizeFontKey('HL Th Ph p');
+            const cleanHl = normalizeFontKey('HL Thư Pháp');
+            expect(isFuzzyDuplicate(strippedHl, cleanHl)).toBe(true);
+
+            // Completely different fonts must NOT be detected as duplicates
+            expect(isFuzzyDuplicate('svnavo', 'vnimanga')).toBe(false);
+            expect(isFuzzyDuplicate('nunito', 'bangers')).toBe(false);
+        });
+
+        test('Deduplicates a 1000-font bloated collection (500 clean + 500 duplicates) back to 500 unique fonts', () => {
+            const rawMockEntries = [];
+            // Generate 500 clean fonts
+            for (let i = 0; i < 500; i++) {
+                rawMockEntries.push({
+                    family: `Font Tiếng Việt ${i}`,
+                    dateAdded: 1000 + i,
+                    weightGrade: 'Regular'
+                });
+            }
+            // Generate 500 duplicate entries (with underscores, missing accents, or .ttf extensions)
+            for (let i = 0; i < 500; i++) {
+                const variant = i % 3 === 0 
+                    ? `Font_Tieng_Viet_${i}.ttf` 
+                    : i % 3 === 1 
+                    ? `Font Ti ng Vi t ${i}` 
+                    : `font-tieng-viet-${i}`;
+                rawMockEntries.push({
+                    family: variant,
+                    dateAdded: 500 + i,
+                    weightGrade: undefined
+                });
+            }
+
+            expect(rawMockEntries.length).toBe(1000);
+
+            // Run deduplication simulation
+            const seenNormalizedMap = new Map();
+            const duplicatesToDelete = [];
+
+            for (const item of rawMockEntries) {
+                const cleanFamily = item.family.replace(/\.[^/.]+$/, '').trim();
+                const normKey = normalizeFontKey(cleanFamily);
+
+                let matchedKey = '';
+                if (seenNormalizedMap.has(normKey)) {
+                    matchedKey = normKey;
+                } else {
+                    for (const existingKey of seenNormalizedMap.keys()) {
+                        if (isFuzzyDuplicate(normKey, existingKey)) {
+                            matchedKey = existingKey;
+                            break;
+                        }
+                    }
+                }
+
+                if (matchedKey) {
+                    const existing = seenNormalizedMap.get(matchedKey);
+                    const existingHasAccents = /[à-ỹÀ-Ỹ]/.test(existing.family);
+                    const itemHasAccents = /[à-ỹÀ-Ỹ]/.test(item.family);
+                    const existingScore = (existingHasAccents ? 20 : 0) + (existing.weightGrade ? 5 : 0) + (existing.dateAdded || 0) / 1e13;
+                    const itemScore = (itemHasAccents ? 20 : 0) + (item.weightGrade ? 5 : 0) + (item.dateAdded || 0) / 1e13;
+
+                    if (itemScore > existingScore) {
+                        duplicatesToDelete.push(existing.family);
+                        seenNormalizedMap.delete(matchedKey);
+                        seenNormalizedMap.set(normKey, item);
+                    } else {
+                        duplicatesToDelete.push(item.family);
+                    }
+                } else {
+                    seenNormalizedMap.set(normKey, item);
+                }
+            }
+
+            expect(seenNormalizedMap.size).toBe(500);
+            expect(duplicatesToDelete.length).toBe(500);
+            // Verify all retained fonts are the clean accented versions
+            for (const font of seenNormalizedMap.values()) {
+                expect(font.family.startsWith('Font Tiếng Việt')).toBe(true);
+            }
         });
     });
 });

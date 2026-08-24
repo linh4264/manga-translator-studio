@@ -1318,6 +1318,9 @@
                             <span id="fontmatch-custom-list-count" class="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-xs font-mono font-bold">0 Font</span>
                         </div>
                         <div class="flex items-center gap-2 flex-wrap">
+                            <button type="button" onclick="deduplicateCustomFonts(true)" class="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer" title="Tự động kiểm tra và xóa các font trùng lặp hoặc tệp lặp tên">
+                                <i class="fa-solid fa-broom text-[11px]"></i> Lọc Trùng
+                            </button>
                             <button type="button" onclick="reprofileAllCustomFonts()" class="px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer" title="Chạy lại thuật toán phân tích hình thái học cho toàn bộ font">
                                 <i class="fa-solid fa-wand-magic-sparkles text-[11px]"></i> Phân Tích Lại Toàn Bộ
                             </button>

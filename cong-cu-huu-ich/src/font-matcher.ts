@@ -3935,9 +3935,38 @@ export function fastProfileFontFromName(family: string): FontProfile {
 const customFontPageSize = 24;
 let customFontCurrentPage = 1;
 
+export function normalizeFontKey(name: string): string {
+    if (!name) return '';
+    return name
+        .replace(/\.[^/.]+$/, '') // strip extension (.ttf, .otf, .woff, etc.)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // strip diacritics/accents
+        .toLowerCase()
+        .replace(/đ/g, 'd')
+        .replace(/[^a-z0-9]/g, '') // strip non-alphanumerics
+        .trim();
+}
+
+export function isFuzzyDuplicate(keyA: string, keyB: string): boolean {
+    if (!keyA || !keyB) return false;
+    if (keyA === keyB) return true;
+    const short = keyA.length < keyB.length ? keyA : keyB;
+    const long = keyA.length < keyB.length ? keyB : keyA;
+    if (long.length > 0 && short.length >= 4) {
+        const shortConsonants = short.replace(/[aeiouy]/g, '');
+        const longConsonants = long.replace(/[aeiouy]/g, '');
+        if (shortConsonants.length >= 3 && shortConsonants === longConsonants) {
+            return true;
+        }
+    }
+    return false;
+}
+
 export function updateCustomFontsBadge(): void {
     const badge = document.getElementById('fontmatch-custom-badge');
     if (badge) badge.innerText = String(customFontsList.length);
+    const listCount = document.getElementById('fontmatch-custom-list-count');
+    if (listCount) listCount.innerText = `${customFontsList.length} Font`;
 }
 
 export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
@@ -3959,18 +3988,64 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
             return;
         }
 
-        // Auto-deduplicate font records if legacy underscore/space duplicates exist
+        // Auto-deduplicate font records across diacritics, underscores, and legacy stripped ASCII / CSS-wrapped names
         const seenNormalizedMap = new Map<string, any>();
         const duplicatesToDelete: string[] = [];
 
         for (const item of rawEntries) {
             if (!item || !item.family) continue;
-            const normKey = item.family.toLowerCase().replace(/[\s_-]+/g, ' ').trim();
+            
+            // Delete ghost built-in font entries or entries without actual font blob
+            if (!item.blob) {
+                duplicatesToDelete.push(item.family);
+                continue;
+            }
 
+            const rawOriginalKey = item.family;
+            const cleanFamily = String(item.family)
+                .replace(/^['"]|['"]$/g, '')
+                .replace(/,\s*(sans-serif|serif|cursive|monospace).*$/i, '')
+                .replace(/\.[^/.]+$/, '')
+                .trim();
+
+            if (!cleanFamily) {
+                duplicatesToDelete.push(rawOriginalKey);
+                continue;
+            }
+
+            // If the key in DB had CSS wrappers or quotes, schedule old key for deletion
+            if (rawOriginalKey !== cleanFamily) {
+                duplicatesToDelete.push(rawOriginalKey);
+                item.family = cleanFamily;
+            }
+
+            const normKey = normalizeFontKey(cleanFamily);
+            if (!normKey) continue;
+
+            // Check exact normKey or fuzzy skeleton match
+            let matchedKey = '';
             if (seenNormalizedMap.has(normKey)) {
-                const existing = seenNormalizedMap.get(normKey);
-                if (!existing.weightGrade && item.weightGrade) {
+                matchedKey = normKey;
+            } else {
+                for (const existingKey of seenNormalizedMap.keys()) {
+                    if (isFuzzyDuplicate(normKey, existingKey)) {
+                        matchedKey = existingKey;
+                        break;
+                    }
+                }
+            }
+
+            if (matchedKey) {
+                const existing = seenNormalizedMap.get(matchedKey);
+                // Prefer font record with proper Vietnamese accents / valid weightGrade / newer timestamp
+                const existingHasAccents = /[à-ỹÀ-Ỹ]/.test(existing.family);
+                const itemHasAccents = /[à-ỹÀ-Ỹ]/.test(item.family);
+                const existingScore = (existingHasAccents ? 20 : 0) + (existing.weightGrade ? 5 : 0) + (existing.dateAdded || 0) / 1e13;
+                const itemScore = (itemHasAccents ? 20 : 0) + (item.weightGrade ? 5 : 0) + (item.dateAdded || 0) / 1e13;
+
+                if (itemScore > existingScore) {
                     duplicatesToDelete.push(existing.family);
+                    seenNormalizedMap.delete(matchedKey);
                     seenNormalizedMap.set(normKey, item);
                 } else {
                     duplicatesToDelete.push(item.family);
@@ -3984,8 +4059,14 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
             try {
                 const delTx = db.transaction(STORE_FONTS_NAME, 'readwrite');
                 const delStore = delTx.objectStore(STORE_FONTS_NAME);
-                duplicatesToDelete.forEach(fam => delStore.delete(fam));
-            } catch (e) {}
+                duplicatesToDelete.forEach(fam => {
+                    if (fam) {
+                        try { delStore.delete(fam); } catch (e) {}
+                    }
+                });
+            } catch (e) {
+                console.warn("Lỗi dọn dẹp font trùng lặp trong IndexedDB:", e);
+            }
         }
 
         const entries = Array.from(seenNormalizedMap.values());
@@ -4120,7 +4201,17 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
             try {
                 const writeTx = db.transaction(STORE_FONTS_NAME, 'readwrite');
                 const writeStore = writeTx.objectStore(STORE_FONTS_NAME);
-                itemsToUpdateDB.forEach(item => writeStore.put(item));
+                itemsToUpdateDB.forEach(item => {
+                    if (!item || !item.family || !item.blob) return;
+                    const rawFamily = String(item.family)
+                        .replace(/^['"]|['"]$/g, '')
+                        .replace(/,\s*(sans-serif|serif|cursive|monospace).*$/i, '')
+                        .trim();
+                    writeStore.put({
+                        ...item,
+                        family: rawFamily
+                    });
+                });
             } catch (cacheErr) {
                 console.warn("Lỗi lưu cache profile font vào IndexedDB:", cacheErr);
             }
@@ -4217,7 +4308,11 @@ export async function handleCustomFontUpload(files: File[]): Promise<void> {
                     recommendedStroke: profile.weightScore > 0.7 ? '3.5px' : '1.5px'
                 };
 
-                const existingIdx = customFontsList.findIndex(f => f.name === family);
+                const normFamily = normalizeFontKey(family);
+                const existingIdx = customFontsList.findIndex(f => {
+                    const normExisting = normalizeFontKey(f.name);
+                    return normExisting === normFamily || isFuzzyDuplicate(normExisting, normFamily);
+                });
                 if (existingIdx >= 0) {
                     customFontsList[existingIdx] = newFontObj;
                 } else {
@@ -4268,6 +4363,111 @@ export async function handleCustomFontUpload(files: File[]): Promise<void> {
         updateAllFontCanvases();
         updateAllFontSetCanvases();
     })();
+}
+
+export async function deduplicateCustomFonts(showPrompt: boolean = false): Promise<number> {
+    try {
+        const db = await openFontsDB();
+        const tx = db.transaction(STORE_FONTS_NAME, 'readonly');
+        const store = tx.objectStore(STORE_FONTS_NAME);
+        const req = store.getAll();
+        const rawEntries: any[] = await new Promise((res, rej) => {
+            req.onsuccess = () => res(req.result || []);
+            req.onerror = (e: any) => rej(e.target.error);
+        });
+
+        if (!rawEntries || rawEntries.length === 0) {
+            if (showPrompt) alert("Kho font hiện đang trống!");
+            return 0;
+        }
+
+        const seenNormalizedMap = new Map<string, any>();
+        const duplicatesToDelete: string[] = [];
+
+        for (const item of rawEntries) {
+            if (!item || !item.family) continue;
+            if (!item.blob) {
+                duplicatesToDelete.push(item.family);
+                continue;
+            }
+
+            const rawOriginalKey = item.family;
+            const cleanFamily = String(item.family)
+                .replace(/^['"]|['"]$/g, '')
+                .replace(/,\s*(sans-serif|serif|cursive|monospace).*$/i, '')
+                .replace(/\.[^/.]+$/, '')
+                .trim();
+
+            if (!cleanFamily) {
+                duplicatesToDelete.push(rawOriginalKey);
+                continue;
+            }
+
+            if (rawOriginalKey !== cleanFamily) {
+                duplicatesToDelete.push(rawOriginalKey);
+                item.family = cleanFamily;
+            }
+
+            const normKey = normalizeFontKey(cleanFamily);
+            if (!normKey) continue;
+
+            let matchedKey = '';
+            if (seenNormalizedMap.has(normKey)) {
+                matchedKey = normKey;
+            } else {
+                for (const existingKey of seenNormalizedMap.keys()) {
+                    if (isFuzzyDuplicate(normKey, existingKey)) {
+                        matchedKey = existingKey;
+                        break;
+                    }
+                }
+            }
+
+            if (matchedKey) {
+                const existing = seenNormalizedMap.get(matchedKey);
+                const existingHasAccents = /[à-ỹÀ-Ỹ]/.test(existing.family);
+                const itemHasAccents = /[à-ỹÀ-Ỹ]/.test(item.family);
+                const existingScore = (existingHasAccents ? 20 : 0) + (existing.weightGrade ? 5 : 0) + (existing.dateAdded || 0) / 1e13;
+                const itemScore = (itemHasAccents ? 20 : 0) + (item.weightGrade ? 5 : 0) + (item.dateAdded || 0) / 1e13;
+
+                if (itemScore > existingScore) {
+                    duplicatesToDelete.push(existing.family);
+                    seenNormalizedMap.delete(matchedKey);
+                    seenNormalizedMap.set(normKey, item);
+                } else {
+                    duplicatesToDelete.push(item.family);
+                }
+            } else {
+                seenNormalizedMap.set(normKey, item);
+            }
+        }
+
+        if (duplicatesToDelete.length > 0) {
+            const delTx = db.transaction(STORE_FONTS_NAME, 'readwrite');
+            const delStore = delTx.objectStore(STORE_FONTS_NAME);
+            duplicatesToDelete.forEach(fam => {
+                if (fam) {
+                    try { delStore.delete(fam); } catch (e) {}
+                }
+            });
+        }
+
+        await loadAndRegisterCustomFontsFromDB();
+
+        if (showPrompt) {
+            if (duplicatesToDelete.length > 0) {
+                alert(`🎉 Đã loại bỏ thành công ${duplicatesToDelete.length} bản sao font trùng lặp! Thư viện hiện còn ${customFontsList.length} font duy nhất.`);
+            } else {
+                alert(`✅ Thư viện hoàn toàn sạch sẽ! Toàn bộ ${customFontsList.length} font đều là font duy nhất.`);
+            }
+        }
+
+        return duplicatesToDelete.length;
+    } catch (e) {
+        console.error("Lỗi lọc trùng font:", e);
+        if (showPrompt) alert("Đã xảy ra lỗi khi kiểm tra font trùng lặp.");
+        return 0;
+    }
 }
 
 export async function reprofileAllCustomFonts(): Promise<void> {
