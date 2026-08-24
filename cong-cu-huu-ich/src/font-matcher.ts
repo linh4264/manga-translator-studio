@@ -24,7 +24,332 @@ import type {
     AiGenreAnalysisResult
 } from './types';
 
-export const BUILTIN_MANGA_FONTS: CustomFontItem[] = [];
+export const BUILTIN_MANGA_FONTS: CustomFontItem[] = [
+    {
+        id: 'builtin_nunito',
+        name: 'Nunito',
+        family: "'Nunito', sans-serif",
+        fontClass: 'font-manga',
+        category: 'dialogue',
+        fontStyleType: 'standard_dialogue',
+        type: 'builtin',
+        weightScore: 0.50,
+        energyScore: 0.50,
+        formalityScore: 0.40,
+        roughnessScore: 0.10,
+        roundnessScore: 0.85,
+        handwrittenScore: 0.20,
+        isAllCaps: false,
+        weightGrade: 'Regular',
+        widthGrade: 'Normal',
+        slantGrade: 'Upright',
+        caseGrade: 'Mixed Case',
+        slantAngle: 0,
+        widthRatio: 0.82,
+        caseRatio: 0.70,
+        size: 150000,
+        dateAdded: 0,
+        desc: 'Font thoại tiêu chuẩn (Shoujo / Romance / Dialogue Manga). Nét tròn mềm mại, dễ đọc.',
+        recommendedStroke: '1.5px'
+    },
+    {
+        id: 'builtin_be_vietnam_pro',
+        name: 'Be Vietnam Pro',
+        family: "'Be Vietnam Pro', sans-serif",
+        fontClass: 'font-vietnamese',
+        category: 'narration',
+        fontStyleType: 'serif_narration',
+        type: 'builtin',
+        weightScore: 0.45,
+        energyScore: 0.40,
+        formalityScore: 0.80,
+        roughnessScore: 0.05,
+        roundnessScore: 0.50,
+        handwrittenScore: 0.10,
+        isAllCaps: false,
+        weightGrade: 'Regular',
+        widthGrade: 'Normal',
+        slantGrade: 'Upright',
+        caseGrade: 'Mixed Case',
+        slantAngle: 0,
+        widthRatio: 0.84,
+        caseRatio: 0.72,
+        size: 180000,
+        dateAdded: 0,
+        desc: 'Font dẫn truyện / tự sự / bối cảnh. Trang nhã, chỉn chu, hiển thị tiếng Việt hoàn hảo.',
+        recommendedStroke: '1.5px'
+    },
+    {
+        id: 'builtin_bangers',
+        name: 'Bangers',
+        family: "'Bangers', cursive",
+        fontClass: 'font-bangers',
+        category: 'shout',
+        fontStyleType: 'shout_impact',
+        type: 'builtin',
+        weightScore: 0.85,
+        energyScore: 0.90,
+        formalityScore: 0.25,
+        roughnessScore: 0.30,
+        roundnessScore: 0.40,
+        handwrittenScore: 0.20,
+        isAllCaps: true,
+        weightGrade: 'Bold',
+        widthGrade: 'Normal',
+        slantGrade: 'Upright',
+        caseGrade: 'All Caps',
+        slantAngle: 0,
+        widthRatio: 0.80,
+        caseRatio: 1.0,
+        size: 120000,
+        dateAdded: 0,
+        desc: 'Font la hét / cảm xúc mạnh / Shounen / Comic Action. Nét khối bùng nổ, nổi bật.',
+        recommendedStroke: '3.5px'
+    },
+    {
+        id: 'builtin_comic_neue',
+        name: 'Comic Neue',
+        family: "'Comic Neue', cursive",
+        fontClass: 'font-comic-neue',
+        category: 'cute',
+        fontStyleType: 'cartoon_quirky',
+        type: 'builtin',
+        weightScore: 0.45,
+        energyScore: 0.55,
+        formalityScore: 0.20,
+        roughnessScore: 0.10,
+        roundnessScore: 0.88,
+        handwrittenScore: 0.40,
+        isAllCaps: false,
+        weightGrade: 'Regular',
+        widthGrade: 'Normal',
+        slantGrade: 'Upright',
+        caseGrade: 'Mixed Case',
+        slantAngle: 0,
+        widthRatio: 0.82,
+        caseRatio: 0.68,
+        size: 140000,
+        dateAdded: 0,
+        desc: 'Font hài hước / đời thường / tấu hài / Slice of Life. Nét vẽ thân thiện, vui tươi.',
+        recommendedStroke: '2.0px'
+    },
+    {
+        id: 'builtin_caveat',
+        name: 'Caveat',
+        family: "'Caveat', cursive",
+        fontClass: 'font-caveat',
+        category: 'whisper',
+        fontStyleType: 'whisper_cursive',
+        type: 'builtin',
+        weightScore: 0.35,
+        energyScore: 0.30,
+        formalityScore: 0.15,
+        roughnessScore: 0.20,
+        roundnessScore: 0.70,
+        handwrittenScore: 0.85,
+        isAllCaps: false,
+        weightGrade: 'Light',
+        widthGrade: 'Normal',
+        slantGrade: 'Italic',
+        caseGrade: 'Mixed Case',
+        slantAngle: 12,
+        widthRatio: 0.75,
+        caseRatio: 0.65,
+        size: 110000,
+        dateAdded: 0,
+        desc: 'Font suy nghĩ nội tâm / lời thì thầm / nhật ký. Viết tay mềm mại, giàu cảm xúc.',
+        recommendedStroke: '1.0px'
+    },
+    {
+        id: 'builtin_patrick_hand',
+        name: 'Patrick Hand',
+        family: "'Patrick Hand', cursive",
+        fontClass: 'font-comic',
+        category: 'cute',
+        fontStyleType: 'cartoon_quirky',
+        type: 'builtin',
+        weightScore: 0.40,
+        energyScore: 0.45,
+        formalityScore: 0.20,
+        roughnessScore: 0.15,
+        roundnessScore: 0.75,
+        handwrittenScore: 0.80,
+        isAllCaps: false,
+        weightGrade: 'Regular',
+        widthGrade: 'Normal',
+        slantGrade: 'Upright',
+        caseGrade: 'Mixed Case',
+        slantAngle: 0,
+        widthRatio: 0.78,
+        caseRatio: 0.68,
+        size: 105000,
+        dateAdded: 0,
+        desc: 'Font độc thoại / ghi chú viết tay / nhân vật phụ. Tự nhiên mộc mạc.',
+        recommendedStroke: '1.5px'
+    },
+    {
+        id: 'builtin_pangolin',
+        name: 'Pangolin',
+        family: "'Pangolin', cursive",
+        fontClass: 'font-pangolin',
+        category: 'cute',
+        fontStyleType: 'cartoon_quirky',
+        type: 'builtin',
+        weightScore: 0.48,
+        energyScore: 0.50,
+        formalityScore: 0.20,
+        roughnessScore: 0.10,
+        roundnessScore: 0.85,
+        handwrittenScore: 0.60,
+        isAllCaps: false,
+        weightGrade: 'Regular',
+        widthGrade: 'Normal',
+        slantGrade: 'Upright',
+        caseGrade: 'Mixed Case',
+        slantAngle: 0,
+        widthRatio: 0.80,
+        caseRatio: 0.70,
+        size: 115000,
+        dateAdded: 0,
+        desc: 'Font dễ thương / trẻ thơ / nhí nhảnh. Bo tròn đáng yêu.',
+        recommendedStroke: '2.0px'
+    },
+    {
+        id: 'builtin_chakra_petch',
+        name: 'Chakra Petch',
+        family: "'Chakra Petch', sans-serif",
+        fontClass: 'font-chakra',
+        category: 'tech',
+        fontStyleType: 'tech_display',
+        type: 'builtin',
+        weightScore: 0.60,
+        energyScore: 0.70,
+        formalityScore: 0.75,
+        roughnessScore: 0.10,
+        roundnessScore: 0.20,
+        handwrittenScore: 0.05,
+        isAllCaps: false,
+        weightGrade: 'Medium',
+        widthGrade: 'Normal',
+        slantGrade: 'Upright',
+        caseGrade: 'Mixed Case',
+        slantAngle: 0,
+        widthRatio: 0.85,
+        caseRatio: 0.72,
+        size: 160000,
+        dateAdded: 0,
+        desc: 'Font công nghệ / Sci-Fi / Robot / Hệ thống Game / Cyberpunk.',
+        recommendedStroke: '2.0px'
+    },
+    {
+        id: 'builtin_permanent_marker',
+        name: 'Permanent Marker',
+        family: "'Permanent Marker', cursive",
+        fontClass: 'font-marker',
+        category: 'sfx',
+        fontStyleType: 'brush_sfx',
+        type: 'builtin',
+        weightScore: 0.90,
+        energyScore: 0.95,
+        formalityScore: 0.10,
+        roughnessScore: 0.85,
+        roundnessScore: 0.30,
+        handwrittenScore: 0.75,
+        isAllCaps: false,
+        weightGrade: 'Black',
+        widthGrade: 'Normal',
+        slantGrade: 'Oblique',
+        caseGrade: 'Mixed Case',
+        slantAngle: 8,
+        widthRatio: 0.85,
+        caseRatio: 0.78,
+        size: 130000,
+        dateAdded: 0,
+        desc: 'Font hiệu ứng âm thanh SFX / Cọ vẽ đậm / Va chạm / Kinh dị.',
+        recommendedStroke: '3.5px'
+    },
+    {
+        id: 'builtin_bungee',
+        name: 'Bungee',
+        family: "'Bungee', cursive",
+        fontClass: 'font-bungee',
+        category: 'sfx',
+        fontStyleType: 'shout_impact',
+        type: 'builtin',
+        weightScore: 0.95,
+        energyScore: 0.90,
+        formalityScore: 0.30,
+        roughnessScore: 0.15,
+        roundnessScore: 0.30,
+        handwrittenScore: 0.10,
+        isAllCaps: true,
+        weightGrade: 'Black',
+        widthGrade: 'Normal',
+        slantGrade: 'Upright',
+        caseGrade: 'All Caps',
+        slantAngle: 0,
+        widthRatio: 0.88,
+        caseRatio: 1.0,
+        size: 140000,
+        dateAdded: 0,
+        desc: 'Font khối dày SFX / Tiêu đề chương / Đòn tấn công uy lực.',
+        recommendedStroke: '4.0px'
+    },
+    {
+        id: 'builtin_saira_condensed',
+        name: 'Saira Condensed',
+        family: "'Saira Condensed', sans-serif",
+        fontClass: 'font-saira',
+        category: 'dialogue',
+        fontStyleType: 'standard_dialogue',
+        type: 'builtin',
+        weightScore: 0.50,
+        energyScore: 0.50,
+        formalityScore: 0.50,
+        roughnessScore: 0.10,
+        roundnessScore: 0.40,
+        handwrittenScore: 0.10,
+        isAllCaps: false,
+        weightGrade: 'Regular',
+        widthGrade: 'Condensed',
+        slantGrade: 'Upright',
+        caseGrade: 'Mixed Case',
+        slantAngle: 0,
+        widthRatio: 0.55,
+        caseRatio: 0.70,
+        size: 135000,
+        dateAdded: 0,
+        desc: 'Font hẹp (Condensed) tối ưu cho các khung thoại manga dọc hẹp.',
+        recommendedStroke: '1.5px'
+    },
+    {
+        id: 'builtin_inter',
+        name: 'Inter',
+        family: "'Inter', sans-serif",
+        fontClass: 'font-inter',
+        category: 'narration',
+        fontStyleType: 'standard_dialogue',
+        type: 'builtin',
+        weightScore: 0.42,
+        energyScore: 0.35,
+        formalityScore: 0.75,
+        roughnessScore: 0.05,
+        roundnessScore: 0.50,
+        handwrittenScore: 0.05,
+        isAllCaps: false,
+        weightGrade: 'Regular',
+        widthGrade: 'Normal',
+        slantGrade: 'Upright',
+        caseGrade: 'Mixed Case',
+        slantAngle: 0,
+        widthRatio: 0.82,
+        caseRatio: 0.72,
+        size: 170000,
+        dateAdded: 0,
+        desc: 'Font phụ chú (Small text) / Chú thích hệ thống / Cực kỳ rõ nét.',
+        recommendedStroke: '1.0px'
+    }
+];
 
 let fontMatchLoadedImg: HTMLImageElement | null = null;
 let fontMatchImgDataUrl = '';
@@ -33,7 +358,12 @@ let customFontsList: CustomFontItem[] = [];
 let liveUpdateDebounceTimer: any = null;
 
 export function getEffectiveFontLibrary(): CustomFontItem[] {
-    return customFontsList;
+    if (customFontsList && customFontsList.length > 0) {
+        const customNames = new Set(customFontsList.map(f => f.name.toLowerCase()));
+        const remainingBuiltins = BUILTIN_MANGA_FONTS.filter(b => !customNames.has(b.name.toLowerCase()));
+        return [...customFontsList, ...remainingBuiltins];
+    }
+    return BUILTIN_MANGA_FONTS;
 }
 
 // Font Set Recommender State
@@ -469,8 +799,17 @@ export function switchFontMatchSubTab(subTabId: string): void {
         }
     });
 
-    if (subTabId === 'set' && !currentGeneratedFontSet) {
-        generateAndDisplayFontSet('romance');
+    if (subTabId === 'set') {
+        generateAndDisplayFontSet();
+    } else if (subTabId === 'custom') {
+        renderCustomFontsUI();
+    } else if (subTabId === 'classify') {
+        try {
+            import('./font-classifier').then(m => {
+                m.populateFontSelectDropdown();
+                m.autoClassifyAndRenderGallery();
+            }).catch(() => {});
+        } catch (e) {}
     }
 }
 
@@ -3467,6 +3806,131 @@ export function profileFontGlyph(family: string): FontProfile {
     }
 }
 
+// --- FAST PROFILE HEURISTICS FROM FONT FAMILY NAME (O(1) Ultra Fast) ---
+export function fastProfileFontFromName(family: string): FontProfile {
+    const lower = (family || '').toLowerCase();
+
+    // 1. Weight Grade & Score
+    let weightScore = 0.50;
+    let weightGrade: FontWeightGrade = 'Regular';
+    if (lower.includes('thin') || lower.includes('hairline')) {
+        weightScore = 0.15; weightGrade = 'Thin';
+    } else if (lower.includes('light') && !lower.includes('semibold')) {
+        weightScore = 0.28; weightGrade = 'Light';
+    } else if (lower.includes('medium')) {
+        weightScore = 0.58; weightGrade = 'Medium';
+    } else if (lower.includes('semibold') || lower.includes('demibold')) {
+        weightScore = 0.72; weightGrade = 'SemiBold';
+    } else if (lower.includes('black') || lower.includes('heavy') || lower.includes('extrabold') || lower.includes('ultrabold')) {
+        weightScore = 0.92; weightGrade = 'Black';
+    } else if (lower.includes('bold')) {
+        weightScore = 0.84; weightGrade = 'Bold';
+    }
+
+    // 2. Width Grade & Score
+    let widthGrade: FontWidthGrade = 'Normal';
+    let widthRatio = 0.82;
+    if (lower.includes('condensed') || lower.includes('narrow') || lower.includes('compress')) {
+        widthGrade = 'Condensed'; widthRatio = 0.58;
+    } else if (lower.includes('wide') || lower.includes('expanded') || lower.includes('extended')) {
+        widthGrade = 'Wide'; widthRatio = 1.15;
+    }
+
+    // 3. Slant Grade & Angle
+    let slantGrade: FontSlantGrade = 'Upright';
+    let slantAngle = 0;
+    if (lower.includes('italic') || lower.includes('cursive') || lower.includes('script') || lower.includes('handwriting')) {
+        slantGrade = 'Italic'; slantAngle = 12;
+    } else if (lower.includes('oblique') || lower.includes('slanted') || lower.includes('incline')) {
+        slantGrade = 'Oblique'; slantAngle = 10;
+    }
+
+    // 4. Case Grade & Flags
+    let caseGrade: FontCaseGrade = 'Mixed Case';
+    let isAllCaps = false;
+    if (lower.includes('allcaps') || lower.includes('all-caps') || lower.includes('caps') || lower.includes('headline')) {
+        caseGrade = 'All Caps'; isAllCaps = true;
+    }
+
+    // 5. Category, Style & Emotional Scores
+    let category: FontCategory = 'dialogue';
+    let fontStyleType: FontStyleType = 'standard_dialogue';
+    let energyScore = 0.50;
+    let handwrittenScore = 0.20;
+    let formalityScore = 0.50;
+    let roughnessScore = 0.15;
+    let roundnessScore = 0.60;
+
+    if (lower.includes('sfx') || lower.includes('brush') || lower.includes('marker') || lower.includes('grunge') || lower.includes('splatter') || lower.includes('thu-phap') || lower.includes('thu phap')) {
+        category = 'sfx';
+        fontStyleType = 'brush_sfx';
+        energyScore = 0.92;
+        roughnessScore = 0.75;
+        handwrittenScore = 0.70;
+        weightScore = Math.max(0.80, weightScore);
+    } else if (lower.includes('shout') || lower.includes('banger') || lower.includes('impact') || lower.includes('action') || lower.includes('boom') || lower.includes('bungee') || lower.includes('battle')) {
+        category = 'shout';
+        fontStyleType = 'shout_impact';
+        energyScore = 0.88;
+        weightScore = Math.max(0.78, weightScore);
+    } else if (lower.includes('whisper') || lower.includes('caveat') || lower.includes('diary') || lower.includes('thought') || lower.includes('monologue')) {
+        category = 'whisper';
+        fontStyleType = 'whisper_cursive';
+        energyScore = 0.30;
+        handwrittenScore = 0.80;
+        weightScore = Math.min(0.38, weightScore);
+    } else if (lower.includes('serif') || lower.includes('mincho') || lower.includes('times') || lower.includes('pro') || lower.includes('narration') || lower.includes('story')) {
+        category = 'narration';
+        fontStyleType = 'serif_narration';
+        formalityScore = 0.80;
+    } else if (lower.includes('comic') || lower.includes('cute') || lower.includes('pangolin') || lower.includes('hand') || lower.includes('cartoon') || lower.includes('fun') || lower.includes('baby') || lower.includes('kid')) {
+        category = 'cute';
+        fontStyleType = 'cartoon_quirky';
+        roundnessScore = 0.85;
+        handwrittenScore = 0.50;
+    } else if (lower.includes('tech') || lower.includes('cyber') || lower.includes('robot') || lower.includes('pixel') || lower.includes('chakra') || lower.includes('digital') || lower.includes('scifi')) {
+        category = 'tech';
+        fontStyleType = 'tech_display';
+        formalityScore = 0.70;
+        roundnessScore = 0.20;
+    }
+
+    const morphology: FontMorphologyResult = {
+        weight: weightGrade,
+        width: widthGrade,
+        slant: slantGrade,
+        caseType: caseGrade,
+        weightScore: Number(weightScore.toFixed(2)),
+        widthScore: Number(widthRatio.toFixed(2)),
+        slantAngle,
+        caseRatio: isAllCaps ? 1.0 : 0.70,
+        inkDensity: weightScore * 0.45,
+        isAllCaps,
+        isSmallCaps: false,
+        isItalic: slantGrade === 'Italic'
+    };
+
+    return {
+        weightScore: Number(weightScore.toFixed(2)),
+        energyScore: Number(energyScore.toFixed(2)),
+        formalityScore: Number(formalityScore.toFixed(2)),
+        roughnessScore: Number(roughnessScore.toFixed(2)),
+        roundnessScore: Number(roundnessScore.toFixed(2)),
+        handwrittenScore: Number(handwrittenScore.toFixed(2)),
+        fontStyleType,
+        category,
+        isAllCaps,
+        weightGrade,
+        widthGrade,
+        slantGrade,
+        caseGrade,
+        slantAngle,
+        widthRatio,
+        caseRatio: isAllCaps ? 1.0 : 0.70,
+        morphology
+    };
+}
+
 // --- CUSTOM FONT STATE & PAGINATION ---
 const customFontPageSize = 24;
 let customFontCurrentPage = 1;
@@ -3491,6 +3955,7 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
             customFontsList = [];
             updateCustomFontsBadge();
             renderCustomFontsUI();
+            generateAndDisplayFontSet();
             return;
         }
 
@@ -3524,11 +3989,10 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
         }
 
         const entries = Array.from(seenNormalizedMap.values());
-
         const newCustomList: CustomFontItem[] = [];
         const itemsToUpdateDB: any[] = [];
 
-        // 1. Synchronously populate fontBlobUrlsMap and initial metadata for instant access
+        // 1. Instantly parse & profile all fonts (O(1) in milliseconds)
         for (const item of entries) {
             if (!item || !item.family || !item.blob) continue;
             try {
@@ -3558,18 +4022,8 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
                         morphology: item.morphology
                     };
                 } else {
-                    // Ensure FontFace is loaded and added to document.fonts before profiling
-                    try {
-                        if (typeof document !== 'undefined' && item.blob) {
-                            const buffer = await item.blob.arrayBuffer();
-                            const fontFace = new FontFace(item.family, buffer);
-                            await fontFace.load();
-                            (document as any).fonts.add(fontFace);
-                        }
-                    } catch (loadErr) {
-                        console.warn(`Font loading prior to profiling failed for "${item.family}":`, loadErr);
-                    }
-                    profile = profileFontGlyph(item.family);
+                    // Fast instant profile from name
+                    profile = fastProfileFontFromName(item.family);
                     itemsToUpdateDB.push({
                         ...item,
                         weightScore: profile.weightScore,
@@ -3631,17 +4085,31 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
         updateCustomFontsBadge();
         updateCustomFontFilterCountsUI();
         renderCustomFontsUI();
+        generateAndDisplayFontSet();
 
-        // 2. Register FontFace objects into document.fonts in background chunks
+        // Notify font-classifier module
+        try {
+            import('./font-classifier').then(m => {
+                m.populateFontSelectDropdown();
+                m.autoClassifyAndRenderGallery();
+            }).catch(() => {});
+        } catch (e) {}
+
+        // 2. Register FontFace objects into document.fonts in smooth background chunks
         (async () => {
-            for (const item of entries) {
-                if (!item || !item.family || !item.blob) continue;
-                try {
-                    const buffer = await item.blob.arrayBuffer();
-                    const fontFace = new FontFace(item.family, buffer);
-                    await fontFace.load();
-                    (document as any).fonts.add(fontFace);
-                } catch (e) { }
+            const chunkSize = 20;
+            for (let i = 0; i < entries.length; i += chunkSize) {
+                const chunk = entries.slice(i, i + chunkSize);
+                await Promise.all(chunk.map(async item => {
+                    if (!item || !item.family || !item.blob) return;
+                    try {
+                        const buffer = await item.blob.arrayBuffer();
+                        const fontFace = new FontFace(item.family, buffer);
+                        await fontFace.load();
+                        (document as any).fonts.add(fontFace);
+                    } catch (e) { }
+                }));
+                await new Promise(r => setTimeout(r, 10));
             }
             updateAllFontCanvases();
             updateAllFontSetCanvases();
@@ -3656,11 +4124,6 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
             } catch (cacheErr) {
                 console.warn("Lỗi lưu cache profile font vào IndexedDB:", cacheErr);
             }
-        }
-
-        // 4. Automatically generate initial Font Set if on Set tab
-        if (!currentGeneratedFontSet && customFontsList.length > 0) {
-            generateAndDisplayFontSet('romance');
         }
     } catch (err) {
         console.warn("Lỗi đọc IndexedDB custom fonts:", err);
@@ -3680,56 +4143,48 @@ export async function handleCustomFontUpload(files: File[]): Promise<void> {
 
     if (progressBox) progressBox.classList.remove('hidden');
 
-    const batchSize = 15;
+    const batchSize = 25;
     let processed = 0;
 
     for (let i = 0; i < total; i += batchSize) {
         const batch = files.slice(i, i + batchSize);
+        const tx = db.transaction(STORE_FONTS_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_FONTS_NAME);
 
         for (const file of batch) {
             if (!file || !file.name) continue;
             const cleanName = file.name.replace(/\.[^/.]+$/, '').trim();
-            const family = cleanName.replace(/[^a-zA-Z0-9\s_-]/g, ' ').replace(/\s+/g, ' ').trim() || 'CustomFont';
+            // Preserve full Unicode & Vietnamese accents while stripping syntax chars
+            const family = cleanName.replace(/['"\\;{}]/g, '').replace(/\s+/g, ' ').trim() || `CustomFont_${processed + 1}`;
 
-            if (progressSubtext) progressSubtext.innerText = `Đang phân tích hình thái học: ${family}...`;
+            if (progressSubtext) progressSubtext.innerText = `Đang phân loại: ${family}...`;
 
             try {
                 fontBlobUrlsMap.set(family, URL.createObjectURL(file));
 
-                const buffer = await file.arrayBuffer();
-                const fontFace = new FontFace(family, buffer);
-                await fontFace.load();
-                (document as any).fonts.add(fontFace);
+                const profile = fastProfileFontFromName(family);
 
-                const profile = profileFontGlyph(family);
-
-                const tx = db.transaction(STORE_FONTS_NAME, 'readwrite');
-                const store = tx.objectStore(STORE_FONTS_NAME);
-                await new Promise((res, rej) => {
-                    const putReq = store.put({
-                        family: family,
-                        blob: file,
-                        category: profile.category,
-                        fontStyleType: profile.fontStyleType,
-                        weightScore: profile.weightScore,
-                        energyScore: profile.energyScore,
-                        formalityScore: profile.formalityScore,
-                        roughnessScore: profile.roughnessScore,
-                        roundnessScore: profile.roundnessScore,
-                        handwrittenScore: profile.handwrittenScore,
-                        isAllCaps: profile.isAllCaps,
-                        weightGrade: profile.weightGrade,
-                        widthGrade: profile.widthGrade,
-                        slantGrade: profile.slantGrade,
-                        caseGrade: profile.caseGrade,
-                        slantAngle: profile.slantAngle,
-                        widthRatio: profile.widthRatio,
-                        caseRatio: profile.caseRatio,
-                        morphology: profile.morphology,
-                        dateAdded: Date.now()
-                    });
-                    putReq.onsuccess = res;
-                    putReq.onerror = rej;
+                store.put({
+                    family: family,
+                    blob: file,
+                    category: profile.category,
+                    fontStyleType: profile.fontStyleType,
+                    weightScore: profile.weightScore,
+                    energyScore: profile.energyScore,
+                    formalityScore: profile.formalityScore,
+                    roughnessScore: profile.roughnessScore,
+                    roundnessScore: profile.roundnessScore,
+                    handwrittenScore: profile.handwrittenScore,
+                    isAllCaps: profile.isAllCaps,
+                    weightGrade: profile.weightGrade,
+                    widthGrade: profile.widthGrade,
+                    slantGrade: profile.slantGrade,
+                    caseGrade: profile.caseGrade,
+                    slantAngle: profile.slantAngle,
+                    widthRatio: profile.widthRatio,
+                    caseRatio: profile.caseRatio,
+                    morphology: profile.morphology,
+                    dateAdded: Date.now()
                 });
 
                 const newFontObj: CustomFontItem = {
@@ -3778,19 +4233,41 @@ export async function handleCustomFontUpload(files: File[]): Promise<void> {
         if (progressBar) progressBar.style.width = `${pct}%`;
         if (progressPercent) progressPercent.innerText = `${pct}% (${processed}/${total})`;
 
-        await new Promise(r => setTimeout(r, 10));
+        await new Promise(r => setTimeout(r, 5));
     }
 
-    if (progressTitle) progressTitle.innerText = `✅ Hoàn thành phân tích hình thái ${total} font!`;
+    if (progressTitle) progressTitle.innerText = `✅ Hoàn thành phân loại ${total} font!`;
     setTimeout(() => {
         if (progressBox) progressBox.classList.add('hidden');
-    }, 1800);
+    }, 1200);
 
     updateDynamicFontFaceStyles();
     updateCustomFontsBadge();
     updateCustomFontFilterCountsUI();
     renderCustomFontsUI();
-    alert(`🎉 Đã nạp & tự động phân loại hình thái (Weight, Width, Slant, Case) xong ${total} font!`);
+    generateAndDisplayFontSet();
+
+    try {
+        const { populateFontSelectDropdown, autoClassifyAndRenderGallery } = await import('./font-classifier');
+        populateFontSelectDropdown();
+        autoClassifyAndRenderGallery();
+    } catch (e) { }
+
+    // Register FontFace in background
+    (async () => {
+        for (const f of files) {
+            try {
+                const cleanName = f.name.replace(/\.[^/.]+$/, '').trim();
+                const family = cleanName.replace(/['"\\;{}]/g, '').replace(/\s+/g, ' ').trim() || 'CustomFont';
+                const buffer = await f.arrayBuffer();
+                const fontFace = new FontFace(family, buffer);
+                await fontFace.load();
+                (document as any).fonts.add(fontFace);
+            } catch (e) {}
+        }
+        updateAllFontCanvases();
+        updateAllFontSetCanvases();
+    })();
 }
 
 export async function reprofileAllCustomFonts(): Promise<void> {

@@ -549,8 +549,10 @@ describe('Manga Font Matcher & Set Recommendation Engine', () => {
     });
 
     describe('6. User Custom Font Library Architecture (100% User-Supplied Fonts)', () => {
-        test('BUILTIN_MANGA_FONTS is strictly empty (no hardcoded default fonts)', () => {
-            expect(BUILTIN_MANGA_FONTS).toEqual([]);
+        test('BUILTIN_MANGA_FONTS contains standard manga Google Fonts fallback', () => {
+            expect(BUILTIN_MANGA_FONTS.length).toBeGreaterThanOrEqual(10);
+            expect(BUILTIN_MANGA_FONTS.some(f => f.name === 'Nunito')).toBe(true);
+            expect(BUILTIN_MANGA_FONTS.some(f => f.name === 'Bangers')).toBe(true);
         });
 
         test('Large custom library (180 fonts) correctly matches roles and maintains cohesion', () => {
