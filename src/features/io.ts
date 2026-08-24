@@ -345,13 +345,38 @@ export async function exportActivePage(): Promise<void> {
     }
 }
 
+let exportModalIsFullSize = false;
+
+export function toggleExportModalFit(): void {
+    const img = elements.exportPreviewImg;
+    const btnLbl = document.getElementById('lbl-export-toggle-fit');
+    if (!img) return;
+
+    exportModalIsFullSize = !exportModalIsFullSize;
+    if (exportModalIsFullSize) {
+        img.className = "max-w-none max-h-none w-auto h-auto border border-slate-800 rounded-lg shadow-xl cursor-zoom-out transition-all duration-150 m-auto";
+        img.title = "Bấm vào ảnh để thu nhỏ khớp khung";
+        if (btnLbl) btnLbl.textContent = "Khớp khung";
+    } else {
+        img.className = "max-w-full h-auto max-h-[70vh] object-contain border border-slate-800 rounded-lg shadow-xl cursor-zoom-in transition-all duration-150 m-auto";
+        img.title = "Bấm vào ảnh để phóng to xem 100% full ảnh";
+        if (btnLbl) btnLbl.textContent = "Xem 100% full ảnh";
+    }
+}
+
 export function closeExportModal(): void {
+    exportModalIsFullSize = false;
+    const btnLbl = document.getElementById('lbl-export-toggle-fit');
+    if (btnLbl) btnLbl.textContent = "Xem 100% full ảnh";
     if (elements.exportModal) elements.exportModal.classList.add('hidden');
     if (exportPreviewObjectUrl) {
         URL.revokeObjectURL(exportPreviewObjectUrl);
         exportPreviewObjectUrl = null;
     }
-    if (elements.exportPreviewImg) elements.exportPreviewImg.src = '';
+    if (elements.exportPreviewImg) {
+        elements.exportPreviewImg.src = '';
+        elements.exportPreviewImg.className = "max-w-full h-auto max-h-[70vh] object-contain border border-slate-800 rounded-lg shadow-xl cursor-zoom-in transition-all duration-150 m-auto";
+    }
     if (elements.lnkExportDirectDownload) elements.lnkExportDirectDownload.removeAttribute('href');
 }
 

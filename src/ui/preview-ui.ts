@@ -21,6 +21,7 @@ function getPageImmediateImageUrl(page: any): string | null {
 
 export let previewCurrentPage = 0;
 export let previewViewMode: 'single' | 'continuous' | 'grid' = 'single';
+export let previewFitMode: 'fit-page' | 'fit-width' | 'original' = 'fit-width';
 export let previewZoom = 1.0;
 export let selectedExportPages: Set<number> = new Set<number>();
 export let activeExportTab: 'zip' | 'pdf' = 'zip';
@@ -173,17 +174,67 @@ export function setPreviewViewMode(mode: 'single' | 'continuous' | 'grid'): void
     renderPreviewViewport();
 }
 
+export function setPreviewFitMode(mode: 'fit-page' | 'fit-width' | 'original'): void {
+    previewFitMode = mode;
+    syncPreviewControlsUI();
+    applySinglePageFitAndZoom();
+}
+
+export function togglePreviewFitMode(): void {
+    if (previewFitMode === 'fit-page') {
+        setPreviewFitMode('fit-width');
+    } else if (previewFitMode === 'fit-width') {
+        setPreviewFitMode('original');
+    } else {
+        setPreviewFitMode('fit-page');
+    }
+}
+
+export function applySinglePageFitAndZoom(): void {
+    const img = document.getElementById('preview-single-img') as HTMLImageElement | null;
+    const container = document.getElementById('preview-zoomable-container');
+    if (!img || !container) return;
+
+    if (previewFitMode === 'fit-page') {
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = `calc((100vh - 140px) * ${previewZoom})`;
+        img.style.width = 'auto';
+        img.style.height = 'auto';
+        img.className = "block select-none shadow-lg rounded transition-all duration-150 cursor-zoom-in";
+        container.style.width = 'auto';
+        container.style.maxWidth = '100%';
+    } else if (previewFitMode === 'fit-width') {
+        const targetWidth = Math.round(920 * previewZoom);
+        img.style.maxWidth = `${targetWidth}px`;
+        img.style.maxHeight = 'none';
+        img.style.width = '100%';
+        img.style.height = 'auto';
+        img.className = "block select-none shadow-lg rounded transition-all duration-150 cursor-zoom-in";
+        container.style.width = '100%';
+        container.style.maxWidth = `${targetWidth}px`;
+    } else if (previewFitMode === 'original') {
+        img.style.maxWidth = 'none';
+        img.style.maxHeight = 'none';
+        if (img.naturalWidth > 0) {
+            img.style.width = `${Math.round(img.naturalWidth * previewZoom)}px`;
+            img.style.height = `${Math.round(img.naturalHeight * previewZoom)}px`;
+        } else {
+            img.style.width = 'auto';
+            img.style.height = 'auto';
+        }
+        img.className = "block select-none shadow-lg rounded transition-all duration-150 cursor-zoom-out";
+        container.style.width = 'auto';
+        container.style.maxWidth = 'none';
+    }
+}
+
 export function setPreviewZoom(zoom: number): void {
     previewZoom = Math.min(Math.max(zoom, 0.25), 3.0);
     const zoomText = document.getElementById('preview-zoom-level');
     if (zoomText) {
         zoomText.textContent = `${Math.round(previewZoom * 100)}%`;
     }
-    const container = document.getElementById('preview-zoomable-container');
-    if (container) {
-        container.style.transform = `scale(${previewZoom})`;
-        container.style.transformOrigin = 'top center';
-    }
+    applySinglePageFitAndZoom();
 }
 
 export function changePreviewZoom(delta: number): void {
@@ -284,6 +335,30 @@ export function syncPreviewControlsUI(): void {
         }
     });
 
+    // Single Page Fit Mode button active highlights
+    const fitButtons = document.querySelectorAll<HTMLElement>('[data-fit-mode]');
+    fitButtons.forEach((btn) => {
+        const mode = btn.getAttribute('data-fit-mode');
+        if (mode === previewFitMode) {
+            btn.classList.add('bg-indigo-600', 'text-white', 'shadow-sm');
+            btn.classList.remove('bg-slate-800', 'text-slate-400');
+        } else {
+            btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-sm');
+            btn.classList.add('bg-slate-800', 'text-slate-400');
+        }
+    });
+
+    const fitContainer = document.getElementById('preview-fit-mode-controls');
+    if (fitContainer) {
+        if (previewViewMode === 'single') {
+            fitContainer.classList.remove('hidden');
+            fitContainer.classList.add('flex');
+        } else {
+            fitContainer.classList.add('hidden');
+            fitContainer.classList.remove('flex');
+        }
+    }
+
     // Export panel tabs
     const tabZipBtn = document.getElementById('preview-tab-btn-zip');
     const tabPdfBtn = document.getElementById('preview-tab-btn-pdf');
@@ -346,12 +421,11 @@ async function renderSinglePageView(container: HTMLElement): Promise<void> {
     if (!page) return;
 
     const pageWrapper = document.createElement('div');
-    pageWrapper.className = "relative flex flex-col items-center justify-center p-4 min-h-full";
+    pageWrapper.className = "relative flex flex-col items-center justify-start py-4 px-2 sm:px-4 min-h-full w-full";
 
     const zoomableContainer = document.createElement('div');
     zoomableContainer.id = "preview-zoomable-container";
-    zoomableContainer.className = "relative shadow-2xl rounded-lg overflow-hidden transition-transform duration-150 origin-top flex items-center justify-center bg-slate-950/80 border border-slate-800";
-    zoomableContainer.style.transform = `scale(${previewZoom})`;
+    zoomableContainer.className = "relative shadow-2xl rounded-xl transition-all duration-150 flex items-center justify-center bg-slate-950/90 border border-slate-800/80 max-w-full";
 
     // Loading skeleton placeholder
     const loader = document.createElement('div');
@@ -383,10 +457,13 @@ async function renderSinglePageView(container: HTMLElement): Promise<void> {
         if (renderedUrl && loader.parentNode === zoomableContainer) {
             zoomableContainer.removeChild(loader);
             const img = document.createElement('img');
+            img.id = "preview-single-img";
             img.src = renderedUrl;
-            img.className = "max-w-full max-h-[calc(100vh-160px)] block object-contain select-none shadow-lg";
             img.draggable = false;
+            img.onclick = () => togglePreviewFitMode();
+            img.title = "Bấm để đổi chế độ xem: Khớp rộng <-> 100% Gốc <-> Khớp toàn trang";
             zoomableContainer.appendChild(img);
+            applySinglePageFitAndZoom();
         }
     } catch (err: any) {
         console.error("Lỗi khi render preview canvas:", err);
@@ -394,10 +471,13 @@ async function renderSinglePageView(container: HTMLElement): Promise<void> {
         if (fallbackSrc && loader.parentNode === zoomableContainer) {
             zoomableContainer.removeChild(loader);
             const img = document.createElement('img');
+            img.id = "preview-single-img";
             img.src = fallbackSrc;
-            img.className = "max-w-full max-h-[calc(100vh-160px)] block object-contain select-none shadow-lg";
             img.draggable = false;
+            img.onclick = () => togglePreviewFitMode();
+            img.title = "Bấm để đổi chế độ xem: Khớp rộng <-> 100% Gốc <-> Khớp toàn trang";
             zoomableContainer.appendChild(img);
+            applySinglePageFitAndZoom();
         } else {
             loader.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-3xl text-red-400"></i><span class="text-xs text-red-300">Không thể kết xuất trang này: ${escapeHTML(err.message)}</span>`;
         }

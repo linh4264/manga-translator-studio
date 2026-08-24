@@ -356,6 +356,9 @@ export function initGlobalBridge(): void {
         previewNextPage: previewUI.previewNextPage,
         previewJumpToPage: previewUI.previewJumpToPage,
         setPreviewViewMode: previewUI.setPreviewViewMode,
+        setPreviewFitMode: previewUI.setPreviewFitMode,
+        togglePreviewFitMode: previewUI.togglePreviewFitMode,
+        applySinglePageFitAndZoom: previewUI.applySinglePageFitAndZoom,
         setPreviewZoom: previewUI.setPreviewZoom,
         changePreviewZoom: previewUI.changePreviewZoom,
         resetPreviewZoom: previewUI.resetPreviewZoom,
@@ -369,6 +372,7 @@ export function initGlobalBridge(): void {
         copyPreviewPageToClipboard: previewUI.copyPreviewPageToClipboard,
         renderPreviewViewport: previewUI.renderPreviewViewport,
         renderPreviewPage: previewUI.renderPreviewViewport,
+        toggleExportModalFit: io.toggleExportModalFit,
 
         // Core State & Utilities
         executeUndo,

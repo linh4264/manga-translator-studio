@@ -37,14 +37,16 @@ import {
 } from './settings-ui';
 
 import {
-    previewCurrentPage, previewViewMode, previewZoom, selectedExportPages, activeExportTab,
+    previewCurrentPage, previewViewMode, previewFitMode, previewZoom, selectedExportPages, activeExportTab,
     openPreviewMode, openExportZipPreview, openExportPdfPreview, closePreviewMode,
     previewKeyHandler, previewPrevPage, previewNextPage, previewJumpToPage,
-    setPreviewViewMode, setPreviewZoom, changePreviewZoom, resetPreviewZoom,
+    setPreviewViewMode, setPreviewFitMode, togglePreviewFitMode, applySinglePageFitAndZoom,
+    setPreviewZoom, changePreviewZoom, resetPreviewZoom,
     togglePageExportSelection, selectAllExportPages, deselectAllExportPages,
     switchPreviewExportTab, executeZipExportFromPreview, executePdfExportFromPreview,
     executeSinglePageExportFromPreview, copyPreviewPageToClipboard, renderPreviewViewport
 } from './preview-ui';
+import { toggleExportModalFit } from '../features/io';
 
 import { populateCustomFontsDropdown, registerCustomFont, uploadCustomFonts } from './font-ui';
 
@@ -79,13 +81,15 @@ export {
     saveTranslationGenrePresets, updateTranslationGenrePreset, updateTranslationContextPrompt,
     updateApiDelay, updateMaxRetries, updateAiProvider, updateApiEndpoint,
     updateExportFormat, updateExportPdfQuality,
-    previewCurrentPage, previewViewMode, previewZoom, selectedExportPages, activeExportTab,
+    previewCurrentPage, previewViewMode, previewFitMode, previewZoom, selectedExportPages, activeExportTab,
     openPreviewMode, openExportZipPreview, openExportPdfPreview, closePreviewMode,
     previewKeyHandler, previewPrevPage, previewNextPage, previewJumpToPage,
-    setPreviewViewMode, setPreviewZoom, changePreviewZoom, resetPreviewZoom,
+    setPreviewViewMode, setPreviewFitMode, togglePreviewFitMode, applySinglePageFitAndZoom,
+    setPreviewZoom, changePreviewZoom, resetPreviewZoom,
     togglePageExportSelection, selectAllExportPages, deselectAllExportPages,
     switchPreviewExportTab, executeZipExportFromPreview, executePdfExportFromPreview,
     executeSinglePageExportFromPreview, copyPreviewPageToClipboard, renderPreviewViewport,
+    toggleExportModalFit,
     populateCustomFontsDropdown, registerCustomFont, uploadCustomFonts,
     openLorebookModal, closeLorebookModal, switchLorebookTab,
     renderCharacterDossierUI, addCharacterDossierEntry, removeCharacterDossierEntry,
