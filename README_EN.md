@@ -66,7 +66,7 @@
 1. **OCR & Bubble Detection**: Accurately detects dialogue bubble boundaries, vertical Japanese text columns, and furigana groupings.
 2. **Scanlation-Grade AI Translation**: Analyzes context, pronoun dynamics, honorifics, sentence particles, and sound effects (SFX) with story continuity.
 3. **Smart Inpainting & Redrawing**: Cleanly erases original text and reconstructs background textures using Best-Shift Patch Synthesis (BSS) without blurring halftone screentones.
-4. **Automated Typesetting & Canvas Tools**: Dynamic font auto-fitting, diamond-shaped bubble text wrapping, arc text curvature, SFX 360° rotation, and multi-layered PSD export.
+4. **Automated Typesetting & Canvas Tools**: Dynamic font auto-fitting, smart bubble text wrapping, arc text curvature, SFX 360° rotation, and multi-layered PSD export.
 
 > [!NOTE]
 > **100% Client-Side Privacy**: All image editing, inpainting, and project storage happen locally within your browser. API keys and manga images are never transferred to any intermediary servers.
@@ -97,7 +97,7 @@
 - **Background Replacement with Dialogue Preservation**: Swap underlying raw art (e.g., after Waifu2x upscaling or manual Photoshop retouching) with **100% retention of text coordinates, styles, and translations**.
 
 ### ✍️ Advanced Typesetting & Canvas Layout Engine
-- **Diamond Wrap Algorithm**: Automatically wraps text lines into an oval/diamond profile to hug comic dialogue bubbles naturally.
+- **Smart Line Wrap Algorithm**: Automatically wraps text lines with balanced spacing to hug comic dialogue bubbles naturally.
 - **Vertical & Horizontal Text Support**: True vertical typesetting with auto-centered columns and top-to-bottom reading order for traditional manga.
 - **Dynamic Auto-Fit Font Size**: Automatically calculates optimal font sizes to fill bubbles cleanly without boundary overflow.
 - **Curated Comic Font Catalog**: Preloaded with high-grade manga typography: *Be Vietnam Pro, Bangers, Comic Neue, Caveat, Chakra Petch, Permanent Marker, Bungee, Saira Condensed, Nunito, Inter*.
@@ -258,7 +258,7 @@ manga_translator_studio/
 │   ├── workers/               # Web Workers for multi-threaded processing
 │   └── features/              # Modular feature domains
 │       ├── ai/                # Gemini, Claude, OpenAI clients & Story Memory
-│       ├── canvas/            # Canvas Renderer, Diamond Wrap, Autofit, Arc
+│       ├── canvas/            # Canvas Renderer, Smart Wrap, Autofit, Arc
 │       ├── inpainting/        # PatchMatch, BSS, Spot Healing, Lasso AI
 │       ├── ocr/               # OCR Normalizer, Magic Wand, Reading Order
 │       ├── io/                # ZIP, PDF, PSD layers, Manga project export
@@ -291,7 +291,7 @@ npm run test:watch
 npm run typecheck
 
 # Run domain-specific test suites
-npm run test:canvas      # Diamond wrap & canvas rendering tests
+npm run test:canvas      # Text wrap & canvas rendering tests
 npm run test:ai          # AI client, retry & story memory tests
 npm run test:ocr         # OCR coordinate normalization tests
 npm run test:inpainting  # BSS & PatchMatch inpainting tests

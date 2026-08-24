@@ -198,8 +198,7 @@ test('CASE H — Manual newline: Hard \\n boundaries are strictly preserved', ()
         translated: textWithNewlines,
         box: { x: 10, y: 10, w: 20, h: 20 },
         style: {
-            fontSize: 16,
-            diamondWrap: false
+            fontSize: 16
         }
     };
 

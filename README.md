@@ -66,7 +66,7 @@
 1. **OCR & Phát hiện bong bóng thoại**: Tự động nhận diện toạ độ khung thoại chuẩn xác, tách cột chữ dọc Nhật Bản, gom nhóm Furigana.
 2. **Dịch thuật chuẩn ngữ Scanlation**: Hiểu sâu sắc thái văn phong, xưng hô, kính ngữ, từ tượng thanh (SFX), duy trì tính liên tục của mạch truyện.
 3. **Xóa chữ & Khôi phục nét vẽ (Inpainting/Redraw)**: Thuật toán BSS (Best-Shift Patch Synthesis), Cọ xóa AI (Spot Healing), Lasso AI tự động lấp đầy nền không làm mờ hạt screentone.
-4. **Typeset tự động & Chỉnh sửa Canvas chuyên nghiệp**: Tự động co giãn cỡ chữ (Auto-fit), ngắt dòng theo hình kim cương (Diamond Wrap), uốn cong theo cung (Arc), xoay SFX 360°, xuất file Photoshop PSD phân lớp.
+4. **Typeset tự động & Chỉnh sửa Canvas chuyên nghiệp**: Tự động co giãn cỡ chữ (Auto-fit), cân bằng ngắt dòng thông minh (Smart Wrap), uốn cong theo cung (Arc), xoay SFX 360°, xuất file Photoshop PSD phân lớp.
 
 > [!NOTE]
 > **Bảo mật & Quyền riêng tư 100%**: Ứng dụng xử lý dữ liệu hoàn toàn tại trình duyệt của bạn (Client-side). API Key và hình ảnh truyện không bao giờ được lưu trữ trên bất kỳ máy chủ trung gian nào.
@@ -97,7 +97,7 @@
 - **Thay đổi Ảnh nền giữ nguyên Thoại (Quick Image Replacement)**: Kéo thả ảnh mới (sau khi upscale Waifu2x hoặc retouch trong Photoshop) vào Canvas mà **bảo toàn 100% toạ độ ô thoại, bản dịch, font chữ và lorebook**.
 
 ### ✍️ Canvas Engine & Typesetting Độc quyền
-- **Thuật toán Ngắt dòng Kim cương (Diamond Wrap)**: Tự động xếp dòng chữ nở ở giữa và thon ở hai đầu, ôm khít bong bóng thoại hình oval/tròn chuẩn manga.
+- **Thuật toán Cân bằng Ngắt dòng (Smart Line Wrap)**: Tự động tính toán độ rộng và ngắt dòng tối ưu, giữ nguyên ngắt dòng thủ công (\n), ôm khít bong bóng thoại chuẩn manga.
 - **Hỗ trợ Chữ Dọc & Chữ Ngang (Vertical & Horizontal Text)**: Tự động căn giữa cột và ngắt dòng chữ dọc cho truyện tranh truyền thống Nhật Bản.
 - **Auto-fit Font Size**: Tự động tính toán cỡ chữ tối ưu để văn bản lấp đầy khung thoại đẹp mắt mà không tràn viền.
 - **Bộ Font chữ Việt hóa Chuyên dụng**: Tuyển tập font truyện tranh đỉnh cao: *Be Vietnam Pro, Bangers, Comic Neue, Caveat, Chakra Petch, Permanent Marker, Bungee, Saira Condensed, Nunito, Inter*.
@@ -258,7 +258,7 @@ manga_translator_studio/
 │   ├── workers/               # Web Workers xử lý song song
 │   └── features/              # Các mô-đun tính năng độc lập
 │       ├── ai/                # Client Gemini, Claude, OpenAI, Story Memory
-│       ├── canvas/            # Canvas Renderer, Diamond Wrap, Autofit, Arc
+│       ├── canvas/            # Canvas Renderer, Smart Wrap, Autofit, Arc
 │       ├── inpainting/        # PatchMatch, BSS, Spot Healing, Lasso AI
 │       ├── ocr/               # OCR Normalizer, Magic Wand, Reading Order
 │       ├── io/                # Xuất/Nhập ZIP, PDF, PSD layers, Manga Project
