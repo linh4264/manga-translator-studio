@@ -37,7 +37,7 @@ export function autoFitBlock(
     }
 
     const page = targetPage || (globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null);
-    const imgEl = customImgElement || elements.mangaBgImage;
+    const imgEl = customImgElement || (page && globalState.activePageIndex >= 0 && page === globalState.pages[globalState.activePageIndex] ? elements.mangaBgImage : null);
     const { width: displayWidth, height: displayHeight } = getReferenceDisplayDimensions(page, imgEl);
 
     const baseFontSize = block.style.baseFontSize || block.style.fontSize || 16;

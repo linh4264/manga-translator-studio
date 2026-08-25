@@ -817,7 +817,7 @@ export function computeTextLayout(
     const getFontFn = (tok: any) => {
         const tokItalic = (tok.italic || (tok.italic === undefined && input.italic)) ? 'italic ' : '';
         const tokWeight = (tok.bold || (tok.bold === undefined && input.bold)) ? 'bold ' : '';
-        const tokSize = fontSize * (tok.sizeRatio || 1.0);
+        const tokSize = Math.max(1, Math.round(fontSize * (tok.sizeRatio || 1.0)));
         const tokFont = tok.font ? getFontFamilyName(tok.font) : fontName;
         return `${tokItalic}${tokWeight}${tokSize}px ${tokFont}`.trim();
     };
@@ -1393,7 +1393,7 @@ export function renderBlockTextToCanvas(
 
     const fontWeight = block.style?.bold ? 'bold ' : '';
     const fontItalic = block.style?.italic ? 'italic ' : '';
-    const fontSpec = `${fontItalic}${fontWeight}${fontSizePx}px ${fontName}`;
+    const fontSpec = `${fontItalic}${fontWeight}${Math.max(1, Math.round(fontSizePx))}px ${fontName}`;
     ctx.font = fontSpec;
     ctx.fillStyle = block.style?.textColor || '#000000';
 

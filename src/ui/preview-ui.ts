@@ -24,7 +24,7 @@ export let previewViewMode: 'single' | 'continuous' | 'grid' = 'single';
 export let previewFitMode: 'fit-page' | 'fit-width' | 'original' = 'fit-width';
 export let previewZoom = 1.0;
 export let selectedExportPages: Set<number> = new Set<number>();
-export let activeExportTab: 'zip' | 'pdf' = 'zip';
+export let activeExportTab: 'zip' | 'pdf' | 'gdrive' = 'zip';
 
 // In-memory cache for rendered preview canvas blobs to prevent redundant renders and memory leaks
 const renderedPreviewCache: Map<number, string> = new Map();
@@ -278,7 +278,7 @@ export function deselectAllExportPages(): void {
     showToast("Đã bỏ chọn tất cả các trang.", 'info');
 }
 
-export function switchPreviewExportTab(tab: 'zip' | 'pdf'): void {
+export function switchPreviewExportTab(tab: 'zip' | 'pdf' | 'gdrive'): void {
     activeExportTab = tab;
     syncPreviewControlsUI();
 }
@@ -362,20 +362,47 @@ export function syncPreviewControlsUI(): void {
     // Export panel tabs
     const tabZipBtn = document.getElementById('preview-tab-btn-zip');
     const tabPdfBtn = document.getElementById('preview-tab-btn-pdf');
+    const tabGdriveBtn = document.getElementById('preview-tab-btn-gdrive');
     const panelZip = document.getElementById('preview-panel-zip');
     const panelPdf = document.getElementById('preview-panel-pdf');
+    const panelGdrive = document.getElementById('preview-panel-gdrive');
+
+    const inactiveTabClass = "h-8 py-1 px-1 text-[11px] font-semibold rounded-lg bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer";
 
     if (tabZipBtn && tabPdfBtn && panelZip && panelPdf) {
         if (activeExportTab === 'zip') {
-            tabZipBtn.className = "flex-1 py-2 text-xs font-bold rounded-lg bg-sky-600 text-white shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer";
-            tabPdfBtn.className = "flex-1 py-2 text-xs font-semibold rounded-lg bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer";
+            tabZipBtn.className = "h-8 py-1 px-1 text-[11px] font-bold rounded-lg bg-sky-600 text-white shadow-md shadow-sky-600/20 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer";
+            tabPdfBtn.className = inactiveTabClass;
+            if (tabGdriveBtn) tabGdriveBtn.className = inactiveTabClass;
             panelZip.classList.remove('hidden');
             panelPdf.classList.add('hidden');
-        } else {
-            tabZipBtn.className = "flex-1 py-2 text-xs font-semibold rounded-lg bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer";
-            tabPdfBtn.className = "flex-1 py-2 text-xs font-bold rounded-lg bg-emerald-600 text-white shadow transition-all flex items-center justify-center gap-1.5 cursor-pointer";
+            if (panelGdrive) panelGdrive.classList.add('hidden');
+        } else if (activeExportTab === 'pdf') {
+            tabZipBtn.className = inactiveTabClass;
+            tabPdfBtn.className = "h-8 py-1 px-1 text-[11px] font-bold rounded-lg bg-emerald-600 text-white shadow-md shadow-emerald-600/20 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer";
+            if (tabGdriveBtn) tabGdriveBtn.className = inactiveTabClass;
             panelZip.classList.add('hidden');
             panelPdf.classList.remove('hidden');
+            if (panelGdrive) panelGdrive.classList.add('hidden');
+        } else if (activeExportTab === 'gdrive') {
+            tabZipBtn.className = inactiveTabClass;
+            tabPdfBtn.className = inactiveTabClass;
+            if (tabGdriveBtn) tabGdriveBtn.className = "h-8 py-1 px-1 text-[11px] font-bold rounded-lg bg-indigo-600 text-white shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer";
+            panelZip.classList.add('hidden');
+            panelPdf.classList.add('hidden');
+            if (panelGdrive) panelGdrive.classList.remove('hidden');
+
+            // Sync GDrive folders dropdown into preview
+            const mainSelect = document.getElementById('gdrive-folder-select') as HTMLSelectElement | null;
+            const previewSelect = document.getElementById('preview-gdrive-folder-select') as HTMLSelectElement | null;
+            if (mainSelect && previewSelect && mainSelect.options.length > 1) {
+                previewSelect.innerHTML = mainSelect.innerHTML;
+                previewSelect.value = mainSelect.value;
+            } else if (previewSelect && previewSelect.options.length <= 1) {
+                import('../features/gdrive').then(({ loadGDriveFolders }) => {
+                    loadGDriveFolders().catch(() => {});
+                });
+            }
         }
     }
 
@@ -388,6 +415,11 @@ export function syncPreviewControlsUI(): void {
     const pdfNameInput = document.getElementById('preview-pdf-filename') as HTMLInputElement | null;
     if (pdfNameInput && !pdfNameInput.value) {
         pdfNameInput.value = `Manga_Chapter_${Date.now()}`;
+    }
+
+    const gdriveSubfolderInput = document.getElementById('preview-gdrive-subfolder-name') as HTMLInputElement | null;
+    if (gdriveSubfolderInput && !gdriveSubfolderInput.value && globalState.pages[0]?.name) {
+        gdriveSubfolderInput.value = `${getCleanFileBaseName(globalState.pages[0].name)}_Translated`;
     }
 
     // Update thumbnail bar if in single mode
@@ -838,6 +870,52 @@ export async function executeZipExportFromPreview(): Promise<void> {
             format,
             quality,
             filename
+        });
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+/**
+ * Trigger Google Drive Batch Export directly from the Preview Modal with selected format/quality/folder
+ */
+export async function executeGDriveExportFromPreview(): Promise<void> {
+    const isGDriveTab = (activeExportTab === 'gdrive');
+    const scopeId = isGDriveTab ? 'preview-gdrive-scope' : 'preview-zip-scope';
+    const pageIndices = getSelectedIndicesFromScope(scopeId);
+    if (pageIndices.length === 0) {
+        showToast("Vui lòng chọn ít nhất một trang để xuất lên Google Drive!", "warn");
+        return;
+    }
+
+    const formatSelect = document.getElementById(isGDriveTab ? 'preview-gdrive-format' : 'preview-zip-format') as HTMLSelectElement | null;
+    let format = (formatSelect ? formatSelect.value : 'png') as 'auto' | 'png' | 'jpeg' | 'webp' | 'jpg';
+    if ((format as string) === 'jpeg') format = 'jpg';
+
+    const qualitySelect = document.getElementById(isGDriveTab ? 'preview-gdrive-quality' : 'preview-zip-quality') as HTMLSelectElement | null;
+    const quality = qualitySelect ? parseFloat(qualitySelect.value) : 0.95;
+
+    const folderSelect = document.getElementById('preview-gdrive-folder-select') as HTMLSelectElement | null;
+    const folderId = folderSelect && folderSelect.value ? folderSelect.value : undefined;
+
+    const subfolderChk = document.getElementById('preview-gdrive-create-subfolder-chk') as HTMLInputElement | null;
+    const createSubfolder = subfolderChk ? subfolderChk.checked : true;
+
+    const subfolderInput = document.getElementById('preview-gdrive-subfolder-name') as HTMLInputElement | null;
+    const folderName = subfolderInput ? subfolderInput.value.trim() : undefined;
+
+    const btn = document.getElementById(isGDriveTab ? 'preview-btn-do-export-gdrive' : 'preview-btn-do-export-zip') as HTMLButtonElement | null;
+    if (btn) btn.disabled = true;
+
+    try {
+        const { uploadBatchPagesToGDrive } = await import('../features/gdrive');
+        await uploadBatchPagesToGDrive({
+            targetIndices: pageIndices,
+            format: format as any,
+            quality,
+            folderId,
+            createSubfolder,
+            folderName
         });
     } finally {
         if (btn) btn.disabled = false;

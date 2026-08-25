@@ -49,13 +49,25 @@ export function getReferenceDisplayDimensions(page?: MangaPage | null, imgElemen
     const aspect = naturalH / Math.max(1, naturalW);
 
     if (!displayWidth) {
-        // If it's the active page, check container / viewport
-        if (isCurrentActiveEl) {
-            if (typeof document !== 'undefined' && elements.mangaCanvasContainer && elements.mangaCanvasContainer.clientWidth > 0) {
-                displayWidth = elements.mangaCanvasContainer.clientWidth / Math.max(0.01, zoomScale);
-            } else if (typeof document !== 'undefined' && elements.workspaceViewport && elements.workspaceViewport.clientWidth > 0) {
-                displayWidth = Math.min((elements.workspaceViewport.clientWidth - 32) / Math.max(0.01, zoomScale), 1000);
+        // Inherit lastDisplayWidth from active page or any configured page in project
+        if (globalState.activePageIndex >= 0 && globalState.pages[globalState.activePageIndex]?.lastDisplayWidth) {
+            displayWidth = globalState.pages[globalState.activePageIndex].lastDisplayWidth;
+        } else if (globalState.pages && globalState.pages.length > 0) {
+            const anyPageWithWidth = globalState.pages.find(p => p.lastDisplayWidth && p.lastDisplayWidth > 0);
+            if (anyPageWithWidth) {
+                displayWidth = anyPageWithWidth.lastDisplayWidth;
             }
+        }
+    }
+
+    if (!displayWidth) {
+        // Check active DOM container/viewport if available
+        if (typeof document !== 'undefined' && elements.mangaBgImage && elements.mangaBgImage.clientWidth > 0) {
+            displayWidth = elements.mangaBgImage.clientWidth / Math.max(0.01, zoomScale);
+        } else if (typeof document !== 'undefined' && elements.mangaCanvasContainer && elements.mangaCanvasContainer.clientWidth > 0) {
+            displayWidth = elements.mangaCanvasContainer.clientWidth / Math.max(0.01, zoomScale);
+        } else if (typeof document !== 'undefined' && elements.workspaceViewport && elements.workspaceViewport.clientWidth > 0) {
+            displayWidth = Math.min((elements.workspaceViewport.clientWidth - 32) / Math.max(0.01, zoomScale), 1000);
         }
     }
 

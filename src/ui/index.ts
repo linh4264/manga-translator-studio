@@ -44,7 +44,7 @@ import {
     setPreviewZoom, changePreviewZoom, resetPreviewZoom,
     togglePageExportSelection, selectAllExportPages, deselectAllExportPages,
     switchPreviewExportTab, executeZipExportFromPreview, executePdfExportFromPreview,
-    executeSinglePageExportFromPreview, copyPreviewPageToClipboard, renderPreviewViewport
+    executeGDriveExportFromPreview, executeSinglePageExportFromPreview, copyPreviewPageToClipboard, renderPreviewViewport
 } from './preview-ui';
 import { toggleExportModalFit } from '../features/io';
 
@@ -88,7 +88,7 @@ export {
     setPreviewZoom, changePreviewZoom, resetPreviewZoom,
     togglePageExportSelection, selectAllExportPages, deselectAllExportPages,
     switchPreviewExportTab, executeZipExportFromPreview, executePdfExportFromPreview,
-    executeSinglePageExportFromPreview, copyPreviewPageToClipboard, renderPreviewViewport,
+    executeGDriveExportFromPreview, executeSinglePageExportFromPreview, copyPreviewPageToClipboard, renderPreviewViewport,
     toggleExportModalFit,
     populateCustomFontsDropdown, registerCustomFont, uploadCustomFonts,
     openLorebookModal, closeLorebookModal, switchLorebookTab,

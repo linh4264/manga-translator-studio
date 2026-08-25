@@ -448,7 +448,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
 
             b.autoFitCache = null;
             if (isBlockAutoFit(b)) {
-                autoFitBlock(b);
+                autoFitBlock(b, imgEl, 1, page);
             }
         });
         page.status = 'done';
@@ -790,7 +790,7 @@ export async function runBatchTranslation(): Promise<void> {
 
                                     b.autoFitCache = null;
                                     if (isBlockAutoFit(b)) {
-                                        autoFitBlock(b);
+                                        autoFitBlock(b, imgEl, 1, p);
                                     }
                                 });
 

@@ -30,7 +30,7 @@ export function updateProcessingOverlay(show: boolean, title: string = "ƒêang x·
         overlay.classList.remove('hidden');
         const titleEl = document.getElementById('processing-title');
         const subtitleEl = document.getElementById('processing-subtitle');
-        const progressEl = document.getElementById('processing-progress-bar');
+        const progressEl = document.getElementById('processing-progress-bar') || document.getElementById('processing-bar');
         const percentageEl = document.getElementById('processing-percentage');
 
         const validProgress = Math.min(100, Math.max(0, isNaN(progress) ? 0 : Number(progress)));

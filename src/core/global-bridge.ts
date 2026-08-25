@@ -284,6 +284,8 @@ export function initGlobalBridge(): void {
         loadGDriveProjectList: gdrive.loadGDriveProjectList,
         createNewGDriveFolder: gdrive.createNewGDriveFolder,
         onGDriveFolderChange: gdrive.onGDriveFolderChange,
+        loadGDriveFolders: gdrive.loadGDriveFolders,
+        promptGDriveFolderLink: gdrive.promptGDriveFolderLink,
 
         // File System Direct Access
         openLocalFolderPicker: fsAccess.openLocalFolderPicker,
@@ -373,6 +375,7 @@ export function initGlobalBridge(): void {
         switchPreviewExportTab: previewUI.switchPreviewExportTab,
         executeZipExportFromPreview: previewUI.executeZipExportFromPreview,
         executePdfExportFromPreview: previewUI.executePdfExportFromPreview,
+        executeGDriveExportFromPreview: previewUI.executeGDriveExportFromPreview,
         executeSinglePageExportFromPreview: previewUI.executeSinglePageExportFromPreview,
         copyPreviewPageToClipboard: previewUI.copyPreviewPageToClipboard,
         renderPreviewViewport: previewUI.renderPreviewViewport,

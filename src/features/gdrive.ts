@@ -171,70 +171,140 @@ export function parseGDriveFolderId(input: string): string {
 }
 
 export function getSelectedFolderId(): string {
+    const previewModal = document.getElementById('preview-modal');
+    const previewSelect = document.getElementById('preview-gdrive-folder-select') as HTMLSelectElement | null;
+    if (previewSelect && previewModal && !previewModal.classList.contains('hidden')) {
+        return previewSelect.value || selectedFolderId;
+    }
     const select = document.getElementById('gdrive-folder-select') as HTMLSelectElement | null;
     return select ? select.value : selectedFolderId;
 }
 
 export function openSelectedFolderOnGDrive(): void {
     const folderId = getSelectedFolderId();
-    if (folderId) {
+    if (folderId && folderId !== '__add_custom__') {
         window.open(`https://drive.google.com/drive/folders/${folderId}`, '_blank');
     } else {
         window.open('https://drive.google.com/drive/my-drive', '_blank');
     }
 }
 
-export async function onGDriveFolderChange(): Promise<void> {
-    const select = document.getElementById('gdrive-folder-select') as HTMLSelectElement | null;
-    if (!select) return;
+/**
+ * Prompt user to paste a Google Drive folder link or folder ID, resolve the folder name, and select it across UI
+ */
+export async function promptGDriveFolderLink(defaultInput?: string): Promise<string | null> {
+    const input = prompt(
+        "Dán ID hoặc đường link thư mục Google Drive (Ví dụ: https://drive.google.com/drive/folders/1ABC...):",
+        defaultInput || ""
+    );
+    if (!input || !input.trim()) return null;
 
-    if (select.value === '__add_custom__') {
-        const input = prompt("Dán ID hoặc đường dẫn thư mục Google Drive (Ví dụ: https://drive.google.com/drive/folders/1ABC...):");
-        if (input) {
-            const cleanId = parseGDriveFolderId(input);
-            if (cleanId) {
-                let folderName = `Thư mục (${cleanId.slice(0, 8)}...)`;
-                const token = getGDriveAccessToken();
-                if (token) {
-                    try {
-                        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${cleanId}?fields=name`, {
-                            headers: { 'Authorization': `Bearer ${token}` }
-                        });
-                        if (res.ok) {
-                            const info = await res.json();
-                            if (info.name) folderName = info.name;
-                        }
-                    } catch (e) {
-                        console.warn("Lỗi lấy tên thư mục:", e);
-                    }
-                }
-                selectedFolderId = cleanId;
-                safeSetLocalStorage('gdrive_selected_folder_id', selectedFolderId);
-                const opt = document.createElement('option');
-                opt.value = cleanId;
-                opt.textContent = `📁 ${folderName} (Tùy chỉnh)`;
-                opt.selected = true;
-                select.insertBefore(opt, select.lastElementChild);
-                showToast(`Đã chọn thư mục: ${folderName}`, "success");
-                loadGDriveProjectList();
-                return;
+    const cleanId = parseGDriveFolderId(input);
+    if (!cleanId) {
+        showToast("ID hoặc đường link thư mục không hợp lệ!", "error");
+        return null;
+    }
+
+    let folderName = `Thư mục (${cleanId.slice(0, 8)}...)`;
+    const token = getGDriveAccessToken();
+    if (token) {
+        try {
+            const res = await fetch(`https://www.googleapis.com/drive/v3/files/${cleanId}?fields=name`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const info = await res.json();
+                if (info.name) folderName = info.name;
+            }
+        } catch (e) {
+            console.warn("Lỗi lấy tên thư mục:", e);
+        }
+    }
+
+    selectedFolderId = cleanId;
+    safeSetLocalStorage('gdrive_selected_folder_id', selectedFolderId);
+
+    const selects = [
+        document.getElementById('gdrive-folder-select') as HTMLSelectElement | null,
+        document.getElementById('preview-gdrive-folder-select') as HTMLSelectElement | null
+    ];
+
+    selects.forEach(select => {
+        if (!select) return;
+        let opt = Array.from(select.options).find(o => o.value === cleanId);
+        if (!opt) {
+            opt = document.createElement('option');
+            opt.value = cleanId;
+            opt.textContent = `📁 ${folderName} (Tùy chỉnh)`;
+            const customAddOpt = select.querySelector('option[value="__add_custom__"]');
+            if (customAddOpt) {
+                select.insertBefore(opt, customAddOpt);
             } else {
-                showToast("ID / Link thư mục không hợp lệ!", "error");
+                select.appendChild(opt);
             }
         }
-        select.value = selectedFolderId;
+        select.value = cleanId;
+    });
+
+    showToast(`Đã chọn thư mục: ${folderName}`, "success");
+    loadGDriveProjectList();
+    return cleanId;
+}
+
+export async function onGDriveFolderChange(eventOrSelectId?: any): Promise<void> {
+    let selectEl: HTMLSelectElement | null = null;
+    if (eventOrSelectId) {
+        if (typeof eventOrSelectId === 'string') {
+            selectEl = document.getElementById(eventOrSelectId) as HTMLSelectElement | null;
+        } else if (eventOrSelectId.target && eventOrSelectId.target instanceof HTMLSelectElement) {
+            selectEl = eventOrSelectId.target;
+        }
+    }
+    if (!selectEl) {
+        const previewModal = document.getElementById('preview-modal');
+        if (previewModal && !previewModal.classList.contains('hidden')) {
+            selectEl = document.getElementById('preview-gdrive-folder-select') as HTMLSelectElement | null;
+        }
+    }
+    if (!selectEl) {
+        selectEl = document.getElementById('gdrive-folder-select') as HTMLSelectElement | null;
+    }
+    if (!selectEl) return;
+
+    if (selectEl.value === '__add_custom__') {
+        const newId = await promptGDriveFolderLink();
+        if (!newId) {
+            selectEl.value = selectedFolderId;
+        }
         return;
     }
 
-    selectedFolderId = select.value;
+    selectedFolderId = selectEl.value;
     safeSetLocalStorage('gdrive_selected_folder_id', selectedFolderId);
+
+    // Sync across dropdowns
+    const selects = [
+        document.getElementById('gdrive-folder-select') as HTMLSelectElement | null,
+        document.getElementById('preview-gdrive-folder-select') as HTMLSelectElement | null
+    ];
+    selects.forEach(s => {
+        if (s && s !== selectEl && s.value !== selectedFolderId) {
+            s.value = selectedFolderId;
+        }
+    });
+
     loadGDriveProjectList();
 }
 
 export async function loadGDriveFolders(): Promise<void> {
     const token = getGDriveAccessToken();
     const folderSelect = document.getElementById('gdrive-folder-select') as HTMLSelectElement | null;
-    if (!folderSelect || !token) return;
+    const previewSelect = document.getElementById('preview-gdrive-folder-select') as HTMLSelectElement | null;
+    if (!token) {
+        showToast("Vui lòng kết nối Google Drive trước để tải danh sách thư mục!", "warn");
+        return;
+    }
+    if (!folderSelect && !previewSelect) return;
 
     try {
         const q = encodeURIComponent("mimeType = 'application/vnd.google-apps.folder' and trashed = false");
@@ -242,18 +312,24 @@ export async function loadGDriveFolders(): Promise<void> {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        folderSelect.innerHTML = '';
-        const rootOpt = document.createElement('option');
-        rootOpt.value = '';
-        rootOpt.textContent = '📁 Google Drive gốc (Root / My Drive)';
-        folderSelect.appendChild(rootOpt);
+        const targetSelects = [folderSelect, previewSelect].filter((s): s is HTMLSelectElement => s !== null);
 
-        let foundSelected = !selectedFolderId;
-
+        let fetchedFolders: { id: string; name: string }[] = [];
         if (response.ok) {
             const data = await response.json();
-            const folders = data.files || [];
-            folders.forEach((f: any) => {
+            fetchedFolders = data.files || [];
+        }
+
+        targetSelects.forEach(select => {
+            select.innerHTML = '';
+            const rootOpt = document.createElement('option');
+            rootOpt.value = '';
+            rootOpt.textContent = '📁 Google Drive gốc (Root / My Drive)';
+            select.appendChild(rootOpt);
+
+            let foundSelected = !selectedFolderId;
+
+            fetchedFolders.forEach((f: any) => {
                 const opt = document.createElement('option');
                 opt.value = f.id;
                 opt.textContent = `📁 ${f.name || ''}`;
@@ -261,22 +337,25 @@ export async function loadGDriveFolders(): Promise<void> {
                     opt.selected = true;
                     foundSelected = true;
                 }
-                folderSelect.appendChild(opt);
+                select.appendChild(opt);
             });
-        }
 
-        if (selectedFolderId && !foundSelected) {
-            const customOpt = document.createElement('option');
-            customOpt.value = selectedFolderId;
-            customOpt.selected = true;
-            customOpt.textContent = `📁 Tùy chỉnh (ID: ${selectedFolderId.slice(0, 8)}...)`;
-            folderSelect.appendChild(customOpt);
-        }
+            if (selectedFolderId && !foundSelected) {
+                const customOpt = document.createElement('option');
+                customOpt.value = selectedFolderId;
+                customOpt.selected = true;
+                customOpt.textContent = `📁 Tùy chỉnh (ID: ${selectedFolderId.slice(0, 8)}...)`;
+                select.appendChild(customOpt);
+            }
 
-        const addCustomOpt = document.createElement('option');
-        addCustomOpt.value = '__add_custom__';
-        addCustomOpt.textContent = '+ Dán Link / ID Thư Mục Khác...';
-        folderSelect.appendChild(addCustomOpt);
+            const addCustomOpt = document.createElement('option');
+            addCustomOpt.value = '__add_custom__';
+            addCustomOpt.textContent = '+ Dán Link / ID Thư Mục Khác...';
+            select.appendChild(addCustomOpt);
+
+            select.value = selectedFolderId;
+        });
+        showToast("Đã làm mới danh sách thư mục Google Drive!", "info");
     } catch (err) {
         console.warn("Lỗi tải danh sách thư mục GDrive:", err);
     }
@@ -378,7 +457,11 @@ export async function uploadBlobToGDrive(
 /**
  * Feature: Upload Active Page Image directly to Google Drive
  */
-export async function uploadActivePageToGDrive(): Promise<void> {
+export async function uploadActivePageToGDrive(options?: {
+    format?: 'auto' | 'png' | 'jpg' | 'jpeg' | 'webp';
+    quality?: number;
+    folderId?: string;
+}): Promise<void> {
     if (globalState.activePageIndex === -1 || globalState.pages.length === 0) {
         showToast("Chưa có trang truyện nào được chọn để xuất!", "warn");
         return;
@@ -395,7 +478,15 @@ export async function uploadActivePageToGDrive(): Promise<void> {
     await saveEraserDrawingToPage();
 
     const page = globalState.pages[globalState.activePageIndex];
-    updateProcessingOverlay(true, "Đang kết xuất ảnh...", `Đang tạo bản vẽ trang "${page.name}" ở độ phân giải gốc...`, 40);
+
+    // Read format and quality from UI or options
+    const formatSelect = document.getElementById('gdrive-export-format') as HTMLSelectElement | null;
+    const qualitySelect = document.getElementById('gdrive-export-quality') as HTMLSelectElement | null;
+    let chosenFormat = options?.format || (formatSelect ? formatSelect.value : globalState.exportFormat) || 'png';
+    if ((chosenFormat as string) === 'jpeg') chosenFormat = 'jpg';
+    const chosenQuality = options?.quality !== undefined ? options.quality : (qualitySelect ? parseFloat(qualitySelect.value) : 0.95);
+
+    updateProcessingOverlay(true, "Đang kết xuất ảnh...", `Đang tạo bản vẽ trang "${page.name}" (${chosenFormat.toUpperCase()})...`, 40);
 
     const prevSelectedId = globalState.selectedBlockId;
     globalState.selectedBlockId = null;
@@ -406,7 +497,7 @@ export async function uploadActivePageToGDrive(): Promise<void> {
             await document.fonts.ready;
         }
 
-        const { mimeType, quality, ext } = getPageExportMimeType(page);
+        const { mimeType, quality, ext } = getPageExportMimeType(page, chosenFormat, chosenQuality);
         const canvas = await renderPageToCanvas2D(page);
 
         const pageBlob = await new Promise<Blob>((resolve, reject) => {
@@ -416,13 +507,14 @@ export async function uploadActivePageToGDrive(): Promise<void> {
             }, mimeType, quality);
         });
 
+        const targetFolder = options?.folderId !== undefined ? options.folderId : getSelectedFolderId();
         const exportName = `translated_${getCleanFileBaseName(page.name)}.${ext}`;
         updateProcessingOverlay(true, "Đang tải lên Google Drive...", `Đang upload ${exportName}...`, 80);
 
-        const result = await uploadBlobToGDrive(pageBlob, exportName, undefined, mimeType);
+        const result = await uploadBlobToGDrive(pageBlob, exportName, targetFolder, mimeType);
         updateProcessingOverlay(false);
 
-        showToast(`Đã xuất ảnh "${exportName}" lên Google Drive thành công!`, "success");
+        showToast(`🎉 Đã xuất ảnh "${exportName}" (${ext.toUpperCase()}) lên Google Drive thành công!`, "success");
     } catch (err: any) {
         console.error("Lỗi xuất ảnh lên Google Drive:", err);
         updateProcessingOverlay(false);
@@ -440,10 +532,12 @@ export async function uploadActivePageToGDrive(): Promise<void> {
  * Feature: Batch Upload all translated images to Google Drive
  */
 export async function uploadBatchPagesToGDrive(options?: {
+    targetIndices?: number[];
     createSubfolder?: boolean;
     folderName?: string;
     format?: 'auto' | 'png' | 'jpg' | 'jpeg' | 'webp';
     quality?: number;
+    folderId?: string;
 }): Promise<void> {
     if (globalState.pages.length === 0) {
         showToast("Không có trang truyện nào để xuất lên Drive.", "warn");
@@ -460,10 +554,13 @@ export async function uploadBatchPagesToGDrive(options?: {
     commitActiveEditingState();
     await saveEraserDrawingToPage();
 
-    const { startIndex, endIndex } = getExportRange();
-    const targetIndices: number[] = [];
-    for (let i = startIndex; i <= endIndex; i++) {
-        if (i >= 0 && i < globalState.pages.length) targetIndices.push(i);
+    // Determine target page indices
+    let targetIndices: number[] = options?.targetIndices || [];
+    if (!targetIndices || targetIndices.length === 0) {
+        const { startIndex, endIndex } = getExportRange();
+        for (let i = startIndex; i <= endIndex; i++) {
+            if (i >= 0 && i < globalState.pages.length) targetIndices.push(i);
+        }
     }
 
     if (targetIndices.length === 0) {
@@ -471,41 +568,54 @@ export async function uploadBatchPagesToGDrive(options?: {
         return;
     }
 
-    let destinationFolderId = getSelectedFolderId();
+    // Read format and quality from UI or options
+    const formatSelect = document.getElementById('gdrive-export-format') as HTMLSelectElement | null;
+    const qualitySelect = document.getElementById('gdrive-export-quality') as HTMLSelectElement | null;
+    let chosenFormat = options?.format || (formatSelect ? formatSelect.value : globalState.exportFormat) || 'png';
+    if ((chosenFormat as string) === 'jpeg') chosenFormat = 'jpg';
+    const chosenQuality = options?.quality !== undefined ? options.quality : (qualitySelect ? parseFloat(qualitySelect.value) : 0.95);
 
-    // Optionally create a subfolder for this chapter
-    const shouldCreateFolder = options?.createSubfolder !== false;
+    let destinationFolderId = options?.folderId !== undefined ? options.folderId : getSelectedFolderId();
+
+    // Check if subfolder creation is desired
+    const subfolderChk = document.getElementById('gdrive-create-subfolder-chk') as HTMLInputElement | null;
+    const subfolderNameInput = document.getElementById('gdrive-subfolder-name-input') as HTMLInputElement | null;
+    const shouldCreateFolder = options?.createSubfolder !== undefined 
+        ? options.createSubfolder 
+        : (subfolderChk ? subfolderChk.checked : true);
+
     if (shouldCreateFolder) {
         let defaultFolderName = `Manga_Chapter_${new Date().toISOString().slice(0, 10)}`;
         if (globalState.pages[0]?.name) {
             defaultFolderName = `${getCleanFileBaseName(globalState.pages[0].name)}_Translated`;
         }
-        const customName = options?.folderName || prompt("Nhập tên thư mục trên Google Drive để chứa toàn bộ ảnh dịch:", defaultFolderName);
-        if (!customName) return;
+        const uiFolderName = subfolderNameInput ? subfolderNameInput.value.trim() : '';
+        const customName = options?.folderName || uiFolderName || prompt("Nhập tên thư mục trên Google Drive để chứa toàn bộ ảnh dịch:", defaultFolderName);
+        if (customName) {
+            updateProcessingOverlay(true, "Đang tạo thư mục trên Drive...", `Thư mục: ${customName}`, 10);
+            try {
+                const parent = destinationFolderId;
+                const meta: any = {
+                    name: customName.trim(),
+                    mimeType: 'application/vnd.google-apps.folder'
+                };
+                if (parent) meta.parents = [parent];
 
-        updateProcessingOverlay(true, "Đang tạo thư mục trên Drive...", `Thư mục: ${customName}`, 10);
-        try {
-            const parent = destinationFolderId;
-            const meta: any = {
-                name: customName.trim(),
-                mimeType: 'application/vnd.google-apps.folder'
-            };
-            if (parent) meta.parents = [parent];
-
-            const folderRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(meta)
-            });
-            if (folderRes.ok) {
-                const folderData = await folderRes.json();
-                destinationFolderId = folderData.id;
+                const folderRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(meta)
+                });
+                if (folderRes.ok) {
+                    const folderData = await folderRes.json();
+                    destinationFolderId = folderData.id;
+                }
+            } catch (fErr) {
+                console.warn("Không thể tạo thư mục con, lưu trực tiếp vào thư mục hiện tại:", fErr);
             }
-        } catch (fErr) {
-            console.warn("Không thể tạo thư mục con, lưu trực tiếp vào thư mục hiện tại:", fErr);
         }
     }
 
@@ -530,7 +640,7 @@ export async function uploadBatchPagesToGDrive(options?: {
             updateProcessingOverlay(
                 true,
                 `Đang xuất lên Google Drive (${currentNum}/${totalToExport})`,
-                `Trang: ${page.name}`,
+                `Trang: ${page.name} (${chosenFormat.toUpperCase()})`,
                 progress
             );
 
@@ -560,7 +670,7 @@ export async function uploadBatchPagesToGDrive(options?: {
                 const canvas = await renderPageToCanvas2D(page, img);
                 if (blobUrl) URL.revokeObjectURL(blobUrl);
 
-                const { mimeType, quality, ext } = getPageExportMimeType(page, options?.format, options?.quality);
+                const { mimeType, quality, ext } = getPageExportMimeType(page, chosenFormat, chosenQuality);
 
                 const pageBlob = await new Promise<Blob>((resolve, reject) => {
                     canvas.toBlob((blob) => {
@@ -587,9 +697,9 @@ export async function uploadBatchPagesToGDrive(options?: {
 
         if (successCount > 0) {
             if (failedPages.length > 0) {
-                showToast(`Đã tải lên Drive thành công ${successCount}/${totalToExport} trang! (Lỗi: ${failedPages.join(', ')})`, "warn");
+                showToast(`Đã tải lên Drive ${successCount}/${totalToExport} trang! (Lỗi: ${failedPages.join(', ')})`, "warn");
             } else {
-                showToast(`Xuất trọn bộ ${successCount} trang ảnh lên Google Drive thành công!`, "success");
+                showToast(`🎉 Xuất trọn bộ ${successCount} trang ảnh (${chosenFormat.toUpperCase()}) lên Google Drive thành công!`, "success");
             }
         } else {
             showToast(`Không thể tải trang nào lên Drive. Vui lòng kiểm tra lại quyền truy cập!`, "error");
