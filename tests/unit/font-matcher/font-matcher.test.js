@@ -794,8 +794,9 @@ describe('Manga Font Matcher & Set Recommendation Engine', () => {
 
                 if (matchedKey) {
                     const existing = seenNormalizedMap.get(matchedKey);
-                    const existingHasAccents = /[à-ỹÀ-Ỹ]/.test(existing.family);
-                    const itemHasAccents = /[à-ỹÀ-Ỹ]/.test(item.family);
+                    const vietnameseDiacriticsRegex = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
+                    const existingHasAccents = vietnameseDiacriticsRegex.test(existing.family);
+                    const itemHasAccents = vietnameseDiacriticsRegex.test(item.family);
                     const existingScore = (existingHasAccents ? 20 : 0) + (existing.weightGrade ? 5 : 0) + (existing.dateAdded || 0) / 1e13;
                     const itemScore = (itemHasAccents ? 20 : 0) + (item.weightGrade ? 5 : 0) + (item.dateAdded || 0) / 1e13;
 

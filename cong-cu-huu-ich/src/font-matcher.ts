@@ -3935,6 +3935,8 @@ export function fastProfileFontFromName(family: string): FontProfile {
 const customFontPageSize = 24;
 let customFontCurrentPage = 1;
 
+export const VIETNAMESE_DIACRITICS_REGEX = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
+
 export function normalizeFontKey(name: string): string {
     if (!name) return '';
     return name
@@ -4038,8 +4040,8 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
             if (matchedKey) {
                 const existing = seenNormalizedMap.get(matchedKey);
                 // Prefer font record with proper Vietnamese accents / valid weightGrade / newer timestamp
-                const existingHasAccents = /[à-ỹÀ-Ỹ]/.test(existing.family);
-                const itemHasAccents = /[à-ỹÀ-Ỹ]/.test(item.family);
+                const existingHasAccents = VIETNAMESE_DIACRITICS_REGEX.test(existing.family);
+                const itemHasAccents = VIETNAMESE_DIACRITICS_REGEX.test(item.family);
                 const existingScore = (existingHasAccents ? 20 : 0) + (existing.weightGrade ? 5 : 0) + (existing.dateAdded || 0) / 1e13;
                 const itemScore = (itemHasAccents ? 20 : 0) + (item.weightGrade ? 5 : 0) + (item.dateAdded || 0) / 1e13;
 
@@ -4425,8 +4427,8 @@ export async function deduplicateCustomFonts(showPrompt: boolean = false): Promi
 
             if (matchedKey) {
                 const existing = seenNormalizedMap.get(matchedKey);
-                const existingHasAccents = /[à-ỹÀ-Ỹ]/.test(existing.family);
-                const itemHasAccents = /[à-ỹÀ-Ỹ]/.test(item.family);
+                const existingHasAccents = VIETNAMESE_DIACRITICS_REGEX.test(existing.family);
+                const itemHasAccents = VIETNAMESE_DIACRITICS_REGEX.test(item.family);
                 const existingScore = (existingHasAccents ? 20 : 0) + (existing.weightGrade ? 5 : 0) + (existing.dateAdded || 0) / 1e13;
                 const itemScore = (itemHasAccents ? 20 : 0) + (item.weightGrade ? 5 : 0) + (item.dateAdded || 0) / 1e13;
 

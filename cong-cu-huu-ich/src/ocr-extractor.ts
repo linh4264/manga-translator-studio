@@ -2,7 +2,7 @@
  * Module 7: OCR Text Extractor (Tesseract.js) (TypeScript)
  */
 
-import { escapeHTML } from './common';
+import { escapeHTML, ensureTesseractLoaded } from './common';
 
 let ocrFileBlob: File | null = null;
 
@@ -18,7 +18,8 @@ export async function runOcrExtraction(): Promise<void> {
     }
 
     try {
-        const worker = await Tesseract.createWorker(lang);
+        const tesseractLib = await ensureTesseractLoaded();
+        const worker = await tesseractLib.createWorker(lang);
         if (statusBar) statusBar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang quét và bóc tách chữ từ ảnh...`;
         const ret = await worker.recognize(ocrFileBlob);
         if (resultText) resultText.value = ret.data.text;

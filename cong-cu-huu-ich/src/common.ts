@@ -230,3 +230,34 @@ export async function ensureJSZipLoaded(): Promise<any> {
 
     throw new Error("Không thể tải thư viện JSZip. Vui lòng kiểm tra kết nối mạng của bạn.");
 }
+
+/**
+ * Ensures Tesseract.js library is loaded on demand
+ */
+export async function ensureTesseractLoaded(): Promise<any> {
+    const scope: any = typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : null);
+    if (!scope) return null;
+
+    if (typeof scope.Tesseract !== 'undefined') {
+        return scope.Tesseract;
+    }
+
+    const cdnSources = [
+        'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.5/tesseract.min.js',
+        'https://unpkg.com/tesseract.js@5/dist/tesseract.min.js'
+    ];
+
+    for (const src of cdnSources) {
+        try {
+            await loadScript(src);
+            if (typeof scope.Tesseract !== 'undefined') {
+                return scope.Tesseract;
+            }
+        } catch {
+            // Fallback to next CDN
+        }
+    }
+
+    throw new Error("Không thể tải thư viện Tesseract.js. Vui lòng kiểm tra kết nối mạng của bạn.");
+}
