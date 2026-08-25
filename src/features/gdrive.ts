@@ -1,12 +1,24 @@
-// Google Drive Cloud Sync & Team Collaboration Module
+// Google Drive Cloud Sync, Direct Image Export & Team Collaboration Module
 import { globalState, savePageToDB, saveProjectMeta, getPageDataURL, clearProjectDB } from '../core/state';
-import { showToast, escapeHTML, getCleanFileBaseName } from '../core/utils';
+import { showToast, escapeHTML, getCleanFileBaseName, waitForNextPaint, waitForImageReady } from '../core/utils';
 import { safeSetLocalStorage } from '../core/utils/storage';
 import { ensureModalElement } from '../core/component-loader';
-import { dataURLtoBlob } from './io';
-import { updatePageListUI, selectPage, updateSourceLanguage, updateTargetLanguage, updatePronounMatrix, updateGlossary, togglePreserveNames } from '../ui/index';
+import { dataURLtoBlob, getPageExportMimeType, getExportRange } from './io';
+import {
+    updatePageListUI,
+    selectPage,
+    updateSourceLanguage,
+    updateTargetLanguage,
+    updatePronounMatrix,
+    updateGlossary,
+    togglePreserveNames,
+    updateProcessingOverlay
+} from '../ui/index';
+import { renderPageToCanvas2D, commitActiveEditingState } from './canvas/canvas-service';
+import { saveEraserDrawingToPage } from './inpainting';
 import { getTranslationContext } from './ai/ai-state';
 import { getCharacterDossier, getLorebook, setCharacterDossier, setLorebook } from './dossier-lorebook';
+import { elements } from '../core/elements';
 
 let gdriveAccessToken: string = localStorage.getItem('gdrive_access_token') || '';
 let selectedFolderId: string = localStorage.getItem('gdrive_selected_folder_id') || '';
@@ -20,6 +32,7 @@ export function setGDriveAccessToken(token: string): void {
     } else {
         localStorage.removeItem('gdrive_access_token');
     }
+    syncGDriveAuthStatusUI();
 }
 
 export function getGDriveAccessToken(): string {
@@ -31,6 +44,72 @@ export function getGDriveAccessToken(): string {
         return inputVal;
     }
     return gdriveAccessToken || localStorage.getItem('gdrive_access_token') || '';
+}
+
+export function getGDriveClientId(): string {
+    const input = document.getElementById('gdrive-client-id-input') as HTMLInputElement | null;
+    const inputVal = input ? input.value.trim() : '';
+    if (inputVal) {
+        googleClientId = inputVal;
+        safeSetLocalStorage('gdrive_client_id', inputVal);
+        return inputVal;
+    }
+    return googleClientId || localStorage.getItem('gdrive_client_id') || '';
+}
+
+export function saveGDriveClientIdFromUI(): void {
+    const input = document.getElementById('gdrive-client-id-input') as HTMLInputElement | null;
+    if (input) {
+        const val = input.value.trim();
+        googleClientId = val;
+        if (val) {
+            safeSetLocalStorage('gdrive_client_id', val);
+            initGoogleGISClient(val);
+            showToast("Đã lưu Google Client ID thành công!", "success");
+        } else {
+            localStorage.removeItem('gdrive_client_id');
+            showToast("Đã xóa Google Client ID.", "info");
+        }
+        syncGDriveAuthStatusUI();
+    }
+}
+
+export function logoutGDrive(): void {
+    setGDriveAccessToken('');
+    const tokenInput = document.getElementById('gdrive-token-input') as HTMLInputElement | null;
+    if (tokenInput) tokenInput.value = '';
+    showToast("Đã đăng xuất Google Drive.", "info");
+    syncGDriveAuthStatusUI();
+}
+
+export function syncGDriveAuthStatusUI(): void {
+    const token = getGDriveAccessToken();
+    const statusBadge = document.getElementById('gdrive-auth-status-badge');
+    const btnLogout = document.getElementById('btn-gdrive-logout');
+    const clientIdInput = document.getElementById('gdrive-client-id-input') as HTMLInputElement | null;
+    const tokenInput = document.getElementById('gdrive-token-input') as HTMLInputElement | null;
+
+    if (clientIdInput && !clientIdInput.value) {
+        clientIdInput.value = googleClientId || localStorage.getItem('gdrive_client_id') || '';
+    }
+    if (tokenInput && !tokenInput.value) {
+        tokenInput.value = token;
+    }
+
+    if (statusBadge) {
+        if (token) {
+            statusBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-[11px] font-semibold";
+            statusBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Đã kết nối Google Drive';
+        } else {
+            statusBadge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-slate-400 text-[11px] font-semibold";
+            statusBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-500"></span> Chưa kết nối';
+        }
+    }
+
+    if (btnLogout) {
+        if (token) btnLogout.classList.remove('hidden');
+        else btnLogout.classList.add('hidden');
+    }
 }
 
 export async function getProjectBackupJSON(): Promise<any> {
@@ -69,7 +148,6 @@ export async function getProjectBackupJSON(): Promise<any> {
     };
 }
 
-
 export function parseGDriveFileId(input: string): string {
     if (!input) return '';
     const trimmed = input.trim();
@@ -95,6 +173,15 @@ export function parseGDriveFolderId(input: string): string {
 export function getSelectedFolderId(): string {
     const select = document.getElementById('gdrive-folder-select') as HTMLSelectElement | null;
     return select ? select.value : selectedFolderId;
+}
+
+export function openSelectedFolderOnGDrive(): void {
+    const folderId = getSelectedFolderId();
+    if (folderId) {
+        window.open(`https://drive.google.com/drive/folders/${folderId}`, '_blank');
+    } else {
+        window.open('https://drive.google.com/drive/my-drive', '_blank');
+    }
 }
 
 export async function onGDriveFolderChange(): Promise<void> {
@@ -158,7 +245,7 @@ export async function loadGDriveFolders(): Promise<void> {
         folderSelect.innerHTML = '';
         const rootOpt = document.createElement('option');
         rootOpt.value = '';
-        rootOpt.textContent = '📁 Google Drive gốc (Root)';
+        rootOpt.textContent = '📁 Google Drive gốc (Root / My Drive)';
         folderSelect.appendChild(rootOpt);
 
         let foundSelected = !selectedFolderId;
@@ -195,27 +282,34 @@ export async function loadGDriveFolders(): Promise<void> {
     }
 }
 
-export async function createNewGDriveFolder(): Promise<void> {
+export async function createNewGDriveFolder(defaultNameInput: string = "Dự Án Manga Dịch"): Promise<string | null> {
     const token = getGDriveAccessToken();
     if (!token) {
         showToast("Vui lòng kết nối Google Drive / dán Access Token trước!", "warn");
-        return;
+        openGDriveModal();
+        return null;
     }
-    const folderName = prompt("Nhập tên thư mục muốn tạo trên Google Drive:", "Dự Án Manga Dịch");
-    if (!folderName || !folderName.trim()) return;
+    const folderName = prompt("Nhập tên thư mục muốn tạo trên Google Drive:", defaultNameInput);
+    if (!folderName || !folderName.trim()) return null;
 
     try {
         showToast("Đang tạo thư mục trên Google Drive...", "info");
+        const parentFolder = getSelectedFolderId();
+        const requestBody: any = {
+            name: folderName.trim(),
+            mimeType: 'application/vnd.google-apps.folder'
+        };
+        if (parentFolder) {
+            requestBody.parents = [parentFolder];
+        }
+
         const response = await fetch('https://www.googleapis.com/drive/v3/files', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                name: folderName.trim(),
-                mimeType: 'application/vnd.google-apps.folder'
-            })
+            body: JSON.stringify(requestBody)
         });
         if (!response.ok) {
             const errData = await response.json().catch(() => ({}));
@@ -227,16 +321,296 @@ export async function createNewGDriveFolder(): Promise<void> {
         showToast(`Tạo thư mục "${newFolder.name}" thành công!`, "success");
         await loadGDriveFolders();
         loadGDriveProjectList();
+        return newFolder.id;
     } catch (err: any) {
         console.error("Lỗi tạo thư mục GDrive:", err);
         showToast(`Không thể tạo thư mục: ${err.message}`, "error");
+        return null;
     }
 }
 
+/**
+ * Core Helper: Upload a Blob (image, zip, json) to Google Drive
+ */
+export async function uploadBlobToGDrive(
+    blob: Blob,
+    fileName: string,
+    folderId?: string,
+    mimeTypeOverride?: string
+): Promise<{ id: string; name: string; webViewLink?: string }> {
+    const token = getGDriveAccessToken();
+    if (!token) {
+        throw new Error("Chưa kết nối Google Drive hoặc Access Token đã hết hạn.");
+    }
+
+    const mimeType = mimeTypeOverride || blob.type || 'application/octet-stream';
+    const targetFolder = folderId !== undefined ? folderId : getSelectedFolderId();
+
+    const metadata: any = {
+        name: fileName,
+        mimeType: mimeType
+    };
+    if (targetFolder) {
+        metadata.parents = [targetFolder];
+    }
+
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', blob);
+
+    const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: form
+    });
+
+    if (!response.ok) {
+        if (response.status === 401) {
+            throw new Error("Access Token hết hạn. Vui lòng đăng nhập lại Google Drive!");
+        }
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `HTTP ${response.status}`);
+    }
+
+    return await response.json();
+}
+
+/**
+ * Feature: Upload Active Page Image directly to Google Drive
+ */
+export async function uploadActivePageToGDrive(): Promise<void> {
+    if (globalState.activePageIndex === -1 || globalState.pages.length === 0) {
+        showToast("Chưa có trang truyện nào được chọn để xuất!", "warn");
+        return;
+    }
+
+    const token = getGDriveAccessToken();
+    if (!token) {
+        showToast("Vui lòng kết nối Google Drive trước khi xuất ảnh!", "warn");
+        openGDriveModal();
+        return;
+    }
+
+    commitActiveEditingState();
+    await saveEraserDrawingToPage();
+
+    const page = globalState.pages[globalState.activePageIndex];
+    updateProcessingOverlay(true, "Đang kết xuất ảnh...", `Đang tạo bản vẽ trang "${page.name}" ở độ phân giải gốc...`, 40);
+
+    const prevSelectedId = globalState.selectedBlockId;
+    globalState.selectedBlockId = null;
+
+    try {
+        await waitForNextPaint();
+        if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+            await document.fonts.ready;
+        }
+
+        const { mimeType, quality, ext } = getPageExportMimeType(page);
+        const canvas = await renderPageToCanvas2D(page);
+
+        const pageBlob = await new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob((blob) => {
+                if (blob) resolve(blob);
+                else reject(new Error('Không thể chuyển canvas sang Blob.'));
+            }, mimeType, quality);
+        });
+
+        const exportName = `translated_${getCleanFileBaseName(page.name)}.${ext}`;
+        updateProcessingOverlay(true, "Đang tải lên Google Drive...", `Đang upload ${exportName}...`, 80);
+
+        const result = await uploadBlobToGDrive(pageBlob, exportName, undefined, mimeType);
+        updateProcessingOverlay(false);
+
+        showToast(`Đã xuất ảnh "${exportName}" lên Google Drive thành công!`, "success");
+    } catch (err: any) {
+        console.error("Lỗi xuất ảnh lên Google Drive:", err);
+        updateProcessingOverlay(false);
+        showToast(`Lỗi tải lên Drive: ${err.message}`, "error");
+        if (err.message && err.message.includes('Token')) {
+            openGDriveModal();
+        }
+    } finally {
+        globalState.selectedBlockId = prevSelectedId;
+        updateProcessingOverlay(false);
+    }
+}
+
+/**
+ * Feature: Batch Upload all translated images to Google Drive
+ */
+export async function uploadBatchPagesToGDrive(options?: {
+    createSubfolder?: boolean;
+    folderName?: string;
+    format?: 'auto' | 'png' | 'jpg' | 'jpeg' | 'webp';
+    quality?: number;
+}): Promise<void> {
+    if (globalState.pages.length === 0) {
+        showToast("Không có trang truyện nào để xuất lên Drive.", "warn");
+        return;
+    }
+
+    const token = getGDriveAccessToken();
+    if (!token) {
+        showToast("Vui lòng kết nối Google Drive trước khi xuất hàng loạt!", "warn");
+        openGDriveModal();
+        return;
+    }
+
+    commitActiveEditingState();
+    await saveEraserDrawingToPage();
+
+    const { startIndex, endIndex } = getExportRange();
+    const targetIndices: number[] = [];
+    for (let i = startIndex; i <= endIndex; i++) {
+        if (i >= 0 && i < globalState.pages.length) targetIndices.push(i);
+    }
+
+    if (targetIndices.length === 0) {
+        showToast("Không có trang nào được chọn để xuất.", "warn");
+        return;
+    }
+
+    let destinationFolderId = getSelectedFolderId();
+
+    // Optionally create a subfolder for this chapter
+    const shouldCreateFolder = options?.createSubfolder !== false;
+    if (shouldCreateFolder) {
+        let defaultFolderName = `Manga_Chapter_${new Date().toISOString().slice(0, 10)}`;
+        if (globalState.pages[0]?.name) {
+            defaultFolderName = `${getCleanFileBaseName(globalState.pages[0].name)}_Translated`;
+        }
+        const customName = options?.folderName || prompt("Nhập tên thư mục trên Google Drive để chứa toàn bộ ảnh dịch:", defaultFolderName);
+        if (!customName) return;
+
+        updateProcessingOverlay(true, "Đang tạo thư mục trên Drive...", `Thư mục: ${customName}`, 10);
+        try {
+            const parent = destinationFolderId;
+            const meta: any = {
+                name: customName.trim(),
+                mimeType: 'application/vnd.google-apps.folder'
+            };
+            if (parent) meta.parents = [parent];
+
+            const folderRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(meta)
+            });
+            if (folderRes.ok) {
+                const folderData = await folderRes.json();
+                destinationFolderId = folderData.id;
+            }
+        } catch (fErr) {
+            console.warn("Không thể tạo thư mục con, lưu trực tiếp vào thư mục hiện tại:", fErr);
+        }
+    }
+
+    const totalToExport = targetIndices.length;
+    const prevSelectedId = globalState.selectedBlockId;
+    globalState.selectedBlockId = null;
+
+    let successCount = 0;
+    const failedPages: string[] = [];
+
+    try {
+        if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+            await document.fonts.ready;
+        }
+
+        for (let seq = 0; seq < targetIndices.length; seq++) {
+            const i = targetIndices[seq];
+            const page = globalState.pages[i];
+            const currentNum = seq + 1;
+            const progress = Math.round((currentNum / totalToExport) * 90);
+
+            updateProcessingOverlay(
+                true,
+                `Đang xuất lên Google Drive (${currentNum}/${totalToExport})`,
+                `Trang: ${page.name}`,
+                progress
+            );
+
+            try {
+                const pageFile = page.originalFile || page.file;
+                let img: HTMLImageElement | null = null;
+                let blobUrl: string | null = null;
+
+                if (pageFile) {
+                    img = new Image();
+                    blobUrl = URL.createObjectURL(pageFile as Blob);
+                    await new Promise((resolve, reject) => {
+                        img!.onload = resolve;
+                        img!.onerror = () => reject(new Error("Không thể tải ảnh offscreen."));
+                        img!.src = blobUrl!;
+                    });
+                } else if (page.src) {
+                    img = new Image();
+                    const targetSrc = page.src;
+                    await new Promise((resolve, reject) => {
+                        img!.onload = resolve;
+                        img!.onerror = () => reject(new Error("Không thể tải ảnh offscreen."));
+                        img!.src = targetSrc;
+                    });
+                }
+
+                const canvas = await renderPageToCanvas2D(page, img);
+                if (blobUrl) URL.revokeObjectURL(blobUrl);
+
+                const { mimeType, quality, ext } = getPageExportMimeType(page, options?.format, options?.quality);
+
+                const pageBlob = await new Promise<Blob>((resolve, reject) => {
+                    canvas.toBlob((blob) => {
+                        if (blob) resolve(blob);
+                        else reject(new Error('Không thể chuyển canvas sang Blob.'));
+                    }, mimeType, quality);
+                });
+
+                if (canvas) {
+                    canvas.width = 0;
+                    canvas.height = 0;
+                }
+
+                const finalExportName = `translated_${getCleanFileBaseName(page.name, `page_${i + 1}`)}.${ext}`;
+                await uploadBlobToGDrive(pageBlob, finalExportName, destinationFolderId, mimeType);
+                successCount++;
+            } catch (err: any) {
+                console.error(`Lỗi upload trang ${i + 1} lên Drive:`, err);
+                failedPages.push(page.name || `Trang ${i + 1}`);
+            }
+        }
+
+        updateProcessingOverlay(false);
+
+        if (successCount > 0) {
+            if (failedPages.length > 0) {
+                showToast(`Đã tải lên Drive thành công ${successCount}/${totalToExport} trang! (Lỗi: ${failedPages.join(', ')})`, "warn");
+            } else {
+                showToast(`Xuất trọn bộ ${successCount} trang ảnh lên Google Drive thành công!`, "success");
+            }
+        } else {
+            showToast(`Không thể tải trang nào lên Drive. Vui lòng kiểm tra lại quyền truy cập!`, "error");
+        }
+    } catch (err: any) {
+        console.error("Batch Drive upload error:", err);
+        updateProcessingOverlay(false);
+        showToast(`Lỗi xuất hàng loạt lên Drive: ${err.message}`, "error");
+    } finally {
+        globalState.selectedBlockId = prevSelectedId;
+        updateProcessingOverlay(false);
+    }
+}
+
+/**
+ * Feature: Export full project .manga to Google Drive
+ */
 export async function uploadProjectToGDrive(customName: string = ''): Promise<void> {
     const token = getGDriveAccessToken();
     if (!token) {
-        showToast("Vui lòng nhập Access Token Google Drive trước!", "warn");
+        showToast("Vui lòng kết nối Google Drive trước khi lưu dự án!", "warn");
         openGDriveModal();
         return;
     }
@@ -309,12 +683,12 @@ export async function loadGDriveProjectList(): Promise<void> {
     if (!listContainer) return;
 
     if (!token) {
-        listContainer.innerHTML = '<div class="text-center py-4 text-slate-500 text-xs">Vui lòng nhập Access Token bên trên để xem danh sách tệp.</div>';
+        listContainer.innerHTML = '<div class="text-center py-4 text-slate-500 text-xs">Vui lòng kết nối Google Drive để xem danh sách tệp dự án.</div>';
         return;
     }
 
     try {
-        listContainer.innerHTML = '<div class="text-center py-4 text-indigo-400 text-xs"><i class="fa-solid fa-spinner animate-spin"></i> Đang tải danh sách từ Drive...</div>';
+        listContainer.innerHTML = '<div class="text-center py-4 text-sky-400 text-xs"><i class="fa-solid fa-spinner animate-spin"></i> Đang tải danh sách từ Drive...</div>';
         const folderId = getSelectedFolderId();
         let queryCondition = "mimeType != 'application/vnd.google-apps.folder' and name contains '.manga' and trashed = false";
         if (folderId) {
@@ -327,7 +701,7 @@ export async function loadGDriveProjectList(): Promise<void> {
 
         if (!response.ok) {
             if (response.status === 401) {
-                listContainer.innerHTML = '<div class="text-center py-4 text-amber-400 text-xs">Access Token hết hạn. Vui lòng dán Token mới!</div>';
+                listContainer.innerHTML = '<div class="text-center py-4 text-amber-400 text-xs">Access Token hết hạn. Vui lòng đăng nhập lại Google!</div>';
                 return;
             }
             const errData = await response.json().catch(() => ({}));
@@ -338,7 +712,7 @@ export async function loadGDriveProjectList(): Promise<void> {
         const validFiles = (data.files || []).filter((f: any) => f.mimeType !== 'application/vnd.google-apps.folder');
 
         if (validFiles.length === 0) {
-            listContainer.innerHTML = '<div class="text-center py-4 text-slate-500 text-xs">Không tìm thấy tệp .manga nào trong thư mục này.</div>';
+            listContainer.innerHTML = '<div class="text-center py-4 text-slate-500 text-xs">Không tìm thấy tệp dự án .manga nào trong thư mục này.</div>';
             return;
         }
 
@@ -347,15 +721,15 @@ export async function loadGDriveProjectList(): Promise<void> {
             const sizeKB = file.size ? `${(file.size / 1024).toFixed(1)} KB` : 'N/A';
             const safeName = escapeHTML(file.name);
             return `
-                <div class="flex items-center justify-between p-2.5 bg-slate-900 hover:bg-slate-800 rounded-lg border border-slate-800 transition-all">
+                <div class="flex items-center justify-between p-2.5 bg-slate-950 hover:bg-slate-900 rounded-xl border border-slate-800 transition-all">
                     <div class="min-w-0 flex-1 pr-2">
                         <div class="text-xs font-semibold text-slate-200 truncate flex items-center gap-1.5">
-                            <i class="fa-solid fa-file-code text-indigo-400"></i> ${safeName}
+                            <i class="fa-solid fa-file-code text-sky-400"></i> ${safeName}
                         </div>
                         <div class="text-[10px] text-slate-400">Cập nhật: ${modDate} | Dung lượng: ${sizeKB}</div>
                     </div>
                     <div class="flex items-center gap-1.5">
-                        <button onclick="importProjectFromGDrive('${file.id}')" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold rounded-lg transition-all shadow flex items-center gap-1">
+                        <button onclick="importProjectFromGDrive('${file.id}')" class="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold rounded-lg transition-all shadow flex items-center gap-1">
                             <i class="fa-solid fa-download"></i> Nạp
                         </button>
                     </div>
@@ -380,7 +754,7 @@ export async function importProjectFromGDrive(fileId: string): Promise<void> {
     }
     const token = getGDriveAccessToken();
     if (!token) {
-        showToast("Vui lòng dán Access Token Google Drive trước khi nạp tệp!", "warn");
+        showToast("Vui lòng kết nối Google Drive trước khi nạp tệp!", "warn");
         openGDriveModal();
         return;
     }
@@ -393,7 +767,7 @@ export async function importProjectFromGDrive(fileId: string): Promise<void> {
 
         if (!response.ok) {
             if (response.status === 401) {
-                showToast("Access Token hết hạn. Vui lòng lấy Token mới!", "error");
+                showToast("Access Token hết hạn. Vui lòng đăng nhập lại!", "error");
                 openGDriveModal();
                 return;
             }
@@ -447,7 +821,6 @@ export async function importProjectFromGDrive(fileId: string): Promise<void> {
             if (data.characterDossier) setCharacterDossier(data.characterDossier, false);
             if (data.lorebook) setLorebook(data.lorebook, false);
 
-
             for (const page of globalState.pages) {
                 await savePageToDB(page);
             }
@@ -480,7 +853,8 @@ export function initGoogleGISClient(customClientId: string = ''): boolean {
                         setGDriveAccessToken(tokenResponse.access_token);
                         const tokenInput = document.getElementById('gdrive-token-input') as HTMLInputElement | null;
                         if (tokenInput) tokenInput.value = tokenResponse.access_token;
-                        showToast("Đã đăng nhập & lấy Token từ Google!", "success");
+                        showToast("Đã kết nối Google Drive thành công!", "success");
+                        loadGDriveFolders();
                         loadGDriveProjectList();
                     } else if (tokenResponse.error) {
                         showToast(`Lỗi đăng nhập Google: ${tokenResponse.error}`, "error");
@@ -496,35 +870,38 @@ export function initGoogleGISClient(customClientId: string = ''): boolean {
 }
 
 export function loginWithGoogleOAuth(): void {
-    if (!googleClientId) {
-        const inputId = prompt(
-            "Tự động 1-Click Đăng Nhập Google:\nNhập Google OAuth Client ID của bạn (x.apps.googleusercontent.com):\n(Để trống nếu muốn mở OAuth Playground)",
-            googleClientId
-        );
-        if (inputId && inputId.trim()) {
-            googleClientId = inputId.trim();
-            safeSetLocalStorage('gdrive_client_id', googleClientId);
+    const clientId = getGDriveClientId();
+    if (clientId) {
+        const initialized = initGoogleGISClient(clientId);
+        if (initialized && tokenClient) {
+            tokenClient.requestAccessToken({ prompt: '' });
+            return;
         }
     }
-    if (googleClientId) {
+
+    const inputId = prompt(
+        "Tự động Đăng nhập 1-Click:\nNhập Google OAuth Client ID của bạn (dạng: xxx.apps.googleusercontent.com):\n(Bấm Cancel nếu muốn mở trang tạo Client ID)",
+        googleClientId
+    );
+    if (inputId && inputId.trim()) {
+        googleClientId = inputId.trim();
+        safeSetLocalStorage('gdrive_client_id', googleClientId);
         const initialized = initGoogleGISClient(googleClientId);
         if (initialized && tokenClient) {
             tokenClient.requestAccessToken({ prompt: '' });
             return;
         }
     }
-    window.open('https://developers.google.com/oauthplayground/', '_blank');
-    showToast("Đã mở OAuth Playground. Chọn Drive API v3 (drive.file) để lấy Access Token!", "info");
+
+    window.open('https://console.cloud.google.com/apis/credentials?hl=vi', '_blank');
+    showToast("Đã mở Google Cloud Console. Hãy tạo OAuth Client ID và dán vào ô bên trên!", "info");
 }
 
 export async function openGDriveModal(): Promise<void> {
     const modal = await ensureModalElement('gdrive-modal');
     if (modal) {
         modal.classList.remove('hidden');
-        const tokenInput = document.getElementById('gdrive-token-input') as HTMLInputElement | null;
-        if (tokenInput) {
-            tokenInput.value = getGDriveAccessToken();
-        }
+        syncGDriveAuthStatusUI();
         if (googleClientId && !tokenClient) {
             initGoogleGISClient(googleClientId);
         }
@@ -554,4 +931,3 @@ export function saveGDriveTokenFromUI(): void {
         }
     }
 }
-

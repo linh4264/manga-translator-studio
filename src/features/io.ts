@@ -420,7 +420,7 @@ export async function exportCurrentPagePSD(): Promise<void> {
     }
 }
 
-function getExportRange(): { startIndex: number; endIndex: number } {
+export function getExportRange(): { startIndex: number; endIndex: number } {
     const chk = document.getElementById('chk-export-range') as HTMLInputElement | null;
     const numStart = document.getElementById('num-export-start') as HTMLInputElement | null;
     const numEnd = document.getElementById('num-export-end') as HTMLInputElement | null;
