@@ -16,6 +16,20 @@ if %errorlevel%==0 (
     echo.
 )
 
+where bun >nul 2>nul
+if %errorlevel%==0 (
+    echo [OK] Phat hien Bun runtime.
+    echo [Web] Dang khoi chay server bang Bun tren cong 3000...
+    echo.
+    bun server.js
+    if errorlevel 1 (
+        echo.
+        echo [Loi] May chu Bun bi dung dot ngot.
+        pause
+    )
+    goto :eof
+)
+
 where node >nul 2>nul
 if %errorlevel%==0 (
     echo [OK] Phat hien Node.js.
@@ -27,28 +41,29 @@ if %errorlevel%==0 (
         echo [Loi] May chu Node.js bi dung dot ngot.
         pause
     )
-) else (
-    where python >nul 2>nul
-    if %errorlevel%==0 (
-        echo [Goi y] Khong tim thay Node.js. 
-        echo [OK] Phat hien Python. Dang chay python -m http.server 3000...
+    goto :eof
+)
+
+where python >nul 2>nul
+if %errorlevel%==0 (
+    echo [Goi y] Khong tim thay Bun hoac Node.js. 
+    echo [OK] Phat hien Python. Dang chay server Python...
+    echo.
+    start http://localhost:3000
+    cd /d "%~dp0\.."
+    python -m http.server 3000
+    if errorlevel 1 (
         echo.
-        start http://localhost:3000
-        cd /d "%~dp0\..\dist"
-        python -m http.server 3000
-        if errorlevel 1 (
-            echo.
-            echo [Loi] May chu Python bi dung.
-            pause
-        )
-    ) else (
-        echo [Canh bao] May ban chua cai ca Node.js lan Python!
-        echo.
-        echo Hay thuc hien mot trong cac cac sau:
-        echo 1. Cai dat Node.js tai: https://nodejs.org/
-        echo 2. Hoac mo thu muc nay bang VS Code va cai extension "Live Server" de chay.
-        echo 3. Hoac su dung extension Chrome "Web Server for Chrome".
-        echo.
+        echo [Loi] May chu Python bi dung.
         pause
     )
+    goto :eof
 )
+
+echo [Canh bao] May ban chua cai ca Bun, Node.js lan Python!
+echo.
+echo Hay thuc hien mot trong cac cach sau:
+echo 1. Cai dat Bun tai: https://bun.sh/ (Khuyen nghi cho Windows)
+echo 2. Hoac cai dat Node.js tai: https://nodejs.org/
+echo.
+pause

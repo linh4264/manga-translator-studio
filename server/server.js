@@ -38,8 +38,18 @@ const MIME_TYPES = {
     '.woff': 'font/woff',
     '.woff2': 'font/woff2',
     '.ttf': 'font/ttf',
-    '.otf': 'font/otf'
+    '.otf': 'font/otf',
+    '.ts': 'text/javascript; charset=utf-8'
 };
+
+let bunTranspiler = null;
+if (typeof Bun !== 'undefined' && Bun.Transpiler) {
+    try {
+        bunTranspiler = new Bun.Transpiler({ loader: 'ts', target: 'browser' });
+    } catch (e) {
+        console.warn('Bun Transpiler init failed:', e.message);
+    }
+}
 
 let ts = null;
 try {
@@ -49,7 +59,9 @@ try {
         ts = tsModule.default || tsModule;
     }
 } catch (e) {
-    console.warn('TypeScript module not found:', e.message);
+    if (!bunTranspiler) {
+        console.warn('TypeScript module not found:', e.message);
+    }
 }
 
 function resolveTsImports(code, currentDir) {
@@ -165,14 +177,26 @@ const server = http.createServer((req, res) => {
                     return;
                 }
 
+                if (bunTranspiler) {
+                    try {
+                        const resolvedTs = resolveTsImports(tsContent, path.dirname(filePath));
+                        const jsCode = bunTranspiler.transformSync(resolvedTs);
+                        res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' });
+                        res.end(jsCode, 'utf-8');
+                        return;
+                    } catch (bErr) {
+                        console.error('Lỗi Bun Transpiler:', bErr);
+                    }
+                }
+
                 if (!ts) {
                     res.statusCode = 500;
                     res.setHeader('Content-Type', 'text/html; charset=utf-8');
                     res.end(`
                         <div style="font-family: sans-serif; text-align: center; padding: 50px; background: #0f172a; color: #f8fafc; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;">
                             <h1 style="color: #f43f5e; font-size: 32px; margin: 0 0 10px 0;">Thiếu Module TypeScript</h1>
-                            <p style="color: #94a3b8; font-size: 16px;">Server cần module <code>typescript</code> để biên dịch trực tiếp các file <code>.ts</code>.</p>
-                            <p style="color: #cbd5e1; font-size: 14px;">Vui lòng chạy lệnh <code>npm install</code> hoặc <code>bun install</code> rồi khởi động lại máy chủ.</p>
+                            <p style="color: #94a3b8; font-size: 16px;">Server cần runtime Bun hoặc module <code>typescript</code> để biên dịch trực tiếp các file <code>.ts</code>.</p>
+                            <p style="color: #cbd5e1; font-size: 14px;">Vui lòng chạy lệnh <code>bun server/server.js</code> hoặc <code>npm run dev</code>.</p>
                         </div>
                     `);
                     return;
