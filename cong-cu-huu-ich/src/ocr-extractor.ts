@@ -5,6 +5,23 @@
 import { escapeHTML, ensureTesseractLoaded } from './common';
 
 let ocrFileBlob: File | null = null;
+let currentOcrWorker: any = null;
+let currentOcrLang: string = '';
+
+export async function getOcrWorker(tesseractLib: any, lang: string): Promise<any> {
+    if (currentOcrWorker && currentOcrLang === lang) {
+        return currentOcrWorker;
+    }
+    if (currentOcrWorker) {
+        try {
+            await currentOcrWorker.terminate();
+        } catch { }
+        currentOcrWorker = null;
+    }
+    currentOcrWorker = await tesseractLib.createWorker(lang);
+    currentOcrLang = lang;
+    return currentOcrWorker;
+}
 
 export async function runOcrExtraction(): Promise<void> {
     if (!ocrFileBlob) return;
@@ -19,12 +36,11 @@ export async function runOcrExtraction(): Promise<void> {
 
     try {
         const tesseractLib = await ensureTesseractLoaded();
-        const worker = await tesseractLib.createWorker(lang);
+        const worker = await getOcrWorker(tesseractLib, lang);
         if (statusBar) statusBar.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang quét và bóc tách chữ từ ảnh...`;
         const ret = await worker.recognize(ocrFileBlob);
         if (resultText) resultText.value = ret.data.text;
         if (statusBar) statusBar.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> Đã trích xuất thành công ${ret.data.words.length} từ!`;
-        await worker.terminate();
     } catch (err: any) {
         console.error("OCR Error:", err);
         if (statusBar) {
