@@ -26,15 +26,17 @@ export async function handleConvertFilesSelect(files: File[]): Promise<void> {
     }
 
     const newItems = await Promise.all(validFiles.map(f => new Promise<ConvertItem | null>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            const img = new Image();
-            img.onload = () => resolve({ file: f, img, originalSize: f.size, convertedBlob: null, objectUrl: null, convertedExt: '' });
-            img.onerror = () => resolve(null);
-            img.src = evt.target?.result as string;
+        const tempUrl = URL.createObjectURL(f);
+        const img = new Image();
+        img.onload = () => {
+            URL.revokeObjectURL(tempUrl);
+            resolve({ file: f, img, originalSize: f.size, convertedBlob: null, objectUrl: null, convertedExt: '' });
         };
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(f);
+        img.onerror = () => {
+            URL.revokeObjectURL(tempUrl);
+            resolve(null);
+        };
+        img.src = tempUrl;
     })));
 
     const filteredNewItems = newItems.filter((item): item is ConvertItem => item !== null);
@@ -109,6 +111,11 @@ export async function processConvertBatch(): Promise<void> {
         ctx.drawImage(item.img, 0, 0);
 
         const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, targetFormat, 0.92));
+
+        // Immediately release canvas GPU backing store
+        canvas.width = 0;
+        canvas.height = 0;
+
         item.convertedBlob = blob;
         item.convertedExt = ext;
         item.objectUrl = blob ? URL.createObjectURL(blob) : '';
@@ -125,7 +132,7 @@ export async function processConvertBatch(): Promise<void> {
         card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col justify-between text-xs font-mono shadow-md hover:border-slate-700 transition-all";
         card.innerHTML = `
             <div class="relative group cursor-pointer overflow-hidden rounded-xl bg-slate-950/50 border border-slate-855 flex items-center justify-center min-h-[140px]">
-                <img src="${item.objectUrl}" class="max-h-40 object-contain rounded transition-transform group-hover:scale-105">
+                <img loading="lazy" src="${item.objectUrl}" class="max-h-40 object-contain rounded transition-transform group-hover:scale-105">
                 <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-sans text-xs gap-1.5 font-bold">
                     <i class="fa-solid fa-magnifying-glass-plus"></i> Xem ảnh
                 </div>
@@ -151,6 +158,9 @@ export async function processConvertBatch(): Promise<void> {
         }
 
         if (grid) grid.appendChild(card);
+
+        // Yield to browser event loop between conversions
+        await new Promise(r => setTimeout(r, 0));
     }
 
     if (statusBadge) {

@@ -131,6 +131,7 @@ export function runPatchMatchNNFSynthesis(
     const minSearchY = R;
     const maxSearchY = roiH - R - 1;
 
+    let prevIterCost = initialTotalCost;
     for (let iter = 0; iter < iterations; iter++) {
         const isForward = (iter % 2 === 0);
         const yStart = isForward ? 0 : roiH - 1;
@@ -228,6 +229,19 @@ export function runPatchMatchNNFSynthesis(
                 nnfCost[tIdx] = curCost;
             }
         }
+
+        let curIterCost = 0;
+        for (let i = 0; i < totalPixels; i++) {
+            if (roiMask[i] === 1 && nnfCost[i] < Infinity) {
+                curIterCost += nnfCost[i];
+            }
+        }
+
+        // Early convergence break if improvement is negligible (< 0.05%) after at least 3 iterations
+        if (iter >= 3 && prevIterCost > 0 && ((prevIterCost - curIterCost) / prevIterCost) < 0.0005) {
+            break;
+        }
+        prevIterCost = curIterCost;
     }
 
     let finalTotalCost = 0;

@@ -50,15 +50,17 @@ export async function handleCompressFilesSelect(files: File[]): Promise<void> {
     }
 
     const newItems = await Promise.all(validFiles.map(f => new Promise<CompressItem | null>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            const img = new Image();
-            img.onload = () => resolve({ file: f, img, originalSize: f.size, compressedBlob: null, objectUrl: null, compressedSize: 0 });
-            img.onerror = () => resolve(null);
-            img.src = evt.target?.result as string;
+        const tempUrl = URL.createObjectURL(f);
+        const img = new Image();
+        img.onload = () => {
+            URL.revokeObjectURL(tempUrl);
+            resolve({ file: f, img, originalSize: f.size, compressedBlob: null, objectUrl: null, compressedSize: 0 });
         };
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(f);
+        img.onerror = () => {
+            URL.revokeObjectURL(tempUrl);
+            resolve(null);
+        };
+        img.src = tempUrl;
     })));
 
     const filteredNewItems = newItems.filter((item): item is CompressItem => item !== null);
@@ -138,6 +140,11 @@ export async function processCompressBatch(): Promise<void> {
         }
 
         const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, format, q));
+
+        // Immediately release canvas GPU backing store
+        canvas.width = 0;
+        canvas.height = 0;
+
         item.compressedBlob = blob;
         item.compressedSize = blob ? blob.size : item.originalSize;
         item.objectUrl = blob ? URL.createObjectURL(blob) : '';
@@ -153,7 +160,7 @@ export async function processCompressBatch(): Promise<void> {
         card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col justify-between text-xs font-mono shadow-md hover:border-slate-700 transition-all";
         card.innerHTML = `
             <div class="relative group cursor-pointer overflow-hidden rounded-xl bg-slate-950/50 border border-slate-855 flex items-center justify-center min-h-[130px]">
-                <img src="${item.objectUrl}" class="max-h-36 object-contain rounded transition-transform group-hover:scale-105">
+                <img loading="lazy" src="${item.objectUrl}" class="max-h-36 object-contain rounded transition-transform group-hover:scale-105">
                 <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-sans text-xs gap-1.5 font-bold">
                     <i class="fa-solid fa-magnifying-glass-plus"></i> So sánh ảnh
                 </div>
@@ -179,6 +186,9 @@ export async function processCompressBatch(): Promise<void> {
         }
 
         if (grid) grid.appendChild(card);
+
+        // Yield to browser event loop between images
+        await new Promise(r => setTimeout(r, 0));
     }
 
     const savedEl = document.getElementById('compress-total-saved');
