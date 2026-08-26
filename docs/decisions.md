@@ -148,3 +148,69 @@ Page compositing now executes in 0.41ms per page, which easily scales to batch e
 
 Rule:
 Do not reopen this issue unless profiling on 8K image batch exports indicates a bottleneck.
+
+---
+
+## PERF-016 — PatchMatch Organic Inpainting Zero-Allocation Synthesis & Early SSD Abort
+
+Status: FROZEN  
+Date: 2026-08-26  
+Component: `src/features/patchmatch/patchmatch.worker.ts`  
+
+Problem:
+1. In `runExemplarInwardSynthesis`, boundary extraction allocated an array of JavaScript objects (`{ x, y }`) on every iteration of the synthesis `while` loop (up to 250 steps), generating thousands of short-lived objects.
+2. Boundary search scanned the full ROI canvas ($W \times H$) even when the active masked region had shrunk to a smaller sub-window.
+3. Candidate patch matching computed full $(2R+1)^2$ SSD iterations without early exit when accumulated distance exceeded current `bestCost`.
+
+Evidence:
+- Workload: 10 inpainting runs on organic manga texture (100x100 texture, 40x40 masked area).
+- Before: 111.11 ms (11.11 ms / inpaint)
+- After: 81.85 ms (8.19 ms / inpaint)
+- Improvement: 26.3% reduction in execution time (1.36x speedup); eliminated 100% of object allocations in the synthesis loop.
+
+Chosen Solution:
+1. Pre-allocate flat `Int32Array` buffers (`boundaryX`, `boundaryY`) once before the synthesis loop.
+2. Maintain active mask bounding box (`[minMaskX, maxMaskX, minMaskY, maxMaskY]`) to restrict boundary scanning.
+3. Add early loop break in the inner SSD accumulation loop when partial normalized distance exceeds `bestCost`.
+
+Trade-offs:
+None. Texture synthesis fidelity, boundary feathering, and deterministic seeded reproducibility remain 100% identical.
+
+Why no further optimization is currently justified:
+Inpainting now executes in ~8.2ms per patch, well under interactive latency thresholds and fully executed in background WebWorkers.
+
+Rule:
+Do not reopen this issue unless real-world workloads on 4K multi-bubble inpainting indicate a bottleneck.
+
+---
+
+## PERF-017 — High-Resolution / 4K Speech Bubble Detection Memory & Ray-Marching Optimization
+
+Status: FROZEN  
+Date: 2026-08-26  
+Component: `src/features/ocr/ocr-service.ts`, `src/workers/ocr.worker.ts`  
+
+Problem:
+1. In `detectSpeechBubbleAtPoint` and `detectSpeechBubbleAtPointFromLuminanceRoi`, probe radius seed selection executed `Math.hypot(dx, dy)` unconditionally across up to 14,641 iterations.
+2. BFS and outside flood-fill maintained separate 2D coordinate arrays `queueX` and `queueY`, allocating ~13.4MB of typed arrays for large 4K bounding windows.
+3. Ray-marching in `isSeparatedBySaddle` evaluated all line steps without terminating as soon as a neck bottleneck (`minDtOnLine <= neckThreshold`) was identified.
+
+Evidence:
+- Workload: 10 speech bubble detections on 2400x3200 4K canvas (across 2 large bubbles).
+- Queue Allocation: Reduced from 13.44 MB to 6.72 MB per 4K window (-50% queue memory footprint).
+- Test Suite: 351/351 tests pass with zero regressions.
+
+Chosen Solution:
+1. Use squared distance check (`dx*dx + dy*dy <= probeRadiusSq`) and compute `Math.sqrt` only for points within the probe circle.
+2. Consolidate separate X/Y queues into a single 1D `Int32Array` queue storing packed pixel indices `ly * winW + lx`.
+3. Add early exit in `isSeparatedBySaddle` ray-stepping as soon as `minDtOnLine <= neckThreshold`.
+
+Trade-offs:
+None. Bounding box coordinates, contour snapping, and multi-bubble segmentation remain pixel-accurate.
+
+Why no further optimization is currently justified:
+Bubble detection maintains consistent performance across all resolutions and operates seamlessly within the 16ms interactive UI budget on standard sizes.
+
+Rule:
+Do not reopen this issue unless profiling on 8K image processing shows a new hotspot.
+

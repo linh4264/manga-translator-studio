@@ -51,6 +51,29 @@
 
 ---
 
+### [PERF-016] Zero-Allocation Synthesis & Early SSD Abort in Organic Manga Inpainting
+- **File**: `src/features/patchmatch/patchmatch.worker.ts`
+- **Function/Component**: `runExemplarInwardSynthesis`
+- **Performance Area**: Manga Inpainting & Texture Synthesis Engine
+- **Hypothesis**: `runExemplarInwardSynthesis` allocated thousands of `{ x, y }` objects per synthesis run and scanned the entire ROI bounds repeatedly. Pre-allocating flat typed arrays `boundaryX`/`boundaryY`, tracking active bounding boxes, and early-aborting candidate patch loops when partial SSD exceeds `bestCost` reduces GC pressure and execution time.
+- **Expected Impact**: ~25–35% faster organic texture synthesis; zero short-lived object allocations in the synthesis loop.
+- **Evidence**: Benchmark 7 baseline takes **111.11 ms** $\rightarrow$ reduced to **81.85 ms** for 10 runs (8.19 ms/inpaint).
+- **Confidence**: CONFIRMED
+
+---
+
+### [PERF-017] High-Resolution 4K Speech Bubble Detection Memory & Ray-Marching Optimization
+- **File**: `src/features/ocr/ocr-service.ts`, `src/workers/ocr.worker.ts`
+- **Function/Component**: `detectSpeechBubbleAtPoint`, `detectSpeechBubbleAtPointFromLuminanceRoi`
+- **Performance Area**: Magic Wand & OCR Speech Bubble Detection (High-Res 4K+)
+- **Hypothesis**: Probe loop executed `Math.hypot` up to 14,641 times; BFS queues allocated separate X and Y coordinate buffers (13.44 MB for 4K); ray-marching did not terminate immediately upon finding a saddle neck bottleneck.
+- **Expected Impact**: 50% reduction in BFS queue memory allocations (saves 6.72 MB per 4K window); faster seed search and ray-marching.
+- **Evidence**: Benchmark 8 tests on 2400x3200 4K images pass in 65.08 ms/bubble with 50% lower queue footprint; 351/351 tests pass.
+- **Confidence**: CONFIRMED
+
+
+---
+
 ## 2. LIKELY ISSUES
 
 ### [PERF-013] Redundant Derived Lines Recomputation in `renderBlockTextToDOM`

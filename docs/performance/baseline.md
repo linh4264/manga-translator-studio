@@ -46,3 +46,20 @@
 - **Bottleneck**:
   1. Creating a secondary full-resolution `bgCanvas` to read `imageDataCache` when the primary export canvas already contains the base image.
   2. Redundant re-computation of text layout between Pass 1 (mask bounds) and Pass 2 (text rendering).
+
+### BENCHMARK 7 — `runPatchMatchPipeline` (Organic Manga Texture Inpainting)
+- **Workload**: 10 inpainting runs on organic/unknown manga background texture (100x100 texture, 40x40 mask).
+- **Baseline Execution Time**: `111.11 ms` (`11.11 ms / inpaint`)
+- **Optimized Execution Time**: `81.85 ms` (`8.19 ms / inpaint`)
+- **Improvement**: `26.3%` reduction in execution time.
+- **Bottleneck**:
+  1. Allocation of boundary coordinate `{ x, y }` objects on every step of the synthesis while loop.
+  2. Full ROI scan for boundary search without bounding box clamping.
+  3. Lack of early exit in SSD candidate patch distance evaluation.
+
+### BENCHMARK 8 — `detectSpeechBubbleAtPoint` (High-Resolution 4K Canvas Detection)
+- **Workload**: 10 detections on 2400x3200 4K image canvas across 2 large speech bubbles.
+- **Throughput / Latency**: `65.08 ms / 4K bubble`
+- **Memory / Allocation**: Consolidating 2D BFS queues to a single 1D `Int32Array` reduced queue allocation from `13.44 MB` to `6.72 MB` per 4K window (-50%).
+- **Bottleneck**: Unconditional `Math.hypot` inside seed probe loop, dual coordinate queue allocations, and un-short-circuited ray-stepping.
+

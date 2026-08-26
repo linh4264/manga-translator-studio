@@ -335,6 +335,7 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
     const localStartY = Math.max(0, Math.min(roiH - 1, Math.round(clickPixelY - roiOffsetY)));
 
     const probeRadius = Math.max(45, Math.min(120, Math.round(Math.min(imgW, imgH) * 0.06)));
+    const probeRadiusSq = probeRadius * probeRadius;
     const lambda = 0.25;
 
     let bestSeedX = localStartX;
@@ -347,8 +348,9 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
             const px = localStartX + dx;
             const py = localStartY + dy;
             if (px >= 0 && px < roiW && py >= 0 && py < roiH) {
-                const dist = Math.hypot(dx, dy);
-                if (dist <= probeRadius) {
+                const distSq = dx * dx + dy * dy;
+                if (distSq <= probeRadiusSq) {
+                    const dist = Math.sqrt(distSq);
                     const b = roiLuminance[py * roiW + px];
                     const normBrightness = b / 255;
                     const normDist = dist / probeRadius;
@@ -382,19 +384,17 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
 
     const winW = winMaxX - winMinX + 1;
     const winH = winMaxY - winMinY + 1;
+    const winPixels = winW * winH;
 
-    const visited = new Uint8Array(winW * winH);
-    const queueX = new Int32Array(winW * winH);
-    const queueY = new Int32Array(winW * winH);
+    const visited = new Uint8Array(winPixels);
+    const queue = new Int32Array(winPixels);
     let head = 0;
     let tail = 0;
 
     const startLocalX = curStartX - winMinX;
     const startLocalY = curStartY - winMinY;
 
-    queueX[tail] = curStartX;
-    queueY[tail] = curStartY;
-    tail++;
+    queue[tail++] = startLocalY * winW + startLocalX;
     visited[startLocalY * winW + startLocalX] = 1;
     const maxAllowedPixels = Math.floor(imgW * imgH * 0.40);
     let initialCount = 0;
@@ -405,9 +405,11 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
     const DY4 = [0, 0, 1, -1];
 
     while (head < tail && initialCount < maxAllowedPixels) {
-        const cx = queueX[head];
-        const cy = queueY[head];
-        head++;
+        const curr = queue[head++];
+        const lx = curr % winW;
+        const ly = (curr / winW) | 0;
+        const cx = winMinX + lx;
+        const cy = winMinY + ly;
         initialCount++;
 
         for (let i = 0; i < 8; i++) {
@@ -415,24 +417,22 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
             const ny = cy + DY8[i];
 
             if (nx >= winMinX && nx <= winMaxX && ny >= winMinY && ny <= winMaxY) {
-                const lx = nx - winMinX;
-                const ly = ny - winMinY;
-                const vIdx = ly * winW + lx;
+                const nlx = nx - winMinX;
+                const nly = ny - winMinY;
+                const vIdx = nly * winW + nlx;
 
                 if (!visited[vIdx]) {
                     const br = roiLuminance[ny * roiW + nx];
                     if (br >= bubbleThreshold) {
                         visited[vIdx] = 1;
-                        queueX[tail] = nx;
-                        queueY[tail] = ny;
-                        tail++;
+                        queue[tail++] = vIdx;
                     }
                 }
             }
         }
     }
 
-    const outside = new Uint8Array(winW * winH);
+    const outside = new Uint8Array(winPixels);
     let outHead = 0;
     let outTail = 0;
 
@@ -441,9 +441,7 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
         if (idx < 0 || idx >= visited.length) return;
         if (visited[idx] === 1 || outside[idx] === 1) return;
         outside[idx] = 1;
-        queueX[outTail] = winMinX + lx;
-        queueY[outTail] = winMinY + ly;
-        outTail++;
+        queue[outTail++] = idx;
     };
 
     for (let x = 0; x < winW; x++) {
@@ -456,35 +454,36 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
     }
 
     while (outHead < outTail) {
-        const cx = queueX[outHead];
-        const cy = queueY[outHead];
-        outHead++;
+        const curr = queue[outHead++];
+        const lx = curr % winW;
+        const ly = (curr / winW) | 0;
+        const cx = winMinX + lx;
+        const cy = winMinY + ly;
 
         for (let i = 0; i < 4; i++) {
             const nx = cx + DX4[i];
             const ny = cy + DY4[i];
 
             if (nx >= winMinX && nx <= winMaxX && ny >= winMinY && ny <= winMaxY) {
-                const lx = nx - winMinX;
-                const ly = ny - winMinY;
-                const vIdx = ly * winW + lx;
+                const nlx = nx - winMinX;
+                const nly = ny - winMinY;
+                const vIdx = nly * winW + nlx;
 
                 if (visited[vIdx] === 0 && outside[vIdx] === 0) {
                     outside[vIdx] = 1;
-                    queueX[outTail] = nx;
-                    queueY[outTail] = ny;
-                    outTail++;
+                    queue[outTail++] = vIdx;
                 }
             }
         }
     }
 
-    const dt = new Int32Array(winW * winH);
+    const dt = new Int32Array(winPixels);
     const INF = 999999;
 
     for (let y = 0; y < winH; y++) {
+        const rowOff = y * winW;
         for (let x = 0; x < winW; x++) {
-            const idx = y * winW + x;
+            const idx = rowOff + x;
             const isInside = (visited[idx] === 1 || outside[idx] === 0);
             if (!isInside) {
                 dt[idx] = 0;
@@ -501,8 +500,9 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
 
     let maxDistVal = 0;
     for (let y = winH - 1; y >= 0; y--) {
+        const rowOff = y * winW;
         for (let x = winW - 1; x >= 0; x--) {
-            const idx = y * winW + x;
+            const idx = rowOff + x;
             if (dt[idx] > 0) {
                 let minNeighbor = dt[idx];
                 if (x < winW - 1) minNeighbor = Math.min(minNeighbor, dt[idx + 1] + 5);
@@ -562,7 +562,7 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
     const primaryPeakX = primaryPeak.peakX;
     const primaryPeakY = primaryPeak.peakY;
 
-    const labels = new Uint8Array(winW * winH);
+    const labels = new Uint8Array(winPixels);
     const path = new Int32Array(1500);
     const saddleCache = new Map<number, boolean>();
 
@@ -572,6 +572,7 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
         const dist = Math.hypot(dx, dy);
         if (dist <= 30) return false;
 
+        const neckThreshold = Math.max(12, Math.floor(primaryPeak.peakDt * 0.45));
         const steps = Math.min(100, Math.max(10, Math.floor(dist / 3)));
         let minDtOnLine = INF;
 
@@ -581,11 +582,13 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
             const py = Math.round(primaryPeakY + t * dy);
             if (px >= 0 && px < winW && py >= 0 && py < winH) {
                 const d = dt[py * winW + px];
-                if (d < minDtOnLine) minDtOnLine = d;
+                if (d < minDtOnLine) {
+                    minDtOnLine = d;
+                    if (minDtOnLine <= neckThreshold) return true;
+                }
             }
         }
 
-        const neckThreshold = Math.max(12, Math.floor(primaryPeak.peakDt * 0.45));
         return (minDtOnLine <= neckThreshold);
     };
 

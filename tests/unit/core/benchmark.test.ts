@@ -292,3 +292,97 @@ test('BENCHMARK 6: renderPageToCanvas2DDirect on 50 page export iterations (10 b
     console.log(`\n[BENCHMARK 6 - renderPageToCanvas2DDirect]: ${iterations} page exports: ${duration.toFixed(2)}ms (${(duration / iterations).toFixed(2)} ms/page)`);
     expect(duration).toBeGreaterThan(0);
 });
+
+test('BENCHMARK 7: runPatchMatchPipeline on organic/unknown manga texture inpainting', () => {
+    const { runPatchMatchPipeline } = require('../../../src/features/patchmatch/patchmatch.worker');
+    const W = 100, H = 100;
+    const rgba = new Uint8Array(W * H * 4);
+    const mask = new Uint8Array(W * H);
+
+    // Create complex organic manga art texture
+    for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+            const p = (y * W + x) * 4;
+            const val = ((x * 17 + y * 31 + ((x % 7) * (y % 11))) ^ (x * y)) & 255;
+            rgba[p] = val;
+            rgba[p + 1] = val;
+            rgba[p + 2] = val;
+            rgba[p + 3] = 255;
+        }
+    }
+
+    // Mask center region [30..69] x [30..69] (40x40 area = 1600 masked pixels)
+    for (let y = 30; y < 70; y++) {
+        for (let x = 30; x < 70; x++) {
+            mask[y * W + x] = 1;
+            const p = (y * W + x) * 4;
+            rgba[p] = 255;
+            rgba[p + 1] = 0;
+            rgba[p + 2] = 255;
+        }
+    }
+
+    const iterations = 10;
+    const t0 = performance.now();
+    for (let i = 0; i < iterations; i++) {
+        runPatchMatchPipeline(rgba, mask, W, H, {
+            patchRadius: 3,
+            maskDilate: 0,
+            enablePatternDetection: true,
+            enableSeamBlending: false
+        });
+    }
+    const duration = performance.now() - t0;
+    console.log(`\n[BENCHMARK 7 - runPatchMatchPipeline Organic]: ${iterations} inpainting runs: ${duration.toFixed(2)}ms (${(duration / iterations).toFixed(2)} ms/inpaint)`);
+    expect(duration).toBeGreaterThan(0);
+});
+
+test('BENCHMARK 8: detectSpeechBubbleAtPoint on High-Resolution 4K Canvas (2400x3200)', () => {
+    const imgW = 2400;
+    const imgH = 3200;
+    const buffer = new Uint8ClampedArray(imgW * imgH * 4);
+    // Background fill
+    for (let i = 0; i < buffer.length; i += 4) {
+        buffer[i] = 120;
+        buffer[i + 1] = 120;
+        buffer[i + 2] = 120;
+        buffer[i + 3] = 255;
+    }
+    // 2 large 4K speech bubbles
+    const bubbles = [
+        { cx: 800, cy: 900, rx: 350, ry: 280 },
+        { cx: 1600, cy: 2200, rx: 320, ry: 380 }
+    ];
+    for (const b of bubbles) {
+        for (let y = b.cy - b.ry; y <= b.cy + b.ry; y++) {
+            for (let x = b.cx - b.rx; x <= b.cx + b.rx; x++) {
+                const dx = (x - b.cx) / b.rx;
+                const dy = (y - b.cy) / b.ry;
+                if (dx * dx + dy * dy <= 1.0) {
+                    const idx = (y * imgW + x) * 4;
+                    buffer[idx] = 255;
+                    buffer[idx + 1] = 255;
+                    buffer[idx + 2] = 255;
+                    buffer[idx + 3] = 255;
+                }
+            }
+        }
+    }
+    const mockImageData = {
+        width: imgW,
+        height: imgH,
+        data: buffer
+    } as any;
+
+    const iterations = 5;
+    const t0 = performance.now();
+    for (let i = 0; i < iterations; i++) {
+        for (const b of bubbles) {
+            detectSpeechBubbleAtPoint(mockImageData, b.cx, b.cy);
+        }
+    }
+    const duration = performance.now() - t0;
+    console.log(`\n[BENCHMARK 8 - detectSpeechBubbleAtPoint 4K]: ${iterations * bubbles.length} 4K detections: ${duration.toFixed(2)}ms (${(duration / (iterations * bubbles.length)).toFixed(2)} ms/bubble)`);
+    expect(duration).toBeGreaterThan(0);
+});
+

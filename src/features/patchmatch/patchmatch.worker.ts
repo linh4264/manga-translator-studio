@@ -275,24 +275,44 @@ export function runExemplarInwardSynthesis(
     const workRgba = new Uint8Array(roiRgba);
     const workMask = new Uint8Array(roiMask);
     const R = Math.max(3, patchRadius);
+    const totalPixels = roiW * roiH;
 
     let remaining = 0;
-    for (let i = 0; i < roiW * roiH; i++) {
-        if (workMask[i] === 1) remaining++;
+    let minMaskX = roiW, maxMaskX = 0, minMaskY = roiH, maxMaskY = 0;
+    for (let y = 0; y < roiH; y++) {
+        const rowOff = y * roiW;
+        for (let x = 0; x < roiW; x++) {
+            if (workMask[rowOff + x] === 1) {
+                remaining++;
+                if (x < minMaskX) minMaskX = x;
+                if (x > maxMaskX) maxMaskX = x;
+                if (y < minMaskY) minMaskY = y;
+                if (y > maxMaskY) maxMaskY = y;
+            }
+        }
     }
     const initialRemaining = remaining;
 
     const maxSteps = 250;
     let step = 0;
 
+    // Pre-allocated flat buffers for boundary coordinates (zero object allocation per step)
+    const boundaryX = new Int32Array(totalPixels);
+    const boundaryY = new Int32Array(totalPixels);
+
     while (remaining > 0 && step < maxSteps) {
         step++;
 
-        // 1. Identify boundary pixels of current mask
-        const boundary: Array<{ x: number; y: number }> = [];
-        for (let y = R; y < roiH - R; y++) {
+        // 1. Identify boundary pixels of current mask within active bounding box
+        let boundaryCount = 0;
+        const scanMinY = Math.max(R, minMaskY);
+        const scanMaxY = Math.min(roiH - R - 1, maxMaskY);
+        const scanMinX = Math.max(R, minMaskX);
+        const scanMaxX = Math.min(roiW - R - 1, maxMaskX);
+
+        for (let y = scanMinY; y <= scanMaxY; y++) {
             const row = y * roiW;
-            for (let x = R; x < roiW - R; x++) {
+            for (let x = scanMinX; x <= scanMaxX; x++) {
                 const idx = row + x;
                 if (workMask[idx] === 1) {
                     if (
@@ -301,26 +321,34 @@ export function runExemplarInwardSynthesis(
                         workMask[idx - roiW] === 0 ||
                         workMask[idx + roiW] === 0
                     ) {
-                        boundary.push({ x, y });
+                        boundaryX[boundaryCount] = x;
+                        boundaryY[boundaryCount] = y;
+                        boundaryCount++;
                     }
                 }
             }
         }
 
-        if (boundary.length === 0) {
+        if (boundaryCount === 0) {
             // Fill any remaining edge pixels by copying from nearest valid pixel
+            const sx = validCoords[0];
+            const sy = validCoords[1];
+            const ps = (sy * roiW + sx) * 4;
+            const sr = roiRgba[ps];
+            const sg = roiRgba[ps + 1];
+            const sb = roiRgba[ps + 2];
+            const sa = roiRgba[ps + 3];
+
             for (let y = 0; y < roiH; y++) {
+                const row = y * roiW;
                 for (let x = 0; x < roiW; x++) {
-                    const idx = y * roiW + x;
+                    const idx = row + x;
                     if (workMask[idx] === 1) {
-                        const sx = validCoords[0];
-                        const sy = validCoords[1];
                         const pt = idx * 4;
-                        const ps = (sy * roiW + sx) * 4;
-                        workRgba[pt] = roiRgba[ps];
-                        workRgba[pt + 1] = roiRgba[ps + 1];
-                        workRgba[pt + 2] = roiRgba[ps + 2];
-                        workRgba[pt + 3] = roiRgba[ps + 3];
+                        workRgba[pt] = sr;
+                        workRgba[pt + 1] = sg;
+                        workRgba[pt + 2] = sb;
+                        workRgba[pt + 3] = sa;
                         workMask[idx] = 0;
                         remaining--;
                     }
@@ -331,29 +359,29 @@ export function runExemplarInwardSynthesis(
 
         // 2. Synthesize patches along the frontier
         const stride = Math.max(1, Math.floor(R / 2));
-        for (let b = 0; b < boundary.length; b += stride) {
-            const { x: tx, y: ty } = boundary[b];
+        const sampleLimit = Math.min(validCount, 150);
+        const stepCoarse = Math.max(1, Math.floor(validCount / sampleLimit));
+
+        for (let b = 0; b < boundaryCount; b += stride) {
+            const tx = boundaryX[b];
+            const ty = boundaryY[b];
             if (workMask[ty * roiW + tx] === 0) continue;
 
             let bestCost = Infinity;
             let bestSx = -1, bestSy = -1;
 
             // Search over valid source candidates
-            const sampleLimit = Math.min(validCount, 150);
-            const stepCoarse = Math.max(1, Math.floor(validCount / sampleLimit));
-
             for (let i = 0; i < validCount; i += stepCoarse) {
                 const sx = validCoords[i * 2];
                 const sy = validCoords[i * 2 + 1];
 
                 let ssd = 0;
                 let count = 0;
+                let earlyAbort = false;
 
                 for (let dy = -R; dy <= R; dy++) {
-                    const tY = ty + dy;
-                    const sY = sy + dy;
-                    const tRow = tY * roiW;
-                    const sRow = sY * roiW;
+                    const tRow = (ty + dy) * roiW;
+                    const sRow = (sy + dy) * roiW;
 
                     for (let dx = -R; dx <= R; dx++) {
                         const tIdx = tRow + (tx + dx);
@@ -366,11 +394,17 @@ export function runExemplarInwardSynthesis(
                             const db = workRgba[pt + 2] - roiRgba[ps + 2];
                             ssd += dr * dr + dg * dg + db * db;
                             count++;
+
+                            if (count > 4 && (ssd / count) >= bestCost) {
+                                earlyAbort = true;
+                                break;
+                            }
                         }
                     }
+                    if (earlyAbort) break;
                 }
 
-                if (count > 0) {
+                if (!earlyAbort && count > 0) {
                     const normCost = ssd / count;
                     if (normCost < bestCost) {
                         bestCost = normCost;
@@ -383,10 +417,8 @@ export function runExemplarInwardSynthesis(
             // Copy candidate patch to target for un-filled pixels
             if (bestSx !== -1) {
                 for (let dy = -R; dy <= R; dy++) {
-                    const tY = ty + dy;
-                    const sY = bestSy + dy;
-                    const tRow = tY * roiW;
-                    const sRow = sY * roiW;
+                    const tRow = (ty + dy) * roiW;
+                    const sRow = (bestSy + dy) * roiW;
 
                     for (let dx = -R; dx <= R; dx++) {
                         const tIdx = tRow + (tx + dx);
