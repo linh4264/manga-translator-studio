@@ -1314,14 +1314,16 @@ export function getImageBrightnessMap(imageData: any): Uint8Array {
     const w = imageData.width;
     const h = imageData.height;
     const data = imageData.data;
-    const map = new Uint8Array(w * h);
+    const totalPixels = w * h;
+    const map = new Uint8Array(totalPixels);
 
-    for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-        const brightness = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-        map[i / 4] = brightness;
+    let pIdx = 0;
+    for (let i = 0; i < totalPixels; i++) {
+        const r = data[pIdx];
+        const g = data[pIdx + 1];
+        const b = data[pIdx + 2];
+        pIdx += 4;
+        map[i] = (r * 77 + g * 150 + b * 29) >> 8;
     }
 
     imageData._brightnessMap = map;

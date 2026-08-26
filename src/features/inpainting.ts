@@ -627,6 +627,7 @@ export function initEraserDrawingEvents(): void {
         let isDragging = false;
         let startClientX = 0;
         let startClientY = 0;
+        let liveSampleCanvas: HTMLCanvasElement | null = null;
 
         if (selectionBox) {
             selectionBox.classList.remove('rounded-full');
@@ -683,15 +684,17 @@ export function initEraserDrawingEvents(): void {
                 const imgElement = elements.mangaBgImage;
                 if (imgElement && imgElement.naturalWidth) {
                     try {
-                        const tempCanvas = document.createElement('canvas');
-                        tempCanvas.width = cropW;
-                        tempCanvas.height = cropH;
-                        const tCtx = tempCanvas.getContext('2d');
+                        if (!liveSampleCanvas) {
+                            liveSampleCanvas = document.createElement('canvas');
+                        }
+                        liveSampleCanvas.width = cropW;
+                        liveSampleCanvas.height = cropH;
+                        const tCtx = liveSampleCanvas.getContext('2d');
                         if (tCtx) {
                             tCtx.drawImage(imgElement, startX, startY, cropW, cropH, 0, 0, cropW, cropH);
-                            lassoSampleCanvas = tempCanvas;
+                            lassoSampleCanvas = liveSampleCanvas;
                             lassoSampleSrc = { x: startX, y: startY, w: cropW, h: cropH };
-                            patchCanvas = tempCanvas;
+                            patchCanvas = liveSampleCanvas;
 
                             // 1. Update Floating Preview HUD
                             if (floatingHud) {
@@ -707,7 +710,7 @@ export function initEraserDrawingEvents(): void {
                                     const pCtx = hudPatch.getContext('2d');
                                     if (pCtx) {
                                         pCtx.clearRect(0, 0, hudPatch.width, hudPatch.height);
-                                        pCtx.drawImage(tempCanvas, 0, 0, hudPatch.width, hudPatch.height);
+                                        pCtx.drawImage(liveSampleCanvas, 0, 0, hudPatch.width, hudPatch.height);
                                     }
                                 }
 
@@ -719,7 +722,7 @@ export function initEraserDrawingEvents(): void {
                                         const sH = hudTiled.height / 3;
                                         for (let ty = 0; ty < 3; ty++) {
                                             for (let tx = 0; tx < 3; tx++) {
-                                                tCtx2.drawImage(tempCanvas, tx * sW, ty * sH, sW, sH);
+                                                tCtx2.drawImage(liveSampleCanvas, tx * sW, ty * sH, sW, sH);
                                             }
                                         }
                                     }
@@ -727,7 +730,7 @@ export function initEraserDrawingEvents(): void {
                             }
 
                             // 2. Update Sidebar thumbnail
-                            updateLassoSampleUI(cropW, cropH, tempCanvas);
+                            updateLassoSampleUI(cropW, cropH, liveSampleCanvas);
 
                             // 3. Update Live Preview in active Lasso Polygon
                             if (activeLassoPoints) {
@@ -852,7 +855,10 @@ export function initEraserDrawingEvents(): void {
                     { x: startPos.x, y: pos.y }
                 ];
             } else {
-                points.push(pos);
+                const lastPt = points[points.length - 1];
+                if (!lastPt || Math.hypot(pos.x - lastPt.x, pos.y - lastPt.y) >= 2) {
+                    points.push(pos);
+                }
             }
 
             ctx.putImageData(preLassoImageData, 0, 0);

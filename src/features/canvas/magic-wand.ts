@@ -110,8 +110,12 @@ export function getActivePageImageData(): ImageData | null {
                 tempCtx.drawImage(imgElement, 0, 0);
                 const imgData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
                 page.imageDataCache = imgData;
+                tempCanvas.width = 0;
+                tempCanvas.height = 0;
                 return imgData;
             }
+            tempCanvas.width = 0;
+            tempCanvas.height = 0;
         } catch (e) {
             console.error("Không thể trích xuất ImageData từ manga image:", e);
         }

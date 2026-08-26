@@ -11,12 +11,15 @@ export interface BoundingBox {
 }
 
 export function getImageBrightnessMapFromBuffer(rgba: Uint8Array, width: number, height: number): Uint8Array {
-    const map = new Uint8Array(width * height);
-    for (let i = 0; i < rgba.length; i += 4) {
-        const r = rgba[i];
-        const g = rgba[i + 1];
-        const b = rgba[i + 2];
-        map[i / 4] = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+    const totalPixels = width * height;
+    const map = new Uint8Array(totalPixels);
+    let pIdx = 0;
+    for (let i = 0; i < totalPixels; i++) {
+        const r = rgba[pIdx];
+        const g = rgba[pIdx + 1];
+        const b = rgba[pIdx + 2];
+        pIdx += 4;
+        map[i] = (r * 77 + g * 150 + b * 29) >> 8;
     }
     return map;
 }
