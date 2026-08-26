@@ -1049,8 +1049,9 @@ export interface DerivedLinesCache {
  * that impact line breaks for a given block.
  */
 export function computeBlockDerivedLinesKey(block: MangaBlock, displayW: number = 800): string {
-    const bw = Math.round(((block.box?.w || 0) / 100) * displayW * 100) / 100;
-    const bh = Math.round(((block.box?.h || 0) / 100) * displayW * 100) / 100;
+    const quantW = Math.round(displayW);
+    const bw = Math.round(((block.box?.w || 0) / 100) * quantW * 10) / 10;
+    const bh = Math.round(((block.box?.h || 0) / 100) * quantW * 10) / 10;
     const style: any = block.style || {};
     return `${block.translated || ''}|bw:${bw}|bh:${bh}|fz:${style.fontSize || 17}|ff:${style.fontFamily || ''}|ls:${style.letterSpacing || 0}|lh:${style.lineHeight || 1.15}|b:${!!style.bold}|i:${!!style.italic}|tt:${style.textTransform || 'none'}|v:${!!style.vertical}|ms:${style.maskShape || 'bubble-fit'}|p:${style.padding ?? ''}|sw:${style.strokeWidth || 0}|sw2:${style.strokeWidth2 || 0}`;
 }
@@ -1119,7 +1120,7 @@ export function computeBlockTextLayout(
         scaledPadding = 4 * scaleFactor;
     }
 
-    const refW = displayW / Math.max(0.0001, scaleFactor);
+    const refW = Math.round(displayW / Math.max(0.0001, scaleFactor));
     const resolvedLockedLines = lockedLines || getCachedDerivedLines(block, refW) || undefined;
 
     const layout = computeTextLayout({
@@ -1228,6 +1229,8 @@ export function renderDerivedLinesToDOM(
             lineDiv.style.minHeight = `${line.height}px`;
             lineDiv.style.lineHeight = `${line.height}px`;
             lineDiv.style.display = 'flex';
+            lineDiv.style.flexDirection = 'row';
+            lineDiv.style.flexWrap = 'nowrap';
             lineDiv.style.alignItems = 'center';
             const align = layout.align || 'center';
             lineDiv.style.justifyContent = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center';
@@ -1332,6 +1335,9 @@ export function renderDerivedLinesToDOM(
                 tokens.forEach(tok => {
                     const span = document.createElement('span');
                     span.textContent = tok.text;
+                    span.style.whiteSpace = 'pre';
+                    span.style.flexShrink = '0';
+                    span.style.lineHeight = 'inherit';
                     if (tok.bold) span.style.fontWeight = 'bold';
                     if (tok.italic) span.style.fontStyle = 'italic';
                     if (tok.underline) span.style.textDecoration = 'underline';
@@ -1360,10 +1366,14 @@ export function renderBlockTextToDOM(
     warpOpts: any = {}
 ): void {
     if (!target) return;
-    const baseW = Math.max(1, displayW / Math.max(0.001, zoomScale));
-    const baseH = Math.max(1, displayH / Math.max(0.001, zoomScale));
-    const refLayout = computeBlockTextLayout(block, baseW, baseH, 1.0);
-    const lockedLines = (refLayout.lines && refLayout.lines.length > 0) ? refLayout.lines.map(l => l.tokens) : undefined;
+    const baseW = Math.max(1, Math.round(displayW / Math.max(0.001, zoomScale)));
+    const baseH = Math.max(1, Math.round(displayH / Math.max(0.001, zoomScale)));
+    const cachedLines = getCachedDerivedLines(block, baseW);
+    let lockedLines = cachedLines || undefined;
+    if (!lockedLines) {
+        const refLayout = computeBlockTextLayout(block, baseW, baseH, 1.0);
+        lockedLines = (refLayout.lines && refLayout.lines.length > 0) ? refLayout.lines.map(l => l.tokens) : undefined;
+    }
     const layout = computeBlockTextLayout(block, displayW, displayH, zoomScale, null, lockedLines);
     renderDerivedLinesToDOM(target, layout, warpOpts);
 }

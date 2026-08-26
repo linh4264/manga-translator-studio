@@ -41,7 +41,7 @@ export function getReferenceDisplayDimensions(page?: MangaPage | null, imgElemen
     const isCurrentActiveEl = (typeof document !== 'undefined' && imgEl === elements.mangaBgImage);
 
     if (!displayWidth && isCurrentActiveEl && imgEl && imgEl.clientWidth > 0) {
-        displayWidth = imgEl.clientWidth / Math.max(0.01, zoomScale);
+        displayWidth = Math.round(imgEl.clientWidth / Math.max(0.01, zoomScale));
     }
 
     const naturalW = (imgEl && imgEl.naturalWidth > 0) ? imgEl.naturalWidth : (page?.width || 800);

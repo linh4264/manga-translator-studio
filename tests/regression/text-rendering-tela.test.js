@@ -503,3 +503,37 @@ test('Tela Principle 18: Export after multiple resizes produces exact match with
         expect(finalExportLayout.lines[i].width).toBeCloseTo(finalEditorLayout.lines[i].width * 2.0, 1);
     }
 });
+
+// 19. Zoom Invariance (100% -> 160% -> 170% -> 200%)
+test('Tela Principle 19: Zoom changes (100% -> 160% -> 170% -> 200%) maintain 100% line break and word wrapping invariance', () => {
+    const block = {
+        id: 'b_zoom_invariance',
+        type: 'dialogue',
+        translated: '※ CHƯƠNG 3',
+        box: { x: 10, y: 80, w: 20, h: 8 },
+        style: { fontSize: 16, fontFamily: 'font-manga', bold: true }
+    };
+
+    const refW = 800;
+    const refH = 1200;
+    const refLayout = computeBlockTextLayout(block, refW, refH, 1.0);
+    const expectedLineCount = refLayout.lines.length;
+    const expectedLineTexts = refLayout.lines.map(l => l.text);
+
+    // Test multiple zoom scales: 1.0, 1.5, 1.6, 1.7, 2.0, 2.5
+    const zoomScales = [1.0, 1.5, 1.6, 1.7, 2.0, 2.5];
+    for (const zoom of zoomScales) {
+        const displayW = refW * zoom;
+        const displayH = refH * zoom;
+
+        const targetDiv = document.createElement('div');
+        renderBlockTextToDOM(targetDiv, block, displayW, displayH, zoom);
+
+        const renderedLineDivs = Array.from(targetDiv.children);
+        expect(renderedLineDivs.length).toBe(expectedLineCount);
+
+        for (let i = 0; i < expectedLineCount; i++) {
+            expect(renderedLineDivs[i].textContent?.trim()).toBe(expectedLineTexts[i].trim());
+        }
+    }
+});

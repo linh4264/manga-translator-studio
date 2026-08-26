@@ -15,7 +15,8 @@ export {
     getFontFamilyName,
     buildFontString,
     BUILTIN_FONT_MAP,
-    wrapParagraphCanva
+    wrapParagraphCanva,
+    getCachedDerivedLines
 } from './text-layout-engine';
 export type {
     TextLayoutInput,
@@ -23,7 +24,7 @@ export type {
     LayoutLine,
     LayoutLineRect
 } from './text-layout-engine';
-import { renderBlockTextToDOM, computeBlockTextLayout, getFontFamilyName } from './text-layout-engine';
+import { renderBlockTextToDOM, computeBlockTextLayout, getFontFamilyName, getCachedDerivedLines } from './text-layout-engine';
 
 
 export let overlayRenderRafId: any = null;
@@ -123,8 +124,10 @@ export function renderOverlays(
     const imgElement = customImgElement || elements.mangaBgImage;
     if (imgElement && imgElement.clientWidth > 0) {
         const zoomScale = (globalState.zoom || 100) / 100;
-        const normalizedWidth = Math.round(imgElement.clientWidth / Math.max(0.01, zoomScale));
-        (page as any).lastDisplayWidth = normalizedWidth;
+        if (!(page as any).lastDisplayWidth || Math.abs(zoomScale - 1.0) < 0.001) {
+            const normalizedWidth = Math.round(imgElement.clientWidth / Math.max(0.01, zoomScale));
+            (page as any).lastDisplayWidth = normalizedWidth;
+        }
     }
 
     if (globalState.autoFitEnabled && !isMirror) {
@@ -283,10 +286,11 @@ export function renderOverlays(
                 coverMaskContent.style.alignItems = 'center';
                 coverMaskContent.style.justifyContent = 'center';
                 if (block.translated && block.translated.trim()) {
-                    const baseW = Math.max(1, displayW / Math.max(0.001, zoomScale));
-                    const baseH = Math.max(1, displayH / Math.max(0.001, zoomScale));
-                    const refLayout = computeBlockTextLayout(block, baseW, baseH, 1.0);
-                    const lockedLines = (refLayout.lines && refLayout.lines.length > 0) ? refLayout.lines.map(l => l.tokens) : undefined;
+                    const cachedLines = getCachedDerivedLines(block, refW);
+                    const lockedLines = cachedLines || (() => {
+                        const refLayout = computeBlockTextLayout(block, refW, refH, 1.0);
+                        return (refLayout.lines && refLayout.lines.length > 0) ? refLayout.lines.map(l => l.tokens) : undefined;
+                    })();
                     const blockLayout = computeBlockTextLayout(block, displayW, displayH, zoomScale, null, lockedLines);
                     const snugW = Math.min(bubblePxW, blockLayout.totalWidth + (blockLayout.padXPx * 2));
                     const snugH = Math.min(bubblePxH, blockLayout.totalHeight + (blockLayout.padYPx * 2));
