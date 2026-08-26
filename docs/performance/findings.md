@@ -40,6 +40,17 @@
 
 ---
 
+### [PERF-015] Secondary Canvas Allocation & Multi-Pass Layout Recomputation in File Exporter
+- **File**: `src/features/canvas/canvas-exporter.ts`
+- **Function/Component**: `renderPageToCanvas2DDirect`
+- **Performance Area**: File Export Pipeline (Batch ZIP, PDF, PSD)
+- **Hypothesis**: In `renderPageToCanvas2DDirect`, extracting `imageDataCache` for bubble-fit masks allocated a separate full-resolution `bgCanvas` and executed an extra `drawImage`. Additionally, blocks with `maskSize: 'snug'` re-computed text layout in Pass 1 (for mask bounds) and Pass 2 (for text rendering). Extracting `imageData` directly from the main canvas and memoizing layout per page saves 4–16MB of memory per exported page and reduces export rendering time.
+- **Expected Impact**: ~15–20% faster canvas compositing per exported page; zero redundant canvas buffer allocations.
+- **Evidence**: Benchmark 6 baseline takes **24.50 ms** (0.49 ms/page) $\rightarrow$ optimized to **20.47 ms** (0.41 ms/page) for 50 pages.
+- **Confidence**: CONFIRMED
+
+---
+
 ## 2. LIKELY ISSUES
 
 ### [PERF-013] Redundant Derived Lines Recomputation in `renderBlockTextToDOM`

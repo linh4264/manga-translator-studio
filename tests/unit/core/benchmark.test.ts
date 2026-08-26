@@ -4,6 +4,7 @@ import { parseRichTextLines } from '../../../src/core/utils';
 import { renderBlockTextToDOM } from '../../../src/features/canvas/text-layout-engine';
 import { autoFitBlock } from '../../../src/features/canvas/canvas-styling';
 import { mergeOverlappingAiBlocks, detectSpeechBubbleAtPoint } from '../../../src/features/ocr/ocr-service';
+import { renderPageToCanvas2DDirect } from '../../../src/features/canvas/canvas-exporter';
 import { MangaBlock, MangaPage } from '../../../src/types/index';
 import { globalState } from '../../../src/core/state';
 
@@ -220,5 +221,74 @@ test('BENCHMARK 5: autoFitBlock on 20 blocks (50 iterations)', () => {
     }
     const duration = performance.now() - t0;
     console.log(`\n[BENCHMARK 5 - autoFitBlock uncached]: ${iterations * blocks.length} auto-fit calculations: ${duration.toFixed(2)}ms (${(duration / (iterations * blocks.length)).toFixed(3)} ms/block)`);
+    expect(duration).toBeGreaterThan(0);
+});
+
+test('BENCHMARK 6: renderPageToCanvas2DDirect on 50 page export iterations (10 blocks/page, snug & bubble-fit)', async () => {
+    const mockCanvas = document.createElement('canvas');
+    mockCanvas.width = 1000;
+    mockCanvas.height = 1400;
+    const mockCtx = mockCanvas.getContext('2d');
+    if (mockCtx) {
+        mockCtx.fillStyle = '#ffffff';
+        mockCtx.fillRect(0, 0, 1000, 1400);
+    }
+    const mockImg = {
+        naturalWidth: 1000,
+        naturalHeight: 1400,
+        width: 1000,
+        height: 1400
+    } as any;
+
+    const blocks: MangaBlock[] = SAMPLE_TEXTS.map((txt, idx) => ({
+        id: `exp_block_${idx}`,
+        type: 'dialogue',
+        original: 'こんにちは',
+        translated: txt,
+        box: { x: 10 + (idx % 3) * 28, y: 5 + Math.floor(idx / 3) * 22, w: 25, h: 18 },
+        style: {
+            fontFamily: 'font-manga',
+            fontSize: 20,
+            lineHeight: 1.2,
+            letterSpacing: 0,
+            textColor: '#000000',
+            bgColor: '#ffffff',
+            bgOpacity: 100,
+            padding: '8% 10%',
+            rotate: 0,
+            vertical: idx % 4 === 0,
+            bold: false,
+            italic: false,
+            align: 'center',
+            maskShape: idx % 2 === 0 ? 'bubble-fit' : 'rounded',
+            maskSize: idx % 3 === 0 ? 'snug' : 'full',
+            strokeWidth: 0,
+            strokeColor: '#ffffff',
+            shadowColor: '#000000',
+            shadowBlur: 0
+        } as any
+    }));
+
+    const mockPage: MangaPage = {
+        id: 'p_export_bench',
+        name: 'Export Benchmark Page',
+        width: 1000,
+        height: 1400,
+        blocks,
+        status: 'done',
+        file: null,
+        originalFile: null
+    };
+
+    globalState.pages = [mockPage];
+    globalState.activePageIndex = 0;
+
+    const iterations = 50;
+    const t0 = performance.now();
+    for (let i = 0; i < iterations; i++) {
+        await renderPageToCanvas2DDirect(mockPage, mockImg);
+    }
+    const duration = performance.now() - t0;
+    console.log(`\n[BENCHMARK 6 - renderPageToCanvas2DDirect]: ${iterations} page exports: ${duration.toFixed(2)}ms (${(duration / iterations).toFixed(2)} ms/page)`);
     expect(duration).toBeGreaterThan(0);
 });

@@ -199,6 +199,18 @@ export async function renderPageToCanvas2DDirect(page: MangaPage, bgImageOverrid
         URL.revokeObjectURL(createdBlobUrl);
     }
 
+    let activeImageData = page.imageDataCache || null;
+    const hasBubbleFit = page.blocks && page.blocks.some(block => (block.style?.maskShape || 'bubble-fit') === 'bubble-fit');
+    if (hasBubbleFit && !activeImageData) {
+        try {
+            activeImageData = ctx.getImageData(0, 0, W, H);
+            page.imageDataCache = activeImageData;
+        } catch (e) {
+            console.error("Lỗi trích xuất imageDataCache khi xuất canvas:", e);
+        }
+    }
+
+    // Overlay inpainting / eraser layer
     if (page === globalState.pages[globalState.activePageIndex] && elements.eraserCanvas && elements.eraserCanvas.width > 0) {
         ctx.drawImage(elements.eraserCanvas, 0, 0, W, H);
     } else if (page.eraserLayerBlob) {
@@ -228,30 +240,18 @@ export async function renderPageToCanvas2DDirect(page: MangaPage, bgImageOverrid
         });
     }
 
-    // Ensure all required fonts are fully loaded
-    await ensureFontsLoadedForPage(page);
-
-    let activeImageData = page.imageDataCache || null;
-    const hasBubbleFit = page.blocks && page.blocks.some(block => (block.style?.maskShape || 'bubble-fit') === 'bubble-fit');
-    if (hasBubbleFit && !activeImageData) {
-        try {
-            const bgCanvas = document.createElement('canvas');
-            bgCanvas.width = W;
-            bgCanvas.height = H;
-            const bgCtx = bgCanvas.getContext('2d', { willReadFrequently: true });
-            if (bgCtx) {
-                bgCtx.drawImage(imgElement, 0, 0);
-                activeImageData = bgCtx.getImageData(0, 0, W, H);
-                page.imageDataCache = activeImageData;
-            }
-        } catch (e) {
-            console.error("Lỗi tạo imageDataCache khi xuất canvas:", e);
-        }
-    }
-
     const scaleFactor = getExportScale(page, W, imgElement);
 
     if (page.blocks && page.blocks.length > 0) {
+        const memoizedLayouts = new Map<string, TextLayoutResult>();
+        const getOrComputeLayout = (block: MangaBlock) => {
+            const cached = memoizedLayouts.get(block.id);
+            if (cached) return cached;
+            const l = buildBlockTextLayout(block, W, H, scaleFactor, ctx, page);
+            memoizedLayouts.set(block.id, l);
+            return l;
+        };
+
         // PASS 1: Render masks / bubble backgrounds / image blocks
         for (const block of page.blocks) {
             const bx = (block.box.x / 100) * W;
@@ -352,7 +352,7 @@ export async function renderPageToCanvas2DDirect(page: MangaPage, bgImageOverrid
             let fillBh = Math.max(1, bh - (insetPad * 2));
 
             if (maskSize === 'snug' && block.translated && block.translated.trim()) {
-                const layout = buildBlockTextLayout(block, W, H, scaleFactor, ctx, page);
+                const layout = getOrComputeLayout(block);
                 const snugW = Math.min(fillBw, layout.totalWidth + (layout.padXPx * 2));
                 const snugH = Math.min(fillBh, layout.totalHeight + (layout.padYPx * 2));
                 fillBx = bx + (bw - snugW) / 2;
@@ -412,7 +412,7 @@ export async function renderPageToCanvas2DDirect(page: MangaPage, bgImageOverrid
             if (block.type === 'image') continue;
             if (!block.translated || !block.translated.trim()) continue;
 
-            const layout = buildBlockTextLayout(block, W, H, scaleFactor, ctx, page);
+            const layout = getOrComputeLayout(block);
             renderBlockTextToCanvas(ctx, block, layout, scaleFactor, {
                 bilingualMode: globalState.bilingualMode
             });

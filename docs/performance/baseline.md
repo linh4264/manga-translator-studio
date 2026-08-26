@@ -38,3 +38,11 @@
 - **Workload**: 1,000 uncached auto-fit block calculations across 20 text blocks.
 - **Execution Time**: `166.48 ms`
 - **Throughput / Latency**: `0.166 ms / block`
+
+### BENCHMARK 6 — `renderPageToCanvas2DDirect` (File Export Canvas Compositing)
+- **Workload**: 50 page export iterations (10 text blocks/page, with snug & bubble-fit masks).
+- **Execution Time**: `24.50 ms`
+- **Throughput / Latency**: `0.49 ms / page`
+- **Bottleneck**:
+  1. Creating a secondary full-resolution `bgCanvas` to read `imageDataCache` when the primary export canvas already contains the base image.
+  2. Redundant re-computation of text layout between Pass 1 (mask bounds) and Pass 2 (text rendering).
