@@ -119,7 +119,10 @@ export interface MangaPage {
 }
 
 export interface HistorySnapshot {
-    pagesState: MangaPage[];
+    scope?: 'page' | 'project';
+    pageId?: string;
+    pageState?: MangaPage;
+    pagesState?: MangaPage[];
     activePageIndex: number;
     selectedBlockId: string | null;
     selectedBlockIds: string[];

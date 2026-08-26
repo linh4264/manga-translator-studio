@@ -70,7 +70,7 @@ export async function selectPage(index: number): Promise<void> {
 }
 
 export async function removePage(index: number): Promise<void> {
-    pushStateToHistory();
+    pushStateToHistory(true);
     const removedPage = globalState.pages[index];
 
     if (removedPage) {
@@ -139,7 +139,7 @@ export function handleReplaceBgFileInput(files: Event | FileList | any): void {
 export async function replacePageBackgroundImage(pageIndex: number, file: File): Promise<void> {
     if (!file || pageIndex < 0 || pageIndex >= globalState.pages.length) return;
 
-    pushStateToHistory();
+    pushStateToHistory(true);
     const page = globalState.pages[pageIndex];
 
     const tempImg = new Image();

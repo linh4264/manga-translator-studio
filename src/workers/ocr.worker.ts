@@ -118,21 +118,18 @@ export function expandAiBox(box: BoundingBox, expandXRatio: number, expandYRatio
     return { x: nextX, y: nextY, w: nextW, h: nextH };
 }
 
-export function computeTextMaskDilatedRoiFromBuffer(
-    rgba: Uint8Array,
+export function computeTextMaskDilatedRoiFromLuminanceRoi(
+    roiLuminance: Uint8Array,
+    sx: number,
+    sy: number,
+    sw: number,
+    sh: number,
     imgW: number,
     imgH: number,
-    rawBox: any,
+    normalized: BoundingBox,
     options: any = {}
 ): BoundingBox {
-    const normalized = normalizeAiBlockBox(rawBox, imgW, imgH);
-    if (!rgba || imgW <= 0 || imgH <= 0) return normalized;
-
-    const searchBox = expandAiBox(normalized, 0.08, 0.08);
-    const sx = Math.max(0, Math.min(imgW - 1, Math.round((searchBox.x / 100) * imgW)));
-    const sy = Math.max(0, Math.min(imgH - 1, Math.round((searchBox.y / 100) * imgH)));
-    const sw = Math.max(4, Math.min(imgW - sx, Math.round((searchBox.w / 100) * imgW)));
-    const sh = Math.max(4, Math.min(imgH - sy, Math.round((searchBox.h / 100) * imgH)));
+    if (!roiLuminance || sw <= 0 || sh <= 0) return normalized;
 
     const darkThreshold = options.darkThreshold || 140;
     const paddingPx = options.paddingPx !== undefined ? options.paddingPx : 6;
@@ -140,19 +137,10 @@ export function computeTextMaskDilatedRoiFromBuffer(
     const rawBinary = new Uint8Array(sw * sh);
     let darkPixelCount = 0;
 
-    for (let ly = 0; ly < sh; ly++) {
-        const rowOffset = (sy + ly) * imgW;
-        for (let lx = 0; lx < sw; lx++) {
-            const idx = (rowOffset + (sx + lx)) * 4;
-            const r = rgba[idx];
-            const g = rgba[idx + 1];
-            const b = rgba[idx + 2];
-            const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-
-            if (luminance <= darkThreshold) {
-                rawBinary[ly * sw + lx] = 1;
-                darkPixelCount++;
-            }
+    for (let i = 0; i < sw * sh; i++) {
+        if (roiLuminance[i] <= darkThreshold) {
+            rawBinary[i] = 1;
+            darkPixelCount++;
         }
     }
 
@@ -298,37 +286,70 @@ export function computeTextMaskDilatedRoiFromBuffer(
     return inpaintBox;
 }
 
-export function detectSpeechBubbleAtPointFromBuffer(
+export function computeTextMaskDilatedRoiFromBuffer(
     rgba: Uint8Array,
+    imgW: number,
+    imgH: number,
+    rawBox: any,
+    options: any = {}
+): BoundingBox {
+    const normalized = normalizeAiBlockBox(rawBox, imgW, imgH);
+    if (!rgba || imgW <= 0 || imgH <= 0) return normalized;
+
+    const searchBox = expandAiBox(normalized, 0.08, 0.08);
+    const sx = Math.max(0, Math.min(imgW - 1, Math.round((searchBox.x / 100) * imgW)));
+    const sy = Math.max(0, Math.min(imgH - 1, Math.round((searchBox.y / 100) * imgH)));
+    const sw = Math.max(4, Math.min(imgW - sx, Math.round((searchBox.w / 100) * imgW)));
+    const sh = Math.max(4, Math.min(imgH - sy, Math.round((searchBox.h / 100) * imgH)));
+
+    const roiLuminance = new Uint8Array(sw * sh);
+    for (let ly = 0; ly < sh; ly++) {
+        const rowOffset = (sy + ly) * imgW;
+        for (let lx = 0; lx < sw; lx++) {
+            const idx = (rowOffset + (sx + lx)) * 4;
+            const r = rgba[idx];
+            const g = rgba[idx + 1];
+            const b = rgba[idx + 2];
+            roiLuminance[ly * sw + lx] = (r * 77 + g * 150 + b * 29) >> 8;
+        }
+    }
+
+    return computeTextMaskDilatedRoiFromLuminanceRoi(roiLuminance, sx, sy, sw, sh, imgW, imgH, normalized, options);
+}
+
+export function detectSpeechBubbleAtPointFromLuminanceRoi(
+    roiLuminance: Uint8Array,
+    roiW: number,
+    roiH: number,
+    roiOffsetX: number,
+    roiOffsetY: number,
     imgW: number,
     imgH: number,
     clickPixelX: number,
     clickPixelY: number,
     _options: any = {}
 ): any {
-    if (!rgba || imgW <= 0 || imgH <= 0) return null;
+    if (!roiLuminance || roiW <= 0 || roiH <= 0) return null;
 
-    const brightnessMap = getImageBrightnessMapFromBuffer(rgba, imgW, imgH);
-
-    const startX = Math.max(0, Math.min(imgW - 1, Math.round(clickPixelX)));
-    const startY = Math.max(0, Math.min(imgH - 1, Math.round(clickPixelY)));
+    const localStartX = Math.max(0, Math.min(roiW - 1, Math.round(clickPixelX - roiOffsetX)));
+    const localStartY = Math.max(0, Math.min(roiH - 1, Math.round(clickPixelY - roiOffsetY)));
 
     const probeRadius = Math.max(45, Math.min(120, Math.round(Math.min(imgW, imgH) * 0.06)));
     const lambda = 0.25;
 
-    let bestSeedX = startX;
-    let bestSeedY = startY;
-    const initialBrightness = brightnessMap[startY * imgW + startX];
+    let bestSeedX = localStartX;
+    let bestSeedY = localStartY;
+    const initialBrightness = roiLuminance[localStartY * roiW + localStartX];
     let bestSeedScore = initialBrightness / 255;
 
     for (let dy = -probeRadius; dy <= probeRadius; dy += 2) {
         for (let dx = -probeRadius; dx <= probeRadius; dx += 2) {
-            const px = startX + dx;
-            const py = startY + dy;
-            if (px >= 0 && px < imgW && py >= 0 && py < imgH) {
+            const px = localStartX + dx;
+            const py = localStartY + dy;
+            if (px >= 0 && px < roiW && py >= 0 && py < roiH) {
                 const dist = Math.hypot(dx, dy);
                 if (dist <= probeRadius) {
-                    const b = brightnessMap[py * imgW + px];
+                    const b = roiLuminance[py * roiW + px];
                     const normBrightness = b / 255;
                     const normDist = dist / probeRadius;
                     const score = normBrightness - (lambda * normDist);
@@ -345,7 +366,7 @@ export function detectSpeechBubbleAtPointFromBuffer(
     const curStartX = bestSeedX;
     const curStartY = bestSeedY;
 
-    const seedBrightness = brightnessMap[curStartY * imgW + curStartX];
+    const seedBrightness = roiLuminance[curStartY * roiW + curStartX];
     if (seedBrightness < 80) {
         return null;
     }
@@ -355,9 +376,9 @@ export function detectSpeechBubbleAtPointFromBuffer(
     const maxHalfH = Math.min(Math.round(imgH * 0.45), 700);
 
     const winMinX = Math.max(0, curStartX - maxHalfW);
-    const winMaxX = Math.min(imgW - 1, curStartX + maxHalfW);
+    const winMaxX = Math.min(roiW - 1, curStartX + maxHalfW);
     const winMinY = Math.max(0, curStartY - maxHalfH);
-    const winMaxY = Math.min(imgH - 1, curStartY + maxHalfH);
+    const winMaxY = Math.min(roiH - 1, curStartY + maxHalfH);
 
     const winW = winMaxX - winMinX + 1;
     const winH = winMaxY - winMinY + 1;
@@ -400,7 +421,7 @@ export function detectSpeechBubbleAtPointFromBuffer(
                 const vIdx = ly * winW + lx;
 
                 if (!visited[vIdx]) {
-                    const br = brightnessMap[ny * imgW + nx];
+                    const br = roiLuminance[ny * roiW + nx];
                     if (br >= bubbleThreshold) {
                         visited[vIdx] = 1;
                         queueX[tail] = nx;
@@ -666,8 +687,11 @@ export function detectSpeechBubbleAtPointFromBuffer(
         return null;
     }
 
-    const cleanMinX = Math.max(0, Math.min(imgW - 1, minX));
-    const cleanMinY = Math.max(0, Math.min(imgH - 1, minY));
+    const absMinX = roiOffsetX + minX;
+    const absMinY = roiOffsetY + minY;
+
+    const cleanMinX = Math.max(0, Math.min(imgW - 1, absMinX));
+    const cleanMinY = Math.max(0, Math.min(imgH - 1, absMinY));
     const cleanBw = Math.max(12, Math.min(imgW - cleanMinX, bw));
     const cleanBh = Math.max(12, Math.min(imgH - cleanMinY, bh));
 
@@ -689,6 +713,31 @@ export function detectSpeechBubbleAtPointFromBuffer(
     };
 }
 
+export function detectSpeechBubbleAtPointFromBuffer(
+    rgba: Uint8Array,
+    imgW: number,
+    imgH: number,
+    clickPixelX: number,
+    clickPixelY: number,
+    options: any = {}
+): any {
+    if (!rgba || imgW <= 0 || imgH <= 0) return null;
+
+    const brightnessMap = getImageBrightnessMapFromBuffer(rgba, imgW, imgH);
+    return detectSpeechBubbleAtPointFromLuminanceRoi(
+        brightnessMap,
+        imgW,
+        imgH,
+        0,
+        0,
+        imgW,
+        imgH,
+        clickPixelX,
+        clickPixelY,
+        options
+    );
+}
+
 // Worker message handling
 if (typeof self !== 'undefined' && typeof (self as any).postMessage === 'function') {
     (self as any).onmessage = function (e: MessageEvent) {
@@ -698,26 +747,59 @@ if (typeof self !== 'undefined' && typeof (self as any).postMessage === 'functio
 
         try {
             if (type === 'DETECT_SPEECH_BUBBLE') {
-                const rgba = new Uint8Array(data.rgbaBuffer);
-                const result = detectSpeechBubbleAtPointFromBuffer(
-                    rgba,
-                    data.width,
-                    data.height,
-                    data.clickPixelX,
-                    data.clickPixelY,
-                    data.options
-                );
-                (self as any).postMessage({ requestId, type: 'DETECT_SPEECH_BUBBLE_RESULT', result });
+                if (data.roiLuminanceBuffer) {
+                    const roiLuminance = new Uint8Array(data.roiLuminanceBuffer);
+                    const result = detectSpeechBubbleAtPointFromLuminanceRoi(
+                        roiLuminance,
+                        data.roiWidth,
+                        data.roiHeight,
+                        data.roiOffsetX,
+                        data.roiOffsetY,
+                        data.imgWidth,
+                        data.imgHeight,
+                        data.clickPixelX,
+                        data.clickPixelY,
+                        data.options
+                    );
+                    (self as any).postMessage({ requestId, type: 'DETECT_SPEECH_BUBBLE_RESULT', result });
+                } else if (data.rgbaBuffer) {
+                    const rgba = new Uint8Array(data.rgbaBuffer);
+                    const result = detectSpeechBubbleAtPointFromBuffer(
+                        rgba,
+                        data.width,
+                        data.height,
+                        data.clickPixelX,
+                        data.clickPixelY,
+                        data.options
+                    );
+                    (self as any).postMessage({ requestId, type: 'DETECT_SPEECH_BUBBLE_RESULT', result });
+                }
             } else if (type === 'COMPUTE_TEXT_MASK_DILATED_ROI') {
-                const rgba = new Uint8Array(data.rgbaBuffer);
-                const result = computeTextMaskDilatedRoiFromBuffer(
-                    rgba,
-                    data.width,
-                    data.height,
-                    data.rawBox,
-                    data.options
-                );
-                (self as any).postMessage({ requestId, type: 'COMPUTE_TEXT_MASK_DILATED_ROI_RESULT', result });
+                if (data.roiLuminanceBuffer) {
+                    const roiLuminance = new Uint8Array(data.roiLuminanceBuffer);
+                    const result = computeTextMaskDilatedRoiFromLuminanceRoi(
+                        roiLuminance,
+                        data.sx,
+                        data.sy,
+                        data.sw,
+                        data.sh,
+                        data.imgWidth,
+                        data.imgHeight,
+                        data.normalized,
+                        data.options
+                    );
+                    (self as any).postMessage({ requestId, type: 'COMPUTE_TEXT_MASK_DILATED_ROI_RESULT', result });
+                } else if (data.rgbaBuffer) {
+                    const rgba = new Uint8Array(data.rgbaBuffer);
+                    const result = computeTextMaskDilatedRoiFromBuffer(
+                        rgba,
+                        data.width,
+                        data.height,
+                        data.rawBox,
+                        data.options
+                    );
+                    (self as any).postMessage({ requestId, type: 'COMPUTE_TEXT_MASK_DILATED_ROI_RESULT', result });
+                }
             }
         } catch (err: any) {
             (self as any).postMessage({ requestId, type: 'ERROR', error: err.message || String(err) });

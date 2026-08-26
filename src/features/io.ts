@@ -258,6 +258,8 @@ export function handleUploadedFiles(filesList: FileList | File[]): void {
 export function sortPagesByName(): void {
     if (globalState.pages.length === 0) return;
 
+    pushStateToHistory(true);
+
     const activePageId = globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex].id : null;
 
     const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
@@ -1275,7 +1277,7 @@ export async function importTranslationScript(fileList: FileList | File[]): Prom
 
     try {
         const text = await file.text();
-        pushStateToHistory();
+        pushStateToHistory(true);
 
         let matchedPages = 0;
         let matchedBlocks = 0;
@@ -1585,7 +1587,7 @@ export function executeFindReplaceAll(): void {
         return;
     }
 
-    pushStateToHistory();
+    pushStateToHistory(true);
 
     let count = 0;
     const flags = matchCase ? 'g' : 'gi';

@@ -389,15 +389,37 @@ function clonePageForHistory(page: MangaPage): MangaPage {
 }
 
 // --- UNDO / REDO CONTROLLERS ---
-export function pushStateToHistory(): void {
-    const currentState = globalState.pages.map((page: MangaPage) => clonePageForHistory(page));
+export function pushStateToHistory(isProjectLevel: boolean = false): void {
+    const activePage = (globalState.activePageIndex >= 0 && globalState.activePageIndex < globalState.pages.length)
+        ? globalState.pages[globalState.activePageIndex]
+        : null;
 
-    undoStack.push({
-        pagesState: currentState,
-        activePageIndex: globalState.activePageIndex,
-        selectedBlockId: globalState.selectedBlockId,
-        selectedBlockIds: [...(globalState.selectedBlockIds || [])]
-    });
+    if (!isProjectLevel && activePage) {
+        const pageSnapshot = clonePageForHistory(activePage);
+        const snapshotObj: HistorySnapshot = {
+            scope: 'page',
+            pageId: activePage.id,
+            pageState: pageSnapshot,
+            activePageIndex: globalState.activePageIndex,
+            selectedBlockId: globalState.selectedBlockId,
+            selectedBlockIds: [...(globalState.selectedBlockIds || [])],
+            timestamp: Date.now(),
+            get pagesState() {
+                return this.pageState ? [this.pageState] : [];
+            }
+        };
+        undoStack.push(snapshotObj);
+    } else {
+        const currentState = globalState.pages.map((page: MangaPage) => clonePageForHistory(page));
+        undoStack.push({
+            scope: 'project',
+            pagesState: currentState,
+            activePageIndex: globalState.activePageIndex,
+            selectedBlockId: globalState.selectedBlockId,
+            selectedBlockIds: [...(globalState.selectedBlockIds || [])],
+            timestamp: Date.now()
+        });
+    }
 
     if (undoStack.length > MAX_HISTORY_LIMIT) {
         undoStack.shift();
@@ -414,17 +436,96 @@ export function clearHistory(): void {
 }
 
 export function applyStateFromSnapshot(snapshot: HistorySnapshot | any): void {
-    if (!snapshot || !Array.isArray(snapshot.pagesState)) return;
+    if (!snapshot) return;
+
+    if (snapshot.scope === 'page' || (snapshot.pageState && !snapshot.pagesState)) {
+        // --- 1. OPTIMIZED PAGE-LEVEL DELTA RESTORE ---
+        let targetPage = snapshot.pageId ? globalState.pages.find((p: MangaPage) => p.id === snapshot.pageId) : null;
+        if (!targetPage && typeof snapshot.activePageIndex === 'number' && snapshot.activePageIndex >= 0 && snapshot.activePageIndex < globalState.pages.length) {
+            targetPage = globalState.pages[snapshot.activePageIndex];
+        }
+
+        if (targetPage && snapshot.pageState) {
+            targetPage.name = snapshot.pageState.name || targetPage.name;
+            targetPage.status = snapshot.pageState.status;
+            targetPage.width = snapshot.pageState.width || targetPage.width;
+            targetPage.height = snapshot.pageState.height || targetPage.height;
+            targetPage.apiWidth = snapshot.pageState.apiWidth || targetPage.apiWidth;
+            targetPage.apiHeight = snapshot.pageState.apiHeight || targetPage.apiHeight;
+            targetPage.eraserLayerBlob = snapshot.pageState.eraserLayerBlob || null;
+            targetPage.blocks = cloneBlocksForHistory(snapshot.pageState.blocks);
+            targetPage.autoFitRevision = (targetPage.autoFitRevision || 0) + 1;
+            savePageToDB(targetPage);
+        } else if (!targetPage && snapshot.pageState) {
+            targetPage = {
+                id: snapshot.pageState.id,
+                name: snapshot.pageState.name || 'Page',
+                width: snapshot.pageState.width || 800,
+                height: snapshot.pageState.height || 1200,
+                apiWidth: snapshot.pageState.apiWidth || snapshot.pageState.width || 800,
+                apiHeight: snapshot.pageState.apiHeight || snapshot.pageState.height || 1200,
+                status: snapshot.pageState.status || 'draft',
+                file: null,
+                originalFile: null,
+                thumbnailBlob: null,
+                thumbnailSrc: null,
+                src: null,
+                apiSrc: null,
+                imageDataCache: null,
+                eraserLayerBlob: snapshot.pageState.eraserLayerBlob || null,
+                blocks: cloneBlocksForHistory(snapshot.pageState.blocks),
+                autoFitRevision: 1
+            };
+            const insertIdx = (typeof snapshot.activePageIndex === 'number' && snapshot.activePageIndex >= 0 && snapshot.activePageIndex <= globalState.pages.length)
+                ? snapshot.activePageIndex
+                : globalState.pages.length;
+            globalState.pages.splice(insertIdx, 0, targetPage);
+            savePageToDB(targetPage);
+        }
+
+        if (typeof snapshot.activePageIndex === 'number' && snapshot.activePageIndex >= 0 && snapshot.activePageIndex < globalState.pages.length) {
+            globalState.activePageIndex = snapshot.activePageIndex;
+        }
+
+        globalState.selectedBlockId = snapshot.selectedBlockId || null;
+        globalState.selectedBlockIds = Array.isArray(snapshot.selectedBlockIds)
+            ? [...snapshot.selectedBlockIds]
+            : (snapshot.selectedBlockId ? [snapshot.selectedBlockId] : []);
+
+        saveProjectMeta(globalState.pages.map(p => p.id), globalState.activePageIndex);
+
+        if (onUndoRedoChange) onUndoRedoChange();
+
+        if (onSnapshotRestored) {
+            onSnapshotRestored(snapshot);
+        } else {
+            uiUpdatePageListUI();
+            if (globalState.activePageIndex !== -1) {
+                import('../ui/pages-ui').then(m => m.selectPage(globalState.activePageIndex));
+            }
+            globalState.selectedBlockId = snapshot.selectedBlockId;
+            globalState.selectedBlockIds = Array.isArray(snapshot.selectedBlockIds)
+                ? [...snapshot.selectedBlockIds]
+                : (snapshot.selectedBlockId ? [snapshot.selectedBlockId] : []);
+            uiUpdateActiveBlockEditor();
+        }
+
+        garbageCollectPageCaches(globalState.activePageIndex);
+        return;
+    }
+
+    // --- 2. FULL PROJECT-LEVEL RESTORE ---
+    if (!Array.isArray(snapshot.pagesState)) return;
 
     const snapshotPageIds = new Set(snapshot.pagesState.map((sp: MangaPage) => sp.id));
 
-    // 1. Remove pages from DB that are not in snapshot
+    // Remove pages from DB that are not in snapshot
     const pagesToDelete = globalState.pages.filter((p: MangaPage) => !snapshotPageIds.has(p.id));
     pagesToDelete.forEach((p: MangaPage) => {
         deletePageFromDB(p.id);
     });
 
-    // 2. Restore or update all pages from snapshot
+    // Restore or update all pages from snapshot
     const existingPagesMap = new Map(globalState.pages.map((p: MangaPage) => [p.id, p]));
     const restoredPages: MangaPage[] = [];
 
@@ -499,14 +600,33 @@ export function applyStateFromSnapshot(snapshot: HistorySnapshot | any): void {
 
 export function executeUndo(): void {
     if (undoStack.length === 0) return;
-    const currentState = globalState.pages.map((page: MangaPage) => clonePageForHistory(page));
+    const targetSnapshot = undoStack[undoStack.length - 1];
 
-    redoStack.push({
-        pagesState: currentState,
-        activePageIndex: globalState.activePageIndex,
-        selectedBlockId: globalState.selectedBlockId,
-        selectedBlockIds: [...(globalState.selectedBlockIds || [])]
-    });
+    const activePage = (globalState.activePageIndex >= 0 && globalState.activePageIndex < globalState.pages.length)
+        ? globalState.pages[globalState.activePageIndex]
+        : null;
+
+    if (targetSnapshot.scope === 'page' && activePage) {
+        redoStack.push({
+            scope: 'page',
+            pageId: activePage.id,
+            pageState: clonePageForHistory(activePage),
+            activePageIndex: globalState.activePageIndex,
+            selectedBlockId: globalState.selectedBlockId,
+            selectedBlockIds: [...(globalState.selectedBlockIds || [])],
+            timestamp: Date.now()
+        });
+    } else {
+        const currentState = globalState.pages.map((page: MangaPage) => clonePageForHistory(page));
+        redoStack.push({
+            scope: 'project',
+            pagesState: currentState,
+            activePageIndex: globalState.activePageIndex,
+            selectedBlockId: globalState.selectedBlockId,
+            selectedBlockIds: [...(globalState.selectedBlockIds || [])],
+            timestamp: Date.now()
+        });
+    }
 
     const previous = undoStack.pop();
     if (previous) {
@@ -516,14 +636,33 @@ export function executeUndo(): void {
 
 export function executeRedo(): void {
     if (redoStack.length === 0) return;
-    const currentState = globalState.pages.map((page: MangaPage) => clonePageForHistory(page));
+    const targetSnapshot = redoStack[redoStack.length - 1];
 
-    undoStack.push({
-        pagesState: currentState,
-        activePageIndex: globalState.activePageIndex,
-        selectedBlockId: globalState.selectedBlockId,
-        selectedBlockIds: [...(globalState.selectedBlockIds || [])]
-    });
+    const activePage = (globalState.activePageIndex >= 0 && globalState.activePageIndex < globalState.pages.length)
+        ? globalState.pages[globalState.activePageIndex]
+        : null;
+
+    if (targetSnapshot.scope === 'page' && activePage) {
+        undoStack.push({
+            scope: 'page',
+            pageId: activePage.id,
+            pageState: clonePageForHistory(activePage),
+            activePageIndex: globalState.activePageIndex,
+            selectedBlockId: globalState.selectedBlockId,
+            selectedBlockIds: [...(globalState.selectedBlockIds || [])],
+            timestamp: Date.now()
+        });
+    } else {
+        const currentState = globalState.pages.map((page: MangaPage) => clonePageForHistory(page));
+        undoStack.push({
+            scope: 'project',
+            pagesState: currentState,
+            activePageIndex: globalState.activePageIndex,
+            selectedBlockId: globalState.selectedBlockId,
+            selectedBlockIds: [...(globalState.selectedBlockIds || [])],
+            timestamp: Date.now()
+        });
+    }
 
     const next = redoStack.pop();
     if (next) {

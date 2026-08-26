@@ -47,26 +47,61 @@ export async function detectSpeechBubbleAtPointAsync(
     options: any = {}
 ): Promise<any> {
     const worker = getOcrWorker();
-    if (!worker || !imageData?.data) {
+    if (!worker || !imageData?.data || imageData.width <= 0 || imageData.height <= 0) {
         return detectSpeechBubbleAtPoint(imageData, clickPixelX, clickPixelY, options);
+    }
+
+    const imgW = imageData.width;
+    const imgH = imageData.height;
+    const startX = Math.max(0, Math.min(imgW - 1, Math.round(clickPixelX)));
+    const startY = Math.max(0, Math.min(imgH - 1, Math.round(clickPixelY)));
+    const probeRadius = Math.max(45, Math.min(120, Math.round(Math.min(imgW, imgH) * 0.06)));
+    const maxHalfW = Math.min(Math.round(imgW * 0.45), 600);
+    const maxHalfH = Math.min(Math.round(imgH * 0.45), 700);
+    const padW = maxHalfW + probeRadius;
+    const padH = maxHalfH + probeRadius;
+
+    const roiMinX = Math.max(0, startX - padW);
+    const roiMaxX = Math.min(imgW - 1, startX + padW);
+    const roiMinY = Math.max(0, startY - padH);
+    const roiMaxY = Math.min(imgH - 1, startY + padH);
+
+    const roiW = roiMaxX - roiMinX + 1;
+    const roiH = roiMaxY - roiMinY + 1;
+
+    const roiLuminance = new Uint8Array(roiW * roiH);
+    const data = imageData.data;
+    for (let ly = 0; ly < roiH; ly++) {
+        const rowOffset = (roiMinY + ly) * imgW;
+        const destOffset = ly * roiW;
+        for (let lx = 0; lx < roiW; lx++) {
+            const idx = (rowOffset + (roiMinX + lx)) * 4;
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
+            roiLuminance[destOffset + lx] = (r * 77 + g * 150 + b * 29) >> 8;
+        }
     }
 
     const requestId = ++ocrRequestIdCounter;
     return new Promise<any>((resolve, reject) => {
         ocrPendingRequests.set(requestId, { resolve, reject });
-        const rgbaCopy = new Uint8Array(imageData.data);
         worker.postMessage(
             {
                 type: 'DETECT_SPEECH_BUBBLE',
                 requestId,
-                rgbaBuffer: rgbaCopy.buffer,
-                width: imageData.width,
-                height: imageData.height,
+                roiLuminanceBuffer: roiLuminance.buffer,
+                roiWidth: roiW,
+                roiHeight: roiH,
+                roiOffsetX: roiMinX,
+                roiOffsetY: roiMinY,
+                imgWidth: imgW,
+                imgHeight: imgH,
                 clickPixelX,
                 clickPixelY,
                 options
             },
-            [rgbaCopy.buffer]
+            [roiLuminance.buffer]
         );
     }).catch((err) => {
         console.warn("OCR Worker bubble detection failed, fallback to sync:", err);
@@ -80,25 +115,52 @@ export async function computeTextMaskDilatedRoiAsync(
     options: any = {}
 ): Promise<BoundingBox> {
     const worker = getOcrWorker();
-    if (!worker || !imageData?.data) {
+    if (!worker || !imageData?.data || imageData.width <= 0 || imageData.height <= 0) {
         return computeTextMaskDilatedRoi(rawBox, imageData, options);
+    }
+
+    const imgW = imageData.width;
+    const imgH = imageData.height;
+    const normalized = normalizeAiBlockBox(rawBox, imgW, imgH);
+    const searchBox = expandAiBox(normalized, 0.08, 0.08);
+
+    const sx = Math.max(0, Math.min(imgW - 1, Math.round((searchBox.x / 100) * imgW)));
+    const sy = Math.max(0, Math.min(imgH - 1, Math.round((searchBox.y / 100) * imgH)));
+    const sw = Math.max(4, Math.min(imgW - sx, Math.round((searchBox.w / 100) * imgW)));
+    const sh = Math.max(4, Math.min(imgH - sy, Math.round((searchBox.h / 100) * imgH)));
+
+    const roiLuminance = new Uint8Array(sw * sh);
+    const data = imageData.data;
+    for (let ly = 0; ly < sh; ly++) {
+        const rowOffset = (sy + ly) * imgW;
+        const destOffset = ly * sw;
+        for (let lx = 0; lx < sw; lx++) {
+            const idx = (rowOffset + (sx + lx)) * 4;
+            const r = data[idx];
+            const g = data[idx + 1];
+            const b = data[idx + 2];
+            roiLuminance[destOffset + lx] = (r * 77 + g * 150 + b * 29) >> 8;
+        }
     }
 
     const requestId = ++ocrRequestIdCounter;
     return new Promise<BoundingBox>((resolve, reject) => {
         ocrPendingRequests.set(requestId, { resolve, reject });
-        const rgbaCopy = new Uint8Array(imageData.data);
         worker.postMessage(
             {
                 type: 'COMPUTE_TEXT_MASK_DILATED_ROI',
                 requestId,
-                rgbaBuffer: rgbaCopy.buffer,
-                width: imageData.width,
-                height: imageData.height,
-                rawBox,
+                roiLuminanceBuffer: roiLuminance.buffer,
+                sx,
+                sy,
+                sw,
+                sh,
+                imgWidth: imgW,
+                imgHeight: imgH,
+                normalized,
                 options
             },
-            [rgbaCopy.buffer]
+            [roiLuminance.buffer]
         );
     }).catch((err) => {
         console.warn("OCR Worker mask dilation failed, fallback to sync:", err);
