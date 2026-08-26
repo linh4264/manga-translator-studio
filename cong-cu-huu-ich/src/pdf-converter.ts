@@ -214,6 +214,10 @@ export async function renderPdfPages(): Promise<void> {
                 blob = await res.blob();
             }
 
+            // Immediately release GPU backing store for the high-res canvas
+            canvas.width = 0;
+            canvas.height = 0;
+
             const blobUrl = blob ? URL.createObjectURL(blob) : '';
             const targetFilename = `${baseName}_trang_${String(pageNum).padStart(3, '0')}.${ext}`;
             const sizeStr = formatFileSize(blob ? blob.size : 0);
@@ -231,7 +235,7 @@ export async function renderPdfPages(): Promise<void> {
             card.className = "bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-md flex flex-col p-3 hover:border-slate-700 transition-all";
             card.innerHTML = `
                 <div class="relative group cursor-pointer overflow-hidden rounded-xl bg-slate-950/60 border border-slate-855 flex items-center justify-center min-h-[160px]">
-                    <img src="${blobUrl}" class="max-h-60 object-contain rounded transition-transform group-hover:scale-105" alt="Trang ${escapeHTML(pageNum)}">
+                    <img loading="lazy" src="${blobUrl}" class="max-h-60 object-contain rounded transition-transform group-hover:scale-105" alt="Trang ${escapeHTML(pageNum)}">
                     <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-sans text-xs gap-1.5 font-bold">
                         <i class="fa-solid fa-magnifying-glass-plus"></i> Phóng to xem
                     </div>
@@ -254,6 +258,9 @@ export async function renderPdfPages(): Promise<void> {
                 previewTarget.addEventListener('click', () => openPreviewModal(blobUrl));
             }
             if (grid) grid.appendChild(card);
+
+            // Yield to browser event loop between pages
+            await new Promise(r => setTimeout(r, 0));
         } catch (pageErr) {
             console.error(`Lỗi render trang ${pageNum}:`, pageErr);
         }

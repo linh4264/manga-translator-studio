@@ -306,11 +306,13 @@ export function mergeAdjacentIdenticalTokens(tokens: RichTextSegment[]): RichTex
     return merged;
 }
 
-const MAX_TEXT_MEASURE_CACHE_SIZE = 3000;
+const MAX_TEXT_MEASURE_CACHE_SIZE = 5000;
 const textMeasureCache = new Map<string, number>();
+let lastMeasureFont: string = '';
 
 export function clearTextMeasureCache(): void {
     textMeasureCache.clear();
+    lastMeasureFont = '';
 }
 
 /**
@@ -347,16 +349,17 @@ export function measureStyledSegmentWidth(
             return cachedWidth + extraSpacing;
         }
 
-        const prevFont = measureCtx.font;
-        measureCtx.font = tokFontStr;
+        if (lastMeasureFont !== tokFontStr) {
+            measureCtx.font = tokFontStr;
+            lastMeasureFont = tokFontStr;
+        }
         const w = measureCtx.measureText(segText).width;
-        measureCtx.font = prevFont;
 
         if (w > 0) {
             if (textMeasureCache.size >= MAX_TEXT_MEASURE_CACHE_SIZE) {
-                // Evict oldest 500 entries
+                // Evict oldest 1000 entries
                 const it = textMeasureCache.keys();
-                for (let i = 0; i < 500; i++) {
+                for (let i = 0; i < 1000; i++) {
                     const k = it.next().value;
                     if (k) textMeasureCache.delete(k);
                 }

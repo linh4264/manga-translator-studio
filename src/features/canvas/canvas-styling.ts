@@ -87,35 +87,49 @@ export function autoFitBlock(
         }
     };
     const baseLayout = computeBlockTextLayout(baseTestBlock, displayWidth, displayHeight, 1);
-    let optimalSize = targetBaseSize;
+    
+    if (!baseLayout.overflowing) {
+        // Fits perfectly at base size - no binary search and no recomputation needed!
+        block.style.fontSize = targetBaseSize;
+        block.textWidth = baseLayout.textWidth;
+        block.textHeight = baseLayout.textHeight;
+        block.autoFitCache = {
+            key: cacheKey,
+            fontSize: targetBaseSize,
+            baseFontSize: baseFontSize,
+            textWidth: block.textWidth,
+            textHeight: block.textHeight
+        };
+        return;
+    }
 
-    if (baseLayout.overflowing) {
-        let low = minSize;
-        let high = targetBaseSize - 1;
-        optimalSize = minSize;
+    let low = minSize;
+    let high = targetBaseSize - 1;
+    let optimalSize = minSize;
+    let bestLayout: any = null;
 
-        while (low <= high) {
-            const mid = Math.floor((low + high) / 2);
-            const testBlock: MangaBlock = {
-                ...block,
-                style: {
-                    ...block.style,
-                    fontSize: mid
-                }
-            };
-            const testLayout = computeBlockTextLayout(testBlock, displayWidth, displayHeight, 1);
-            if (!testLayout.overflowing) {
-                optimalSize = mid;
-                low = mid + 1;
-            } else {
-                high = mid - 1;
+    while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        const testBlock: MangaBlock = {
+            ...block,
+            style: {
+                ...block.style,
+                fontSize: mid
             }
+        };
+        const testLayout = computeBlockTextLayout(testBlock, displayWidth, displayHeight, 1);
+        if (!testLayout.overflowing) {
+            optimalSize = mid;
+            bestLayout = testLayout;
+            low = mid + 1;
+        } else {
+            high = mid - 1;
         }
     }
 
     block.style.fontSize = optimalSize;
 
-    const finalLayout = computeBlockTextLayout(block, displayWidth, displayHeight, 1);
+    const finalLayout = bestLayout || computeBlockTextLayout(block, displayWidth, displayHeight, 1);
     block.textWidth = finalLayout.textWidth;
     block.textHeight = finalLayout.textHeight;
 
@@ -130,7 +144,7 @@ export function autoFitBlock(
 
 export function autoFitAllBlocksOnPage(page: MangaPage | null = null, customImgElement: HTMLImageElement | null = null, forceExportScale: number = 1): void {
     const targetPage = page || (globalState.activePageIndex !== -1 ? globalState.pages[globalState.activePageIndex] : null);
-    if (!targetPage) return;
+    if (!targetPage || !targetPage.blocks || targetPage.blocks.length === 0) return;
     targetPage.blocks.forEach(block => autoFitBlock(block, customImgElement, forceExportScale, targetPage));
 }
 

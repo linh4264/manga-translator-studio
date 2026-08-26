@@ -536,6 +536,9 @@ export async function runBatchExport(options?: BatchExportOptions): Promise<void
                 failedPages.push({ index: i + 1, name: page.name || `page_${i + 1}`, error: err?.message || 'Lỗi không xác định' });
                 showToast(`Lỗi kết xuất trang ${i + 1} (${page.name}): ${err.message}`, "error");
             }
+
+            // Yield to browser event loop for smooth progress update and garbage collection
+            await new Promise(r => setTimeout(r, 0));
         }
 
         if (successCount > 0) {
