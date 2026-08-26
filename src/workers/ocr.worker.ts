@@ -396,9 +396,13 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
     queueY[tail] = curStartY;
     tail++;
     visited[startLocalY * winW + startLocalX] = 1;
-
     const maxAllowedPixels = Math.floor(imgW * imgH * 0.40);
     let initialCount = 0;
+
+    const DX8 = [1, -1, 0, 0, 1, -1, 1, -1];
+    const DY8 = [0, 0, 1, -1, 1, -1, -1, 1];
+    const DX4 = [1, -1, 0, 0];
+    const DY4 = [0, 0, 1, -1];
 
     while (head < tail && initialCount < maxAllowedPixels) {
         const cx = queueX[head];
@@ -406,14 +410,9 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
         head++;
         initialCount++;
 
-        const neighbors = [
-            [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1],
-            [cx + 1, cy + 1], [cx - 1, cy - 1], [cx + 1, cy - 1], [cx - 1, cy + 1]
-        ];
-
         for (let i = 0; i < 8; i++) {
-            const nx = neighbors[i][0];
-            const ny = neighbors[i][1];
+            const nx = cx + DX8[i];
+            const ny = cy + DY8[i];
 
             if (nx >= winMinX && nx <= winMaxX && ny >= winMinY && ny <= winMaxY) {
                 const lx = nx - winMinX;
@@ -461,13 +460,9 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
         const cy = queueY[outHead];
         outHead++;
 
-        const neighbors = [
-            [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]
-        ];
-
         for (let i = 0; i < 4; i++) {
-            const nx = neighbors[i][0];
-            const ny = neighbors[i][1];
+            const nx = cx + DX4[i];
+            const ny = cy + DY4[i];
 
             if (nx >= winMinX && nx <= winMaxX && ny >= winMinY && ny <= winMaxY) {
                 const lx = nx - winMinX;
@@ -539,14 +534,9 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
             let bestNy = cy;
             let bestNDt = cDt;
 
-            const nbs = [
-                [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1],
-                [cx + 1, cy + 1], [cx - 1, cy - 1], [cx + 1, cy - 1], [cx - 1, cy + 1]
-            ];
-
             for (let i = 0; i < 8; i++) {
-                const nx = nbs[i][0];
-                const ny = nbs[i][1];
+                const nx = cx + DX8[i];
+                const ny = cy + DY8[i];
                 if (nx >= 0 && nx < winW && ny >= 0 && ny < winH) {
                     const nd = dt[ny * winW + nx];
                     if (nd > bestNDt) {
@@ -574,6 +564,7 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
 
     const labels = new Uint8Array(winW * winH);
     const path = new Int32Array(1500);
+    const saddleCache = new Map<number, boolean>();
 
     const isSeparatedBySaddle = (destX: number, destY: number) => {
         const dx = destX - primaryPeakX;
@@ -622,14 +613,9 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
                 let bestNy = cy;
                 let bestNDt = curD;
 
-                const nbs = [
-                    [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1],
-                    [cx + 1, cy + 1], [cx - 1, cy - 1], [cx + 1, cy - 1], [cx - 1, cy + 1]
-                ];
-
                 for (let i = 0; i < 8; i++) {
-                    const nx = nbs[i][0];
-                    const ny = nbs[i][1];
+                    const nx = cx + DX8[i];
+                    const ny = cy + DY8[i];
                     if (nx >= 0 && nx < winW && ny >= 0 && ny < winH) {
                         const nd = dt[ny * winW + nx];
                         if (nd > bestNDt) {
@@ -645,7 +631,12 @@ export function detectSpeechBubbleAtPointFromLuminanceRoi(
                     cy = bestNy;
                     curD = bestNDt;
                 } else {
-                    const isOtherBubble = isSeparatedBySaddle(cx, cy);
+                    const peakIdx = cy * winW + cx;
+                    let isOtherBubble = saddleCache.get(peakIdx);
+                    if (isOtherBubble === undefined) {
+                        isOtherBubble = isSeparatedBySaddle(cx, cy);
+                        saddleCache.set(peakIdx, isOtherBubble);
+                    }
                     assignedLabel = isOtherBubble ? 2 : 1;
                     break;
                 }

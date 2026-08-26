@@ -97,6 +97,38 @@ export interface RichTextSegment {
 export function parseRichTextLines(text: string, baseStyle: any = {}): RichTextSegment[][] {
     if (!text || typeof text !== 'string') return [[]];
 
+    // Fast-path: If text has no markdown or BBCode tag triggers, bypass 5 multi-line regexes
+    if (!text.includes('*') && !text.includes('_') && !text.includes('~') && !text.includes('[')) {
+        const subLines = text.split('\n');
+        const bold = !!baseStyle.bold;
+        const italic = !!baseStyle.italic;
+        const underline = !!baseStyle.underline;
+        const strikethrough = !!baseStyle.strikethrough;
+        const color = baseStyle.color || null;
+        const sizeRatio = typeof baseStyle.sizeRatio === 'number' ? baseStyle.sizeRatio : 1.0;
+        const font = baseStyle.font || null;
+
+        const lines: RichTextSegment[][] = [];
+        for (let s = 0; s < subLines.length; s++) {
+            const subText = subLines[s];
+            if (subText) {
+                lines.push([{
+                    text: subText,
+                    bold,
+                    italic,
+                    underline,
+                    strikethrough,
+                    color,
+                    sizeRatio,
+                    font
+                }]);
+            } else {
+                lines.push([]);
+            }
+        }
+        return lines.length > 0 ? lines : [[]];
+    }
+
     let normalized = text;
     // Normalize markdown into BBCode
     normalized = normalized.replace(/\*\*(.*?)\*\*/gs, '[b]$1[/b]');

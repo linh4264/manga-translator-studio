@@ -583,20 +583,20 @@ export function detectSpeechBubbleAtPoint(imageData: ImageData, clickPixelX: num
     const maxAllowedPixels = Math.floor(imgW * imgH * 0.40);
     let initialCount = 0;
 
+    const DX8 = [1, -1, 0, 0, 1, -1, 1, -1];
+    const DY8 = [0, 0, 1, -1, 1, -1, -1, 1];
+    const DX4 = [1, -1, 0, 0];
+    const DY4 = [0, 0, 1, -1];
+
     while (head < tail && initialCount < maxAllowedPixels) {
         const cx = queueX[head];
         const cy = queueY[head];
         head++;
         initialCount++;
 
-        const neighbors = [
-            [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1],
-            [cx + 1, cy + 1], [cx - 1, cy - 1], [cx + 1, cy - 1], [cx - 1, cy + 1]
-        ];
-
         for (let i = 0; i < 8; i++) {
-            const nx = neighbors[i][0];
-            const ny = neighbors[i][1];
+            const nx = cx + DX8[i];
+            const ny = cy + DY8[i];
 
             if (nx >= winMinX && nx <= winMaxX && ny >= winMinY && ny <= winMaxY) {
                 const lx = nx - winMinX;
@@ -644,13 +644,9 @@ export function detectSpeechBubbleAtPoint(imageData: ImageData, clickPixelX: num
         const cy = queueY[outHead];
         outHead++;
 
-        const neighbors = [
-            [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]
-        ];
-
         for (let i = 0; i < 4; i++) {
-            const nx = neighbors[i][0];
-            const ny = neighbors[i][1];
+            const nx = cx + DX4[i];
+            const ny = cy + DY4[i];
 
             if (nx >= winMinX && nx <= winMaxX && ny >= winMinY && ny <= winMaxY) {
                 const lx = nx - winMinX;
@@ -722,14 +718,9 @@ export function detectSpeechBubbleAtPoint(imageData: ImageData, clickPixelX: num
             let bestNy = cy;
             let bestNDt = cDt;
 
-            const nbs = [
-                [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1],
-                [cx + 1, cy + 1], [cx - 1, cy - 1], [cx + 1, cy - 1], [cx - 1, cy + 1]
-            ];
-
             for (let i = 0; i < 8; i++) {
-                const nx = nbs[i][0];
-                const ny = nbs[i][1];
+                const nx = cx + DX8[i];
+                const ny = cy + DY8[i];
                 if (nx >= 0 && nx < winW && ny >= 0 && ny < winH) {
                     const nd = dt[ny * winW + nx];
                     if (nd > bestNDt) {
@@ -757,6 +748,7 @@ export function detectSpeechBubbleAtPoint(imageData: ImageData, clickPixelX: num
 
     const labels = new Uint8Array(winW * winH);
     const path = new Int32Array(1500);
+    const saddleCache = new Map<number, boolean>();
 
     const isSeparatedBySaddle = (destX: number, destY: number) => {
         const dx = destX - primaryPeakX;
@@ -805,14 +797,9 @@ export function detectSpeechBubbleAtPoint(imageData: ImageData, clickPixelX: num
                 let bestNy = cy;
                 let bestNDt = curD;
 
-                const nbs = [
-                    [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1],
-                    [cx + 1, cy + 1], [cx - 1, cy - 1], [cx + 1, cy - 1], [cx - 1, cy + 1]
-                ];
-
                 for (let i = 0; i < 8; i++) {
-                    const nx = nbs[i][0];
-                    const ny = nbs[i][1];
+                    const nx = cx + DX8[i];
+                    const ny = cy + DY8[i];
                     if (nx >= 0 && nx < winW && ny >= 0 && ny < winH) {
                         const nd = dt[ny * winW + nx];
                         if (nd > bestNDt) {
@@ -828,7 +815,12 @@ export function detectSpeechBubbleAtPoint(imageData: ImageData, clickPixelX: num
                     cy = bestNy;
                     curD = bestNDt;
                 } else {
-                    const isOtherBubble = isSeparatedBySaddle(cx, cy);
+                    const peakIdx = cy * winW + cx;
+                    let isOtherBubble = saddleCache.get(peakIdx);
+                    if (isOtherBubble === undefined) {
+                        isOtherBubble = isSeparatedBySaddle(cx, cy);
+                        saddleCache.set(peakIdx, isOtherBubble);
+                    }
                     assignedLabel = isOtherBubble ? 2 : 1;
                     break;
                 }
@@ -1131,20 +1123,29 @@ function isTextDuplicateOrSimilar(t1: string, t2: string): boolean {
     const lenMax = Math.max(s1.length, s2.length);
     if (lenMax === 0) return true;
 
-    const track: number[][] = Array(s2.length + 1).fill(null).map(() => Array(s1.length + 1).fill(0));
-    for (let i = 0; i <= s1.length; i += 1) track[0][i] = i;
-    for (let j = 0; j <= s2.length; j += 1) track[j][0] = j;
-    for (let j = 1; j <= s2.length; j += 1) {
-        for (let i = 1; i <= s1.length; i += 1) {
-            const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
-            track[j][i] = Math.min(
-                track[j][i - 1] + 1,
-                track[j - 1][i] + 1,
-                track[j - 1][i - 1] + indicator
+    // Fast Levenshtein distance using 2-row rolling buffer (zero 2D array allocations)
+    const n = s1.length;
+    const m = s2.length;
+    let prevRow = new Int32Array(n + 1);
+    let currRow = new Int32Array(n + 1);
+    for (let i = 0; i <= n; i++) prevRow[i] = i;
+
+    for (let j = 1; j <= m; j++) {
+        currRow[0] = j;
+        const ch2 = s2[j - 1];
+        for (let i = 1; i <= n; i++) {
+            const indicator = s1[i - 1] === ch2 ? 0 : 1;
+            currRow[i] = Math.min(
+                currRow[i - 1] + 1,
+                prevRow[i] + 1,
+                prevRow[i - 1] + indicator
             );
         }
+        const temp = prevRow;
+        prevRow = currRow;
+        currRow = temp;
     }
-    const dist = track[s2.length][s1.length];
+    const dist = prevRow[n];
     const similarity = 1 - (dist / lenMax);
     return similarity >= 0.7;
 }
@@ -1152,41 +1153,58 @@ function isTextDuplicateOrSimilar(t1: string, t2: string): boolean {
 export function mergeOverlappingAiBlocks(blocks: any[], overlapThreshold: number = 0.70): any[] {
     if (!Array.isArray(blocks) || blocks.length <= 1) return blocks || [];
 
+    const n = blocks.length;
+    // Pre-normalize all block metadata in O(N) to avoid O(N^2) redundant normalizations in inner loop
+    const items = blocks.map((b) => {
+        const box = normalizeAiBlockBox(b.box);
+        const isPointAnchor = Array.isArray(b.box) && b.box.length === 2;
+        const cx = isPointAnchor ? (b.box[0] > 100 ? b.box[0] / 10 : b.box[0]) : (box.x + box.w / 2);
+        const cy = isPointAnchor ? (b.box[1] > 100 ? b.box[1] / 10 : b.box[1]) : (box.y + box.h / 2);
+        const type = (b.type || 'dialogue').toLowerCase();
+        const orig = (b.original || '').trim();
+        const trans = (b.translated || '').trim();
+        return {
+            raw: { ...b },
+            box,
+            isPointAnchor,
+            cx,
+            cy,
+            type,
+            orig,
+            trans
+        };
+    });
+
     const result: any[] = [];
-    const merged = new Array(blocks.length).fill(false);
+    const merged = new Uint8Array(n);
 
-    for (let i = 0; i < blocks.length; i++) {
+    for (let i = 0; i < n; i++) {
         if (merged[i]) continue;
-        let current = { ...blocks[i] };
-        let currentBox = normalizeAiBlockBox(current.box);
+        const itemI = items[i];
+        let current = itemI.raw;
+        let currentBox = itemI.box;
+        const isPointAnchor1 = itemI.isPointAnchor;
+        let c1X = itemI.cx;
+        let c1Y = itemI.cy;
+        const type1 = itemI.type;
 
-        const isPointAnchor1 = Array.isArray(current.box) && current.box.length === 2;
-        const c1X = isPointAnchor1 ? (current.box[0] > 100 ? current.box[0] / 10 : current.box[0]) : (currentBox.x + currentBox.w / 2);
-        const c1Y = isPointAnchor1 ? (current.box[1] > 100 ? current.box[1] / 10 : current.box[1]) : (currentBox.y + currentBox.h / 2);
-
-        for (let j = i + 1; j < blocks.length; j++) {
+        for (let j = i + 1; j < n; j++) {
             if (merged[j]) continue;
-            const other = blocks[j];
-            const otherBox = normalizeAiBlockBox(other.box);
-
-            const isPointAnchor2 = Array.isArray(other.box) && other.box.length === 2;
-            const c2X = isPointAnchor2 ? (other.box[0] > 100 ? other.box[0] / 10 : other.box[0]) : (otherBox.x + otherBox.w / 2);
-            const c2Y = isPointAnchor2 ? (other.box[1] > 100 ? other.box[1] / 10 : other.box[1]) : (otherBox.y + otherBox.h / 2);
+            const itemJ = items[j];
+            const other = itemJ.raw;
+            const otherBox = itemJ.box;
+            const isPointAnchor2 = itemJ.isPointAnchor;
+            const c2X = itemJ.cx;
+            const c2Y = itemJ.cy;
+            const type2 = itemJ.type;
 
             const centerDist = Math.hypot(c1X - c2X, c1Y - c2Y);
-
-            const type1 = (current.type || 'dialogue').toLowerCase();
-            const type2 = (other.type || 'dialogue').toLowerCase();
             const sameType = type1 === type2;
 
-            const orig1 = (current.original || '').trim();
-            const orig2 = (other.original || '').trim();
-            const trans1 = (current.translated || '').trim();
-            const trans2 = (other.translated || '').trim();
-
-            const hasTextDuplicateEvidence = isTextDuplicateOrSimilar(orig1, orig2) ||
-                isTextDuplicateOrSimilar(trans1, trans2) ||
-                (!orig1 && !orig2 && !trans1 && !trans2);
+            const orig1 = current.original ? current.original.trim() : itemI.orig;
+            const orig2 = other.original ? other.original.trim() : itemJ.orig;
+            const trans1 = current.translated ? current.translated.trim() : itemI.trans;
+            const trans2 = other.translated ? other.translated.trim() : itemJ.trans;
 
             let isDuplicate = false;
 
@@ -1195,14 +1213,19 @@ export function mergeOverlappingAiBlocks(blocks: any[], overlapThreshold: number
                 // and have duplicate evidence (identical/similar text or both empty).
                 // Distinct texts at neighboring points must NOT be merged.
                 const isNearPoint = centerDist <= 1.8;
-                isDuplicate = isNearPoint && sameType && hasTextDuplicateEvidence;
-            } else {
+                if (isNearPoint && sameType) {
+                    const hasTextDuplicateEvidence = (!orig1 && !orig2 && !trans1 && !trans2) ||
+                        isTextDuplicateOrSimilar(orig1, orig2) ||
+                        isTextDuplicateOrSimilar(trans1, trans2);
+                    isDuplicate = hasTextDuplicateEvidence;
+                }
+            } else if (centerDist <= 6.0 && sameType) {
                 const overlapRatio = calculateBoxIntersectionRatio(currentBox, otherBox);
-                isDuplicate = (overlapRatio >= overlapThreshold && centerDist <= 6.0);
+                isDuplicate = (overlapRatio >= overlapThreshold);
             }
 
             if (isDuplicate) {
-                merged[j] = true;
+                merged[j] = 1;
 
                 const o1 = (current.original || '').trim();
                 const o2 = (other.original || '').trim();
@@ -1229,6 +1252,8 @@ export function mergeOverlappingAiBlocks(blocks: any[], overlapThreshold: number
                         h: Math.round((maxY - minY) * 100) / 100
                     };
                     current.box = currentBox;
+                    c1X = currentBox.x + currentBox.w / 2;
+                    c1Y = currentBox.y + currentBox.h / 2;
                 }
                 if (other.vertical) current.vertical = true;
             }
