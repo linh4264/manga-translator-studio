@@ -1692,25 +1692,26 @@ export function renderBlockTextToCanvas(
                     curX += cw + effLetterSpacing;
                 }
             } else {
-                const measuredLineWidth = lineLayout.width;
-                let curTokenX = startX;
-                if (!block.style?.align || block.style.align === 'center') {
-                    curTokenX = startX - (measuredLineWidth / 2);
-                } else if (block.style.align === 'right') {
-                    curTokenX = startX - measuredLineWidth;
-                }
+                const align = block.style?.align || 'center';
+                const isSingleToken = lineTokens.length === 1;
 
-                ctx.textAlign = 'left';
-                ctx.textBaseline = 'alphabetic';
-
-                lineTokens.forEach(tok => {
+                if (isSingleToken) {
+                    const tok = lineTokens[0];
                     const transformedTokText = transformCase(tok.text, block.style?.textTransform || 'none');
                     const tokFontSpec = layout.getFontFn(tok);
                     ctx.font = tokFontSpec;
-                    const tokenW = ctx.measureText(transformedTokText).width;
+                    const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
+                    if ('letterSpacing' in ctx) {
+                        (ctx as any).letterSpacing = effLetterSpacing !== 0 ? `${effLetterSpacing}px` : '0px';
+                    }
                     const tokSize = fontSizePx * (tok.sizeRatio || 1.0);
                     const baselineOffset = getFontBaselineOffset(ctx, tokFontSpec, tokSize);
                     const tokBaselineY = lineCenterY + baselineOffset;
+
+                    ctx.textAlign = align === 'left' ? 'left' : align === 'right' ? 'right' : 'center';
+                    ctx.textBaseline = 'alphabetic';
+
+                    const targetX = align === 'left' ? (bx + layout.padXPx) : align === 'right' ? (bx + bw - layout.padXPx) : startX;
 
                     if (strokeWidth2 > 0) {
                         ctx.save();
@@ -1724,7 +1725,7 @@ export function renderBlockTextToCanvas(
                         ctx.strokeStyle = strokeColor2;
                         ctx.lineJoin = 'round';
                         ctx.miterLimit = 2;
-                        ctx.strokeText(transformedTokText, curTokenX, tokBaselineY);
+                        ctx.strokeText(transformedTokText, targetX, tokBaselineY);
                         ctx.restore();
                     }
 
@@ -1740,7 +1741,7 @@ export function renderBlockTextToCanvas(
                         ctx.strokeStyle = strokeColor;
                         ctx.lineJoin = 'round';
                         ctx.miterLimit = 2;
-                        ctx.strokeText(transformedTokText, curTokenX, tokBaselineY);
+                        ctx.strokeText(transformedTokText, targetX, tokBaselineY);
                         ctx.restore();
                     }
 
@@ -1760,35 +1761,143 @@ export function renderBlockTextToCanvas(
                     const fillToApply: any = tok.color || (block.style?.gradientEnabled && blockGradient ? blockGradient : (block.style?.textColor || '#000000'));
 
                     ctx.fillStyle = fillToApply;
-                    ctx.fillText(transformedTokText, curTokenX, tokBaselineY);
+                    ctx.fillText(transformedTokText, targetX, tokBaselineY);
                     ctx.restore();
 
-                    if (tok.underline || block.style?.underline) {
-                        ctx.save();
-                        ctx.strokeStyle = tok.color || block.style?.textColor || '#000000';
-                        ctx.lineWidth = Math.max(1, tokSize * 0.08);
-                        ctx.beginPath();
-                        const underlineY = tokBaselineY + (tokSize * 0.14);
-                        ctx.moveTo(curTokenX, underlineY);
-                        ctx.lineTo(curTokenX + tokenW, underlineY);
-                        ctx.stroke();
-                        ctx.restore();
-                    }
+                    if (tok.underline || block.style?.underline || tok.strikethrough) {
+                        const tokenW = ctx.measureText(transformedTokText).width;
+                        const lineLeftX = align === 'left' ? targetX : align === 'right' ? (targetX - tokenW) : (targetX - tokenW / 2);
 
-                    if (tok.strikethrough) {
-                        ctx.save();
-                        ctx.strokeStyle = tok.color || block.style?.textColor || '#000000';
-                        ctx.lineWidth = Math.max(1, tokSize * 0.08);
-                        ctx.beginPath();
-                        const strikethroughY = tokBaselineY - (tokSize * 0.28);
-                        ctx.moveTo(curTokenX, strikethroughY);
-                        ctx.lineTo(curTokenX + tokenW, strikethroughY);
-                        ctx.stroke();
-                        ctx.restore();
-                    }
+                        if (tok.underline || block.style?.underline) {
+                            ctx.save();
+                            ctx.strokeStyle = tok.color || block.style?.textColor || '#000000';
+                            ctx.lineWidth = Math.max(1, tokSize * 0.08);
+                            ctx.beginPath();
+                            const underlineY = tokBaselineY + (tokSize * 0.14);
+                            ctx.moveTo(lineLeftX, underlineY);
+                            ctx.lineTo(lineLeftX + tokenW, underlineY);
+                            ctx.stroke();
+                            ctx.restore();
+                        }
 
-                    curTokenX += tokenW;
-                });
+                        if (tok.strikethrough) {
+                            ctx.save();
+                            ctx.strokeStyle = tok.color || block.style?.textColor || '#000000';
+                            ctx.lineWidth = Math.max(1, tokSize * 0.08);
+                            ctx.beginPath();
+                            const strikethroughY = tokBaselineY - (tokSize * 0.28);
+                            ctx.moveTo(lineLeftX, strikethroughY);
+                            ctx.lineTo(lineLeftX + tokenW, strikethroughY);
+                            ctx.stroke();
+                            ctx.restore();
+                        }
+                    }
+                } else {
+                    const tokenInfos = lineTokens.map(tok => {
+                        const transformedTokText = transformCase(tok.text, block.style?.textTransform || 'none');
+                        const tokFontSpec = layout.getFontFn(tok);
+                        ctx.font = tokFontSpec;
+                        const effLetterSpacing = letterSpacingPx * (tok.sizeRatio || 1.0);
+                        if ('letterSpacing' in ctx) {
+                            (ctx as any).letterSpacing = effLetterSpacing !== 0 ? `${effLetterSpacing}px` : '0px';
+                        }
+                        const tokenW = ctx.measureText(transformedTokText).width;
+                        const tokSize = fontSizePx * (tok.sizeRatio || 1.0);
+                        const baselineOffset = getFontBaselineOffset(ctx, tokFontSpec, tokSize);
+                        const tokBaselineY = lineCenterY + baselineOffset;
+                        return { tok, transformedTokText, tokFontSpec, effLetterSpacing, tokenW, tokSize, tokBaselineY };
+                    });
+
+                    const totalRenderW = tokenInfos.reduce((sum, item) => sum + item.tokenW, 0);
+                    let curTokenX = align === 'left' ? (bx + layout.padXPx) : align === 'right' ? (bx + bw - layout.padXPx - totalRenderW) : (startX - totalRenderW / 2);
+
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'alphabetic';
+
+                    tokenInfos.forEach(({ tok, transformedTokText, tokFontSpec, effLetterSpacing, tokenW, tokSize, tokBaselineY }) => {
+                        ctx.font = tokFontSpec;
+                        if ('letterSpacing' in ctx) {
+                            (ctx as any).letterSpacing = effLetterSpacing !== 0 ? `${effLetterSpacing}px` : '0px';
+                        }
+
+                        if (strokeWidth2 > 0) {
+                            ctx.save();
+                            if (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0) {
+                                ctx.shadowColor = shadowColor;
+                                ctx.shadowBlur = shadowBlurPx;
+                                ctx.shadowOffsetX = shadowOffsetX;
+                                ctx.shadowOffsetY = shadowOffsetY;
+                            }
+                            ctx.lineWidth = strokeWidthPx + (strokeWidth2Px * 2);
+                            ctx.strokeStyle = strokeColor2;
+                            ctx.lineJoin = 'round';
+                            ctx.miterLimit = 2;
+                            ctx.strokeText(transformedTokText, curTokenX, tokBaselineY);
+                            ctx.restore();
+                        }
+
+                        if (strokeWidth > 0) {
+                            ctx.save();
+                            if (strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
+                                ctx.shadowColor = shadowColor;
+                                ctx.shadowBlur = shadowBlurPx;
+                                ctx.shadowOffsetX = shadowOffsetX;
+                                ctx.shadowOffsetY = shadowOffsetY;
+                            }
+                            ctx.lineWidth = strokeWidthPx;
+                            ctx.strokeStyle = strokeColor;
+                            ctx.lineJoin = 'round';
+                            ctx.miterLimit = 2;
+                            ctx.strokeText(transformedTokText, curTokenX, tokBaselineY);
+                            ctx.restore();
+                        }
+
+                        ctx.save();
+                        if (block.style?.blendMode && block.style.blendMode !== 'normal' && (!block.style.bgOpacity || block.style.bgOpacity === 0)) {
+                            ctx.globalCompositeOperation = (block.style.blendMode as GlobalCompositeOperation) || 'source-over';
+                        } else {
+                            ctx.globalCompositeOperation = 'source-over';
+                        }
+                        if (strokeWidth === 0 && strokeWidth2 === 0 && (shadowBlur > 0 || shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
+                            ctx.shadowColor = shadowColor;
+                            ctx.shadowBlur = shadowBlurPx;
+                            ctx.shadowOffsetX = shadowOffsetX;
+                            ctx.shadowOffsetY = shadowOffsetY;
+                        }
+
+                        const fillToApply: any = tok.color || (block.style?.gradientEnabled && blockGradient ? blockGradient : (block.style?.textColor || '#000000'));
+
+                        ctx.fillStyle = fillToApply;
+                        ctx.fillText(transformedTokText, curTokenX, tokBaselineY);
+                        ctx.restore();
+
+                        if (tok.underline || block.style?.underline) {
+                            ctx.save();
+                            ctx.strokeStyle = tok.color || block.style?.textColor || '#000000';
+                            ctx.lineWidth = Math.max(1, tokSize * 0.08);
+                            ctx.beginPath();
+                            const underlineY = tokBaselineY + (tokSize * 0.14);
+                            ctx.moveTo(curTokenX, underlineY);
+                            ctx.lineTo(curTokenX + tokenW, underlineY);
+                            ctx.stroke();
+                            ctx.restore();
+                        }
+
+                        if (tok.strikethrough) {
+                            ctx.save();
+                            ctx.strokeStyle = tok.color || block.style?.textColor || '#000000';
+                            ctx.lineWidth = Math.max(1, tokSize * 0.08);
+                            ctx.beginPath();
+                            const strikethroughY = tokBaselineY - (tokSize * 0.28);
+                            ctx.moveTo(curTokenX, strikethroughY);
+                            ctx.lineTo(curTokenX + tokenW, strikethroughY);
+                            ctx.stroke();
+                            ctx.restore();
+                        }
+
+                        curTokenX += tokenW;
+                    });
+                }
             }
             ctx.restore();
         }
