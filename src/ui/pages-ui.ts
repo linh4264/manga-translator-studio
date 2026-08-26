@@ -247,6 +247,8 @@ export function updatePageListUI(): void {
 
     if (!elements.pagesList) return;
     elements.pagesList.innerHTML = '';
+    const frag = document.createDocumentFragment();
+
     globalState.pages.forEach((page, index) => {
         if (filterQuery && !page.name.toLowerCase().includes(filterQuery)) return;
 
@@ -281,7 +283,7 @@ export function updatePageListUI(): void {
         pageItem.innerHTML = `
             <div class="flex items-center space-x-2.5 min-w-0 flex-1">
                 <div class="relative w-10 h-12 bg-slate-900 rounded overflow-hidden shrink-0 thumb-frame ${isActive ? 'border-2 border-pink-400 ring-2 ring-pink-500 shadow-[2px_2px_0px_#ff2a85]' : 'border border-slate-700'}">
-                    <img id="thumb-${page.id}" src="${page.thumbnailSrc || ''}" class="w-full h-full object-cover select-none">
+                    <img id="thumb-${page.id}" loading="lazy" src="${page.thumbnailSrc || ''}" class="w-full h-full object-cover select-none">
                     <div class="absolute bottom-0 inset-x-0 ${isActive ? 'bg-pink-500 text-white' : 'bg-slate-950/80 text-slate-400'} text-[8px] text-center font-mono py-0.5 font-bold">${index + 1}</div>
                 </div>
                 <div class="min-w-0 flex-1">
@@ -301,8 +303,10 @@ export function updatePageListUI(): void {
                 </button>
             </div>
         `;
-        if (elements.pagesList) elements.pagesList.appendChild(pageItem);
+        frag.appendChild(pageItem);
     });
+
+    elements.pagesList.appendChild(frag);
 
     import('./layout-ui').then(m => m.updateStepperUI());
 }

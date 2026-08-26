@@ -1048,6 +1048,8 @@ export async function createThumbnail(file: Blob, maxDim: number = 120): Promise
                 ctx.drawImage(img, 0, 0, width, height);
             }
             canvas.toBlob((blob) => {
+                canvas.width = 0;
+                canvas.height = 0;
                 resolve(blob);
             }, 'image/jpeg', 0.7);
         };
