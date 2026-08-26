@@ -777,42 +777,6 @@ export function getCategoryLabel(cat: string): string {
     }
 }
 
-// Sub-tabs switcher
-export function switchFontMatchSubTab(subTabId: string): void {
-    const tabs = ['set', 'analyze', 'classify', 'custom', 'guide'];
-    tabs.forEach(t => {
-        const btn = document.getElementById(`btn-subtab-fontmatch-${t}`);
-        const panel = document.getElementById(`fontmatch-panel-${t}`);
-        if (btn) {
-            if (t === subTabId) {
-                btn.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white shadow flex items-center gap-1.5";
-            } else {
-                btn.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5";
-            }
-        }
-        if (panel) {
-            if (t === subTabId) {
-                panel.classList.remove('hidden');
-            } else {
-                panel.classList.add('hidden');
-            }
-        }
-    });
-
-    if (subTabId === 'set') {
-        generateAndDisplayFontSet();
-    } else if (subTabId === 'custom') {
-        renderCustomFontsUI();
-    } else if (subTabId === 'classify') {
-        try {
-            import('./font-classifier').then(m => {
-                m.populateFontSelectDropdown();
-                m.autoClassifyAndRenderGallery();
-            }).catch(() => {});
-        } catch (e) {}
-    }
-}
-
 // =========================================================================
 // --- GENRE -> STYLE PROFILE -> FONT SET RECOMMENDER ENGINE ---
 // =========================================================================
@@ -834,24 +798,59 @@ export function calculateRoleSimilarity(
     const th = targetProfile.handwritten;
     const ti = targetProfile.intensity;
 
+    const dw = tw - fw;
+    const dr = tr - fr;
+    const df = tf - ff;
+    const dh = th - fh;
+    const di = ti - fi;
+
     const dist = Math.sqrt(
-        Math.pow(tw - fw, 2) * 0.30 +
-        Math.pow(tr - fr, 2) * 0.25 +
-        Math.pow(tf - ff, 2) * 0.20 +
-        Math.pow(th - fh, 2) * 0.15 +
-        Math.pow(ti - fi, 2) * 0.10
+        dw * dw * 0.30 +
+        dr * dr * 0.25 +
+        df * df * 0.20 +
+        dh * dh * 0.15 +
+        di * di * 0.10
     );
 
     const morphSim = Math.max(0, 1.0 - dist);
 
     let catBonus = 0.35;
-    if (preferredCategories && preferredCategories.includes(font.category)) {
+    if (preferredCategories) {
         const idx = preferredCategories.indexOf(font.category);
-        catBonus = idx === 0 ? 1.0 : idx === 1 ? 0.75 : 0.55;
+        if (idx !== -1) {
+            catBonus = idx === 0 ? 1.0 : idx === 1 ? 0.75 : 0.55;
+        }
     }
 
     const finalScore = morphSim * 0.85 + catBonus * 0.15;
     return Math.max(0.1, Math.min(1.0, finalScore));
+}
+
+export function findBestFontForRole(
+    fontList: CustomFontItem[],
+    roleConfig: RoleConfig,
+    preferredFontName?: string
+): { font: CustomFontItem; score: number } {
+    if (!fontList || fontList.length === 0) {
+        return { font: null as any, score: 0 };
+    }
+
+    let bestFont = fontList[0];
+    let bestScore = -Infinity;
+
+    for (let i = 0; i < fontList.length; i++) {
+        const font = fontList[i];
+        let score = calculateRoleSimilarity(font, roleConfig.targetProfile, roleConfig.preferredCategories);
+        if (preferredFontName && font.name === preferredFontName) {
+            score = Math.min(0.99, score + 0.04);
+        }
+        if (score > bestScore) {
+            bestScore = score;
+            bestFont = font;
+        }
+    }
+
+    return { font: bestFont, score: Math.max(0, bestScore) };
 }
 
 export function rankFontsForRole(
@@ -908,25 +907,23 @@ export function generateFontSetFromPreset(fontList: CustomFontItem[], presetId: 
         };
     }
 
-    // 1. Assign primary dialogue font
-    const dialogueRanked = rankFontsForRole(fontList, preset.roles.dialogue);
-    const dialogueBest = dialogueRanked[0];
-    const dialogueFontName = dialogueBest?.font.name || fontList[0].name;
+    // 1. Assign primary dialogue font in single pass
+    const dialogueBest = findBestFontForRole(fontList, preset.roles.dialogue);
+    const dialogueFontName = dialogueBest?.font?.name || fontList[0].name;
 
-    // 2. Assign remaining roles
+    // 2. Assign remaining roles in single pass
     roles.forEach(role => {
         const roleCfg = preset.roles[role];
         const isReadingGroup = ['dialogue', 'innerThought', 'narration', 'smallText'].includes(role);
         const preferredName = isReadingGroup ? dialogueFontName : undefined;
-        const ranked = rankFontsForRole(fontList, roleCfg, preferredName);
-        const best = ranked[0] || { font: fontList[0], score: 0.5 };
+        const best = findBestFontForRole(fontList, roleCfg, preferredName);
 
         const matchPercent = Math.min(99, Math.max(10, Math.round(best.score * 100)));
         assignments[role] = {
             role,
             roleLabel: roleCfg.label,
-            fontName: best.font.name,
-            fontFamily: best.font.family,
+            fontName: best.font ? best.font.name : fontList[0].name,
+            fontFamily: best.font ? best.font.family : fontList[0].family,
             fontItem: best.font,
             score: matchPercent,
             isStrongMatch: matchPercent >= 60,
@@ -960,13 +957,12 @@ export function generateFontSetFromCustomProfile(
     let minPresetDist = Infinity;
     (Object.keys(GENRE_PRESETS) as GenrePresetId[]).forEach(id => {
         const p = GENRE_PRESETS[id].baseProfile;
-        const dist = Math.sqrt(
-            Math.pow(customProfile.weight - p.weight, 2) +
-            Math.pow(customProfile.roundness - p.roundness, 2) +
-            Math.pow(customProfile.formality - p.formality, 2) +
-            Math.pow(customProfile.handwritten - p.handwritten, 2) +
-            Math.pow(customProfile.intensity - p.intensity, 2)
-        );
+        const dw = customProfile.weight - p.weight;
+        const dr = customProfile.roundness - p.roundness;
+        const df = customProfile.formality - p.formality;
+        const dh = customProfile.handwritten - p.handwritten;
+        const di = customProfile.intensity - p.intensity;
+        const dist = Math.sqrt(dw * dw + dr * dr + df * df + dh * dh + di * di);
         if (dist < minPresetDist) {
             minPresetDist = dist;
             closestPresetId = id;
@@ -1021,15 +1017,14 @@ export function generateFontSetFromCustomProfile(
             targetProfile: adaptedProfile
         };
 
-        const ranked = rankFontsForRole(fontList, adaptedRoleCfg);
-        const best = ranked[0] || { font: fontList[0], score: 0.5 };
+        const best = findBestFontForRole(fontList, adaptedRoleCfg);
         const matchPercent = Math.min(99, Math.max(10, Math.round(best.score * 100)));
 
         assignments[role] = {
             role,
             roleLabel: roleCfg.label,
-            fontName: best.font.name,
-            fontFamily: best.font.family,
+            fontName: best.font ? best.font.name : fontList[0].name,
+            fontFamily: best.font ? best.font.family : fontList[0].family,
             fontItem: best.font,
             score: matchPercent,
             isStrongMatch: matchPercent >= 60,
@@ -1290,1187 +1285,6 @@ export function analyzeGenreWithCanvasHeuristics(imgs: HTMLImageElement[]): AiGe
     };
 }
 
-// UI State & Display Handlers for Font Set
-export function generateAndDisplayFontSet(presetId?: GenrePresetId): void {
-    const activePresetId = presetId || ((document.getElementById('fontset-genre-select') as HTMLSelectElement)?.value as GenrePresetId) || 'romance';
-    currentGeneratedFontSet = generateFontSetFromPreset(getEffectiveFontLibrary(), activePresetId);
-    renderFontSetUI(currentGeneratedFontSet);
-    updateAllFontSetCanvases();
-}
-
-export function onFontSetRoleChange(role: FontRole, selectedFontName: string): void {
-    if (!currentGeneratedFontSet) return;
-    const fontLib = getEffectiveFontLibrary();
-    const fontObj = fontLib.find(f => f.name === selectedFontName) || null;
-    const assignment = currentGeneratedFontSet.roles[role];
-    if (assignment) {
-        assignment.fontName = selectedFontName;
-        assignment.fontFamily = fontObj ? fontObj.family : `'${selectedFontName}', sans-serif`;
-        assignment.fontItem = fontObj;
-        if (fontObj) {
-            const preset = GENRE_PRESETS[currentGeneratedFontSet.presetId as GenrePresetId] || GENRE_PRESETS.romance;
-            const roleCfg = preset.roles[role];
-            const sim = calculateRoleSimilarity(fontObj, roleCfg.targetProfile, roleCfg.preferredCategories);
-            assignment.score = Math.min(99, Math.max(10, Math.round(sim * 100)));
-            assignment.isStrongMatch = assignment.score >= 60;
-        }
-
-        // Recalculate unique core fonts count
-        const fontNames = new Set(Object.values(currentGeneratedFontSet.roles).map(r => r.fontName).filter(Boolean));
-        currentGeneratedFontSet.coreFontCount = fontNames.size;
-
-        renderFontSetUI(currentGeneratedFontSet);
-        updateAllFontSetCanvases();
-    }
-}
-
-export function onFontSetSampleTextChange(role: FontRole, newText: string): void {
-    if (!currentGeneratedFontSet) return;
-    const assignment = currentGeneratedFontSet.roles[role];
-    if (assignment) {
-        assignment.sampleText = newText;
-        renderRolePreviewCanvas(role, currentGeneratedFontSet);
-    }
-}
-
-export function renderFontSetUI(fontSet: GeneratedFontSet): void {
-    const container = document.getElementById('fontset-roles-grid');
-    if (!container) return;
-
-    // Header updates
-    const titleEl = document.getElementById('fontset-title');
-    const toneEl = document.getElementById('fontset-tone-badge');
-    const coreCountEl = document.getElementById('fontset-core-count');
-    const visualEl = document.getElementById('fontset-visual-desc');
-
-    if (titleEl) titleEl.innerText = fontSet.presetName;
-    if (toneEl) toneEl.innerText = fontSet.tone;
-    if (coreCountEl) coreCountEl.innerText = `Sử dụng ${fontSet.coreFontCount} phông chữ chủ đạo`;
-    if (visualEl) visualEl.innerText = fontSet.visualStyle;
-
-    const rolesOrder: FontRole[] = ['dialogue', 'innerThought', 'narration', 'shout', 'sfx', 'smallText'];
-    const fontLib = getEffectiveFontLibrary();
-
-    container.innerHTML = '';
-    rolesOrder.forEach(role => {
-        const item = fontSet.roles[role];
-        if (!item) return;
-
-        const isStrong = item.isStrongMatch;
-        const score = item.score;
-        let scoreBadge = isStrong
-            ? `<span class="px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[10px] font-mono font-bold">${score}% Tương đồng</span>`
-            : `<span class="px-2 py-0.5 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold">⚠️ ${score}% (Chưa khớp tốt)</span>`;
-
-        // Role Icon & Title
-        let roleIcon = '💬';
-        if (role === 'innerThought') roleIcon = '💭';
-        else if (role === 'narration') roleIcon = '📜';
-        else if (role === 'shout') roleIcon = '🗯️';
-        else if (role === 'sfx') roleIcon = '💥';
-        else if (role === 'smallText') roleIcon = '📝';
-
-        // Options for Font Select dropdown
-        let fontOptions = '';
-        if (fontLib.length === 0) {
-            fontOptions = `<option value="">Kho font trống - Vui lòng nạp font</option>`;
-        } else {
-            fontLib.forEach(f => {
-                const selected = f.name === item.fontName ? 'selected' : '';
-                const typeTag = f.type === 'custom' ? '✨ ' : '🔤 ';
-                fontOptions += `<option value="${f.name}" ${selected}>${typeTag}${f.name} (${getCategoryLabel(f.category)})</option>`;
-            });
-        }
-
-        const card = document.createElement('div');
-        card.className = "bg-slate-950 border border-slate-855 rounded-2xl p-4 flex flex-col justify-between gap-3 shadow-md hover:border-slate-700 transition-all";
-        card.innerHTML = `
-            <div class="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-850">
-                <div class="flex items-center gap-2">
-                    <span class="text-base">${roleIcon}</span>
-                    <div>
-                        <h4 class="text-xs font-bold text-slate-100">${item.roleLabel}</h4>
-                        <p class="text-[10px] text-slate-400 max-w-xs mt-0.5 truncate" title="${item.desc}">${item.desc}</p>
-                    </div>
-                </div>
-                <div>
-                    ${scoreBadge}
-                </div>
-            </div>
-
-            <!-- Role Live Canvas Render -->
-            <div class="relative group flex justify-center p-2 rounded-xl bg-slate-900 border border-slate-800 overflow-hidden shadow-inner">
-                <canvas id="fontset-canvas-${role}" class="w-full max-w-full h-auto rounded-lg shadow cursor-pointer transition-transform group-hover:scale-[1.01]"></canvas>
-                <div class="absolute bottom-2.5 right-2.5 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button type="button" data-action="download-role-sample" class="px-2 py-1 rounded-lg bg-slate-900/90 hover:bg-indigo-600 border border-slate-700 text-white text-[10px] font-bold shadow-lg transition-colors flex items-center gap-1">
-                        <i class="fa-solid fa-download"></i> Tải ảnh
-                    </button>
-                </div>
-            </div>
-
-            <!-- Assigned Font Selector & Editable Sample Text -->
-            <div class="flex flex-col gap-2 pt-1 text-xs">
-                <div class="flex items-center justify-between gap-2">
-                    <label class="text-[10px] font-bold text-slate-400 shrink-0">Phông chữ gán:</label>
-                    <select data-role="${role}" class="fontset-role-select flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-indigo-300 font-bold focus:outline-none focus:border-indigo-500 truncate">
-                        ${fontOptions}
-                    </select>
-                </div>
-
-                <div class="flex items-center justify-between gap-2">
-                    <label class="text-[10px] font-bold text-slate-400 shrink-0">Mẫu câu thử:</label>
-                    <input type="text" data-sample-role="${role}" value="${item.sampleText}" class="fontset-sample-input flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
-                </div>
-            </div>
-        `;
-
-        const selectEl = card.querySelector('.fontset-role-select') as HTMLSelectElement | null;
-        if (selectEl) {
-            selectEl.addEventListener('change', (e: Event) => {
-                const target = e.target as HTMLSelectElement;
-                onFontSetRoleChange(role, target.value);
-            });
-        }
-
-        const inputEl = card.querySelector('.fontset-sample-input') as HTMLInputElement | null;
-        if (inputEl) {
-            inputEl.addEventListener('input', (e: Event) => {
-                const target = e.target as HTMLInputElement;
-                onFontSetSampleTextChange(role, target.value);
-            });
-        }
-
-        const btnDownload = card.querySelector('[data-action="download-role-sample"]');
-        if (btnDownload) {
-            btnDownload.addEventListener('click', () => downloadFontSetSampleImage(role));
-        }
-
-        const canvasEl = card.querySelector(`#fontset-canvas-${role}`) as HTMLCanvasElement | null;
-        if (canvasEl) {
-            canvasEl.addEventListener('click', () => openPreviewModal(canvasEl.toDataURL()));
-        }
-
-        container.appendChild(card);
-    });
-}
-
-export async function renderRolePreviewCanvas(role: FontRole, fontSet: GeneratedFontSet): Promise<void> {
-    const canvas = document.getElementById(`fontset-canvas-${role}`) as HTMLCanvasElement | null;
-    if (!canvas || !fontSet) return;
-    const assignment = fontSet.roles[role];
-    if (!assignment) return;
-
-    const fontName = assignment.fontName;
-    const cleanFontName = fontName.replace(/['"]/g, '');
-    const text = assignment.sampleText || 'Manga Translator Studio';
-
-    const dpr = 2;
-    const displayW = 460;
-    const displayH = 130;
-
-    canvas.width = displayW * dpr;
-    canvas.height = displayH * dpr;
-    canvas.style.width = displayW + 'px';
-    canvas.style.height = displayH + 'px';
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.scale(dpr, dpr);
-
-    // Font styles based on role
-    let isBold = true;
-    let isItalic = false;
-    let fontSize = 22;
-    let strokeWidth = 2.5;
-    let textColor = '#ffffff';
-    let strokeColor = '#000000';
-
-    if (role === 'innerThought') {
-        isItalic = true;
-        isBold = false;
-        fontSize = 20;
-        strokeWidth = 1.5;
-        textColor = '#e0e7ff';
-    } else if (role === 'narration') {
-        isBold = false;
-        fontSize = 19;
-        strokeWidth = 1.5;
-        textColor = '#f8fafc';
-    } else if (role === 'shout') {
-        isBold = true;
-        fontSize = 26;
-        strokeWidth = 4.0;
-        textColor = '#ffffff';
-        strokeColor = '#000000';
-    } else if (role === 'sfx') {
-        isBold = true;
-        isItalic = true;
-        fontSize = 30;
-        strokeWidth = 4.5;
-        textColor = '#fef08a';
-        strokeColor = '#000000';
-    } else if (role === 'smallText') {
-        isBold = false;
-        fontSize = 16;
-        strokeWidth = 1.0;
-        textColor = '#cbd5e1';
-    }
-
-    const fallbackFamily = (assignment.fontItem?.family && assignment.fontItem.family.includes('cursive')) ? 'cursive' : 'sans-serif';
-    const fontSpec = `${isBold ? 'bold ' : ''}${isItalic ? 'italic ' : ''}${fontSize}px "${cleanFontName}"`;
-    const fontStyleStr = `${isBold ? 'bold ' : ''}${isItalic ? 'italic ' : ''}${fontSize}px "${cleanFontName}", ${fallbackFamily}`;
-
-    try {
-        await Promise.race([
-            (document as any).fonts.load(fontSpec, text),
-            new Promise(resolve => setTimeout(resolve, 250))
-        ]);
-        await Promise.race([
-            (document as any).fonts.ready,
-            new Promise(resolve => setTimeout(resolve, 250))
-        ]);
-    } catch (e) { }
-
-    // Background gradient
-    const bgGrad = ctx.createLinearGradient(0, 0, displayW, displayH);
-    bgGrad.addColorStop(0, '#0b0f19');
-    bgGrad.addColorStop(1, '#111827');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, displayW, displayH);
-
-    // Inner glow
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.strokeRect(6, 6, displayW - 12, displayH - 12);
-
-    // Header label
-    ctx.font = '600 10px sans-serif';
-    ctx.fillStyle = '#64748b';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText(`FONT: ${cleanFontName.toUpperCase()}`, 14, 12);
-
-    // Render Text
-    ctx.font = fontStyleStr;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    const maxWidth = displayW - 50;
-    const words = text.split(' ');
-    const lines: string[] = [];
-    let currentLine = '';
-
-    for (let i = 0; i < words.length; i++) {
-        const testLine = currentLine ? (currentLine + ' ' + words[i]) : words[i];
-        const metrics = ctx.measureText(testLine);
-        if (metrics.width > maxWidth && currentLine) {
-            lines.push(currentLine);
-            currentLine = words[i];
-        } else {
-            currentLine = testLine;
-        }
-    }
-    if (currentLine) lines.push(currentLine);
-
-    const lineHeight = fontSize * 1.3;
-    const startY = (displayH / 2 + 6) - ((lines.length - 1) * lineHeight / 2);
-
-    lines.forEach((line, lIdx) => {
-        const y = startY + lIdx * lineHeight;
-        const x = displayW / 2;
-
-        if (strokeWidth > 0) {
-            ctx.save();
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-            ctx.shadowBlur = 4;
-            ctx.strokeStyle = strokeColor;
-            ctx.lineWidth = strokeWidth * 2;
-            ctx.lineJoin = 'round';
-            ctx.miterLimit = 2;
-            ctx.strokeText(line, x, y);
-            ctx.restore();
-        }
-
-        ctx.fillStyle = textColor;
-        ctx.fillText(line, x, y);
-    });
-}
-
-export async function updateAllFontSetCanvases(): Promise<void> {
-    if (!currentGeneratedFontSet) return;
-    const roles: FontRole[] = ['dialogue', 'innerThought', 'narration', 'shout', 'sfx', 'smallText'];
-    for (const role of roles) {
-        await renderRolePreviewCanvas(role, currentGeneratedFontSet);
-    }
-}
-
-export function copyFontSetSummary(): void {
-    if (!currentGeneratedFontSet) return;
-    let summary = `[Manga Font Set: ${currentGeneratedFontSet.presetName}]\n`;
-    summary += `Thể loại: ${currentGeneratedFontSet.tone}\n\n`;
-    const roles: FontRole[] = ['dialogue', 'innerThought', 'narration', 'shout', 'sfx', 'smallText'];
-    roles.forEach(r => {
-        const item = currentGeneratedFontSet!.roles[r];
-        summary += `• ${item.roleLabel}: ${item.fontName} (${item.score}% match)\n`;
-    });
-    navigator.clipboard.writeText(summary);
-    alert("Đã sao chép cấu hình Font Set vào khay nhớ tạm!");
-}
-
-export function copyFontSetJson(): void {
-    if (!currentGeneratedFontSet) return;
-    const jsonStr = JSON.stringify(currentGeneratedFontSet, null, 2);
-    navigator.clipboard.writeText(jsonStr);
-    alert("Đã sao chép cấu trúc dữ liệu Font Set JSON!");
-}
-
-export function downloadFontSetSampleImage(role: FontRole): void {
-    const canvas = document.getElementById(`fontset-canvas-${role}`) as HTMLCanvasElement | null;
-    if (!canvas || !currentGeneratedFontSet) return;
-    const fontName = currentGeneratedFontSet.roles[role]?.fontName || 'font';
-    const a = document.createElement('a');
-    a.href = canvas.toDataURL('image/png');
-    a.download = `FontSet_${currentGeneratedFontSet.presetName}_${role}_${fontName.replace(/\s+/g, '_')}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-}
-
-export function handleGenreSampleImageSelect(files: File[]): void {
-    if (!files || files.length === 0) return;
-    const limitFiles = files.slice(0, 3);
-    genreSampleLoadedImgs = [];
-    genreSampleDataUrls = [];
-
-    const container = document.getElementById('genre-sample-thumbs-container');
-    if (container) container.innerHTML = '';
-
-    let loadedCount = 0;
-    limitFiles.forEach((file, idx) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const dataUrl = e.target?.result as string;
-            const img = new Image();
-            img.onload = () => {
-                genreSampleLoadedImgs.push(img);
-                genreSampleDataUrls.push(dataUrl);
-                loadedCount++;
-
-                if (container) {
-                    const thumb = document.createElement('img');
-                    thumb.src = dataUrl;
-                    thumb.className = "w-14 h-14 object-cover rounded-lg border border-slate-700 bg-slate-900";
-                    container.appendChild(thumb);
-                }
-
-                const countEl = document.getElementById('genre-sample-count');
-                if (countEl) countEl.innerText = `Đã chọn ${loadedCount} trang mẫu`;
-            };
-            img.src = dataUrl;
-        };
-        reader.readAsDataURL(file);
-    });
-
-    const dropzone = document.getElementById('genre-sample-dropzone');
-    const previewBox = document.getElementById('genre-sample-preview-box');
-    if (dropzone) dropzone.classList.add('hidden');
-    if (previewBox) previewBox.classList.remove('hidden');
-}
-
-export function resetGenreSampleImages(): void {
-    genreSampleLoadedImgs = [];
-    genreSampleDataUrls = [];
-    const container = document.getElementById('genre-sample-thumbs-container');
-    if (container) container.innerHTML = '';
-    const dropzone = document.getElementById('genre-sample-dropzone');
-    const previewBox = document.getElementById('genre-sample-preview-box');
-    if (previewBox) previewBox.classList.add('hidden');
-    if (dropzone) dropzone.classList.remove('hidden');
-    const fileInput = document.getElementById('genre-sample-files-input') as HTMLInputElement | null;
-    if (fileInput) fileInput.value = '';
-}
-
-export async function runAiGenreAnalysis(): Promise<void> {
-    if (genreSampleDataUrls.length === 0 && genreSampleLoadedImgs.length === 0) {
-        alert("Vui lòng tải lên từ 1 đến 3 ảnh trang manga mẫu trước!");
-        return;
-    }
-
-    const effectiveFonts = getEffectiveFontLibrary();
-
-    const model = getEffectiveFontMatchModel();
-    const apiKeyInput = document.getElementById('fontmatch-api-key') as HTMLInputElement | null;
-    let apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
-    if (!apiKey) {
-        apiKey = getSecureToken('gemini_manga_api_key') ||
-            getSecureToken('gemini_api_key') ||
-            getSecureToken('manga_gemini_key') || '';
-    }
-
-    const loadingBtn = document.getElementById('btn-run-genre-ai');
-    if (loadingBtn) loadingBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Đang phân tích phong cách...';
-
-    try {
-        let result: AiGenreAnalysisResult;
-        if (model !== 'offline-heuristic' && apiKey && genreSampleDataUrls.length > 0) {
-            result = await callGeminiVisionForGenreStyle(model, apiKey, genreSampleDataUrls);
-        } else {
-            await new Promise(r => setTimeout(r, 450));
-            result = analyzeGenreWithCanvasHeuristics(genreSampleLoadedImgs);
-        }
-
-        const customProfile: StyleProfile = {
-            weight: result.weight,
-            roundness: result.roundness,
-            formality: result.formality,
-            handwritten: result.handwritten,
-            intensity: result.intensity
-        };
-
-        currentGeneratedFontSet = generateFontSetFromCustomProfile(
-            effectiveFonts,
-            customProfile,
-            result.genre,
-            result.tone,
-            result.visualStyle
-        );
-
-        renderFontSetUI(currentGeneratedFontSet);
-        await updateAllFontSetCanvases();
-
-        // Update active dropdown preset if matched
-        const select = document.getElementById('fontset-genre-select') as HTMLSelectElement | null;
-        if (select && result.detectedPresetId) {
-            select.value = result.detectedPresetId;
-        }
-
-        alert(`🎉 AI đã phân tích xong phong cách: "${result.genre}"!\n\nĐã đề xuất bộ Font Set tối ưu cho dự án.`);
-    } catch (err: any) {
-        console.warn("AI Genre analysis failed, falling back to local heuristic:", err);
-        const fallbackResult = analyzeGenreWithCanvasHeuristics(genreSampleLoadedImgs);
-        const fallbackProfile: StyleProfile = {
-            weight: fallbackResult.weight,
-            roundness: fallbackResult.roundness,
-            formality: fallbackResult.formality,
-            handwritten: fallbackResult.handwritten,
-            intensity: fallbackResult.intensity
-        };
-
-        currentGeneratedFontSet = generateFontSetFromCustomProfile(
-            effectiveFonts,
-            fallbackProfile,
-            fallbackResult.genre,
-            fallbackResult.tone,
-            fallbackResult.visualStyle
-        );
-
-        renderFontSetUI(currentGeneratedFontSet);
-        await updateAllFontSetCanvases();
-        alert(`Đã hoàn tất phân tích phong cách (Chế độ Heuristic cục bộ): "${fallbackResult.genre}".`);
-    } finally {
-        if (loadingBtn) loadingBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i> Phân Tích & Sinh Font Set';
-    }
-}
-
-// --- MODEL MANAGEMENT ENGINE (SYNCED WITH STUDIO SETTINGS) ---
-export let cachedGeminiModels: string[] = (() => {
-    try {
-        const saved = localStorage.getItem('gemini_cached_models');
-        return saved ? JSON.parse(saved) : [];
-    } catch (e) { return []; }
-})();
-
-export function getModelScore(id: string): number {
-    let score = 0;
-    const match = id.match(/gemini-(\d+)(?:\.(\d+))?/);
-    if (match) {
-        const major = parseInt(match[1]);
-        const minor = match[2] ? parseInt(match[2]) : 0;
-        score = major * 100 + minor * 10;
-    }
-    if (id.includes('pro')) score += 5;
-    if (id.includes('flash')) score += 3;
-    if (id.includes('lite')) score += 1;
-    if (id.includes('preview')) score -= 2;
-    return score;
-}
-
-export function getFriendlyModelName(id: string): string {
-    switch (id) {
-        case "gemini-2.5-flash":
-            return "Gemini 2.5 Flash (Khuyên dùng: Siêu tốc & nhận diện chuẩn)";
-        case "gemini-2.5-flash-lite":
-            return "Gemini 2.5 Flash-Lite (Siêu rẻ & tiết kiệm quota)";
-        case "gemini-3.1-flash-lite":
-            return "Gemini 3.1 Flash-Lite (Đời mới, tối ưu tốc độ & rẻ)";
-        case "gemini-2.5-pro":
-            return "Gemini 2.5 Pro (Độ chính xác cao nhất)";
-        case "gemini-3.1-pro-preview":
-            return "Gemini 3.1 Pro Preview (Chuyên sâu ngữ cảnh)";
-        case "gemini-2.0-flash":
-            return "Gemini 2.0 Flash (Ổn định)";
-        case "gemini-2.0-flash-lite":
-            return "Gemini 2.0 Flash-Lite (Tiết kiệm)";
-        case "gemini-1.5-flash":
-            return "Gemini 1.5 Flash (Truyền thống)";
-        case "gemini-1.5-pro":
-            return "Gemini 1.5 Pro (Chất lượng cao)";
-        default:
-            return id.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') + ' (Google API Online)';
-    }
-}
-
-export function updateFontMatchModelDropdown(fetchedModels: string[] = []): void {
-    const select = document.getElementById('fontmatch-model-select') as HTMLSelectElement | null;
-    if (!select) return;
-
-    const baseKnownModels = [
-        "gemini-2.5-flash",
-        "gemini-3.1-flash-lite",
-        "gemini-2.5-flash-lite",
-        "gemini-2.5-pro",
-        "gemini-3.1-pro-preview",
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
-        "gemini-1.5-flash",
-        "gemini-1.5-pro"
-    ];
-
-    const allModelsSet = new Set<string>([
-        ...baseKnownModels,
-        ...(Array.isArray(fetchedModels) ? fetchedModels : cachedGeminiModels)
-    ]);
-
-    const savedSelected = localStorage.getItem('gemini_manga_ocr_model') ||
-        localStorage.getItem('gemini_manga_model') ||
-        select.value || 'gemini-3.1-flash-lite';
-    if (savedSelected && savedSelected !== '__custom__' && savedSelected !== 'offline-heuristic') {
-        allModelsSet.add(savedSelected);
-    }
-
-    const sortedModels = Array.from(allModelsSet).sort((a, b) => {
-        const scoreA = getModelScore(a);
-        const scoreB = getModelScore(b);
-        return scoreA !== scoreB ? scoreB - scoreA : a.localeCompare(b);
-    });
-
-    select.innerHTML = '';
-
-    // 1. Recommended group
-    const recGroup = document.createElement('optgroup');
-    recGroup.label = '⚡ Khuyên Dùng Cho Manga & Vision';
-    const recList = ["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash-lite"];
-    recList.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = getFriendlyModelName(m);
-        recGroup.appendChild(opt);
-    });
-    select.appendChild(recGroup);
-
-    // 2. High tier & Pro
-    const proGroup = document.createElement('optgroup');
-    proGroup.label = '🌟 Mô Hình Cao Cấp (Pro / Preview)';
-    const proList = ["gemini-2.5-pro", "gemini-3.1-pro-preview", "gemini-1.5-pro"];
-    proList.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = getFriendlyModelName(m);
-        proGroup.appendChild(opt);
-    });
-    select.appendChild(proGroup);
-
-    // 3. Online scanned extra models (if any)
-    const otherOnline = sortedModels.filter(m => !recList.includes(m) && !proList.includes(m) && m !== 'gemini-2.0-flash' && m !== 'gemini-2.0-flash-lite' && m !== 'gemini-1.5-flash');
-    if (otherOnline.length > 0) {
-        const onlineGroup = document.createElement('optgroup');
-        onlineGroup.label = '🌐 Mô Hình Quét Trực Tuyến Từ Google API';
-        otherOnline.forEach(m => {
-            const opt = document.createElement('option');
-            opt.value = m;
-            opt.textContent = getFriendlyModelName(m);
-            onlineGroup.appendChild(opt);
-        });
-        select.appendChild(onlineGroup);
-    }
-
-    // 4. Stable other versions
-    const stableGroup = document.createElement('optgroup');
-    stableGroup.label = '📦 Các Phiên Bản Ổn Định Khác';
-    const stableList = ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"];
-    stableList.forEach(m => {
-        const opt = document.createElement('option');
-        opt.value = m;
-        opt.textContent = getFriendlyModelName(m);
-        stableGroup.appendChild(opt);
-    });
-    select.appendChild(stableGroup);
-
-    // 5. Offline Heuristic
-    const offlineGroup = document.createElement('optgroup');
-    offlineGroup.label = '🛡️ Chế Độ Không Cần Mạng (Offline)';
-    const offOpt = document.createElement('option');
-    offOpt.value = 'offline-heuristic';
-    offOpt.textContent = '⚡ Offline 100% Heuristic (Không cần API Key & Mạng)';
-    offlineGroup.appendChild(offOpt);
-    select.appendChild(offlineGroup);
-
-    // 6. Custom model option
-    const customGroup = document.createElement('optgroup');
-    customGroup.label = '✍️ Tùy Chỉnh';
-    const custOpt = document.createElement('option');
-    custOpt.value = '__custom__';
-    custOpt.textContent = '✍️ Tự nhập model Vision tùy chỉnh...';
-    customGroup.appendChild(custOpt);
-    select.appendChild(customGroup);
-
-    // Set current selection
-    const customInput = document.getElementById('fontmatch-custom-model-input') as HTMLInputElement | null;
-    if (allModelsSet.has(savedSelected) || savedSelected === 'offline-heuristic') {
-        select.value = savedSelected;
-        if (customInput) customInput.classList.add('hidden');
-    } else if (savedSelected) {
-        select.value = '__custom__';
-        if (customInput) {
-            customInput.classList.remove('hidden');
-            customInput.value = savedSelected;
-        }
-    } else {
-        select.value = 'gemini-3.1-flash-lite';
-    }
-
-    onFontMatchModelChange();
-}
-
-export async function fetchFontMatchModels(isManual: boolean = false): Promise<void> {
-    const apiKeyInput = document.getElementById('fontmatch-api-key') as HTMLInputElement | null;
-    let apiKey = (apiKeyInput ? apiKeyInput.value.trim() : '') ||
-        getSecureToken('gemini_manga_api_key') ||
-        getSecureToken('gemini_api_key') || '';
-
-    if (!apiKey) {
-        updateFontMatchModelDropdown(cachedGeminiModels);
-        if (isManual) alert("Vui lòng nhập hoặc kiểm tra Gemini API Key trước khi quét mô hình!");
-        return;
-    }
-
-    if (!isManual && cachedGeminiModels.length > 0) {
-        updateFontMatchModelDropdown(cachedGeminiModels);
-        return;
-    }
-
-    const btn = document.getElementById('btn-fontmatch-refresh-models');
-    if (btn) btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[9px]"></i> Đang nạp...';
-
-    try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`;
-        const resp = await fetch(url);
-        if (!resp.ok) {
-            updateFontMatchModelDropdown(cachedGeminiModels);
-            if (isManual) alert(`Không thể tải Model từ Google API (Mã lỗi ${resp.status}). Vui lòng kiểm tra lại API Key.`);
-            return;
-        }
-        const data = await resp.json();
-        if (data && data.models && Array.isArray(data.models)) {
-            const geminiModels = data.models
-                .filter((m: any) => {
-                    const id = m.name ? m.name.replace('models/', '') : '';
-                    if (!id) return false;
-                    const supportsGen = m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent');
-                    if (!supportsGen) return false;
-                    if (id.includes('embedding') || id.includes('bison') || id.includes('aqa') || id.includes('imagen') || id.includes('tunedModels/')) return false;
-                    return true;
-                })
-                .map((m: any) => m.name.replace('models/', ''));
-
-            if (geminiModels.length > 0) {
-                cachedGeminiModels = geminiModels;
-                safeSetLocalStorage('gemini_cached_models', geminiModels);
-                updateFontMatchModelDropdown(geminiModels);
-                if (isManual) {
-                    alert(`Đã nạp và cập nhật thành công ${geminiModels.length} mô hình từ Google Gemini API!`);
-                }
-            } else {
-                updateFontMatchModelDropdown(cachedGeminiModels);
-            }
-        }
-    } catch (err: any) {
-        console.warn("Lỗi quét mô hình Gemini:", err);
-        updateFontMatchModelDropdown(cachedGeminiModels);
-        if (isManual) alert(`Lỗi kết nối mạng khi tải danh sách model: ${err?.message || err}`);
-    } finally {
-        if (btn) btn.innerHTML = '<i class="fa-solid fa-arrows-rotate text-[9px]"></i> Quét Model';
-    }
-}
-
-export function getEffectiveFontMatchModel(): string {
-    const select = document.getElementById('fontmatch-model-select') as HTMLSelectElement | null;
-    if (!select) return 'gemini-3.1-flash-lite';
-    if (select.value === '__custom__') {
-        const customInput = document.getElementById('fontmatch-custom-model-input') as HTMLInputElement | null;
-        const val = customInput ? customInput.value.trim() : '';
-        return val || 'gemini-3.1-flash-lite';
-    }
-    return select.value;
-}
-
-export function onFontMatchModelChange(): void {
-    const select = document.getElementById('fontmatch-model-select') as HTMLSelectElement | null;
-    const model = select ? select.value : '';
-    const keyBox = document.getElementById('fontmatch-api-key-container');
-    const customInput = document.getElementById('fontmatch-custom-model-input');
-
-    if (customInput) {
-        if (model === '__custom__') {
-            customInput.classList.remove('hidden');
-            customInput.focus();
-        } else {
-            customInput.classList.add('hidden');
-        }
-    }
-
-    if (keyBox) {
-        if (model === 'offline-heuristic') {
-            keyBox.classList.add('opacity-40', 'pointer-events-none');
-        } else {
-            keyBox.classList.remove('opacity-40', 'pointer-events-none');
-        }
-    }
-}
-
-export function toggleFontMatchApiKeyVisibility(): void {
-    const input = document.getElementById('fontmatch-api-key') as HTMLInputElement | null;
-    const eye = document.getElementById('fontmatch-key-eye');
-    if (!input || !eye) return;
-    if (input.type === 'password') {
-        input.type = 'text';
-        eye.className = 'fa-solid fa-eye-slash';
-    } else {
-        input.type = 'password';
-        eye.className = 'fa-solid fa-eye';
-    }
-}
-
-export function handleFontMatchImageSelect(file: File): void {
-    if (!file || !file.type.startsWith('image/')) {
-        alert("Vui lòng chọn tệp hình ảnh hợp lệ (PNG, JPG, WEBP).");
-        return;
-    }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-            fontMatchLoadedImg = img;
-            fontMatchImgDataUrl = e.target?.result as string;
-            const dropzone = document.getElementById('fontmatch-dropzone');
-            if (dropzone) dropzone.classList.add('hidden');
-            const previewBox = document.getElementById('fontmatch-img-preview-box');
-            if (previewBox) previewBox.classList.remove('hidden');
-            const thumb = document.getElementById('fontmatch-img-thumb') as HTMLImageElement | null;
-            if (thumb) thumb.src = fontMatchImgDataUrl;
-            const nameEl = document.getElementById('fontmatch-img-name');
-            if (nameEl) nameEl.innerText = file.name || 'image.png';
-            const metaEl = document.getElementById('fontmatch-img-meta');
-            if (metaEl) metaEl.innerText = `${img.naturalWidth} x ${img.naturalHeight} px • ${formatFileSize(file.size)}`;
-        };
-        img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-}
-
-export function resetFontMatchImage(): void {
-    fontMatchLoadedImg = null;
-    fontMatchImgDataUrl = '';
-    const previewBox = document.getElementById('fontmatch-img-preview-box');
-    if (previewBox) previewBox.classList.add('hidden');
-    const dropzone = document.getElementById('fontmatch-dropzone');
-    if (dropzone) dropzone.classList.remove('hidden');
-    const fileInput = document.getElementById('fontmatch-file-input') as HTMLInputElement | null;
-    if (fileInput) fileInput.value = '';
-}
-
-export function loadFontMatchSample(type: string): void {
-    const canvas = document.createElement('canvas');
-    canvas.width = 360;
-    canvas.height = 360;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, 360, 360);
-
-    if (type === 'shout') {
-        ctx.fillStyle = '#f8fafc';
-        ctx.beginPath();
-        const cx = 180, cy = 180, numSpikes = 16, outerR = 160, innerR = 120;
-        for (let i = 0; i < numSpikes * 2; i++) {
-            const r = (i % 2 === 0) ? outerR : innerR;
-            const angle = (i * Math.PI) / numSpikes;
-            const x = cx + Math.cos(angle) * r;
-            const y = cy + Math.sin(angle) * r;
-            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = '#000000';
-        ctx.stroke();
-
-        ctx.fillStyle = '#000000';
-        ctx.font = 'bold 38px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('くらえぇぇっ！', 180, 150);
-        ctx.fillText('死ねぇぇ！！！', 180, 210);
-    } else if (type === 'narration') {
-        ctx.fillStyle = '#f1f5f9';
-        ctx.fillRect(30, 60, 300, 240);
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = '#000000';
-        ctx.strokeRect(30, 60, 300, 240);
-
-        ctx.fillStyle = '#0f172a';
-        ctx.font = '24px serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('昔々、ある所に…', 180, 130);
-        ctx.fillText('勇敢な戦士がいた。', 180, 180);
-        ctx.fillText('運命の歯車が回り出す。', 180, 230);
-    } else if (type === 'sfx') {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, 360, 360);
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#94a3b8';
-        for (let i = 0; i < 20; i++) {
-            ctx.beginPath();
-            ctx.moveTo(180, 180);
-            const angle = Math.random() * Math.PI * 2;
-            ctx.lineTo(180 + Math.cos(angle) * 200, 180 + Math.sin(angle) * 200);
-            ctx.stroke();
-        }
-
-        ctx.fillStyle = '#000000';
-        ctx.font = 'italic 900 64px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.save();
-        ctx.translate(180, 180);
-        ctx.rotate(-0.15);
-        ctx.lineWidth = 8;
-        ctx.strokeStyle = '#ffffff';
-        ctx.strokeText('ドカーン！', 0, 0);
-        ctx.fillText('ドカーン！', 0, 0);
-        ctx.restore();
-    } else {
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.ellipse(180, 180, 140, 110, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = '#000000';
-        ctx.stroke();
-
-        ctx.fillStyle = '#000000';
-        ctx.font = '28px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('何だ…あれは？！', 180, 160);
-        ctx.fillText('信じられない…', 180, 205);
-    }
-
-    const dataUrl = canvas.toDataURL('image/png');
-    const img = new Image();
-    img.onload = () => {
-        fontMatchLoadedImg = img;
-        fontMatchImgDataUrl = dataUrl;
-        const dropzone = document.getElementById('fontmatch-dropzone');
-        if (dropzone) dropzone.classList.add('hidden');
-        const previewBox = document.getElementById('fontmatch-img-preview-box');
-        if (previewBox) previewBox.classList.remove('hidden');
-        const thumb = document.getElementById('fontmatch-img-thumb') as HTMLImageElement | null;
-        if (thumb) thumb.src = dataUrl;
-        const nameEl = document.getElementById('fontmatch-img-name');
-        if (nameEl) nameEl.innerText = `sample_${type}.png`;
-        const metaEl = document.getElementById('fontmatch-img-meta');
-        if (metaEl) metaEl.innerText = `360 x 360 px • Mẫu có sẵn`;
-    };
-    img.src = dataUrl;
-}
-
-// --- CORE MATCHING ENGINE ---
-export async function runFontMatchAnalysis(): Promise<void> {
-    if (!fontMatchLoadedImg) {
-        alert("Vui lòng tải lên ảnh chữ tiếng Nhật hoặc chọn một ảnh mẫu trước!");
-        return;
-    }
-
-    const effectiveFonts = getEffectiveFontLibrary();
-
-    const model = getEffectiveFontMatchModel();
-    const contextTag = (document.getElementById('fontmatch-context-select') as HTMLSelectElement)?.value || 'auto';
-    const apiKeyInput = document.getElementById('fontmatch-api-key') as HTMLInputElement | null;
-    let apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
-    if (!apiKey) {
-        apiKey = getSecureToken('gemini_manga_api_key') ||
-            getSecureToken('gemini_api_key') ||
-            getSecureToken('manga_gemini_key') || '';
-    }
-    if (apiKeyInput && apiKey && !apiKeyInput.value) {
-        apiKeyInput.value = apiKey;
-    }
-
-    if (apiKey) {
-        saveSecureToken('gemini_manga_api_key', apiKey);
-        saveSecureToken('gemini_api_key', apiKey);
-        saveSecureToken('manga_gemini_key', apiKey);
-    }
-
-    const emptyState = document.getElementById('fontmatch-empty-state');
-    if (emptyState) emptyState.classList.add('hidden');
-    const resultsContainer = document.getElementById('fontmatch-results-container');
-    if (resultsContainer) resultsContainer.classList.add('hidden');
-    const loadingBox = document.getElementById('fontmatch-loading-state');
-    if (loadingBox) loadingBox.classList.remove('hidden');
-
-    const loadingTitle = document.getElementById('fontmatch-loading-title');
-    const loadingDesc = document.getElementById('fontmatch-loading-desc');
-    if (loadingTitle) loadingTitle.innerText = "Đang quét đặc trưng hình thái & thần thái chữ...";
-    const fontLibLabel = (customFontsList && customFontsList.length > 0) ? `${customFontsList.length} font cá nhân đã tải lên` : `${effectiveFonts.length} font mẫu chuẩn`;
-    if (loadingDesc) loadingDesc.innerText = `Đang so khớp với ${fontLibLabel}...`;
-
-    let analysisResult: AnalysisResult;
-
-    if (model !== 'offline-heuristic' && apiKey) {
-        try {
-            if (loadingTitle) loadingTitle.innerText = `Đang kích hoạt AI Vision (${model})...`;
-            analysisResult = await callGeminiVisionForFontMatch(model, apiKey, fontMatchImgDataUrl, contextTag);
-        } catch (err) {
-            console.warn("AI Vision font match failed, falling back to local heuristic:", err);
-            if (loadingDesc) loadingDesc.innerText = "Chuyển sang thuật toán phân tích cục bộ Heuristic...";
-            analysisResult = analyzeImageWithCanvasHeuristics(fontMatchLoadedImg, contextTag);
-        }
-    } else {
-        await new Promise(r => setTimeout(r, 450));
-        analysisResult = analyzeImageWithCanvasHeuristics(fontMatchLoadedImg, contextTag);
-    }
-
-    const rankedFonts = rankFontsAgainstAnalysis(effectiveFonts, analysisResult, contextTag);
-    currentTop3Matches = rankedFonts.slice(0, Math.min(3, rankedFonts.length));
-
-    if (loadingBox) loadingBox.classList.add('hidden');
-    if (resultsContainer) resultsContainer.classList.remove('hidden');
-
-    const badgeEl = document.getElementById('fontmatch-engine-badge');
-    if (badgeEl) badgeEl.innerText = (model !== 'offline-heuristic' && apiKey && analysisResult.isAi) ? `AI Vision (${model})` : 'Heuristic Offline 100%';
-    const catEl = document.getElementById('fontmatch-res-category');
-    if (catEl) catEl.innerText = getCategoryLabel(analysisResult.category);
-    const weightEl = document.getElementById('fontmatch-res-weight');
-    if (weightEl) weightEl.innerText = analysisResult.weightDesc || 'Đậm vừa (Medium)';
-    const energyEl = document.getElementById('fontmatch-res-energy');
-    if (energyEl) energyEl.innerText = analysisResult.styleDesc || analysisResult.energyDesc || 'Thoại Manga Chuẩn Mực';
-    const strokeEl = document.getElementById('fontmatch-res-stroke');
-    if (strokeEl) strokeEl.innerText = analysisResult.recommendedStroke || '1.5px (Viền tương phản)';
-    const reasonEl = document.getElementById('fontmatch-res-reasoning');
-    const sourceDesc = (customFontsList && customFontsList.length > 0) ? `kho ${customFontsList.length} font cá nhân` : `kho ${effectiveFonts.length} font mẫu Manga`;
-    if (reasonEl) reasonEl.innerText = analysisResult.reasoning || `Đã phân tích và so khớp với ${sourceDesc}.`;
-
-    // Dynamically adjust preview text & styling to fit detected typography mood
-    const liveTextInput = document.getElementById('fontmatch-live-text') as HTMLTextAreaElement | null;
-    const liveBoldCheck = document.getElementById('live-bold') as HTMLInputElement | null;
-    const liveItalicCheck = document.getElementById('live-italic') as HTMLInputElement | null;
-    const liveStrokeSlider = document.getElementById('live-stroke-width') as HTMLInputElement | null;
-    const liveStrokeLabel = document.getElementById('lbl-live-stroke');
-
-    if (liveTextInput) {
-        const currentVal = liveTextInput.value.trim();
-        const isGenericDefault = currentVal === 'Ngươi dám cản đường ta sao?!' || currentVal === 'Hôm nay trời đẹp thật đấy, cậu có muốn cùng đi dạo không?';
-        if (isGenericDefault) {
-            if (analysisResult.category === 'dialogue' || analysisResult.fontStyleType === 'standard_dialogue') {
-                liveTextInput.value = 'Hôm nay trời đẹp thật đấy, cậu có muốn cùng đi dạo không?';
-                if (liveBoldCheck) liveBoldCheck.checked = false;
-                if (liveItalicCheck) liveItalicCheck.checked = false;
-                if (liveStrokeSlider) liveStrokeSlider.value = '1.5';
-                if (liveStrokeLabel) liveStrokeLabel.innerText = '1.5px';
-            } else if (analysisResult.category === 'shout' || analysisResult.fontStyleType === 'shout_impact') {
-                liveTextInput.value = 'NGƯƠI DÁM CẢN ĐƯỜNG TA SAO?!';
-                if (liveBoldCheck) liveBoldCheck.checked = true;
-                if (liveItalicCheck) liveItalicCheck.checked = false;
-                if (liveStrokeSlider) liveStrokeSlider.value = '3.5';
-                if (liveStrokeLabel) liveStrokeLabel.innerText = '3.5px';
-            } else if (analysisResult.category === 'whisper' || analysisResult.fontStyleType === 'whisper_cursive') {
-                liveTextInput.value = '(Ước gì thời gian có thể dừng lại ngay lúc này...)';
-                if (liveBoldCheck) liveBoldCheck.checked = false;
-                if (liveItalicCheck) liveItalicCheck.checked = true;
-                if (liveStrokeSlider) liveStrokeSlider.value = '1';
-                if (liveStrokeLabel) liveStrokeLabel.innerText = '1px';
-            } else if (analysisResult.category === 'sfx' || analysisResult.fontStyleType === 'brush_sfx') {
-                liveTextInput.value = 'ẦM ẦM!! RẮC RẮC!!';
-                if (liveBoldCheck) liveBoldCheck.checked = true;
-                if (liveStrokeSlider) liveStrokeSlider.value = '4';
-                if (liveStrokeLabel) liveStrokeLabel.innerText = '4px';
-            }
-        }
-    }
-
-    renderTop3FontCards(currentTop3Matches);
-    await updateAllFontCanvases();
-}
-
-export async function callGeminiVisionForFontMatch(
-    modelId: string,
-    apiKey: string,
-    dataUrl: string,
-    contextTag: string
-): Promise<AnalysisResult> {
-    const base64Data = dataUrl.split(',')[1];
-    const mimeType = dataUrl.split(';')[0].split(':')[1] || 'image/png';
-
-    const prompt = `Bạn là một chuyên gia chỉ đạo nghệ thuật Typography và Typesetting Manga/Comic hàng đầu.
-Nhiệm vụ: Phân tích sâu sắc phong cách typography của chữ trong ảnh mẫu (tiếng Nhật/Manga) để so khớp và chọn phông chữ tiếng Việt chuẩn xác nhất từ kho font của người dùng.
-Gợi ý ngữ cảnh từ người dùng: "${contextTag}".
-
-HƯỚNG DẪN ĐÁNH GIÁ ĐẶC TRƯNG HÌNH THÁI HỌC & PHONG CÁCH CHỮ:
-1. fontStyleType: Chọn đúng 1 trong các kiểu thiết kế sau (RẤT QUAN TRỌNG ĐỂ TRÁNH LỆCH TÔNG):
-   - "standard_dialogue": Chữ thoại manga Nhật Bản in ấn tiêu chuẩn (Antique/Gothic, nét đều, thẳng thớm, cân đối, dễ đọc, chỉn chu - như CC Wild Words, SVN-Avo, Anime Ace, Manga Temple).
-   - "cartoon_quirky": Chữ hoạt hình biếm họa / nhí nhố / vẽ tay nguệch ngoạc / Simpsons / Chibi.
-   - "shout_impact": Chữ hét / chiêu thức / Shounen bùng nổ, nét cực đậm, in hoa.
-   - "serif_narration": Chữ có chân (Mincho/Serif) trang trọng, quý tộc, dẫn chuyện.
-   - "whisper_cursive": Chữ thì thầm / suy nghĩ / viết tay mềm mại thanh mảnh.
-   - "brush_sfx": Hiệu ứng SFX / cọ vẽ nứt xước / tiếng động.
-   - "tech_display": Màn hình sci-fi / game / robot.
-2. category: Chọn đúng 1 trong: ["dialogue", "shout", "narration", "whisper", "cute", "tech", "sfx"]
-3. weightScore: Điểm độ đậm nét CHÍNH của thân chữ từ 0.1 (thanh mảnh) đến 1.0 (chữ khối siêu đậm). Đánh giá thân chữ thật, KHÔNG tính viền stroke.
-4. roundnessScore: Điểm bo tròn đầu nét (0.1: sắc nhọn/vuông vức -> 1.0: bo tròn mềm mại).
-5. handwrittenScore: Điểm tính chất viết tay (0.1: in ấn quy chuẩn, cơ học -> 1.0: viết tay mộc mạc, thư pháp). Chữ thoại in ấn manga tiêu chuẩn có điểm viết tay RẤT THẤP (~0.1 - 0.25).
-6. formalityScore: Điểm độ nghiêm túc/quy chuẩn từ 0.1 (nhí nhố, tự do) đến 1.0 (trang trọng, serif/in hoa chuẩn).
-7. roughnessScore: Điểm độ nham nhở/gai góc/nứt vỡ từ 0.1 (mượt mà) đến 1.0 (cọ xước, nứt vỡ).
-8. energyScore: Điểm mức độ cảm xúc/năng lượng từ 0.1 (bình tĩnh, thì thầm) đến 1.0 (bùng nổ, la hét).
-9. isAllCaps: true nếu là chữ in hoa toàn bộ hoặc chữ khối tiêu đề, false nếu là chữ hoa-thường.
-10. isSerif: true nếu kiểu chữ có chân (Mincho/Serif), false nếu không chân (Gothic/Sans).
-11. slantAngle: Góc nghiêng ước lượng tính bằng độ (0 nếu thẳng đứng, 8-15 nếu nghiêng/italic).
-12. weightDesc: Mô tả ngắn gọn độ đậm (ví dụ: "Nét thanh mảnh", "Nét đều chuẩn (Regular)", "Nét dày đậm (Bold)").
-13. energyDesc: Mô tả ngắn gọn cảm xúc & phong thái (ví dụ: "Bình thản / Tự nhiên", "Bùng nổ / La hét", "Dịu dàng").
-14. styleDesc: Mô tả phong cách chữ ngắn gọn (ví dụ: "Thoại Manga in ấn chuẩn mực (Antique/Gothic)", "Hoạt hình nhí nhố", "Serif dẫn chuyện").
-15. reasoning: 1-2 câu tiếng Việt phân tích đặc trưng hình thái và định hướng font thay thế tối ưu khi typeset tiếng Việt.
-16. recommendedStroke: Độ dày viền chữ khuyến nghị (ví dụ: "1.5px", "2px", "3.5px").
-
-QUY TẮC BẮT BUỘC:
-- KHÔNG bịa tên phông chữ cụ thể.
-- ĐẶC BIỆT CHÚ Ý: Chữ thoại đối thoại manga Nhật Bản in ấn tiêu chuẩn (như trong ảnh mẫu) PHẢI ĐƯỢC XẾP VÀO "standard_dialogue" với handwrittenScore thấp (<= 0.25) để tránh bị gợi ý nhầm font hoạt hình/nhí nhố.
-
-TRẢ VỀ DUY NHẤT ĐỊNH DẠNG JSON TUÂN THỦ SCHEMA SAU:
-{
-  "fontStyleType": "standard_dialogue",
-  "category": "dialogue",
-  "weightScore": 0.48,
-  "roundnessScore": 0.75,
-  "handwrittenScore": 0.18,
-  "formalityScore": 0.65,
-  "roughnessScore": 0.10,
-  "energyScore": 0.45,
-  "isAllCaps": false,
-  "isSerif": false,
-  "slantAngle": 0,
-  "weightDesc": "Nét đều chuẩn (Regular)",
-  "energyDesc": "Bình thản / Tự nhiên",
-  "styleDesc": "Thoại Manga in ấn chuẩn mực (Clean Dialogue)",
-  "reasoning": "Chữ hội thoại manga in ấn chuẩn mực, trục chữ thẳng thớm, độ dày nét đều đặn dễ đọc, phù hợp font thoại manga chuẩn (Avo, Wild Words, Anime Ace).",
-  "recommendedStroke": "1.5px (Viền thanh)"
-}`;
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelId)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-    const payload = {
-        contents: [{
-            parts: [
-                { text: prompt },
-                {
-                    inlineData: {
-                        mimeType: mimeType,
-                        data: base64Data
-                    }
-                }
-            ]
-        }],
-        generationConfig: {
-            temperature: 0.2,
-            responseMimeType: "application/json"
-        }
-    };
-
-    const resp = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-
-    if (!resp.ok) {
-        const errText = await resp.text();
-        throw new Error(`Gemini API Error ${resp.status}: ${errText}`);
-    }
-
-    const data = await resp.json();
-    const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!textContent) throw new Error("Không nhận được dữ liệu phản hồi từ AI");
-
-    const cleanJson = textContent.replace(/```json/g, '').replace(/```/g, '').trim();
-    let parsed: any;
-    try {
-        parsed = JSON.parse(cleanJson);
-    } catch (parseErr) {
-        throw new Error(`Phản hồi AI không đúng định dạng JSON: ${cleanJson}`);
-    }
-
-    const validCategories: FontCategory[] = ['dialogue', 'shout', 'narration', 'whisper', 'cute', 'tech', 'sfx'];
-    const safeCategory: FontCategory = validCategories.includes(parsed.category) ? parsed.category : 'dialogue';
-
-    const validStyleTypes: FontStyleType[] = ['standard_dialogue', 'cartoon_quirky', 'shout_impact', 'serif_narration', 'whisper_cursive', 'brush_sfx', 'tech_display'];
-    const safeStyleType: FontStyleType = validStyleTypes.includes(parsed.fontStyleType)
-        ? parsed.fontStyleType
-        : (safeCategory === 'shout' ? 'shout_impact' : safeCategory === 'narration' ? 'serif_narration' : safeCategory === 'whisper' ? 'whisper_cursive' : safeCategory === 'sfx' ? 'brush_sfx' : safeCategory === 'cute' ? 'cartoon_quirky' : 'standard_dialogue');
-
-    const clamp = (val: any, def: number): number => {
-        const num = typeof val === 'number' ? val : parseFloat(val);
-        if (isNaN(num)) return def;
-        return Math.max(0.1, Math.min(1.0, num));
-    };
-
-    const parsedWeight = Number(clamp(parsed.weightScore, 0.5).toFixed(2));
-    const parsedRoundness = Number(clamp(parsed.roundnessScore, 0.6).toFixed(2));
-    const parsedHandwritten = Number(clamp(parsed.handwrittenScore, 0.2).toFixed(2));
-    const parsedEnergy = Number(clamp(parsed.energyScore, 0.5).toFixed(2));
-    const parsedFormality = Number(clamp(parsed.formalityScore, 0.4).toFixed(2));
-    const parsedRoughness = Number(clamp(parsed.roughnessScore, 0.2).toFixed(2));
-    const parsedSlant = typeof parsed.slantAngle === 'number' ? parsed.slantAngle : 0;
-    const parsedAllCaps = !!parsed.isAllCaps;
-    const parsedSerif = !!parsed.isSerif;
-
-    const weightGrade = determineWeightGrade(parsedWeight);
-    const slantGrade: FontSlantGrade = Math.abs(parsedSlant) > 4 ? 'Italic' : 'Upright';
-    const caseGrade: FontCaseGrade = parsedAllCaps ? 'All Caps' : 'Mixed Case';
-
-    return {
-        category: safeCategory,
-        fontStyleType: safeStyleType,
-        weightScore: parsedWeight,
-        roundnessScore: parsedRoundness,
-        handwrittenScore: parsedHandwritten,
-        energyScore: parsedEnergy,
-        formalityScore: parsedFormality,
-        roughnessScore: parsedRoughness,
-        isAllCaps: parsedAllCaps,
-        isSerif: parsedSerif,
-        slantAngle: parsedSlant,
-        weightGrade: weightGrade,
-        widthGrade: 'Normal',
-        slantGrade: slantGrade,
-        caseGrade: caseGrade,
-        weightDesc: typeof parsed.weightDesc === 'string' && parsed.weightDesc.trim() ? parsed.weightDesc.trim() : `${weightGrade} (Chuẩn)`,
-        energyDesc: typeof parsed.energyDesc === 'string' && parsed.energyDesc.trim() ? parsed.energyDesc.trim() : 'Tự nhiên / Cân bằng',
-        styleDesc: typeof parsed.styleDesc === 'string' && parsed.styleDesc.trim() ? parsed.styleDesc.trim() : (safeStyleType === 'standard_dialogue' ? 'Thoại Manga in ấn chuẩn mực' : 'Typography Manga'),
-        reasoning: typeof parsed.reasoning === 'string' && parsed.reasoning.trim() ? parsed.reasoning.trim() : 'Phân tích hình thái nét chữ phục vụ Việt hóa manga.',
-        recommendedStroke: typeof parsed.recommendedStroke === 'string' && parsed.recommendedStroke.trim() ? parsed.recommendedStroke.trim() : '1.5px (Viền tương phản)',
-        isAi: true
-    };
-}
-
 export function analyzeImageWithCanvasHeuristics(img?: HTMLImageElement | null, contextTag?: string): AnalysisResult {
     if (typeof document === 'undefined' || !img) {
         const fallbackCat: FontCategory = (contextTag && contextTag !== 'auto') ? (contextTag as FontCategory) : 'dialogue';
@@ -2708,32 +1522,23 @@ export function analyzeImageWithCanvasHeuristics(img?: HTMLImageElement | null, 
     };
 }
 
+const CATEGORY_COMPATIBILITY_MAP: Record<string, number> = {
+    'shout:sfx': 0.70, 'sfx:shout': 0.70,
+    'dialogue:narration': 0.70, 'narration:dialogue': 0.70,
+    'dialogue:cute': 0.70, 'cute:dialogue': 0.70,
+    'whisper:cute': 0.70, 'cute:whisper': 0.70,
+    'tech:narration': 0.45, 'narration:tech': 0.45,
+    'tech:shout': 0.45, 'shout:tech': 0.45,
+    'dialogue:whisper': 0.45, 'whisper:dialogue': 0.45,
+    'shout:whisper': 0.15, 'whisper:shout': 0.15,
+    'sfx:whisper': 0.15, 'whisper:sfx': 0.15,
+    'sfx:narration': 0.15, 'narration:sfx': 0.15
+};
+
 export function calculateCategoryCompatibility(fontCat: string, targetCat: string): number {
     if (fontCat === targetCat) return 1.0;
-
-    const highPairs = [
-        ['shout', 'sfx'], ['sfx', 'shout'],
-        ['dialogue', 'narration'], ['narration', 'dialogue'],
-        ['dialogue', 'cute'], ['cute', 'dialogue'],
-        ['whisper', 'cute'], ['cute', 'whisper']
-    ];
-    if (highPairs.some(([a, b]) => a === fontCat && b === targetCat)) return 0.70;
-
-    const medPairs = [
-        ['tech', 'narration'], ['narration', 'tech'],
-        ['tech', 'shout'], ['shout', 'tech'],
-        ['dialogue', 'whisper'], ['whisper', 'dialogue']
-    ];
-    if (medPairs.some(([a, b]) => a === fontCat && b === targetCat)) return 0.45;
-
-    const lowPairs = [
-        ['shout', 'whisper'], ['whisper', 'shout'],
-        ['sfx', 'whisper'], ['whisper', 'sfx'],
-        ['sfx', 'narration'], ['narration', 'sfx']
-    ];
-    if (lowPairs.some(([a, b]) => a === fontCat && b === targetCat)) return 0.15;
-
-    return 0.35;
+    const score = CATEGORY_COMPATIBILITY_MAP[`${fontCat}:${targetCat}`];
+    return score !== undefined ? score : 0.35;
 }
 
 export function rankFontsAgainstAnalysis(
@@ -2763,14 +1568,21 @@ export function rankFontsAgainstAnalysis(
 
         const fontStyleType: FontStyleType = font.fontStyleType || (font.category === 'cute' ? 'cartoon_quirky' : font.category === 'shout' ? 'shout_impact' : font.category === 'narration' ? 'serif_narration' : font.category === 'whisper' ? 'whisper_cursive' : font.category === 'sfx' ? 'brush_sfx' : 'standard_dialogue');
 
+        const dw = tw - fw;
+        const drnd = trnd - frnd;
+        const dhw = thw - fhw;
+        const df = tf - ff;
+        const dr = tr - fr;
+        const dslant = tslant - fslant;
+
         // 1. Independent 6-dimensional morphological Euclidean distance
         const morphDist = Math.sqrt(
-            Math.pow(tw - fw, 2) * 0.30 +
-            Math.pow(trnd - frnd, 2) * 0.20 +
-            Math.pow(thw - fhw, 2) * 0.15 +
-            Math.pow(tf - ff, 2) * 0.15 +
-            Math.pow(tr - fr, 2) * 0.10 +
-            Math.pow(tslant - fslant, 2) * 0.10
+            dw * dw * 0.30 +
+            drnd * drnd * 0.20 +
+            dhw * dhw * 0.15 +
+            df * df * 0.15 +
+            dr * dr * 0.10 +
+            dslant * dslant * 0.10
         );
 
         // Morphological similarity in [0, 1]
@@ -2841,299 +1653,13 @@ export function rankFontsAgainstAnalysis(
     });
 }
 
-export function renderTop3FontCards(top3: CustomFontItem[]): void {
-    const grid = document.getElementById('fontmatch-top3-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-
-    if (!top3 || top3.length === 0) {
-        grid.innerHTML = `
-            <div class="p-6 bg-slate-900 border border-slate-800 rounded-2xl text-center text-slate-400 text-xs">
-                Không tìm thấy phông chữ phù hợp trong kho.
-            </div>
-        `;
-        return;
-    }
-
-    const top1Score = top3[0]?.matchPercent ?? 0;
-    const isLowMatch = top1Score < 65;
-
-    // Insert warning notice banner if closest font has low match score (<65%)
-    if (isLowMatch) {
-        const notice = document.createElement('div');
-        notice.className = "bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 text-xs text-amber-200/90 flex items-start gap-3 shadow-md";
-        notice.innerHTML = `
-            <div class="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
-                <i class="fa-solid fa-triangle-exclamation text-xs"></i>
-            </div>
-            <div class="flex-1">
-                <div class="font-bold text-amber-300 flex items-center gap-1.5">
-                    <span>Thông Báo: Không Có Font Khớp Hoàn Hảo</span>
-                    <span class="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 text-[10px] font-mono">Độ khớp cao nhất: ${top1Score}%</span>
-                </div>
-                <p class="text-[11px] text-amber-200/80 mt-1 leading-relaxed">
-                    Kho font hiện tại của bạn chưa có font nào thực sự tương đồng cao với phong cách chữ trong ảnh. Danh sách dưới đây là những lựa chọn có hình thái <strong>gần nhất</strong> để bạn tham khảo.
-                </p>
-            </div>
-        `;
-        grid.appendChild(notice);
-    }
-
-    top3.forEach((item, index) => {
-        const rank = index + 1;
-        const isTop1 = rank === 1;
-        const score = item.matchPercent ?? 50;
-
-        let scoreTextColor = 'text-slate-400';
-        let progressColor = 'bg-slate-600';
-        if (score >= 85) {
-            scoreTextColor = 'text-emerald-400';
-            progressColor = 'bg-gradient-to-r from-emerald-500 to-teal-400';
-        } else if (score >= 70) {
-            scoreTextColor = 'text-indigo-300';
-            progressColor = 'bg-indigo-500';
-        } else if (score >= 55) {
-            scoreTextColor = 'text-amber-400';
-            progressColor = 'bg-amber-500';
-        }
-
-        let rankBadge: string;
-        if (isTop1) {
-            if (isLowMatch) {
-                rankBadge = `<span class="px-2.5 py-1 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-bold font-mono flex items-center gap-1.5"><i class="fa-solid fa-compass text-amber-400"></i> LỰA CHỌN GẦN NHẤT</span>`;
-            } else {
-                rankBadge = `<span class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold font-mono flex items-center gap-1"><i class="fa-solid fa-crown text-amber-400"></i> TOP 1 KHỚP NHẤT</span>`;
-            }
-        } else if (rank === 2) {
-            rankBadge = `<span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 border border-slate-700 text-xs font-bold font-mono">🥈 TOP 2</span>`;
-        } else {
-            rankBadge = `<span class="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 border border-slate-700 text-xs font-bold font-mono">🥉 TOP 3</span>`;
-        }
-
-        const typeBadge = item.type === 'custom'
-            ? `<span class="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px] font-bold">✨ Font Cá Nhân</span>`
-            : `<span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px] font-bold">🔤 Font Mẫu Chuẩn</span>`;
-        const cardBorder = (isTop1 && !isLowMatch)
-            ? 'border-amber-500/40 bg-gradient-to-b from-amber-500/5 via-slate-900 to-slate-900 shadow-xl shadow-amber-500/5'
-            : isTop1
-                ? 'border-amber-500/20 bg-slate-900 shadow-lg'
-                : 'border-slate-800 bg-slate-900';
-
-        const card = document.createElement('div');
-        card.className = `${cardBorder} border rounded-2xl p-4 flex flex-col gap-3.5 transition-all`;
-        card.innerHTML = `
-            <div class="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-800/80">
-                <div class="flex items-center gap-2">
-                    ${rankBadge}
-                    <div>
-                        <h4 class="text-sm font-bold text-slate-100 flex items-center gap-1.5">
-                            <span>${escapeHTML(item.name)}</span>
-                            ${typeBadge}
-                        </h4>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <div class="flex flex-col items-end">
-                        <span class="text-xs font-mono font-bold ${scoreTextColor}">${score}% Tương đồng</span>
-                        <div class="w-24 bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800 mt-0.5">
-                            <div class="${progressColor} h-full transition-all duration-300" style="width: ${score}%"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Visual Typography Canvas Render Card -->
-            <div class="relative group flex justify-center p-2 rounded-xl bg-slate-950 border border-slate-855 overflow-hidden shadow-inner">
-                <canvas id="font-preview-canvas-${rank}" class="w-full max-w-full h-auto rounded-lg shadow cursor-pointer transition-transform group-hover:scale-[1.01]"></canvas>
-                <div class="absolute bottom-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button type="button" data-action="download-sample" class="px-2.5 py-1 rounded-lg bg-slate-900/90 hover:bg-indigo-600 border border-slate-700 text-white text-[11px] font-bold shadow-lg transition-colors flex items-center gap-1">
-                        <i class="fa-solid fa-download"></i> Tải ảnh mẫu
-                    </button>
-                </div>
-            </div>
-
-            <!-- Description & Action Bar -->
-            <div class="flex items-center justify-between flex-wrap gap-2 pt-1 text-xs">
-                <p class="text-slate-400 text-[11px] max-w-md">${item.desc}</p>
-                <div class="flex items-center gap-2">
-                    <button type="button" data-action="copy-name" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 text-xs font-bold border border-slate-700 transition-all flex items-center gap-1.5">
-                        <i class="fa-solid fa-copy text-indigo-400"></i> Sao chép tên font
-                    </button>
-                </div>
-            </div>
-        `;
-
-        const canvasEl = card.querySelector(`#font-preview-canvas-${rank}`) as HTMLCanvasElement | null;
-        if (canvasEl) {
-            canvasEl.addEventListener('click', () => openPreviewModal(canvasEl.toDataURL()));
-        }
-
-        const btnDownload = card.querySelector('[data-action="download-sample"]');
-        if (btnDownload) {
-            btnDownload.addEventListener('click', () => downloadFontSampleImage(`font-preview-canvas-${rank}`, item.name));
-        }
-
-        const btnCopy = card.querySelector('[data-action="copy-name"]');
-        if (btnCopy) {
-            btnCopy.addEventListener('click', () => copyFontName(item.name));
-        }
-
-        grid.appendChild(card);
-    });
-}
-
-export async function renderFontVisualCanvas(canvasId: string, fontObj: CustomFontItem): Promise<void> {
-    const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
-    if (!canvas || !fontObj) return;
-
-    const textInput = document.getElementById('fontmatch-live-text') as HTMLTextAreaElement | null;
-    const text = textInput ? (textInput.value.trim() || 'Ngươi dám cản đường ta sao?!') : 'Ngươi dám cản đường ta sao?!';
-
-    const fontSize = parseInt((document.getElementById('live-font-size') as HTMLInputElement)?.value || '24', 10);
-    const strokeWidth = parseFloat((document.getElementById('live-stroke-width') as HTMLInputElement)?.value || '3');
-    const textColor = (document.getElementById('live-text-color') as HTMLInputElement)?.value || '#ffffff';
-    const strokeColor = (document.getElementById('live-stroke-color') as HTMLInputElement)?.value || '#000000';
-    const isBold = (document.getElementById('live-bold') as HTMLInputElement)?.checked ?? true;
-    const isItalic = (document.getElementById('live-italic') as HTMLInputElement)?.checked ?? false;
-
-    const dpr = 2;
-    const displayW = 600;
-    const displayH = 220;
-
-    canvas.width = displayW * dpr;
-    canvas.height = displayH * dpr;
-    canvas.style.width = displayW + 'px';
-    canvas.style.height = displayH + 'px';
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.scale(dpr, dpr);
-
-    const cleanFontName = fontObj.name.replace(/['"]/g, '');
-    const fallbackFamily = (fontObj.family && fontObj.family.includes('cursive')) ? 'cursive' : 'sans-serif';
-    const fontSpec = `${isBold ? 'bold ' : ''}${isItalic ? 'italic ' : ''}${fontSize}px "${cleanFontName}"`;
-    const fontStyleStr = `${isBold ? 'bold ' : ''}${isItalic ? 'italic ' : ''}${fontSize}px "${cleanFontName}", ${fallbackFamily}`;
-
-    try {
-        await Promise.race([
-            (document as any).fonts.load(fontSpec, text),
-            new Promise(resolve => setTimeout(resolve, 250))
-        ]);
-        await Promise.race([
-            (document as any).fonts.ready,
-            new Promise(resolve => setTimeout(resolve, 250))
-        ]);
-    } catch (e) { }
-
-    const bgGrad = ctx.createLinearGradient(0, 0, displayW, displayH);
-    bgGrad.addColorStop(0, '#090d16');
-    bgGrad.addColorStop(0.5, '#0f172a');
-    bgGrad.addColorStop(1, '#0b0f19');
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, displayW, displayH);
-
-    const radGlow = ctx.createRadialGradient(displayW / 2, displayH / 2, 10, displayW / 2, displayH / 2, 260);
-    radGlow.addColorStop(0, 'rgba(99, 102, 241, 0.12)');
-    radGlow.addColorStop(1, 'rgba(0, 0, 0, 0)');
-    ctx.fillStyle = radGlow;
-    ctx.fillRect(0, 0, displayW, displayH);
-
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-    ctx.strokeRect(10, 10, displayW - 20, displayH - 20);
-
-    ctx.font = '600 11px sans-serif';
-    ctx.fillStyle = '#64748b';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText(`FONT: ${cleanFontName.toUpperCase()}`, 18, 16);
-
-    ctx.font = fontStyleStr;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    const maxWidth = displayW - 70;
-    const words = text.split(' ');
-    const lines: string[] = [];
-    let currentLine = '';
-
-    for (let i = 0; i < words.length; i++) {
-        const testLine = currentLine ? (currentLine + ' ' + words[i]) : words[i];
-        const metrics = ctx.measureText(testLine);
-        if (metrics.width > maxWidth && currentLine) {
-            lines.push(currentLine);
-            currentLine = words[i];
-        } else {
-            currentLine = testLine;
-        }
-    }
-    if (currentLine) lines.push(currentLine);
-
-    const lineHeight = fontSize * 1.35;
-    const startY = (displayH / 2) - ((lines.length - 1) * lineHeight / 2);
-
-    lines.forEach((line, lIdx) => {
-        const y = startY + lIdx * lineHeight;
-        const x = displayW / 2;
-
-        if (strokeWidth > 0) {
-            ctx.save();
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-            ctx.shadowBlur = 6;
-            ctx.shadowOffsetY = 2;
-            ctx.strokeStyle = strokeColor;
-            ctx.lineWidth = strokeWidth * 2;
-            ctx.lineJoin = 'round';
-            ctx.miterLimit = 2;
-            ctx.strokeText(line, x, y);
-            ctx.restore();
-        }
-
-        ctx.fillStyle = textColor;
-        ctx.fillText(line, x, y);
-    });
-}
-
-export async function updateAllFontCanvases(): Promise<void> {
-    if (!currentTop3Matches || currentTop3Matches.length === 0) return;
-    for (let idx = 0; idx < currentTop3Matches.length; idx++) {
-        const fontObj = currentTop3Matches[idx];
-        const rank = idx + 1;
-        await renderFontVisualCanvas(`font-preview-canvas-${rank}`, fontObj);
-    }
-}
-
-export function onLiveTestTextChange(): void {
-    clearTimeout(liveUpdateDebounceTimer);
-    liveUpdateDebounceTimer = setTimeout(() => {
-        updateAllFontCanvases();
-    }, 60);
-}
-
-export function setLiveTestText(phrase: string): void {
-    const input = document.getElementById('fontmatch-live-text') as HTMLTextAreaElement | null;
-    if (input) {
-        input.value = phrase;
-        updateAllFontCanvases();
-    }
-}
-
 export function copyFontName(name: string): void {
-    navigator.clipboard.writeText(name);
-    alert(`Đã sao chép tên phông chữ "${name}" vào khay nhớ tạm!`);
+    if (!name) return;
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+        navigator.clipboard.writeText(name);
+    }
 }
 
-export function downloadFontSampleImage(canvasId: string, fontName: string): void {
-    const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
-    if (!canvas) return;
-    const a = document.createElement('a');
-    a.href = canvas.toDataURL('image/png');
-    a.download = `MangaFont_${fontName.replace(/\s+/g, '_')}_Preview.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-}
 
 // --- CUSTOM FONT MANAGER (INDEXEDDB PERSISTENCE & DYNAMIC @FONT-FACE) ---
 const DB_NAME_FONTS = 'MangaTranslatorDB';
@@ -4032,12 +2558,13 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
             customFontsList = [];
             updateCustomFontsBadge();
             renderCustomFontsUI();
-            generateAndDisplayFontSet();
+            
             return;
         }
 
         // Auto-deduplicate font records across diacritics, underscores, and legacy stripped ASCII / CSS-wrapped names
         const seenNormalizedMap = new Map<string, any>();
+        const consonantSkeletonMap = new Map<string, string>();
         const duplicatesToDelete: string[] = [];
 
         for (const item of rawEntries) {
@@ -4070,17 +2597,14 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
             const normKey = normalizeFontKey(cleanFamily);
             if (!normKey) continue;
 
-            // Check exact normKey or fuzzy skeleton match
+            const skeleton = normKey.length >= 4 ? normKey.replace(/[aeiouy]/g, '') : '';
+
+            // Check exact normKey or fuzzy skeleton match in O(1)
             let matchedKey = '';
             if (seenNormalizedMap.has(normKey)) {
                 matchedKey = normKey;
-            } else {
-                for (const existingKey of seenNormalizedMap.keys()) {
-                    if (isFuzzyDuplicate(normKey, existingKey)) {
-                        matchedKey = existingKey;
-                        break;
-                    }
-                }
+            } else if (skeleton.length >= 3 && consonantSkeletonMap.has(skeleton)) {
+                matchedKey = consonantSkeletonMap.get(skeleton)!;
             }
 
             if (matchedKey) {
@@ -4095,11 +2619,17 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
                     duplicatesToDelete.push(existing.family);
                     seenNormalizedMap.delete(matchedKey);
                     seenNormalizedMap.set(normKey, item);
+                    if (skeleton.length >= 3) {
+                        consonantSkeletonMap.set(skeleton, normKey);
+                    }
                 } else {
                     duplicatesToDelete.push(item.family);
                 }
             } else {
                 seenNormalizedMap.set(normKey, item);
+                if (skeleton.length >= 3 && !consonantSkeletonMap.has(skeleton)) {
+                    consonantSkeletonMap.set(skeleton, normKey);
+                }
             }
         }
 
@@ -4214,15 +2744,9 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
         updateCustomFontsBadge();
         updateCustomFontFilterCountsUI();
         renderCustomFontsUI();
-        generateAndDisplayFontSet();
+        
 
-        // Notify font-classifier module
-        try {
-            import('./font-classifier').then(m => {
-                m.populateFontSelectDropdown();
-                m.autoClassifyAndRenderGallery();
-            }).catch(() => {});
-        } catch (e) {}
+        
 
         // 2. Register FontFace objects into document.fonts in smooth background chunks
         (async () => {
@@ -4240,8 +2764,8 @@ export async function loadAndRegisterCustomFontsFromDB(): Promise<void> {
                 }));
                 await new Promise(r => setTimeout(r, 10));
             }
-            updateAllFontCanvases();
-            updateAllFontSetCanvases();
+            
+            
         })();
 
         // 3. Cache computed profiles back to IndexedDB asynchronously
@@ -4388,13 +2912,9 @@ export async function handleCustomFontUpload(files: File[]): Promise<void> {
     updateCustomFontsBadge();
     updateCustomFontFilterCountsUI();
     renderCustomFontsUI();
-    generateAndDisplayFontSet();
+    
 
-    try {
-        const { populateFontSelectDropdown, autoClassifyAndRenderGallery } = await import('./font-classifier');
-        populateFontSelectDropdown();
-        autoClassifyAndRenderGallery();
-    } catch (e) { }
+    
 
     // Register FontFace in background
     (async () => {
@@ -4408,8 +2928,8 @@ export async function handleCustomFontUpload(files: File[]): Promise<void> {
                 (document as any).fonts.add(fontFace);
             } catch (e) {}
         }
-        updateAllFontCanvases();
-        updateAllFontSetCanvases();
+        
+        
     })();
 }
 
@@ -4430,6 +2950,7 @@ export async function deduplicateCustomFonts(showPrompt: boolean = false): Promi
         }
 
         const seenNormalizedMap = new Map<string, any>();
+        const consonantSkeletonMap = new Map<string, string>();
         const duplicatesToDelete: string[] = [];
 
         for (const item of rawEntries) {
@@ -4459,16 +2980,14 @@ export async function deduplicateCustomFonts(showPrompt: boolean = false): Promi
             const normKey = normalizeFontKey(cleanFamily);
             if (!normKey) continue;
 
+            const skeleton = normKey.length >= 4 ? normKey.replace(/[aeiouy]/g, '') : '';
+
+            // Check exact normKey or fuzzy skeleton match in O(1)
             let matchedKey = '';
             if (seenNormalizedMap.has(normKey)) {
                 matchedKey = normKey;
-            } else {
-                for (const existingKey of seenNormalizedMap.keys()) {
-                    if (isFuzzyDuplicate(normKey, existingKey)) {
-                        matchedKey = existingKey;
-                        break;
-                    }
-                }
+            } else if (skeleton.length >= 3 && consonantSkeletonMap.has(skeleton)) {
+                matchedKey = consonantSkeletonMap.get(skeleton)!;
             }
 
             if (matchedKey) {
@@ -4482,11 +3001,17 @@ export async function deduplicateCustomFonts(showPrompt: boolean = false): Promi
                     duplicatesToDelete.push(existing.family);
                     seenNormalizedMap.delete(matchedKey);
                     seenNormalizedMap.set(normKey, item);
+                    if (skeleton.length >= 3) {
+                        consonantSkeletonMap.set(skeleton, normKey);
+                    }
                 } else {
                     duplicatesToDelete.push(item.family);
                 }
             } else {
                 seenNormalizedMap.set(normKey, item);
+                if (skeleton.length >= 3 && !consonantSkeletonMap.has(skeleton)) {
+                    consonantSkeletonMap.set(skeleton, normKey);
+                }
             }
         }
 
@@ -5242,122 +3767,11 @@ export function refreshCustomFontsUI(): void {
 }
 
 export function initFontMatcherModule(): void {
-    try {
-        (document as any).fonts.onloadingdone = () => {
-            updateAllFontCanvases();
-            updateAllFontSetCanvases();
-        };
-    } catch (e) { }
-
     loadAndRegisterCustomFontsFromDB().then(() => {
-        generateAndDisplayFontSet('romance');
+        renderCustomFontsUI();
     });
 
-    const savedKey = getSecureToken('gemini_manga_api_key') ||
-        getSecureToken('gemini_api_key') ||
-        getSecureToken('manga_gemini_key') || '';
-    const keyInput = document.getElementById('fontmatch-api-key') as HTMLInputElement | null;
-    if (keyInput && savedKey) {
-        keyInput.value = savedKey;
-    }
-
-    updateFontMatchModelDropdown(cachedGeminiModels);
-
-    if (savedKey) {
-        fetchFontMatchModels(false);
-    }
-
-    if (keyInput) {
-        keyInput.addEventListener('input', (e: Event) => {
-            const target = e.target as HTMLInputElement;
-            const k = target.value.trim();
-            saveSecureToken('gemini_manga_api_key', k);
-            saveSecureToken('gemini_api_key', k);
-            saveSecureToken('manga_gemini_key', k);
-        });
-    }
-
-    // Genre Presets Select Listener
-    const genreSelect = document.getElementById('fontset-genre-select') as HTMLSelectElement | null;
-    if (genreSelect) {
-        genreSelect.addEventListener('change', (e: Event) => {
-            const target = e.target as HTMLSelectElement;
-            generateAndDisplayFontSet(target.value as GenrePresetId);
-        });
-    }
-
-    // Genre Sample Files Upload
-    const genreSampleInput = document.getElementById('genre-sample-files-input') as HTMLInputElement | null;
-    if (genreSampleInput) {
-        genreSampleInput.addEventListener('change', (e: Event) => {
-            const target = e.target as HTMLInputElement;
-            if (target.files && target.files.length > 0) {
-                handleGenreSampleImageSelect(Array.from(target.files));
-            }
-        });
-    }
-
-    // Genre Sample Dropzone Drag & Drop
-    const genreDropzone = document.getElementById('genre-sample-dropzone');
-    if (genreDropzone) {
-        ['dragenter', 'dragover'].forEach(eventName => {
-            genreDropzone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                genreDropzone.classList.add('border-indigo-500', 'bg-indigo-500/10');
-            }, false);
-        });
-        ['dragleave', 'drop'].forEach(eventName => {
-            genreDropzone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                genreDropzone.classList.remove('border-indigo-500', 'bg-indigo-500/10');
-            }, false);
-        });
-        genreDropzone.addEventListener('drop', (e) => {
-            const dt = (e as DragEvent).dataTransfer;
-            if (dt && dt.files && dt.files.length > 0) {
-                const imgFiles = Array.from(dt.files).filter(f => f.type.startsWith('image/'));
-                if (imgFiles.length > 0) {
-                    handleGenreSampleImageSelect(imgFiles);
-                }
-            }
-        });
-    }
-
-    window.addEventListener('paste', (e: ClipboardEvent) => {
-        const secFont = document.getElementById('sec-fontmatch');
-        if (!secFont || secFont.classList.contains('hidden')) return;
-
-        const items = e.clipboardData?.items;
-        if (!items) return;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf('image') !== -1) {
-                const blob = items[i].getAsFile();
-                if (blob) {
-                    const activeSubTab = document.querySelector('#fontmatch-panel-set:not(.hidden)');
-                    if (activeSubTab) {
-                        handleGenreSampleImageSelect([blob]);
-                    } else {
-                        handleFontMatchImageSelect(blob);
-                    }
-                    break;
-                }
-            }
-        }
-    });
-
-    const fontMatchInput = document.getElementById('fontmatch-file-input');
-    if (fontMatchInput) {
-        fontMatchInput.addEventListener('change', (e: Event) => {
-            const target = e.target as HTMLInputElement;
-            if (target.files && target.files[0]) {
-                handleFontMatchImageSelect(target.files[0]);
-            }
-        });
-    }
-
-    const customFontInput = document.getElementById('fontmatch-custom-files');
+    const customFontInput = document.getElementById('fontmatch-custom-files') as HTMLInputElement | null;
     if (customFontInput) {
         customFontInput.addEventListener('change', (e: Event) => {
             const target = e.target as HTMLInputElement;
@@ -5367,3 +3781,4 @@ export function initFontMatcherModule(): void {
         });
     }
 }
+

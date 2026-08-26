@@ -8,7 +8,7 @@ import {
     getFontFamilyName,
     renderPageToCanvas2D
 } from '../../../src/features/canvas/canvas-exporter.ts';
-import { computeBlockTextLayout } from '../../../src/features/canvas/text-layout-engine.ts';
+import { computeBlockTextLayout, clearTextMeasureCache, ensureFontsReady } from '../../../src/features/canvas/text-layout-engine.ts';
 import { autoFitBlock } from '../../../src/features/canvas/canvas-styling.ts';
 import { parseRichTextLines } from '../../../src/core/utils.ts';
 import { globalState } from '../../../src/core/state.ts';
@@ -584,6 +584,42 @@ test('CASE Y — P1: AutoFit Frozen Layout during Export pipeline', async () => 
     const canvas = await renderPageToCanvas2D(page);
     assert.ok(canvas);
     assert.strictEqual(block.style.fontSize, initialFontSize, 'Export must never re-run AutoFit or mutate block.style.fontSize');
+});
+
+test('CASE Z — Prevention of Export Text Right-Shift (Font Cache Invalidation & Default Padding Scale)', async () => {
+    // 1. Verify clearTextMeasureCache works and is invoked when fonts are ready
+    clearTextMeasureCache();
+    await ensureFontsReady(['font-manga', 'font-vietnamese', 'font-comic']);
+
+    // 2. Test centered text block layout
+    const block = {
+        id: 'b_center_shift_test',
+        type: 'dialogue',
+        translated: 'Văn bản kiểm tra căn giữa',
+        box: { x: 20, y: 30, w: 60, h: 20 },
+        style: {
+            fontSize: 20,
+            fontFamily: 'font-manga',
+            align: 'center'
+        }
+    };
+
+    const naturalW = 2000;
+    const naturalH = 3000;
+    const scaleFactor = 2.0;
+    const layout = buildBlockTextLayout(block, naturalW, naturalH, scaleFactor);
+
+    const bx = (block.box.x / 100) * naturalW; // 400
+    const bw = (block.box.w / 100) * naturalW; // 1200
+    const expectedCenterX = bx + (bw / 2); // 1000
+
+    assert.strictEqual(layout.lines.length, 1);
+    const line = layout.lines[0];
+    const computedCenterX = (layout.lineRects[0].x) + (line.width / 2);
+
+    expect(computedCenterX).toBeCloseTo(expectedCenterX, 2);
+    // Line width must be non-zero and padding must scale by 2.0
+    expect(layout.padXPx).toBe(8); // 4 * 2.0
 });
 
 

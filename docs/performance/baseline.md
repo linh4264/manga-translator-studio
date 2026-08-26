@@ -63,3 +63,21 @@
 - **Memory / Allocation**: Consolidating 2D BFS queues to a single 1D `Int32Array` reduced queue allocation from `13.44 MB` to `6.72 MB` per 4K window (-50%).
 - **Bottleneck**: Unconditional `Math.hypot` inside seed probe loop, dual coordinate queue allocations, and un-short-circuited ray-stepping.
 
+### BENCHMARK 9 — `generateFontSetFromPreset` (Manga Font Set Recommendation)
+- **Workload**: 200 font set generations across a 200-font manga repository.
+- **Baseline Execution Time**: `37.48 ms` (`0.187 ms / font set`)
+- **Optimized Execution Time**: `8.36 ms` (`0.042 ms / font set`)
+- **Improvement**: `77.7%` reduction in execution time (**4.5x faster**).
+- **Bottleneck**:
+  1. Allocation of 23 temporary arrays on every `calculateCategoryCompatibility` invocation.
+  2. Full-array mapping and $O(N \log N)$ sorting for each role just to pick the top-1 candidate (`[0]`).
+  3. Slow `Math.pow(dx, 2)` calls in Euclidean distance calculations.
+
+### BENCHMARK 10 — Font Library Deduplication (`deduplicateCustomFonts`)
+- **Workload**: 10 deduplication runs on 1,000 custom fonts with fuzzy stripped duplicate records.
+- **Baseline Execution Time**: `337.92 ms` (`33.79 ms / run`)
+- **Optimized Execution Time**: `10.49 ms` (`1.05 ms / run`)
+- **Improvement**: `96.9%` reduction in execution time (**32.2x faster**).
+- **Bottleneck**: Quadratic $O(N^2)$ iteration over existing keys running multiple regex `.replace(/[aeiouy]/g, '')` evaluations per font pair.
+
+

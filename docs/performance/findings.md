@@ -71,8 +71,30 @@
 - **Evidence**: Benchmark 8 tests on 2400x3200 4K images pass in 65.08 ms/bubble with 50% lower queue footprint; 351/351 tests pass.
 - **Confidence**: CONFIRMED
 
+---
+
+### [PERF-018] Font Recommendation Engine & Single-Pass Top-1 Role Matching
+- **File**: `cong-cu-huu-ich/src/font-matcher.ts`
+- **Function/Component**: `calculateCategoryCompatibility`, `calculateRoleSimilarity`, `generateFontSetFromPreset`, `generateFontSetFromCustomProfile`
+- **Performance Area**: Manga Font Matcher & Set Recommendation Engine
+- **Hypothesis**: `calculateCategoryCompatibility` created and allocated 23 sub-arrays per call ($500 \times 6 = 3,000$ calls $= 69,000$ array allocations). Font set generation mapped and sorted the entire font repository $O(N \log N)$ 7 times just to pick the top-1 font.
+- **Expected Impact**: ~70–80% faster font set recommendation; zero array allocations in role matching.
+- **Evidence**: Benchmark 9 baseline takes **37.48 ms** $\rightarrow$ reduced to **8.36 ms** for 200 font set generations (**4.5x faster**).
+- **Confidence**: CONFIRMED
 
 ---
+
+### [PERF-019] Font Library Deduplication & Consonant Skeleton O(N) Hash Indexing
+- **File**: `cong-cu-huu-ich/src/font-matcher.ts`
+- **Function/Component**: `loadAndRegisterCustomFontsFromDB`, `deduplicateCustomFonts`
+- **Performance Area**: Custom Font Ingestion & Repository Deduplication
+- **Hypothesis**: Deduplication looped through all existing keys in $O(N^2)$ time with repetitive regex evaluations in `isFuzzyDuplicate`. Maintaining an indexed `consonantSkeletonMap` allows $O(1)$ fast duplicate lookups.
+- **Expected Impact**: ~90–95% faster custom font library deduplication.
+- **Evidence**: Benchmark 10 baseline takes **337.92 ms** $\rightarrow$ reduced to **10.49 ms** for 10 runs on 1,000 fonts (**32.2x faster**).
+- **Confidence**: CONFIRMED
+
+---
+
 
 ## 2. LIKELY ISSUES
 

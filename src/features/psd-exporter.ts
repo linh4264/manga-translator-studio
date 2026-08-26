@@ -7,8 +7,8 @@
  */
 
 import { MangaPage, MangaBlock } from '../types/index';
-import { computeBlockTextLayout, renderBlockTextToCanvas, ensureFontsLoadedForPage } from './canvas/text-layout-engine';
-import { getExportScale } from './canvas/canvas-exporter';
+import { renderBlockTextToCanvas, ensureFontsLoadedForPage } from './canvas/text-layout-engine';
+import { getExportScale, buildBlockTextLayout } from './canvas/canvas-exporter';
 
 export async function createMangaPSD(page: MangaPage, originalImgEl?: HTMLImageElement | null, eraserCanvas?: HTMLCanvasElement | null): Promise<Blob> {
     if (!page) {
@@ -73,7 +73,7 @@ export async function createMangaPSD(page: MangaPage, originalImgEl?: HTMLImageE
                 const tCtx = tCanvas.getContext('2d');
                 if (!tCtx) return null;
 
-                const layout = computeBlockTextLayout(block, width, height, scaleFactor, tCtx);
+                const layout = buildBlockTextLayout(block, width, height, scaleFactor, tCtx, page);
 
                 // Optional Background Mask for the block
                 const hexBgColor = block.style?.bgColor || '#ffffff';

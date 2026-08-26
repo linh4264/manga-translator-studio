@@ -91,6 +91,8 @@ export async function ensureFontsReady(fontFamilies?: string[]): Promise<void> {
             }
         }
     }
+    // Clear stale font metrics cache so fresh measurements use the loaded fonts
+    clearTextMeasureCache();
 }
 
 /**
@@ -312,6 +314,7 @@ let lastMeasureFont: string = '';
 
 export function clearTextMeasureCache(): void {
     textMeasureCache.clear();
+    fontBaselineCache.clear();
     lastMeasureFont = '';
 }
 
@@ -343,17 +346,27 @@ export function measureStyledSegmentWidth(
             fontSize: fontSizePx
         }, fontSizePx, baseFontFamily);
 
-        const cacheKey = `${tokFontStr}\0${segText}`;
+        const cacheKey = `${tokFontStr}\0ls:${effLetterSpacing}\0${segText}`;
         const cachedWidth = textMeasureCache.get(cacheKey);
         if (cachedWidth !== undefined) {
-            return cachedWidth + extraSpacing;
+            return cachedWidth;
         }
 
         if (lastMeasureFont !== tokFontStr) {
             measureCtx.font = tokFontStr;
             lastMeasureFont = tokFontStr;
         }
-        const w = measureCtx.measureText(segText).width;
+
+        let w = 0;
+        if ('letterSpacing' in measureCtx && effLetterSpacing !== 0) {
+            (measureCtx as any).letterSpacing = `${effLetterSpacing}px`;
+            w = measureCtx.measureText(segText).width;
+        } else {
+            if ('letterSpacing' in measureCtx) {
+                (measureCtx as any).letterSpacing = '0px';
+            }
+            w = measureCtx.measureText(segText).width + extraSpacing;
+        }
 
         if (w > 0) {
             if (textMeasureCache.size >= MAX_TEXT_MEASURE_CACHE_SIZE) {
@@ -365,7 +378,7 @@ export function measureStyledSegmentWidth(
                 }
             }
             textMeasureCache.set(cacheKey, w);
-            return w + extraSpacing;
+            return w;
         }
     }
 
@@ -1102,6 +1115,8 @@ export function computeBlockTextLayout(
     let scaledPadding = block.style?.padding;
     if (typeof scaledPadding === 'number') {
         scaledPadding = scaledPadding * scaleFactor;
+    } else if (scaledPadding === undefined || scaledPadding === null) {
+        scaledPadding = 4 * scaleFactor;
     }
 
     const refW = displayW / Math.max(0.0001, scaleFactor);

@@ -214,3 +214,68 @@ Bubble detection maintains consistent performance across all resolutions and ope
 Rule:
 Do not reopen this issue unless profiling on 8K image processing shows a new hotspot.
 
+---
+
+## PERF-018 — Font Recommendation Engine & Single-Pass Top-1 Role Matching
+
+Status: FROZEN  
+Date: 2026-08-26  
+Component: `cong-cu-huu-ich/src/font-matcher.ts`  
+
+Problem:
+1. `calculateCategoryCompatibility` created and allocated 23 sub-arrays and 3 closure iterations on every single call ($500 \times 6 = 3,000$ calls per set generation $= 69,000$ array allocations).
+2. In `generateFontSetFromPreset` and `generateFontSetFromCustomProfile`, each role called `rankFontsForRole`, which mapped the entire font library into `{font, score}` objects and executed an $O(N \log N)$ sort across the entire list just to extract the single best match (`[0]`).
+3. `calculateRoleSimilarity` and `rankFontsAgainstAnalysis` used `Math.pow(delta, 2)` instead of direct multiplication `delta * delta`.
+
+Evidence:
+- Benchmark 9 (200 font set generations across 200 fonts):
+  - Baseline: **37.48 ms** (0.187 ms/set)
+  - Optimized: **8.36 ms** (0.042 ms/set)
+  - Result: **4.5x faster (77.7% reduction in time)**; zero temporary sorting array allocations.
+- Test Suite: 353/353 tests pass (1,612 assertions).
+
+Chosen Solution:
+1. Replaced array pairs in `calculateCategoryCompatibility` with a static lookup map `CATEGORY_COMPATIBILITY_MAP`.
+2. Created `findBestFontForRole(fontList, roleConfig, preferredFontName)` to find the top-1 candidate in a single linear $O(N)$ pass without object allocations or sorting.
+3. Replaced `Math.pow(x, 2)` with `x * x` in Euclidean distance evaluations.
+
+Trade-offs:
+None. Generated font sets, role rankings, and score percentages remain 100% identical.
+
+Why no further optimization is currently justified:
+Generating a complete 6-role manga font set takes only 0.042 ms (over 23,000 font sets/second).
+
+Rule:
+Do not reopen this issue unless profiling indicates a bottleneck on font libraries exceeding 10,000 fonts.
+
+---
+
+## PERF-019 — Font Library Deduplication & Consonant Skeleton O(N) Hash Indexing
+
+Status: FROZEN  
+Date: 2026-08-26  
+Component: `cong-cu-huu-ich/src/font-matcher.ts`  
+
+Problem:
+In `loadAndRegisterCustomFontsFromDB` and `deduplicateCustomFonts`, checking for fuzzy duplicates looped over all existing keys in $O(N^2)$ time, calling `isFuzzyDuplicate` which executed regex consonant strip `.replace(/[aeiouy]/g, '')` twice per pair (up to 250,000 regex operations on a 1,000-font library).
+
+Evidence:
+- Benchmark 10 (10 deduplication runs on 1,000 custom fonts with fuzzy stripped duplicates):
+  - Baseline: **337.92 ms** (33.79 ms/run)
+  - Optimized: **10.49 ms** (1.05 ms/run)
+  - Result: **32.2x faster (96.9% reduction in time)**.
+- Test Suite: 353/353 tests pass (1,612 assertions).
+
+Chosen Solution:
+Maintained a `consonantSkeletonMap = new Map<string, string>()` during deduplication. When checking a candidate key, its consonant skeleton is computed once and queried in $O(1)$ constant time against the map instead of looping through all existing keys.
+
+Trade-offs:
+None. Deduplication accuracy across diacritics, CSS wrappers, and stripped ASCII font names remains 100% identical.
+
+Why no further optimization is currently justified:
+Deduplication of 1,000 fonts takes ~1.0ms, executing instantaneously during font repository ingestion.
+
+Rule:
+Do not reopen this issue unless real-world workloads demonstrate a regression.
+
+

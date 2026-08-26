@@ -386,3 +386,96 @@ test('BENCHMARK 8: detectSpeechBubbleAtPoint on High-Resolution 4K Canvas (2400x
     expect(duration).toBeGreaterThan(0);
 });
 
+test('BENCHMARK 9: generateFontSetFromPreset & rankFontsAgainstAnalysis across 200 fonts (200 set generations)', () => {
+    const { generateFontSetFromPreset, rankFontsAgainstAnalysis, BUILTIN_MANGA_FONTS } = require('../../../cong-cu-huu-ich/src/font-matcher');
+    const mockFonts = [];
+    for (let i = 0; i < 200; i++) {
+        const cat = ['dialogue', 'shout', 'narration', 'whisper', 'sfx', 'cute'][i % 6];
+        mockFonts.push({
+            id: `font_mock_${i}`,
+            name: `Manga Font ${i} ${cat}`,
+            family: `Manga Font ${i}`,
+            category: cat,
+            weightScore: 0.2 + (i % 8) * 0.1,
+            energyScore: 0.1 + (i % 9) * 0.1,
+            formalityScore: 0.2 + (i % 7) * 0.1,
+            roughnessScore: 0.05 + (i % 10) * 0.08,
+            roundnessScore: 0.3 + (i % 6) * 0.1,
+            handwrittenScore: 0.1 + (i % 5) * 0.15,
+            isAllCaps: i % 4 === 0,
+            dateAdded: i
+        });
+    }
+
+    const presets = ['romance', 'comedy', 'action', 'fantasy', 'dark', 'modern'];
+    const iterations = 200;
+    const t0 = performance.now();
+    for (let i = 0; i < iterations; i++) {
+        const p = presets[i % presets.length];
+        generateFontSetFromPreset(mockFonts, p);
+    }
+    const duration = performance.now() - t0;
+    console.log(`\n[BENCHMARK 9 - generateFontSetFromPreset]: ${iterations} font set generations across 200 fonts: ${duration.toFixed(2)}ms (${(duration / iterations).toFixed(3)} ms/set)`);
+    expect(duration).toBeGreaterThan(0);
+});
+
+test('BENCHMARK 10: Font Deduplication Engine on 1000 custom fonts with fuzzy skeleton matching', () => {
+    const { normalizeFontKey } = require('../../../cong-cu-huu-ich/src/font-matcher');
+    const rawEntries = [];
+    for (let i = 0; i < 500; i++) {
+        rawEntries.push({
+            family: `SVN-Manga Font ${i} Bold`,
+            blob: new Blob(['dummy']),
+            dateAdded: i
+        });
+        // Add fuzzy duplicate (stripped/legacy formatted)
+        rawEntries.push({
+            family: `'SVNMangaFont${i}Bold.ttf', sans-serif`,
+            blob: new Blob(['dummy']),
+            dateAdded: i + 1000
+        });
+    }
+
+    const iterations = 10;
+    const t0 = performance.now();
+    for (let it = 0; it < iterations; it++) {
+        const seenNormalizedMap = new Map();
+        const consonantSkeletonMap = new Map();
+        const duplicatesToDelete = [];
+
+        for (const item of rawEntries) {
+            const rawOriginalKey = item.family;
+            const cleanFamily = String(item.family)
+                .replace(/^['"]|['"]$/g, '')
+                .replace(/,\s*(sans-serif|serif|cursive|monospace).*$/i, '')
+                .replace(/\.[^/.]+$/, '')
+                .trim();
+
+            const normKey = normalizeFontKey(cleanFamily);
+            if (!normKey) continue;
+
+            const skeleton = normKey.length >= 4 ? normKey.replace(/[aeiouy]/g, '') : '';
+
+            let matchedKey = '';
+            if (seenNormalizedMap.has(normKey)) {
+                matchedKey = normKey;
+            } else if (skeleton.length >= 3 && consonantSkeletonMap.has(skeleton)) {
+                matchedKey = consonantSkeletonMap.get(skeleton);
+            }
+
+            if (matchedKey) {
+                duplicatesToDelete.push(item.family);
+            } else {
+                seenNormalizedMap.set(normKey, item);
+                if (skeleton.length >= 3 && !consonantSkeletonMap.has(skeleton)) {
+                    consonantSkeletonMap.set(skeleton, normKey);
+                }
+            }
+        }
+    }
+    const duration = performance.now() - t0;
+    console.log(`\n[BENCHMARK 10 - Font Deduplication 1000 Fonts]: ${iterations} runs: ${duration.toFixed(2)}ms (${(duration / iterations).toFixed(2)} ms/run)`);
+    expect(duration).toBeGreaterThan(0);
+});
+
+
