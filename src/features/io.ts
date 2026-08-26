@@ -1,4 +1,3 @@
-// Input/Output Operations, ZIP Chapter Packs & Backup Restore
 import {
     globalState,
     pushStateToHistory,
