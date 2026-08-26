@@ -290,6 +290,12 @@ function isStandardMangaDialogueFamily(name: string): boolean {
     return standardKeywords.some(kw => clean.includes(kw));
 }
 
+const fontClassificationCache = new Map<string, FontClassificationResult>();
+
+export function clearFontClassificationCache(): void {
+    fontClassificationCache.clear();
+}
+
 /**
  * Classifies any font into primary Text Type and Tone based purely on local typography morphology
  * Zero network dependencies.
@@ -305,6 +311,17 @@ export function classifyFontOfflineHeuristics(font: Partial<CustomFontItem>): Fo
     const formality = font.formalityScore ?? 0.50;
     const energy = font.energyScore ?? 0.45;
     const styleType = font.fontStyleType;
+
+    const cacheKey = `${name}_${cat}_${weight}_${round}_${hand}_${rough}_${formality}_${energy}_${styleType}`;
+    if (fontClassificationCache.has(cacheKey)) {
+        return fontClassificationCache.get(cacheKey)!;
+    }
+
+    const cacheAndReturn = (res: FontClassificationResult): FontClassificationResult => {
+        fontClassificationCache.set(cacheKey, res);
+        return res;
+    };
+
     const isStandardDialogue = isStandardMangaDialogueFamily(name);
 
     let primaryType: MangaTextType = 'dialogue';
@@ -332,7 +349,7 @@ export function classifyFontOfflineHeuristics(font: Partial<CustomFontItem>): Fo
         compatibleTones = ['none'];
         tags.push('SFX Display', 'Nét cọ mạnh mẽ', 'Tương phản cao');
         reasoning = `Phông chữ mang phong cách Brush/SFX (${Math.round(rough * 100)}% độ gai ráp), năng lượng bùng nổ, tối ưu tuyệt đối cho tiếng động âm thanh manga.`;
-        return {
+        return cacheAndReturn({
             primaryTextType: primaryType,
             compatibleTextTypes: compatibleTypes,
             primaryTone: primaryTone,
@@ -342,7 +359,7 @@ export function classifyFontOfflineHeuristics(font: Partial<CustomFontItem>): Fo
             reasoning,
             recommendedStroke: '3px - 5px (Viền đậm nổi bật)',
             recommendedUsage: 'SFX hành động, tiếng va chạm, nổ, chiêu thức'
-        };
+        });
     }
 
     // 2. Explicit Serif / Editorial Narration Fonts
@@ -359,7 +376,7 @@ export function classifyFontOfflineHeuristics(font: Partial<CustomFontItem>): Fo
         compatibleTones = ['none'];
         tags.push('Chữ có chân (Serif)', 'Trang trọng', 'Dẫn chuyện');
         reasoning = `Phông chữ có tính trang trọng cao (${Math.round(formality * 100)}%), đường nét thanh lịch mực thước, tối ưu cho khung dẫn truyện và văn bản tự sự.`;
-        return {
+        return cacheAndReturn({
             primaryTextType: primaryType,
             compatibleTextTypes: compatibleTypes,
             primaryTone: primaryTone,
@@ -369,7 +386,7 @@ export function classifyFontOfflineHeuristics(font: Partial<CustomFontItem>): Fo
             reasoning,
             recommendedStroke: '0px - 1px (Nét trong khung chữ nhật)',
             recommendedUsage: 'Khung dẫn truyện mở đầu, bối cảnh, thư từ cổ phong'
-        };
+        });
     }
 
     // 3. Explicit Cute / Chibi / Casual Aside Fonts
@@ -387,7 +404,7 @@ export function classifyFontOfflineHeuristics(font: Partial<CustomFontItem>): Fo
         compatibleTones = ['none'];
         tags.push('Viết tay vui nhộn', 'Lời bình ngoài lề', 'Chibi nhí nhố');
         reasoning = `Nét chữ mang phong cách viết tay ngộ nghĩnh (${Math.round(hand * 100)}%), thích hợp cho lời thoại phụ ngoài bóng thoại và tranh chibi.`;
-        return {
+        return cacheAndReturn({
             primaryTextType: primaryType,
             compatibleTextTypes: compatibleTypes,
             primaryTone: primaryTone,
@@ -397,7 +414,7 @@ export function classifyFontOfflineHeuristics(font: Partial<CustomFontItem>): Fo
             reasoning,
             recommendedStroke: '1px - 2px',
             recommendedUsage: 'Lời thì thầm ngoài bóng thoại, ghi chú tác giả, tranh chibi'
-        };
+        });
     }
 
     // 4. Explicit Whisper / Thin / Italic Monologue Fonts
@@ -412,7 +429,7 @@ export function classifyFontOfflineHeuristics(font: Partial<CustomFontItem>): Fo
         compatibleTones = ['whisper', 'soft', 'sad', 'hesitant', 'weak'];
         tags.push('Độc thoại nội tâm', 'Mềm mại thanh thoát', 'Dịu dàng');
         reasoning = `Nét chữ mảnh nhẹ (${Math.round(weight * 100)}% độ đậm), thanh thoát, thích hợp cho dòng suy nghĩ nội tâm trong bóng thoại đám mây.`;
-        return {
+        return cacheAndReturn({
             primaryTextType: primaryType,
             compatibleTextTypes: compatibleTypes,
             primaryTone: primaryTone,
@@ -422,7 +439,7 @@ export function classifyFontOfflineHeuristics(font: Partial<CustomFontItem>): Fo
             reasoning,
             recommendedStroke: '1px (Viền mỏng nhẹ)',
             recommendedUsage: 'Bóng thoại đám mây, suy ngẫm nội tâm, lời thì thầm bí mật'
-        };
+        });
     }
 
     // 5. Default Backbone: Standard Manga Dialogue
@@ -492,7 +509,7 @@ export function classifyFontOfflineHeuristics(font: Partial<CustomFontItem>): Fo
         reasoning = `Phông chữ hội thoại tiêu chuẩn của manga, độ cân đối hoàn hảo, dễ đọc mượt mà trong hầu hết mọi bóng thoại đời thường.`;
     }
 
-    return {
+    return cacheAndReturn({
         primaryTextType: primaryType,
         compatibleTextTypes: compatibleTypes,
         primaryTone: primaryTone,
@@ -502,7 +519,7 @@ export function classifyFontOfflineHeuristics(font: Partial<CustomFontItem>): Fo
         reasoning,
         recommendedStroke: '1.5px (Chuẩn Typeset)',
         recommendedUsage: 'Bóng thoại hội thoại tiêu chuẩn hàng ngày'
-    };
+    });
 }
 
 // ============================================================================

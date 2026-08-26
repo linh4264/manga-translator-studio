@@ -145,6 +145,8 @@ export function renderOverlays(
                 activeImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                 page.imageDataCache = activeImageData;
             }
+            canvas.width = 0;
+            canvas.height = 0;
         } catch (e) {
             console.error("Không thể lấy dữ liệu ảnh để khớp bong bóng:", e);
         }
@@ -152,6 +154,21 @@ export function renderOverlays(
 
     const activeCoverIds = new Set<string>();
     const activeBubbleIds = new Set<string>();
+
+    const existingCoversMap = new Map<string, HTMLElement>();
+    if (coversLayer) {
+        for (let i = 0; i < coversLayer.children.length; i++) {
+            const el = coversLayer.children[i] as HTMLElement;
+            if (el.id) existingCoversMap.set(el.id, el);
+        }
+    }
+    const existingTextsMap = new Map<string, HTMLElement>();
+    if (textsLayer) {
+        for (let i = 0; i < textsLayer.children.length; i++) {
+            const el = textsLayer.children[i] as HTMLElement;
+            if (el.id) existingTextsMap.set(el.id, el);
+        }
+    }
 
     const { width: refW, height: refH } = getReferenceDisplayDimensions(page, imgElement);
     const naturalW = (imgElement && imgElement.naturalWidth > 0) ? imgElement.naturalWidth : (page?.width || 800);
@@ -177,9 +194,8 @@ export function renderOverlays(
         activeCoverIds.add(coverId);
         activeBubbleIds.add(bubbleId);
 
-        // 1. Cover Layer Node Reconciliation
-        let coverEl = (Array.from(coversLayer!.children).find((c: any) => c.id === coverId) ||
-            coversLayer!.querySelector(`#${coverId}`)) as HTMLElement | null;
+        // 1. Cover Layer Node Reconciliation (O(1) lookup)
+        let coverEl = existingCoversMap.get(coverId) || null;
         let isNewCover = false;
         if (!coverEl) {
             coverEl = document.createElement('div');
@@ -321,9 +337,8 @@ export function renderOverlays(
             coversLayer!.appendChild(coverEl);
         }
 
-        // 2. Text/Content Layer Node Reconciliation
-        let bubble = (Array.from(textsLayer!.children).find((b: any) => b.id === bubbleId) ||
-            textsLayer!.querySelector(`#${bubbleId}`)) as HTMLElement | null;
+        // 2. Text/Content Layer Node Reconciliation (O(1) lookup)
+        let bubble = existingTextsMap.get(bubbleId) || null;
         let isNewBubble = false;
         if (!bubble) {
             bubble = document.createElement('div');
@@ -674,17 +689,23 @@ export function renderOverlays(
         }
     });
 
-    // 3. Cleanup Orphan Elements
-    Array.from(coversLayer!.children).forEach((child) => {
-        if (child.id && !activeCoverIds.has(child.id)) {
-            coversLayer!.removeChild(child);
+    // 3. Cleanup Orphan Elements (In-place loop without array allocation)
+    if (coversLayer) {
+        for (let i = coversLayer.children.length - 1; i >= 0; i--) {
+            const child = coversLayer.children[i] as HTMLElement;
+            if (child.id && !activeCoverIds.has(child.id)) {
+                coversLayer.removeChild(child);
+            }
         }
-    });
-    Array.from(textsLayer!.children).forEach((child) => {
-        if (child.id && !activeBubbleIds.has(child.id)) {
-            textsLayer!.removeChild(child);
+    }
+    if (textsLayer) {
+        for (let i = textsLayer.children.length - 1; i >= 0; i--) {
+            const child = textsLayer.children[i] as HTMLElement;
+            if (child.id && !activeBubbleIds.has(child.id)) {
+                textsLayer.removeChild(child);
+            }
         }
-    });
+    }
 }
 
 export function convertHexToRGBA(hex: string, alpha: number): string {

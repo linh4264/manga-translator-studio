@@ -95,31 +95,30 @@ export function handleSliceFileSelect(file: File): void {
     }
     sliceFile = file;
     sliceName = file.name;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-        const img = new Image();
-        img.onload = () => {
-            sliceImg = img;
-            const filenameEl = document.getElementById('slice-filename');
-            if (filenameEl) {
-                filenameEl.innerText = file.name;
-                filenameEl.title = file.name;
-            }
-            const sizeStr = formatFileSize(file.size);
-            const dimEl = document.getElementById('slice-dim');
-            if (dimEl) dimEl.innerText = `${img.naturalWidth} x ${img.naturalHeight} px • ${sizeStr}`;
-            const uploadEl = document.getElementById('slice-upload');
-            if (uploadEl) uploadEl.classList.add('hidden');
-            const panelEl = document.getElementById('slice-panel');
-            if (panelEl) panelEl.classList.remove('hidden');
-            processSlicing();
-        };
-        img.onerror = () => {
-            alert("Không thể đọc định dạng ảnh này. Vui lòng thử lại với ảnh khác.");
-        };
-        img.src = evt.target?.result as string;
+    const tempUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+        URL.revokeObjectURL(tempUrl);
+        sliceImg = img;
+        const filenameEl = document.getElementById('slice-filename');
+        if (filenameEl) {
+            filenameEl.innerText = file.name;
+            filenameEl.title = file.name;
+        }
+        const sizeStr = formatFileSize(file.size);
+        const dimEl = document.getElementById('slice-dim');
+        if (dimEl) dimEl.innerText = `${img.naturalWidth} x ${img.naturalHeight} px • ${sizeStr}`;
+        const uploadEl = document.getElementById('slice-upload');
+        if (uploadEl) uploadEl.classList.add('hidden');
+        const panelEl = document.getElementById('slice-panel');
+        if (panelEl) panelEl.classList.remove('hidden');
+        processSlicing();
     };
-    reader.readAsDataURL(file);
+    img.onerror = () => {
+        URL.revokeObjectURL(tempUrl);
+        alert("Không thể đọc định dạng ảnh này. Vui lòng thử lại với ảnh khác.");
+    };
+    img.src = tempUrl;
 }
 
 /**
@@ -225,25 +224,29 @@ export async function processSlicing(): Promise<void> {
         if (heightCalc) heightCalc.innerText = `(~${Math.ceil(H / targetH)} mảnh)`;
     }
 
-    // If Smart Gap is enabled, adjust cut points to blank comic gutters
+    // If Smart Gap is enabled, adjust cut points to blank comic gutters using lightweight localized sample canvas
     if (enableSmartGap && cutPoints.length > 1) {
         const sampleCanvas = document.createElement('canvas');
-        sampleCanvas.width = W;
-        sampleCanvas.height = H;
         const sampleCtx = sampleCanvas.getContext('2d');
         if (sampleCtx) {
-            sampleCtx.drawImage(sliceImg, 0, 0);
-
             for (let i = 1; i < cutPoints.length; i++) {
                 const prevCut = cutPoints[i - 1];
                 const rawTarget = cutPoints[i];
                 const nextTarget = (i + 1 < cutPoints.length) ? cutPoints[i + 1] : H;
                 const maxSearch = Math.min(300, Math.floor((rawTarget - prevCut) * 0.3), Math.floor((nextTarget - rawTarget) * 0.3));
                 if (maxSearch > 20) {
-                    const optimalY = findOptimalCutLine(sampleCtx, rawTarget, maxSearch, W, H);
-                    cutPoints[i] = optimalY;
+                    const minY = Math.max(0, Math.floor(rawTarget - maxSearch));
+                    const maxY = Math.min(H, Math.floor(rawTarget + maxSearch));
+                    const sampleH = maxY - minY;
+                    sampleCanvas.width = W;
+                    sampleCanvas.height = sampleH;
+                    sampleCtx.drawImage(sliceImg, 0, minY, W, sampleH, 0, 0, W, sampleH);
+                    const optimalYOffset = findOptimalCutLine(sampleCtx, rawTarget - minY, maxSearch, W, sampleH);
+                    cutPoints[i] = minY + optimalYOffset;
                 }
             }
+            sampleCanvas.width = 0;
+            sampleCanvas.height = 0;
         }
     }
 
@@ -282,6 +285,11 @@ export async function processSlicing(): Promise<void> {
         ctx.drawImage(sliceImg, 0, sy, W, sh, 0, 0, W, sh);
 
         const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, format, quality));
+
+        // Immediately release canvas GPU backing store
+        canvas.width = 0;
+        canvas.height = 0;
+
         const objectUrl = blob ? URL.createObjectURL(blob) : '';
         const partIdx = String(i + 1).padStart(2, '0');
         const targetFilename = `${baseName}_part_${partIdx}.${ext}`;
@@ -302,7 +310,7 @@ export async function processSlicing(): Promise<void> {
         card.className = "bg-slate-900 border border-slate-800 rounded-2xl p-3 flex flex-col justify-between text-xs font-mono shadow-md hover:border-slate-700 transition-all";
         card.innerHTML = `
             <div class="relative group cursor-pointer overflow-hidden rounded-xl bg-slate-950/60 border border-slate-855 flex items-center justify-center min-h-[140px]">
-                <img src="${objectUrl}" class="max-h-48 object-contain rounded transition-transform group-hover:scale-105" alt="Slice ${escapeHTML(i+1)}">
+                <img loading="lazy" src="${objectUrl}" class="max-h-48 object-contain rounded transition-transform group-hover:scale-105" alt="Slice ${escapeHTML(i+1)}">
                 <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-sans text-xs gap-1.5 font-bold">
                     <i class="fa-solid fa-magnifying-glass-plus"></i> Phóng to xem
                 </div>
@@ -325,6 +333,9 @@ export async function processSlicing(): Promise<void> {
             previewTarget.addEventListener('click', () => openPreviewModal(objectUrl));
         }
         if (grid) grid.appendChild(card);
+
+        // Yield to event loop between slices
+        await new Promise(r => setTimeout(r, 0));
     }
 
     if (indicator) indicator.classList.add('hidden');
