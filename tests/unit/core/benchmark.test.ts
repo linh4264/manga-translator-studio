@@ -5,6 +5,8 @@ import { renderBlockTextToDOM } from '../../../src/features/canvas/text-layout-e
 import { autoFitBlock } from '../../../src/features/canvas/canvas-styling';
 import { mergeOverlappingAiBlocks, detectSpeechBubbleAtPoint } from '../../../src/features/ocr/ocr-service';
 import { renderPageToCanvas2DDirect } from '../../../src/features/canvas/canvas-exporter';
+import { runPatchMatchPipeline } from '../../../src/features/patchmatch/patchmatch.worker';
+import { generateFontSetFromPreset, rankFontsAgainstAnalysis, BUILTIN_MANGA_FONTS, normalizeFontKey } from '../../../cong-cu-huu-ich/src/font-matcher';
 import { MangaBlock, MangaPage } from '../../../src/types/index';
 import { globalState } from '../../../src/core/state';
 
@@ -294,7 +296,6 @@ test('BENCHMARK 6: renderPageToCanvas2DDirect on 50 page export iterations (10 b
 });
 
 test('BENCHMARK 7: runPatchMatchPipeline on organic/unknown manga texture inpainting', () => {
-    const { runPatchMatchPipeline } = require('../../../src/features/patchmatch/patchmatch.worker');
     const W = 100, H = 100;
     const rgba = new Uint8Array(W * H * 4);
     const mask = new Uint8Array(W * H);
@@ -387,7 +388,6 @@ test('BENCHMARK 8: detectSpeechBubbleAtPoint on High-Resolution 4K Canvas (2400x
 });
 
 test('BENCHMARK 9: generateFontSetFromPreset & rankFontsAgainstAnalysis across 200 fonts (200 set generations)', () => {
-    const { generateFontSetFromPreset, rankFontsAgainstAnalysis, BUILTIN_MANGA_FONTS } = require('../../../cong-cu-huu-ich/src/font-matcher');
     const mockFonts = [];
     for (let i = 0; i < 200; i++) {
         const cat = ['dialogue', 'shout', 'narration', 'whisper', 'sfx', 'cute'][i % 6];
@@ -412,7 +412,7 @@ test('BENCHMARK 9: generateFontSetFromPreset & rankFontsAgainstAnalysis across 2
     const t0 = performance.now();
     for (let i = 0; i < iterations; i++) {
         const p = presets[i % presets.length];
-        generateFontSetFromPreset(mockFonts, p);
+        generateFontSetFromPreset(mockFonts as any, p as any);
     }
     const duration = performance.now() - t0;
     console.log(`\n[BENCHMARK 9 - generateFontSetFromPreset]: ${iterations} font set generations across 200 fonts: ${duration.toFixed(2)}ms (${(duration / iterations).toFixed(3)} ms/set)`);
@@ -420,7 +420,6 @@ test('BENCHMARK 9: generateFontSetFromPreset & rankFontsAgainstAnalysis across 2
 });
 
 test('BENCHMARK 10: Font Deduplication Engine on 1000 custom fonts with fuzzy skeleton matching', () => {
-    const { normalizeFontKey } = require('../../../cong-cu-huu-ich/src/font-matcher');
     const rawEntries = [];
     for (let i = 0; i < 500; i++) {
         rawEntries.push({
