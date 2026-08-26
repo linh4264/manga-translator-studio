@@ -379,9 +379,9 @@ function clonePageForHistory(page: MangaPage): MangaPage {
         eraserLayerBlob: page.eraserLayerBlob || null,
         thumbnailBlob: page.thumbnailBlob || null,
         thumbnailSrc: page.thumbnailSrc || null,
-        src: page.src || null,
-        apiSrc: page.apiSrc || null,
-        imageDataCache: page.imageDataCache || null,
+        src: null,
+        apiSrc: null,
+        imageDataCache: null,
         lastDisplayWidth: page.lastDisplayWidth,
         autoFitRevision: page.autoFitRevision || 0,
         blocks: cloneBlocksForHistory(page.blocks)
@@ -493,6 +493,8 @@ export function applyStateFromSnapshot(snapshot: HistorySnapshot | any): void {
             : (snapshot.selectedBlockId ? [snapshot.selectedBlockId] : []);
         uiUpdateActiveBlockEditor();
     }
+
+    garbageCollectPageCaches(globalState.activePageIndex);
 }
 
 export function executeUndo(): void {
@@ -1189,6 +1191,7 @@ export function deactivatePage(page: MangaPage | null | undefined): void {
     if (page.blocks) {
         page.blocks.forEach((b: MangaBlock) => {
             b.maskCache = null;
+            b.autoFitCache = null;
         });
     }
 }

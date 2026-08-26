@@ -3217,9 +3217,43 @@ export function determineCaseGrade(isAllCaps: boolean, isSmallCaps: boolean): Fo
     return 'Mixed Case';
 }
 
+let sharedMorphologyCanvas: HTMLCanvasElement | null = null;
+let sharedMorphologyCtx: CanvasRenderingContext2D | null = null;
+
+function getSharedMorphologyContext(size: number = 80): CanvasRenderingContext2D | null {
+    if (typeof document === 'undefined') return null;
+    try {
+        if (!sharedMorphologyCanvas) {
+            sharedMorphologyCanvas = document.createElement('canvas');
+            sharedMorphologyCanvas.width = size;
+            sharedMorphologyCanvas.height = size;
+            sharedMorphologyCtx = sharedMorphologyCanvas.getContext('2d', { willReadFrequently: true });
+        } else if (sharedMorphologyCanvas.width !== size || sharedMorphologyCanvas.height !== size) {
+            sharedMorphologyCanvas.width = size;
+            sharedMorphologyCanvas.height = size;
+            sharedMorphologyCtx = sharedMorphologyCanvas.getContext('2d', { willReadFrequently: true });
+        }
+        return sharedMorphologyCtx;
+    } catch {
+        return null;
+    }
+}
+
+export const fontMorphologyCache = new Map<string, FontMorphologyResult>();
+export const fontProfileCache = new Map<string, FontProfile>();
+
+export function clearFontMorphologyCaches(): void {
+    fontMorphologyCache.clear();
+    fontProfileCache.clear();
+}
+
 export function analyzeFontMorphology(family: string): FontMorphologyResult {
     const cleanFamily = (family || 'Sans').replace(/['",]/g, '').trim();
     const lowerName = cleanFamily.toLowerCase();
+
+    if (fontMorphologyCache.has(cleanFamily)) {
+        return fontMorphologyCache.get(cleanFamily)!;
+    }
 
     // Fallback if headless / no DOM canvas
     if (typeof document === 'undefined') {
@@ -3255,7 +3289,7 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
             caseType = 'Small Caps'; isSmallCaps = true;
         }
 
-        return {
+        const fallbackResult: FontMorphologyResult = {
             weight,
             width,
             slant,
@@ -3269,14 +3303,13 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
             isSmallCaps,
             isItalic
         };
+        fontMorphologyCache.set(cleanFamily, fallbackResult);
+        return fallbackResult;
     }
 
     try {
-        const canvas = document.createElement('canvas');
-        const size = 120;
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const size = 80;
+        const ctx = getSharedMorphologyContext(size);
         if (!ctx) throw new Error("Canvas context 2D not available");
 
         // 1. Measure Weight & Width over multi-glyph set
@@ -3289,7 +3322,7 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, size, size);
             ctx.fillStyle = '#000000';
-            ctx.font = `72px "${cleanFamily}", sans-serif`;
+            ctx.font = `48px "${cleanFamily}", sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(glyph, size / 2, size / 2);
@@ -3312,7 +3345,7 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
                 }
             }
 
-            if (darkCount > 15 && maxX >= minX && maxY >= minY) {
+            if (darkCount > 8 && maxX >= minX && maxY >= minY) {
                 const bw = Math.max(1, maxX - minX + 1);
                 const bh = Math.max(1, maxY - minY + 1);
                 const density = darkCount / (bw * bh);
@@ -3328,10 +3361,10 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
         let advanceRatio: number | undefined = undefined;
         if (validGlyphs > 0) {
             try {
-                ctx.font = `72px "${cleanFamily}", sans-serif`;
+                ctx.font = `48px "${cleanFamily}", sans-serif`;
                 const textMetrics = ctx.measureText('Manga Studio');
                 if (textMetrics && typeof textMetrics.width === 'number' && textMetrics.width > 0) {
-                    advanceRatio = textMetrics.width / (72 * 12);
+                    advanceRatio = textMetrics.width / (48 * 12);
                 }
             } catch (e) { }
         }
@@ -3358,7 +3391,7 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, size, size);
             ctx.fillStyle = '#000000';
-            ctx.font = `72px "${cleanFamily}", sans-serif`;
+            ctx.font = `48px "${cleanFamily}", sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(stem, size / 2, size / 2);
@@ -3366,7 +3399,7 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
             const imgData = ctx.getImageData(0, 0, size, size).data;
             const points: { x: number; y: number }[] = [];
 
-            for (let y = 15; y < size - 15; y++) {
+            for (let y = 10; y < size - 10; y++) {
                 let rowSumX = 0;
                 let rowCount = 0;
                 for (let x = 0; x < size; x++) {
@@ -3382,7 +3415,7 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
                 }
             }
 
-            if (points.length > 20) {
+            if (points.length > 15) {
                 const n = points.length;
                 let sumY = 0, sumX = 0, sumY2 = 0, sumXY = 0;
                 for (const p of points) {
@@ -3467,7 +3500,7 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
                 distinctGlyphCount++;
             }
 
-            if (hRatio > 0.90 && Math.abs(darkRatio - 1.0) < 0.18 && upDark > 20) {
+            if (hRatio > 0.90 && Math.abs(darkRatio - 1.0) < 0.18 && upDark > 10) {
                 fullCapMatches++;
             } else if (hRatio >= 0.60 && hRatio <= 0.85 && darkRatio >= 0.50 && darkRatio <= 0.85) {
                 if (['e', 'r', 'a'].includes(lowChar) && darkRatio > 0.55) {
@@ -3482,7 +3515,7 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
         const isSmallCaps = !isAllCaps && ((isRealGlyphCanvas && smallCapMatches >= 2) || lowerName.includes('smallcaps') || lowerName.includes('small-caps') || lowerName.includes('small caps'));
         const caseGrade = determineCaseGrade(isAllCaps, isSmallCaps);
 
-        return {
+        const morphologyResult: FontMorphologyResult = {
             weight: weightGrade,
             width: widthGrade,
             slant: slantGrade,
@@ -3496,9 +3529,12 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
             isSmallCaps,
             isItalic: slantGrade === 'Italic'
         };
+
+        fontMorphologyCache.set(cleanFamily, morphologyResult);
+        return morphologyResult;
     } catch (err) {
         console.warn(`Lỗi phân tích morphology font "${family}":`, err);
-        return {
+        const fallbackErr: FontMorphologyResult = {
             weight: 'Regular',
             width: 'Normal',
             slant: 'Upright',
@@ -3512,12 +3548,18 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
             isSmallCaps: false,
             isItalic: false
         };
+        fontMorphologyCache.set(cleanFamily, fallbackErr);
+        return fallbackErr;
     }
 }
 
 const PROFILING_GLYPHS = ['M', 'A', 'H', 'O', 'a', 'e', 'g', 'q', '0', '8'];
 
 export function profileFontGlyph(family: string): FontProfile {
+    if (fontProfileCache.has(family)) {
+        return fontProfileCache.get(family)!;
+    }
+
     const morphology = analyzeFontMorphology(family);
     const cleanName = (family || '').toLowerCase();
 
@@ -3593,7 +3635,7 @@ export function profileFontGlyph(family: string): FontProfile {
             fallbackCat = 'whisper';
         }
 
-        return {
+        const profile: FontProfile = {
             weightScore: morphology.weightScore,
             energyScore: morphology.weightScore > 0.75 ? 0.85 : 0.45,
             formalityScore: morphology.caseType === 'All Caps' ? 0.65 : 0.55,
@@ -3612,14 +3654,13 @@ export function profileFontGlyph(family: string): FontProfile {
             caseRatio: morphology.caseRatio,
             morphology: morphology
         };
+        fontProfileCache.set(family, profile);
+        return profile;
     }
 
     try {
-        const canvas = document.createElement('canvas');
-        const size = 120;
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const size = 80;
+        const ctx = getSharedMorphologyContext(size);
         if (!ctx) throw new Error("Canvas 2D context unavailable");
 
         let totalInkDensity = 0;
@@ -3634,7 +3675,7 @@ export function profileFontGlyph(family: string): FontProfile {
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(0, 0, size, size);
             ctx.fillStyle = '#000000';
-            ctx.font = `72px "${family}", sans-serif`;
+            ctx.font = `48px "${family}", sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(glyph, size / 2, size / 2);
@@ -3682,7 +3723,7 @@ export function profileFontGlyph(family: string): FontProfile {
                 }
             }
 
-            if (darkCount > 15 && maxX >= minX && maxY >= minY) {
+            if (darkCount > 8 && maxX >= minX && maxY >= minY) {
                 const bboxW = Math.max(1, maxX - minX + 1);
                 const bboxH = Math.max(1, maxY - minY + 1);
                 const bboxArea = bboxW * bboxH;
@@ -3763,7 +3804,7 @@ export function profileFontGlyph(family: string): FontProfile {
         // Energy / Intensity score
         const energyScore = Math.max(0.10, Math.min(1.00, weightScore * 0.45 + roughnessScore * 0.35 + (isAllCaps ? 0.20 : 0.05)));
 
-        return {
+        const profileResult: FontProfile = {
             weightScore: Number(weightScore.toFixed(2)),
             energyScore: Number(energyScore.toFixed(2)),
             formalityScore: Number(formalityScore.toFixed(2)),
@@ -3782,9 +3823,12 @@ export function profileFontGlyph(family: string): FontProfile {
             caseRatio: morphology.caseRatio,
             morphology: morphology
         };
+
+        fontProfileCache.set(family, profileResult);
+        return profileResult;
     } catch (err) {
         console.warn(`Lỗi profiling font "${family}":`, err);
-        return {
+        const fallbackProfileErr: FontProfile = {
             weightScore: morphology.weightScore,
             energyScore: 0.45,
             formalityScore: 0.55,
@@ -3803,6 +3847,8 @@ export function profileFontGlyph(family: string): FontProfile {
             caseRatio: morphology.caseRatio,
             morphology: morphology
         };
+        fontProfileCache.set(family, fallbackProfileErr);
+        return fallbackProfileErr;
     }
 }
 
@@ -4540,7 +4586,8 @@ export async function reprofileAllCustomFonts(): Promise<void> {
         if (progressBar) progressBar.style.width = `${pct}%`;
         if (progressPercent) progressPercent.innerText = `${pct}% (${i + 1}/${total})`;
 
-        if (i % 20 === 0) await new Promise(r => setTimeout(r, 5));
+        // Yield to event loop on each font to prevent UI freezing
+        await new Promise(r => setTimeout(r, 0));
     }
 
     setTimeout(() => {
