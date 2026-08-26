@@ -58,20 +58,21 @@ export function downloadEnhancedImage(): void {
 export function handleEnhanceFile(file: File): void {
     if (!file) return;
     enhanceFileName = file.name;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-        const img = new Image();
-        img.onload = () => {
-            enhanceImg = img;
-            const uploadEl = document.getElementById('enhance-upload');
-            if (uploadEl) uploadEl.classList.add('hidden');
-            const panelEl = document.getElementById('enhance-panel');
-            if (panelEl) panelEl.classList.remove('hidden');
-            processEnhance();
-        };
-        img.src = evt.target?.result as string;
+    const tempUrl = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+        URL.revokeObjectURL(tempUrl);
+        enhanceImg = img;
+        const uploadEl = document.getElementById('enhance-upload');
+        if (uploadEl) uploadEl.classList.add('hidden');
+        const panelEl = document.getElementById('enhance-panel');
+        if (panelEl) panelEl.classList.remove('hidden');
+        processEnhance();
     };
-    reader.readAsDataURL(file);
+    img.onerror = () => {
+        URL.revokeObjectURL(tempUrl);
+    };
+    img.src = tempUrl;
 }
 
 export function initImageEnhancer(): void {

@@ -127,13 +127,19 @@ export async function executeMergeImages(): Promise<void> {
             currentY += scaledH;
         });
 
-        const dataUrl = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = `Merged_Vertical_Webtoon.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        canvas.toBlob((blob) => {
+            canvas.width = 0;
+            canvas.height = 0;
+            if (!blob) return;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Merged_Vertical_Webtoon.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+        }, 'image/png');
     } else {
         // Horizontal Side-by-Side Merge (Spread Page)
         const maxH = Math.max(...itemsToMerge.map(i => i.img.naturalHeight));
@@ -155,13 +161,19 @@ export async function executeMergeImages(): Promise<void> {
             currentX += scaledW;
         });
 
-        const dataUrl = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = `Merged_Horizontal_Spread.png`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        canvas.toBlob((blob) => {
+            canvas.width = 0;
+            canvas.height = 0;
+            if (!blob) return;
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Merged_Horizontal_Spread.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+        }, 'image/png');
     }
 }
 
@@ -173,16 +185,17 @@ export function handleMergeFiles(files: File[]): void {
     if (panelEl) panelEl.classList.remove('hidden');
 
     files.forEach(f => {
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            const img = new Image();
-            img.onload = () => {
-                mergeImgs.push({ name: f.name, img });
-                renderMergeList();
-            };
-            img.src = evt.target?.result as string;
+        const tempUrl = URL.createObjectURL(f);
+        const img = new Image();
+        img.onload = () => {
+            URL.revokeObjectURL(tempUrl);
+            mergeImgs.push({ name: f.name, img });
+            renderMergeList();
         };
-        reader.readAsDataURL(f);
+        img.onerror = () => {
+            URL.revokeObjectURL(tempUrl);
+        };
+        img.src = tempUrl;
     });
 }
 
