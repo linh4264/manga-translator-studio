@@ -19,17 +19,32 @@ export function applySharpenFilterToCtx(
     const data = imgData.data;
     const copy = new Uint8ClampedArray(data);
     const k = sharpAmount;
+    const weightCenter = 1 + 4 * k;
+    const stride = width * 4;
+
     for (let y = 1; y < height - 1; y++) {
+        const curRow = y * stride;
+        const topRow = (y - 1) * stride;
+        const botRow = (y + 1) * stride;
+
         for (let x = 1; x < width - 1; x++) {
-            const idx = (y * width + x) * 4;
-            for (let c = 0; c < 3; c++) {
-                const val = (1 + 4 * k) * copy[idx + c]
-                    - k * copy[((y - 1) * width + x) * 4 + c]
-                    - k * copy[((y + 1) * width + x) * 4 + c]
-                    - k * copy[(y * width + x - 1) * 4 + c]
-                    - k * copy[(y * width + x + 1) * 4 + c];
-                data[idx + c] = Math.min(255, Math.max(0, val));
-            }
+            const idx = curRow + (x << 2);
+            const topIdx = topRow + (x << 2);
+            const botIdx = botRow + (x << 2);
+            const leftIdx = idx - 4;
+            const rightIdx = idx + 4;
+
+            // Red
+            let val = weightCenter * copy[idx] - k * (copy[topIdx] + copy[botIdx] + copy[leftIdx] + copy[rightIdx]);
+            data[idx] = val < 0 ? 0 : (val > 255 ? 255 : val);
+
+            // Green
+            val = weightCenter * copy[idx + 1] - k * (copy[topIdx + 1] + copy[botIdx + 1] + copy[leftIdx + 1] + copy[rightIdx + 1]);
+            data[idx + 1] = val < 0 ? 0 : (val > 255 ? 255 : val);
+
+            // Blue
+            val = weightCenter * copy[idx + 2] - k * (copy[topIdx + 2] + copy[botIdx + 2] + copy[leftIdx + 2] + copy[rightIdx + 2]);
+            data[idx + 2] = val < 0 ? 0 : (val > 255 ? 255 : val);
         }
     }
     ctx.putImageData(imgData, 0, 0);
