@@ -3334,7 +3334,7 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
             for (let y = 0; y < size; y++) {
                 for (let x = 0; x < size; x++) {
                     const idx = (y * size + x) * 4;
-                    const lum = 0.299 * imgData[idx] + 0.587 * imgData[idx + 1] + 0.114 * imgData[idx + 2];
+                    const lum = (imgData[idx] * 77 + imgData[idx + 1] * 150 + imgData[idx + 2] * 29) >> 8;
                     if (lum < 128) {
                         darkCount++;
                         if (x < minX) minX = x;
@@ -3404,7 +3404,7 @@ export function analyzeFontMorphology(family: string): FontMorphologyResult {
                 let rowCount = 0;
                 for (let x = 0; x < size; x++) {
                     const idx = (y * size + x) * 4;
-                    const lum = 0.299 * imgData[idx] + 0.587 * imgData[idx + 1] + 0.114 * imgData[idx + 2];
+                    const lum = (imgData[idx] * 77 + imgData[idx + 1] * 150 + imgData[idx + 2] * 29) >> 8;
                     if (lum < 128) {
                         rowSumX += x;
                         rowCount++;

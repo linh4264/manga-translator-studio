@@ -136,6 +136,17 @@ export async function createMangaPSD(page: MangaPage, originalImgEl?: HTMLImageE
             };
 
             const buffer = writeFn(psdDoc);
+
+            // Release GPU backing store of layer canvases
+            rawCanvas.width = 0; rawCanvas.height = 0;
+            cleanCanvas.width = 0; cleanCanvas.height = 0;
+            textChildren.forEach((child: any) => {
+                if (child && child.canvas) {
+                    child.canvas.width = 0;
+                    child.canvas.height = 0;
+                }
+            });
+
             return new Blob([buffer], { type: 'image/vnd.adobe.photoshop' });
         }
     } catch (cdnErr) {
@@ -152,6 +163,10 @@ function writeStandalonePSD(width: number, height: number, cleanCanvas: HTMLCanv
 
     const cleanImgData = cleanCtx.getImageData(0, 0, width, height).data;
     const rawImgData = rawCtx.getImageData(0, 0, width, height).data;
+
+    // Immediately release source canvas backing stores
+    cleanCanvas.width = 0; cleanCanvas.height = 0;
+    rawCanvas.width = 0; rawCanvas.height = 0;
 
     const pixelCount = width * height;
     const parts: Uint8Array[] = [];
