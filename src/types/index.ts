@@ -27,6 +27,8 @@ export interface BlockStyle {
     padding?: number | string;
     rotate: number;
     textRotate?: number;
+    textOffsetX?: number;
+    textOffsetY?: number;
     vertical: boolean;
     bold: boolean;
     align: 'left' | 'center' | 'right';

@@ -554,6 +554,19 @@ export function initEventListeners(): void {
             return;
         }
 
+        if (globalState.selectedBlockId !== null && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            const step = e.shiftKey ? 5 : 1;
+            let dx = 0;
+            let dy = 0;
+            if (e.key === 'ArrowLeft') dx = -step;
+            if (e.key === 'ArrowRight') dx = step;
+            if (e.key === 'ArrowUp') dy = -step;
+            if (e.key === 'ArrowDown') dy = step;
+            import('../features/canvas/canvas-service').then(cs => cs.nudgeTextOffset(dx, dy));
+            return;
+        }
+
         if (globalState.selectedBlockId !== null && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && (e.shiftKey || e.altKey)) {
             const activePage = globalState.pages[globalState.activePageIndex];
             const block = activePage ? activePage.blocks.find(b => b.id === globalState.selectedBlockId) : null;

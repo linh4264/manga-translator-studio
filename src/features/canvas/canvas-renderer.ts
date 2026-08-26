@@ -458,11 +458,17 @@ export function renderOverlays(
             maskContent.style.fontWeight = block.style.bold ? 'bold' : 'normal';
             maskContent.style.fontStyle = block.style.italic ? 'italic' : 'normal';
 
-            if (block.style.textRotate) {
-                maskContent.style.transform = `rotate(${block.style.textRotate}deg)`;
-            } else {
-                maskContent.style.transform = '';
+            const textOffX = (block.style.textOffsetX || 0) * screenScale;
+            const textOffY = (block.style.textOffsetY || 0) * screenScale;
+            const textRot = block.style.textRotate || 0;
+            const transforms: string[] = [];
+            if (textOffX !== 0 || textOffY !== 0) {
+                transforms.push(`translate(${textOffX}px, ${textOffY}px)`);
             }
+            if (textRot !== 0) {
+                transforms.push(`rotate(${textRot}deg)`);
+            }
+            maskContent.style.transform = transforms.join(' ');
 
             if (block.style.vertical) {
                 maskContent.classList.add('text-vertical');

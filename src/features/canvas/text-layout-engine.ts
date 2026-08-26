@@ -1389,8 +1389,10 @@ export function renderBlockTextToCanvas(
 
     const offX = options.originOffsetX || 0;
     const offY = options.originOffsetY || 0;
-    const bx = (layout.bx ?? 0) + offX;
-    const by = (layout.by ?? 0) + offY;
+    const textOffX = (parseFloat(block.style?.textOffsetX as any) || 0) * scaleFactor;
+    const textOffY = (parseFloat(block.style?.textOffsetY as any) || 0) * scaleFactor;
+    const bx = (layout.bx ?? 0) + offX + textOffX;
+    const by = (layout.by ?? 0) + offY + textOffY;
     const bw = layout.bw ?? (layout.availableWidth || 100);
     const bh = layout.bh ?? (layout.availableHeight || 100);
     const fontSizePx = layout.fontSizePx;
@@ -1581,7 +1583,7 @@ export function renderBlockTextToCanvas(
         for (let i = 0; i < totalLines; i++) {
             const lineLayout = layout.lines[i];
             const lineTokens = lineLayout.tokens;
-            const lineCenterY = lineLayout.centerY + offY;
+            const lineCenterY = lineLayout.centerY + offY + textOffY;
 
             ctx.save();
             if (hasSkew) {
@@ -1915,7 +1917,7 @@ export function renderBlockTextToCanvas(
             const subLineHeight = subFontSizePx * 1.1;
             const subBaselineOffset = getFontBaselineOffset(ctx, subFontSpec, subFontSizePx);
             const subLines = (block.original || '').split('\n');
-            const lastLineBottom = layout.lines.length > 0 ? (layout.lines[layout.lines.length - 1].top + offY + layout.lines[layout.lines.length - 1].height) : (by + bh / 2);
+            const lastLineBottom = layout.lines.length > 0 ? (layout.lines[layout.lines.length - 1].top + offY + textOffY + layout.lines[layout.lines.length - 1].height) : (by + bh / 2);
             const subStartY = lastLineBottom + (subFontSizePx * 0.3);
             ctx.textAlign = (!block.style?.align || block.style.align === 'center') ? 'center' : (block.style.align === 'right' ? 'right' : 'left');
             const subStartX = startX;

@@ -10,6 +10,10 @@ import {
     updateSfxSkewY,
     updateSfxWave,
     updateSfxBulge,
+    updateTextOffsetX,
+    updateTextOffsetY,
+    nudgeTextOffset,
+    resetTextOffset,
     resetWarpTransformControls,
     setCopiedStyle,
     copiedStyle,
@@ -108,4 +112,46 @@ test('Canvas Styling - Multi-Block Alignment Engine', () => {
     globalState.selectedBlockId = 'b1';
     alignActiveBlockPosition('center-h');
     assert.strictEqual(b1.box.x, 40, '(100 - 20) / 2 = 40');
+});
+
+test('Canvas Styling - 4-Directional Text Offset & Nudge Engine', () => {
+    const textBlock = {
+        id: 'offset_blk',
+        type: 'dialogue',
+        translated: 'Sáng thứ Hai gặp nhau nhé',
+        box: { x: 5, y: 0, w: 40, h: 20 },
+        style: { vertical: false }
+    };
+
+    globalState.pages = [{ id: 'p1', blocks: [textBlock] }];
+    globalState.activePageIndex = 0;
+    globalState.selectedBlockId = 'offset_blk';
+
+    // 1. Direct offset setting
+    updateTextOffsetX(12);
+    updateTextOffsetY(-8);
+    assert.strictEqual(textBlock.style.textOffsetX, 12);
+    assert.strictEqual(textBlock.style.textOffsetY, -8);
+
+    // 2. Nudging 4 directions
+    // Nudge UP (dy = -2)
+    nudgeTextOffset(0, -2);
+    assert.strictEqual(textBlock.style.textOffsetY, -10);
+
+    // Nudge DOWN (dy = +4)
+    nudgeTextOffset(0, 4);
+    assert.strictEqual(textBlock.style.textOffsetY, -6);
+
+    // Nudge LEFT (dx = -5)
+    nudgeTextOffset(-5, 0);
+    assert.strictEqual(textBlock.style.textOffsetX, 7);
+
+    // Nudge RIGHT (dx = +10)
+    nudgeTextOffset(10, 0);
+    assert.strictEqual(textBlock.style.textOffsetX, 17);
+
+    // 3. Reset text offset
+    resetTextOffset();
+    assert.strictEqual(textBlock.style.textOffsetX, 0);
+    assert.strictEqual(textBlock.style.textOffsetY, 0);
 });

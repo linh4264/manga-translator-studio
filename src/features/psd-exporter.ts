@@ -67,9 +67,14 @@ export async function createMangaPSD(page: MangaPage, originalImgEl?: HTMLImageE
                 const bw = Math.max(10, Math.round((block.box.w / 100) * width));
                 const bh = Math.max(10, Math.round((block.box.h / 100) * height));
 
+                const textOffX = (parseFloat(block.style?.textOffsetX as any) || 0) * scaleFactor;
+                const textOffY = (parseFloat(block.style?.textOffsetY as any) || 0) * scaleFactor;
+                const padX = textOffX !== 0 ? Math.ceil(Math.abs(textOffX)) + 20 : 0;
+                const padY = textOffY !== 0 ? Math.ceil(Math.abs(textOffY)) + 20 : 0;
+
                 const tCanvas = document.createElement('canvas');
-                tCanvas.width = bw;
-                tCanvas.height = bh;
+                tCanvas.width = bw + padX * 2;
+                tCanvas.height = bh + padY * 2;
                 const tCtx = tCanvas.getContext('2d');
                 if (!tCtx) return null;
 
@@ -85,31 +90,31 @@ export async function createMangaPSD(page: MangaPage, originalImgEl?: HTMLImageE
                     tCtx.globalAlpha = alpha;
                     if (maskShape === 'ellipse') {
                         tCtx.beginPath();
-                        tCtx.ellipse(bw / 2, bh / 2, bw / 2, bh / 2, 0, 0, 2 * Math.PI);
+                        tCtx.ellipse(padX + bw / 2, padY + bh / 2, bw / 2, bh / 2, 0, 0, 2 * Math.PI);
                         tCtx.fill();
                     } else if (maskShape === 'rounded') {
                         const r = Math.min(16 * scaleFactor, bw / 4, bh / 4);
                         tCtx.beginPath();
-                        if (typeof tCtx.roundRect === 'function') tCtx.roundRect(0, 0, bw, bh, r);
-                        else tCtx.rect(0, 0, bw, bh);
+                        if (typeof tCtx.roundRect === 'function') tCtx.roundRect(padX, padY, bw, bh, r);
+                        else tCtx.rect(padX, padY, bw, bh);
                         tCtx.fill();
                     } else {
-                        tCtx.fillRect(0, 0, bw, bh);
+                        tCtx.fillRect(padX, padY, bw, bh);
                     }
                     tCtx.globalAlpha = 1.0;
                 }
 
                 // Text Layer rendering via shared canonical canvas text renderer
                 renderBlockTextToCanvas(tCtx, block, layout, scaleFactor, {
-                    originOffsetX: -(layout.bx || 0),
-                    originOffsetY: -(layout.by || 0)
+                    originOffsetX: -(layout.bx || 0) + padX,
+                    originOffsetY: -(layout.by || 0) + padY
                 });
 
                 return {
                     name: `Text ${idx + 1}: ${(block.translated || '').slice(0, 16)}`,
                     canvas: tCanvas,
-                    left: bx,
-                    top: by,
+                    left: bx - padX,
+                    top: by - padY,
                     blendMode: block.style?.blendMode || 'normal',
                     opacity: 1
                 };

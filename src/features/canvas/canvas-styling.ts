@@ -440,6 +440,7 @@ export function syncActiveBlockStyle(property: string, value: any): void {
 
         const rangeProperties = [
             'fontSize', 'bgOpacity', 'padding', 'rotate', 'textRotate',
+            'textOffsetX', 'textOffsetY',
             'lineHeight', 'letterSpacing',
             'strokeWidth', 'strokeWidth2', 'shadowBlur', 'shadowOffsetX', 'shadowOffsetY',
             'arcAngle', 'skewX', 'skewY', 'warpWave', 'warpBulge'
@@ -534,6 +535,16 @@ export function syncActiveBlockStyle(property: string, value: any): void {
             const lbl = document.getElementById('lbl-text-rotate');
             if (lbl) lbl.textContent = `${value}°`;
             const slider = document.getElementById('slider-text-rotate') as HTMLInputElement | null;
+            if (slider) slider.value = value;
+        } else if (property === 'textOffsetX') {
+            const lbl = document.getElementById('lbl-text-offset-x');
+            if (lbl) lbl.textContent = `${value > 0 ? '+' : ''}${value}px`;
+            const slider = document.getElementById('slider-text-offset-x') as HTMLInputElement | null;
+            if (slider) slider.value = value;
+        } else if (property === 'textOffsetY') {
+            const lbl = document.getElementById('lbl-text-offset-y');
+            if (lbl) lbl.textContent = `${value > 0 ? '+' : ''}${value}px`;
+            const slider = document.getElementById('slider-text-offset-y') as HTMLInputElement | null;
             if (slider) slider.value = value;
         } else if (property === 'lineHeight') {
             const lbl = document.getElementById('lbl-line-height');
@@ -671,6 +682,46 @@ export function updateSfxBulge(val: string | number): void {
     syncActiveBlockStyle('warpBulge', bulge);
 }
 
+export function updateTextOffsetX(val: string | number): void {
+    const offX = typeof val === 'number' ? val : parseInt(val, 10) || 0;
+    const lbl = document.getElementById('lbl-text-offset-x');
+    if (lbl) lbl.textContent = `${offX > 0 ? '+' : ''}${offX}px`;
+    syncActiveBlockStyle('textOffsetX', offX);
+}
+
+export function updateTextOffsetY(val: string | number): void {
+    const offY = typeof val === 'number' ? val : parseInt(val, 10) || 0;
+    const lbl = document.getElementById('lbl-text-offset-y');
+    if (lbl) lbl.textContent = `${offY > 0 ? '+' : ''}${offY}px`;
+    syncActiveBlockStyle('textOffsetY', offY);
+}
+
+export function nudgeTextOffset(dx: number, dy: number): void {
+    if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    if (!page) return;
+    const block = page.blocks.find(b => b.id === globalState.selectedBlockId);
+    if (!block) return;
+    if (!block.style) block.style = {} as BlockStyle;
+
+    const curX = parseFloat(block.style.textOffsetX as any) || 0;
+    const curY = parseFloat(block.style.textOffsetY as any) || 0;
+    const nextX = Math.round(curX + dx);
+    const nextY = Math.round(curY + dy);
+
+    syncActiveBlockStyle('textOffsetX', nextX);
+    syncActiveBlockStyle('textOffsetY', nextY);
+}
+
+export function resetTextOffset(): void {
+    updateTextOffsetX(0);
+    updateTextOffsetY(0);
+    const offXSlider = document.getElementById('slider-text-offset-x') as HTMLInputElement | null;
+    const offYSlider = document.getElementById('slider-text-offset-y') as HTMLInputElement | null;
+    if (offXSlider) offXSlider.value = '0';
+    if (offYSlider) offYSlider.value = '0';
+}
+
 export function resetWarpTransformControls(): void {
     updateTextRotate(0);
     updateSfxRotate(0);
@@ -679,6 +730,7 @@ export function resetWarpTransformControls(): void {
     updateSfxSkewY(0);
     updateSfxWave(0);
     updateSfxBulge(0);
+    resetTextOffset();
 
     const trSlider = document.getElementById('slider-text-rotate') as HTMLInputElement | null;
     const rSlider = (document.getElementById('slider-sfx-rotate') || document.getElementById('style-rotate')) as HTMLInputElement | null;
@@ -687,6 +739,8 @@ export function resetWarpTransformControls(): void {
     const sySlider = document.getElementById('slider-sfx-skew-y') as HTMLInputElement | null;
     const wSlider = document.getElementById('slider-sfx-wave') as HTMLInputElement | null;
     const bSlider = document.getElementById('slider-sfx-bulge') as HTMLInputElement | null;
+    const offXSlider = document.getElementById('slider-text-offset-x') as HTMLInputElement | null;
+    const offYSlider = document.getElementById('slider-text-offset-y') as HTMLInputElement | null;
 
     if (trSlider) trSlider.value = '0';
     if (rSlider) rSlider.value = '0';
@@ -695,6 +749,8 @@ export function resetWarpTransformControls(): void {
     if (sySlider) sySlider.value = '0';
     if (wSlider) wSlider.value = '0';
     if (bSlider) bSlider.value = '0';
+    if (offXSlider) offXSlider.value = '0';
+    if (offYSlider) offYSlider.value = '0';
 }
 
 export function toggleActiveBlockBold(): void {

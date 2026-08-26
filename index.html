@@ -1444,6 +1444,86 @@
                         </div>
                     </div>
 
+                    <!-- Text Position / 4-Directional Nudge Controls -->
+                    <div id="text-offset-controls-container"
+                        class="space-y-3 p-3 bg-slate-950 rounded-lg border border-slate-800">
+                        <h4
+                            class="text-[10px] font-bold text-teal-400 uppercase tracking-wider flex items-center justify-between">
+                            <span class="flex items-center gap-1.5"><i class="fa-solid fa-arrows-up-down-left-right text-teal-400"></i> Tịnh tiến chữ 4 hướng (Nudge)</span>
+                            <button onclick="resetTextOffset()"
+                                class="text-[9px] text-slate-400 hover:text-white font-normal cursor-pointer">Đặt lại (0, 0)</button>
+                        </h4>
+
+                        <!-- 4-Way Directional D-Pad & Fast Info -->
+                        <div class="flex items-center justify-between gap-3 bg-slate-900/80 p-2 rounded-lg border border-slate-800/80">
+                            <!-- D-Pad -->
+                            <div class="relative w-24 h-24 shrink-0 mx-auto flex items-center justify-center">
+                                <!-- Up Button -->
+                                <button type="button" onclick="nudgeTextOffset(0, -2)" title="Tịnh tiến LÊN (Ctrl + ↑) [-2px]"
+                                    class="absolute top-0 left-1/2 -translate-x-1/2 w-7 h-7 bg-slate-800 hover:bg-teal-600 active:bg-teal-700 text-slate-200 hover:text-white rounded-md flex items-center justify-center transition-all shadow-sm cursor-pointer border border-slate-700/60">
+                                    <i class="fa-solid fa-chevron-up text-xs"></i>
+                                </button>
+                                <!-- Down Button -->
+                                <button type="button" onclick="nudgeTextOffset(0, 2)" title="Tịnh tiến XUỐNG (Ctrl + ↓) [+2px]"
+                                    class="absolute bottom-0 left-1/2 -translate-x-1/2 w-7 h-7 bg-slate-800 hover:bg-teal-600 active:bg-teal-700 text-slate-200 hover:text-white rounded-md flex items-center justify-center transition-all shadow-sm cursor-pointer border border-slate-700/60">
+                                    <i class="fa-solid fa-chevron-down text-xs"></i>
+                                </button>
+                                <!-- Left Button -->
+                                <button type="button" onclick="nudgeTextOffset(-2, 0)" title="Tịnh tiến SANG TRÁI (Ctrl + ←) [-2px]"
+                                    class="absolute left-0 top-1/2 -translate-y-1/2 w-7 h-7 bg-slate-800 hover:bg-teal-600 active:bg-teal-700 text-slate-200 hover:text-white rounded-md flex items-center justify-center transition-all shadow-sm cursor-pointer border border-slate-700/60">
+                                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                                </button>
+                                <!-- Right Button -->
+                                <button type="button" onclick="nudgeTextOffset(2, 0)" title="Tịnh tiến SANG PHẢI (Ctrl + →) [+2px]"
+                                    class="absolute right-0 top-1/2 -translate-y-1/2 w-7 h-7 bg-slate-800 hover:bg-teal-600 active:bg-teal-700 text-slate-200 hover:text-white rounded-md flex items-center justify-center transition-all shadow-sm cursor-pointer border border-slate-700/60">
+                                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                                </button>
+                                <!-- Center Reset Button -->
+                                <button type="button" onclick="resetTextOffset()" title="Đặt lại vị trí gốc (0, 0)"
+                                    class="w-6 h-6 bg-slate-950 hover:bg-rose-600/80 active:bg-rose-700 text-slate-400 hover:text-white rounded-full flex items-center justify-center transition-all cursor-pointer border border-slate-700 text-[10px]">
+                                    <i class="fa-solid fa-crosshairs"></i>
+                                </button>
+                            </div>
+
+                            <!-- Fast Steps Info -->
+                            <div class="flex-1 space-y-1 text-[10px] text-slate-400">
+                                <div class="text-[9px] text-slate-400 leading-tight">
+                                    <i class="fa-solid fa-keyboard text-teal-400 mr-1"></i> <span class="text-slate-300 font-semibold">Phím tắt nhanh:</span>
+                                </div>
+                                <div class="text-[9px] text-slate-400">
+                                    <kbd class="px-1 py-0.5 bg-slate-950 rounded border border-slate-800 text-[8px] text-teal-300">Ctrl + Mũi tên</kbd>: ±1px
+                                </div>
+                                <div class="text-[9px] text-slate-400">
+                                    <kbd class="px-1 py-0.5 bg-slate-950 rounded border border-slate-800 text-[8px] text-teal-300">Ctrl + Shift + Mũi tên</kbd>: ±5px
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Fine Sliders -->
+                        <div class="space-y-2 pt-1">
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-[10px] text-slate-400">
+                                    <span><i class="fa-solid fa-arrows-left-right text-[9px] text-teal-400 mr-1"></i> Dịch ngang (X Offset):</span>
+                                    <span id="lbl-text-offset-x" class="font-mono text-teal-300">0px</span>
+                                </div>
+                                <input type="range" id="slider-text-offset-x" min="-150" max="150" value="0"
+                                    oninput="updateTextOffsetX(this.value)"
+                                    class="w-full accent-teal-500 bg-slate-900 h-1.5 rounded cursor-pointer"
+                                    title="Tịnh tiến chữ sang trái (-) hoặc sang phải (+)">
+                            </div>
+                            <div class="space-y-1">
+                                <div class="flex justify-between text-[10px] text-slate-400">
+                                    <span><i class="fa-solid fa-arrows-up-down text-[9px] text-teal-400 mr-1"></i> Dịch dọc (Y Offset):</span>
+                                    <span id="lbl-text-offset-y" class="font-mono text-teal-300">0px</span>
+                                </div>
+                                <input type="range" id="slider-text-offset-y" min="-150" max="150" value="0"
+                                    oninput="updateTextOffsetY(this.value)"
+                                    class="w-full accent-teal-500 bg-slate-900 h-1.5 rounded cursor-pointer"
+                                    title="Tịnh tiến chữ lên trên (-) hoặc xuống dưới (+)">
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Image Block Specific Controls -->
                     <div id="image-controls-container"
                         class="hidden space-y-3 p-3 bg-slate-950 rounded-lg border border-slate-800">

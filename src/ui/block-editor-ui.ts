@@ -18,6 +18,7 @@ export function updateActiveBlockEditor(): void {
 
     const imageControls = document.getElementById('image-controls-container');
     const sfxControls = document.getElementById('sfx-controls-container');
+    const textOffsetControls = document.getElementById('text-offset-controls-container');
     const textOriginalContainer = elements.editOriginalText?.parentElement;
     const textTranslatedContainer = elements.editTranslatedText?.parentElement;
 
@@ -29,6 +30,7 @@ export function updateActiveBlockEditor(): void {
     if (activeBlock.type === 'image') {
         if (imageControls) imageControls.classList.remove('hidden');
         if (sfxControls) sfxControls.classList.add('hidden');
+        if (textOffsetControls) textOffsetControls.classList.add('hidden');
         if (textOriginalContainer) textOriginalContainer.classList.add('hidden');
         if (textTranslatedContainer) textTranslatedContainer.classList.add('hidden');
 
@@ -50,6 +52,7 @@ export function updateActiveBlockEditor(): void {
     } else {
         if (imageControls) imageControls.classList.add('hidden');
         if (sfxControls) sfxControls.classList.remove('hidden');
+        if (textOffsetControls) textOffsetControls.classList.remove('hidden');
         if (textOriginalContainer) textOriginalContainer.classList.remove('hidden');
         if (textTranslatedContainer) textTranslatedContainer.classList.remove('hidden');
 
@@ -225,6 +228,25 @@ function syncBlockStyleInputs(block: MangaBlock): void {
     const sfxWaveLbl = document.getElementById('lbl-sfx-wave');
     const sfxBulgeSlider = document.getElementById('slider-sfx-bulge') as HTMLInputElement | null;
     const sfxBulgeLbl = document.getElementById('lbl-sfx-bulge');
+
+    const currentTextOffsetX = block.style.textOffsetX || 0;
+    const currentTextOffsetY = block.style.textOffsetY || 0;
+    const currentTextRotate = block.style.textRotate || 0;
+
+    const textRotateSlider = document.getElementById('slider-text-rotate') as HTMLInputElement | null;
+    const textRotateLbl = document.getElementById('lbl-text-rotate');
+    if (textRotateSlider) textRotateSlider.value = String(currentTextRotate);
+    if (textRotateLbl) textRotateLbl.textContent = `${currentTextRotate}°`;
+
+    const textOffsetXSlider = document.getElementById('slider-text-offset-x') as HTMLInputElement | null;
+    const textOffsetXLbl = document.getElementById('lbl-text-offset-x');
+    if (textOffsetXSlider) textOffsetXSlider.value = String(currentTextOffsetX);
+    if (textOffsetXLbl) textOffsetXLbl.textContent = `${currentTextOffsetX > 0 ? '+' : ''}${currentTextOffsetX}px`;
+
+    const textOffsetYSlider = document.getElementById('slider-text-offset-y') as HTMLInputElement | null;
+    const textOffsetYLbl = document.getElementById('lbl-text-offset-y');
+    if (textOffsetYSlider) textOffsetYSlider.value = String(currentTextOffsetY);
+    if (textOffsetYLbl) textOffsetYLbl.textContent = `${currentTextOffsetY > 0 ? '+' : ''}${currentTextOffsetY}px`;
 
     if (sfxRotateSlider) sfxRotateSlider.value = String(currentRotate);
     if (sfxRotateLbl) sfxRotateLbl.textContent = `${currentRotate}°`;

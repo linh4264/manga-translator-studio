@@ -8,7 +8,13 @@ import {
     getFontFamilyName,
     renderPageToCanvas2D
 } from '../../../src/features/canvas/canvas-exporter.ts';
-import { computeBlockTextLayout, clearTextMeasureCache, ensureFontsReady } from '../../../src/features/canvas/text-layout-engine.ts';
+import {
+    computeBlockTextLayout,
+    clearTextMeasureCache,
+    ensureFontsReady,
+    renderBlockTextToCanvas,
+    getFontBaselineOffset
+} from '../../../src/features/canvas/text-layout-engine.ts';
 import { autoFitBlock } from '../../../src/features/canvas/canvas-styling.ts';
 import { parseRichTextLines } from '../../../src/core/utils.ts';
 import { globalState } from '../../../src/core/state.ts';
@@ -620,6 +626,53 @@ test('CASE Z — Prevention of Export Text Right-Shift (Font Cache Invalidation 
     expect(computedCenterX).toBeCloseTo(expectedCenterX, 2);
     // Line width must be non-zero and padding must scale by 2.0
     expect(layout.padXPx).toBe(8); // 4 * 2.0
+});
+
+test('CASE Offset — renderBlockTextToCanvas applies textOffsetX and textOffsetY correctly', () => {
+    const block = {
+        id: 'b_offset_test',
+        type: 'dialogue',
+        translated: 'Sáng thứ Hai',
+        box: { x: 10, y: 10, w: 40, h: 20 },
+        style: {
+            fontSize: 20,
+            fontFamily: 'font-manga',
+            align: 'center',
+            textOffsetX: 15,
+            textOffsetY: -25
+        }
+    };
+
+    const naturalW = 1000;
+    const naturalH = 1000;
+    const scaleFactor = 1.0;
+    const layout = buildBlockTextLayout(block, naturalW, naturalH, scaleFactor);
+
+    const filledTexts = [];
+    const canvas = document.createElement('canvas');
+    canvas.width = 1000;
+    canvas.height = 1000;
+    const realCtx = canvas.getContext('2d');
+
+    const origFillText = realCtx.fillText.bind(realCtx);
+    realCtx.fillText = (text, x, y) => {
+        filledTexts.push({ text, x, y });
+        origFillText(text, x, y);
+    };
+
+    renderBlockTextToCanvas(realCtx, block, layout, scaleFactor);
+
+    expect(filledTexts.length).toBeGreaterThan(0);
+    const rendered = filledTexts[0];
+
+    // Base center X for box: 100 + 400/2 = 300. With textOffsetX=15 -> 315
+    expect(rendered.x).toBe(315);
+
+    // Base lineCenterY for box: layout.lines[0].centerY.
+    // With textOffsetY = -25, rendered.y should be shifted by -25
+    const baselineY = layout.lines[0].centerY - 25;
+    const expectedBaselineOffset = getFontBaselineOffset(realCtx, '20px font-manga', 20);
+    expect(rendered.y).toBeCloseTo(baselineY + expectedBaselineOffset, 2);
 });
 
 
