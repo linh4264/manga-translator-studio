@@ -31,12 +31,14 @@ export async function requestAiInpaintPatch(page: MangaPage, block: MangaBlock, 
     tempCtx.drawImage(imgElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
 
     const { cleanMangaBackgroundArtText } = await import('../inpainting');
-    cleanMangaBackgroundArtText(tempCtx, cropW, cropH);
+    await cleanMangaBackgroundArtText(tempCtx, cropW, cropH);
 
     const canvas = elements.eraserCanvas;
     if (canvas) {
-        canvas.width = imgElement.naturalWidth;
-        canvas.height = imgElement.naturalHeight;
+        if (canvas.width !== imgElement.naturalWidth || canvas.height !== imgElement.naturalHeight) {
+            canvas.width = imgElement.naturalWidth;
+            canvas.height = imgElement.naturalHeight;
+        }
 
         const eraserCtx = canvas.getContext('2d');
         if (eraserCtx) {
@@ -91,7 +93,7 @@ export async function runLocalTeleaCleanPage(activePage: MangaPage): Promise<voi
                 const tempCtx = tempCanvas.getContext('2d');
                 if (tempCtx) {
                     tempCtx.drawImage(imgElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-                    cleanMangaBackgroundArtText(tempCtx, cropW, cropH);
+                    await cleanMangaBackgroundArtText(tempCtx, cropW, cropH);
                     ctx.drawImage(tempCanvas, cropX, cropY);
                     sfxCount++;
                 }
@@ -134,7 +136,8 @@ export async function runAIEraseTextPage(): Promise<void> {
         const base64Data = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
-                const base64 = (reader.result as string).replace(/^data:image\/(png|jpeg|jpg);base64,/, '');
+                const resultStr = String(reader.result || '');
+                const base64 = resultStr.includes(',') ? resultStr.split(',')[1] : resultStr;
                 resolve(base64);
             };
             reader.onerror = reject;

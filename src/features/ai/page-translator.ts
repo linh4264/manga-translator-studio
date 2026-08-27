@@ -131,7 +131,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
         const pageFile = (page.file || page.originalFile) as File;
         const fileForOcr = ctx.ocrEnhanceEnabled ? await enhanceImageForOcr(pageFile) : pageFile;
         const rawBase64 = await getBase64(fileForOcr);
-        const mimeType = fileForOcr.type || pageFile.type;
+        const mimeType = fileForOcr.type || pageFile.type || 'image/png';
         const targetLang = ctx.targetLanguage || 'vi';
         const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
         const glossaryNames = ctx.preserveNames ? (ctx.glossaryNames || '').trim() : "";

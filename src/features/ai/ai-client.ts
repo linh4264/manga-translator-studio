@@ -406,6 +406,7 @@ export async function executeOcrVisionStep({
         "Return valid JSON only matching schema {\"blocks\": [{\"id\": \"b1\", \"type\": \"dialogue\", \"original\": \"...\", \"box\": [500, 300], \"vertical\": true}]}."
     ].join(" ");
 
+    const safeMimeType = mimeType || 'image/png';
     let requestBody: string;
     let apiUrl: string;
 
@@ -419,7 +420,7 @@ export async function executeOcrVisionStep({
                     role: "user",
                     content: [
                         { type: "text", text: "Detect each speech bubble, narration box, thought bubble, and SFX with exact 2-integer center coordinates [x, y] of its VISIBLE TEXT GLYPHS on a 0-1000 scale (x = centerX, y = centerY), type ('dialogue'|'narration'|'thought'|'sfx'), and raw original text. Return JSON matching schema: {\"blocks\": [{\"id\": \"b1\", \"type\": \"dialogue\", \"original\": \"...\", \"box\": [x, y], \"vertical\": true}]}." },
-                        { type: "image_url", image_url: { url: `data:${mimeType};base64,${rawBase64}` } }
+                        { type: "image_url", image_url: { url: `data:${safeMimeType};base64,${rawBase64}` } }
                     ]
                 }
             ],
@@ -433,7 +434,7 @@ export async function executeOcrVisionStep({
             contents: [{
                 parts: [
                     { text: "Detect each speech bubble, narration box, thought bubble, SFX with exact 2-integer center coordinates [x, y] of its VISIBLE TEXT GLYPHS on a 0-1000 scale (x = centerX, y = centerY), classified type ('dialogue'|'narration'|'thought'|'sfx'), and raw original text. Return JSON." },
-                    { inlineData: { mimeType, data: rawBase64 } }
+                    { inlineData: { mimeType: safeMimeType, data: rawBase64 } }
                 ]
             }],
             generationConfig: {
