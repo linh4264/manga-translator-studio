@@ -194,6 +194,7 @@ Object.assign(globalScope, {
     closeFontMorphologyModal,
     onCustomFontFilterChange,
     loadMoreCustomFonts,
+    renderCustomFontsUI,
     refreshCustomFontsUI
 });
 

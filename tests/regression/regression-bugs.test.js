@@ -141,3 +141,27 @@ test('Regression Reg-04: Unicode Vietnamese Diacritics and Japanese Kanji Integr
     const parsed = JSON.parse(jsonPayload);
     assert.strictEqual(parsed.text, complexUnicodeText, 'Unicode characters must match byte-for-byte');
 });
+
+test('Regression Reg-05: Pronoun Matrix Xưng-Gọi Prompt Direction', async () => {
+    const { compilePronounMatrixPrompt } = await import('../../src/features/pronoun.ts');
+    const matrix = {
+        characters: ['Naruto', 'Sasuke'],
+        relationships: {
+            Naruto: {
+                Sasuke: 'tớ - cậu'
+            }
+        }
+    };
+    const prompt = compilePronounMatrixPrompt(matrix);
+    assert.ok(prompt.includes('Naruto refers to self as "tớ" and calls Sasuke "cậu"'), 'Should properly map Xưng (self) and Gọi (listener)');
+});
+
+test('Regression Reg-06: TOEIC Diff Accuracy Calculation Penalizes Extraneous Words', async () => {
+    const { getSimpleWordDiff } = await import('../../src/features/toeic.ts');
+    const correct = 'good morning';
+    const userWithExtraWords = 'good morning everyone have a nice day today';
+    const result = getSimpleWordDiff(userWithExtraWords, correct);
+    // User typed 8 words, only 2 matched: accuracy should be 2/8 = 25%, NOT 100%
+    assert.ok(result.accuracy < 50, `Accuracy must be penalized for extra words, got ${result.accuracy}%`);
+});
+

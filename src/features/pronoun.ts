@@ -168,16 +168,19 @@ export function compilePronounMatrixPrompt(matrixData?: PronounMatrixData): stri
                 const rule = (matrix.relationships[speaker] && matrix.relationships[speaker][listener]) || '';
                 if (rule.trim()) {
                     const parts = rule.split('-').map(p => p.trim());
-                    const callPronoun = parts[0] || '';
-                    const referPronoun = parts[1] || '';
+                    // In Vietnamese standard "Xưng - Gọi":
+                    // parts[0] is how speaker refers to self ("Xưng")
+                    // parts[1] is how speaker calls listener ("Gọi")
+                    const referPronoun = parts[0] || '';
+                    const callPronoun = parts[1] || '';
 
                     let ruleDesc = `- When ${speaker} speaks to ${listener}: `;
-                    if (callPronoun && referPronoun) {
-                        ruleDesc += `${speaker} calls ${listener} "${callPronoun}" and refers to self as "${referPronoun}".`;
-                    } else if (callPronoun) {
-                        ruleDesc += `${speaker} calls ${listener} "${callPronoun}".`;
-                    } else {
+                    if (referPronoun && callPronoun) {
+                        ruleDesc += `${speaker} refers to self as "${referPronoun}" and calls ${listener} "${callPronoun}".`;
+                    } else if (referPronoun) {
                         ruleDesc += `${speaker} refers to self as "${referPronoun}".`;
+                    } else {
+                        ruleDesc += `${speaker} calls ${listener} "${callPronoun}".`;
                     }
                     prompt += ruleDesc + '\n';
                     hasRules = true;

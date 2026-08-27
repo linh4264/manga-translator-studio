@@ -88,6 +88,7 @@ export function populateVoiceSelectorsUI(): void {
     const narratorSelect = document.getElementById('voice-select-narrator') as HTMLSelectElement | null;
     const malePitchInp = document.getElementById('audio-male-pitch-input') as HTMLInputElement | null;
     const femalePitchInp = document.getElementById('audio-female-pitch-input') as HTMLInputElement | null;
+    const narratorPitchInp = document.getElementById('audio-narrator-pitch-input') as HTMLInputElement | null;
     const rateInp = document.getElementById('audio-rate-input') as HTMLInputElement | null;
 
     if (!maleSelect && !femaleSelect && !narratorSelect) return;
@@ -124,6 +125,7 @@ export function populateVoiceSelectorsUI(): void {
 
     if (malePitchInp) malePitchInp.value = String(settings.malePitch || 0.92);
     if (femalePitchInp) femalePitchInp.value = String(settings.femalePitch || 1.08);
+    if (narratorPitchInp) narratorPitchInp.value = String(settings.narratorPitch || 1.0);
     if (rateInp) rateInp.value = String(settings.rate || 1.0);
 }
 
@@ -213,13 +215,14 @@ function getCharacterGenderForBlock(block?: MangaBlock, indexInPage: number = 0)
 function setSpeakingHighlight(blockId: string): void {
     const overlays = document.querySelectorAll('.bubble-overlay');
     overlays.forEach((el: any) => {
-        if (el.id === blockId) {
+        const id = el.getAttribute('data-block-id') || el.id;
+        if (id === blockId) {
             el.classList.add('speaking-highlight');
             el.style.boxShadow = '0 0 18px 5px rgba(99, 102, 241, 0.95)';
             el.style.borderColor = '#6366f1';
         } else {
             el.classList.remove('speaking-highlight');
-            if (el.id !== globalState.selectedBlockId) {
+            if (id !== globalState.selectedBlockId) {
                 el.style.boxShadow = '';
                 el.style.borderColor = '';
             }
@@ -230,8 +233,9 @@ function setSpeakingHighlight(blockId: string): void {
 function clearSpeakingHighlights(): void {
     const overlays = document.querySelectorAll('.bubble-overlay');
     overlays.forEach((el: any) => {
+        const id = el.getAttribute('data-block-id') || el.id;
         el.classList.remove('speaking-highlight');
-        if (el.id !== globalState.selectedBlockId) {
+        if (id !== globalState.selectedBlockId) {
             el.style.boxShadow = '';
             el.style.borderColor = '';
         }

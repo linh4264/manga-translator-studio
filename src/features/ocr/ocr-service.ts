@@ -1688,7 +1688,10 @@ export function computeBubbleMask(page: MangaPage, block: MangaBlock, imageData:
     const hexBgColor = block.style.bgColor || '#ffffff';
     const bgOpacity = block.style.bgOpacity !== undefined ? block.style.bgOpacity : 100;
 
-    const cleanHex = hexBgColor.replace('#', '');
+    let cleanHex = hexBgColor.replace('#', '').trim();
+    if (cleanHex.length === 3) {
+        cleanHex = cleanHex.split('').map(c => c + c).join('');
+    }
     const br = parseInt(cleanHex.substring(0, 2), 16) || 0;
     const bg = parseInt(cleanHex.substring(2, 4), 16) || 0;
     const bb = parseInt(cleanHex.substring(4, 6), 16) || 0;

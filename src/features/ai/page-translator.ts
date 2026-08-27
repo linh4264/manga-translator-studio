@@ -431,6 +431,10 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 translated: rawTrans,
                 box: normalisedBox,
                 style: blockStyle,
+                ...(b.speaker !== undefined ? { speaker: b.speaker } : {}),
+                ...(b.target !== undefined ? { target: b.target } : {}),
+                ...(b.vertical !== undefined ? { vertical: blockVertical } : (blockVertical ? { vertical: true } : {})),
+                ...(b.positionKnown !== undefined ? { positionKnown: b.positionKnown } : {}),
                 ...(textAnchor ? { textAnchor } : {})
             };
         });

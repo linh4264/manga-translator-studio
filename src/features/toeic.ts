@@ -762,6 +762,7 @@ export function checkToeicRecall(): void {
 export function getSimpleWordDiff(userText: string, correctText: string): { html: string; accuracy: number } {
     const clean = (str: string) => str.toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"]/g, "").split(/\s+/).filter(Boolean);
     const userWords = clean(userText);
+    const totalUserWords = userWords.length;
     const correctWords = clean(correctText);
 
     let html = '<span class="text-slate-400 block text-[9px] uppercase font-bold tracking-wider mb-1.5">So sánh chi tiết các từ:</span>';
@@ -782,7 +783,8 @@ export function getSimpleWordDiff(userText: string, correctText: string): { html
         }
     }).join(' ');
 
-    const accuracy = correctWords.length > 0 ? Math.round((matchedCount / correctWords.length) * 100) : 0;
+    const divisor = Math.max(correctWords.length, totalUserWords);
+    const accuracy = divisor > 0 ? Math.round((matchedCount / divisor) * 100) : 0;
     return {
         html: html + `<div class="p-2.5 rounded bg-slate-900 leading-relaxed font-semibold font-mono">${comparisonHTML}</div>`,
         accuracy

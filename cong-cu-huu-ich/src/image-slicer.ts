@@ -22,6 +22,9 @@ export function clearSliceList(): void {
 
 export function resetSlice(): void {
     clearSliceList();
+    if (sliceImg?.src && sliceImg.src.startsWith('blob:')) {
+        URL.revokeObjectURL(sliceImg.src);
+    }
     sliceImg = null;
     sliceFile = null;
     sliceName = '';
@@ -99,7 +102,9 @@ export function handleSliceFileSelect(file: File): void {
     const tempUrl = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
-        URL.revokeObjectURL(tempUrl);
+        if (sliceImg?.src && sliceImg.src.startsWith('blob:') && sliceImg.src !== tempUrl) {
+            URL.revokeObjectURL(sliceImg.src);
+        }
         sliceImg = img;
         const filenameEl = document.getElementById('slice-filename');
         if (filenameEl) {

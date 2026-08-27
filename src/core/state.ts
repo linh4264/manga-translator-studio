@@ -760,6 +760,10 @@ export function savePageToDB(page: MangaPage | null | undefined): Promise<void> 
                 };
                 if (block.speaker !== undefined) cleanBlock.speaker = block.speaker;
                 if (block.target !== undefined) cleanBlock.target = block.target;
+                if (block.vertical !== undefined) cleanBlock.vertical = block.vertical;
+                if (block.textAnchor !== undefined) cleanBlock.textAnchor = { ...block.textAnchor };
+                if (block.positionKnown !== undefined) cleanBlock.positionKnown = block.positionKnown;
+                if (block.originalBackgroundBackup !== undefined) cleanBlock.originalBackgroundBackup = block.originalBackgroundBackup;
                 if (block.textWidth !== undefined) cleanBlock.textWidth = block.textWidth;
                 if (block.textHeight !== undefined) cleanBlock.textHeight = block.textHeight;
                 cleanBlock.maskCache = null;

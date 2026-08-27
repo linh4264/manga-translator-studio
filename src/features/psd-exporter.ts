@@ -39,6 +39,25 @@ export async function createMangaPSD(page: MangaPage, originalImgEl?: HTMLImageE
     cleanCtx.drawImage(rawCanvas, 0, 0);
     if (eraserCanvas && eraserCanvas.width > 0 && eraserCanvas.height > 0) {
         cleanCtx.drawImage(eraserCanvas, 0, 0, width, height);
+    } else if (page.eraserLayerBlob) {
+        try {
+            const eraserImg = new Image();
+            const blobUrl = URL.createObjectURL(page.eraserLayerBlob);
+            await new Promise<void>((resolve) => {
+                eraserImg.onload = () => {
+                    cleanCtx.drawImage(eraserImg, 0, 0, width, height);
+                    URL.revokeObjectURL(blobUrl);
+                    resolve();
+                };
+                eraserImg.onerror = () => {
+                    URL.revokeObjectURL(blobUrl);
+                    resolve();
+                };
+                eraserImg.src = blobUrl;
+            });
+        } catch (e) {
+            console.warn("Could not load eraserLayerBlob for PSD export:", e);
+        }
     }
 
     // Try loading ag-psd from CDN first for full PSD features

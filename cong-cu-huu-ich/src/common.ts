@@ -27,10 +27,10 @@ export function saveSecureToken(key: string, value: string): void {
             window.localStorage.removeItem(key);
             return;
         }
-        const str = String(value);
+        const utf8 = encodeURIComponent(String(value));
         let encoded = '';
-        for (let i = 0; i < str.length; i++) {
-            encoded += String.fromCharCode(str.charCodeAt(i) ^ 0x5a);
+        for (let i = 0; i < utf8.length; i++) {
+            encoded += String.fromCharCode(utf8.charCodeAt(i) ^ 0x5a);
         }
         window.localStorage.setItem(key, SEC_PREFIX + btoa(encoded));
     } catch { }
@@ -47,7 +47,11 @@ export function getSecureToken(key: string): string {
             for (let i = 0; i < raw.length; i++) {
                 decoded += String.fromCharCode(raw.charCodeAt(i) ^ 0x5a);
             }
-            return decoded;
+            try {
+                return decodeURIComponent(decoded);
+            } catch {
+                return decoded;
+            }
         }
         return stored;
     } catch {

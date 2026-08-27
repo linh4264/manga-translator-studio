@@ -68,7 +68,6 @@ export async function handleCompressFilesSelect(files: File[]): Promise<void> {
         const tempUrl = URL.createObjectURL(f);
         const img = new Image();
         img.onload = () => {
-            URL.revokeObjectURL(tempUrl);
             resolve({ file: f, img, originalSize: f.size, compressedBlob: null, objectUrl: null, compressedSize: 0 });
         };
         img.onerror = () => {
@@ -98,6 +97,7 @@ export function addMoreCompressFiles(): void {
 export function resetCompressBatch(): void {
     compressList.forEach(item => {
         if (item.objectUrl) URL.revokeObjectURL(item.objectUrl);
+        if (item.img?.src && item.img.src.startsWith('blob:')) URL.revokeObjectURL(item.img.src);
     });
     compressList = [];
     const grid = document.getElementById('compress-grid');

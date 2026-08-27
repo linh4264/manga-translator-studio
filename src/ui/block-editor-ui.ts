@@ -545,11 +545,16 @@ export function restoreOriginalBackground(): void {
 }
 
 function applyColorSync(val: string, styleProperty: keyof MangaBlock['style'], inputEl: HTMLInputElement | null, hexInputEl: HTMLInputElement | null): void {
-    let color = val;
-    if (color && !color.startsWith('#') && color.length <= 6) {
+    let color = (val || '').trim();
+    if (color && !color.startsWith('#') && (color.length === 3 || color.length === 6)) {
         color = '#' + color;
     }
-    if (inputEl) inputEl.value = color;
+    if (color && color.startsWith('#') && color.length === 4) {
+        color = '#' + color[1] + color[1] + color[2] + color[2] + color[3] + color[3];
+    }
+    if (inputEl && /^#[0-9A-Fa-f]{6}$/.test(color)) {
+        inputEl.value = color.toLowerCase();
+    }
     if (hexInputEl) hexInputEl.value = color.toUpperCase();
     syncActiveBlockStyle(styleProperty, color);
 }

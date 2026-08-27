@@ -39,7 +39,16 @@ export function moveMergeImage(fromIdx: number, toIdx: number): void {
 
 export function removeMergeImage(index: number): void {
     if (index >= 0 && index < mergeImgs.length) {
-        mergeImgs.splice(index, 1);
+        const [removed] = mergeImgs.splice(index, 1);
+        if (removed?.img?.src && removed.img.src.startsWith('blob:')) {
+            URL.revokeObjectURL(removed.img.src);
+        }
+        if (mergeImgs.length === 0) {
+            const uploadEl = document.getElementById('merge-upload');
+            if (uploadEl) uploadEl.classList.remove('hidden');
+            const panelEl = document.getElementById('merge-panel');
+            if (panelEl) panelEl.classList.add('hidden');
+        }
         renderMergeList();
     }
 }
@@ -189,7 +198,6 @@ export async function handleMergeFiles(files: File[]): Promise<void> {
             const tempUrl = URL.createObjectURL(f);
             const img = new Image();
             img.onload = () => {
-                URL.revokeObjectURL(tempUrl);
                 resolve({ name: f.name, img });
             };
             img.onerror = () => {
