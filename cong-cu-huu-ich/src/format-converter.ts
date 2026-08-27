@@ -193,7 +193,8 @@ export async function downloadConvertedZip(): Promise<void> {
     const zipUrl = URL.createObjectURL(content);
     const a = document.createElement('a');
     a.href = zipUrl;
-    a.download = `Converted_${convertList[0].convertedExt.toUpperCase()}_Images.zip`;
+    const extName = validItems[0]?.convertedExt ? validItems[0].convertedExt.toUpperCase() : 'CONVERTED';
+    a.download = `Converted_${extName}_Images.zip`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

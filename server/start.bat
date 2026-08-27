@@ -46,24 +46,15 @@ if %errorlevel%==0 (
 
 where python >nul 2>nul
 if %errorlevel%==0 (
-    echo [Goi y] Khong tim thay Bun hoac Node.js. 
-    echo [OK] Phat hien Python. Dang chay server Python...
+    echo [Canh bao] Phat hien Python, nhung du an TypeScript yeu cau Bun hoac Node.js de bien dich!
+    echo Vui long cai dat Bun (https://bun.sh) hoac Node.js (https://nodejs.org) de chay server.js.
     echo.
-    start http://localhost:3000
-    cd /d "%~dp0\.."
-    python -m http.server 3000
-    if errorlevel 1 (
-        echo.
-        echo [Loi] May chu Python bi dung.
-        pause
-    )
-    goto :eof
 )
 
-echo [Canh bao] May ban chua cai ca Bun, Node.js lan Python!
+echo [Canh bao] May ban chua cai Bun hoac Node.js!
 echo.
 echo Hay thuc hien mot trong cac cach sau:
-echo 1. Cai dat Bun tai: https://bun.sh/ (Khuyen nghi cho Windows)
+echo 1. Cai dat Bun tai: https://bun.sh/ (Khuyen nghi - Chay sieu nhanh tren Windows)
 echo 2. Hoac cai dat Node.js tai: https://nodejs.org/
 echo.
 pause

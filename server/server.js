@@ -67,15 +67,23 @@ try {
 function resolveTsImports(code, currentDir) {
     return code
         .replace(/(import|export)\s+([\s\S]*?from\s+['"])([\.\/][^'"]+)(['"])/g, (match, p1, p2, p3, p4) => {
-            if (p3.endsWith('.js') || p3.endsWith('.ts') || p3.endsWith('.json')) return match;
+            if (p3.endsWith('.js') || p3.endsWith('.ts') || p3.endsWith('.json') || p3.endsWith('.css')) return match;
             const absTarget = path.resolve(currentDir, p3);
             if (fs.existsSync(absTarget + '.ts')) return `${p1} ${p2}${p3}.ts${p4}`;
             if (fs.existsSync(path.join(absTarget, 'index.ts'))) return `${p1} ${p2}${p3}/index.ts${p4}`;
             if (fs.existsSync(absTarget + '.js')) return `${p1} ${p2}${p3}.js${p4}`;
             return match;
         })
+        .replace(/import\s+['"]([\.\/][^'"]+)['"]/g, (match, p1) => {
+            if (p1.endsWith('.js') || p1.endsWith('.ts') || p1.endsWith('.json') || p1.endsWith('.css')) return match;
+            const absTarget = path.resolve(currentDir, p1);
+            if (fs.existsSync(absTarget + '.ts')) return `import '${p1}.ts'`;
+            if (fs.existsSync(path.join(absTarget, 'index.ts'))) return `import '${p1}/index.ts'`;
+            if (fs.existsSync(absTarget + '.js')) return `import '${p1}.js'`;
+            return match;
+        })
         .replace(/import\s*\(\s*['"]([\.\/][^'"]+)['"]\s*\)/g, (match, p1) => {
-            if (p1.endsWith('.js') || p1.endsWith('.ts') || p1.endsWith('.json')) return match;
+            if (p1.endsWith('.js') || p1.endsWith('.ts') || p1.endsWith('.json') || p1.endsWith('.css')) return match;
             const absTarget = path.resolve(currentDir, p1);
             if (fs.existsSync(absTarget + '.ts')) return `import('${p1}.ts')`;
             if (fs.existsSync(path.join(absTarget, 'index.ts'))) return `import('${p1}/index.ts')`;
@@ -132,7 +140,7 @@ const server = http.createServer((req, res) => {
     }
 
     let filePath = path.resolve(projectRoot, safePath);
-    if (!filePath.startsWith(projectRoot)) {
+    if (!filePath.startsWith(projectRoot + path.sep) && filePath !== projectRoot) {
         res.statusCode = 403;
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.end('403 Cấm truy cập: Yêu cầu ngoài phạm vi thư mục dự án.');

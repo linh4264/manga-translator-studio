@@ -89,7 +89,8 @@ export function processSlicingDebounced(): void {
 }
 
 export function handleSliceFileSelect(file: File): void {
-    if (!file || !file.type.startsWith('image/')) {
+    const isImage = file && (file.type.startsWith('image/') || /\.(png|jpe?g|webp|avif|bmp|gif)$/i.test(file.name));
+    if (!isImage) {
         alert("Vui lòng chọn một tệp hình ảnh hợp lệ (PNG, JPG, WEBP, v.v.)");
         return;
     }

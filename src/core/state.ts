@@ -359,6 +359,8 @@ function cloneBlocksForHistory(blocks: MangaBlock[]): MangaBlock[] {
         speaker: block.speaker !== undefined ? block.speaker : undefined,
         target: block.target !== undefined ? block.target : undefined,
         vertical: block.vertical !== undefined ? block.vertical : undefined,
+        textAnchor: block.textAnchor ? { ...block.textAnchor } : undefined,
+        positionKnown: block.positionKnown,
         originalBackgroundBackup: block.originalBackgroundBackup || undefined,
         textWidth: block.textWidth,
         textHeight: block.textHeight

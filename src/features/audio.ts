@@ -133,6 +133,25 @@ if (synthesis) {
     };
 }
 
+const SPEECH_LANG_MAP: Record<string, string> = {
+    vi: 'vi-VN',
+    ja: 'ja-JP',
+    en: 'en-US',
+    zh: 'zh-CN',
+    ko: 'ko-KR',
+    fr: 'fr-FR',
+    es: 'es-ES',
+    de: 'de-DE',
+    ru: 'ru-RU',
+    th: 'th-TH',
+    id: 'id-ID'
+};
+
+function getSpeechLangCode(targetLang: string): string {
+    const key = (targetLang || 'vi').toLowerCase();
+    return SPEECH_LANG_MAP[key] || `${key}-${key.toUpperCase()}`;
+}
+
 function getVoiceForGender(gender: string = 'neutral'): SpeechSynthesisVoice | null {
     if (!synthesis) return null;
     const voices = synthesis.getVoices();
@@ -149,9 +168,8 @@ function getVoiceForGender(gender: string = 'neutral'): SpeechSynthesisVoice | n
         if (found) return found;
     }
 
-    const currentLang = getTranslationContext().targetLanguage || 'vi';
-    const langPrefix = currentLang === 'vi' ? 'vi' : (currentLang === 'en' ? 'en' : 'ja');
-    const matched = voices.filter(v => v.lang.toLowerCase().startsWith(langPrefix));
+    const currentLang = (getTranslationContext().targetLanguage || 'vi').toLowerCase();
+    const matched = voices.filter(v => v.lang.toLowerCase().startsWith(currentLang));
     
     if (matched.length > 0) {
         if (gender === 'female' && matched.length >= 2) return matched[1];
@@ -255,7 +273,7 @@ export function playNextBlockInQueue(): void {
 
     const targetLang = getTranslationContext().targetLanguage || 'vi';
     currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
-    currentUtterance.lang = targetLang === 'vi' ? 'vi-VN' : 'en-US';
+    currentUtterance.lang = getSpeechLangCode(targetLang);
     
     const settings = getAudioSettings();
     const baseRate = settings.rate || 1.0;

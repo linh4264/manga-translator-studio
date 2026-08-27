@@ -52,11 +52,30 @@ export async function runOcrExtraction(): Promise<void> {
     }
 }
 
-export function copyOcrText(): void {
-    const text = (document.getElementById('ocr-result-text') as HTMLTextAreaElement)?.value;
+export async function copyOcrText(): Promise<void> {
+    const textarea = document.getElementById('ocr-result-text') as HTMLTextAreaElement | null;
+    const text = textarea?.value;
     if (!text) return;
-    navigator.clipboard.writeText(text);
-    alert("Đã sao chép toàn bộ văn bản bóc tách vào khay nhớ tạm!");
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+        } else if (textarea) {
+            textarea.select();
+            document.execCommand('copy');
+        }
+        alert("Đã sao chép toàn bộ văn bản bóc tách vào khay nhớ tạm!");
+    } catch (err) {
+        if (textarea) {
+            try {
+                textarea.select();
+                document.execCommand('copy');
+                alert("Đã sao chép toàn bộ văn bản bóc tách vào khay nhớ tạm!");
+                return;
+            } catch {}
+        }
+        console.warn("Clipboard write error:", err);
+        alert("Không thể tự động sao chép. Vui lòng bôi đen và nhấn Ctrl+C.");
+    }
 }
 
 export function handleOcrFile(file: File): void {
