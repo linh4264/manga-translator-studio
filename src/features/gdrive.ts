@@ -118,11 +118,29 @@ export async function getProjectBackupJSON(): Promise<any> {
     const pagesData: any[] = [];
     for (const page of globalState.pages) {
         const imgDataURL = await getPageDataURL(page);
+        let eraserLayerDataURL: string | null = null;
+        if (page.eraserLayerBlob) {
+            try {
+                eraserLayerDataURL = await new Promise<string>((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+                    reader.onerror = () => resolve('');
+                    reader.readAsDataURL(page.eraserLayerBlob as Blob);
+                });
+            } catch {
+                eraserLayerDataURL = null;
+            }
+        }
         pagesData.push({
             id: page.id,
             name: page.name,
             status: page.status,
+            width: page.width,
+            height: page.height,
+            apiWidth: page.apiWidth,
+            apiHeight: page.apiHeight,
             src: imgDataURL,
+            eraserLayerSrc: eraserLayerDataURL,
             blocks: page.blocks ? page.blocks.map(b => ({
                 id: b.id,
                 type: b.type,
@@ -130,7 +148,12 @@ export async function getProjectBackupJSON(): Promise<any> {
                 original: b.original,
                 translated: b.translated,
                 box: { ...b.box },
-                style: { ...b.style }
+                style: { ...b.style },
+                speaker: b.speaker !== undefined ? b.speaker : undefined,
+                target: (b as any).target !== undefined ? (b as any).target : undefined,
+                vertical: b.vertical !== undefined ? b.vertical : undefined,
+                textAnchor: b.textAnchor ? { ...b.textAnchor } : undefined,
+                positionKnown: b.positionKnown
             })) : []
         });
     }
@@ -918,6 +941,14 @@ export async function importProjectFromGDrive(fileId: string): Promise<void> {
                         p.thumbnailSrc = URL.createObjectURL(blob);
                     } catch (err) {
                         console.warn("Không thể chuyển data URL cho trang:", p.name, err);
+                    }
+                }
+                if (p.eraserLayerSrc && p.eraserLayerSrc.startsWith('data:')) {
+                    try {
+                        const eraserBlob = await dataURLtoBlob(p.eraserLayerSrc);
+                        p.eraserLayerBlob = eraserBlob;
+                    } catch (err) {
+                        console.warn("Không thể chuyển eraserLayerSrc sang Blob cho trang:", p.name, err);
                     }
                 }
             }

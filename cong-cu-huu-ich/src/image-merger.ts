@@ -177,26 +177,34 @@ export async function executeMergeImages(): Promise<void> {
     }
 }
 
-export function handleMergeFiles(files: File[]): void {
+export async function handleMergeFiles(files: File[]): Promise<void> {
     if (!files || files.length === 0) return;
     const uploadEl = document.getElementById('merge-upload');
     if (uploadEl) uploadEl.classList.add('hidden');
     const panelEl = document.getElementById('merge-panel');
     if (panelEl) panelEl.classList.remove('hidden');
 
-    files.forEach(f => {
-        const tempUrl = URL.createObjectURL(f);
-        const img = new Image();
-        img.onload = () => {
-            URL.revokeObjectURL(tempUrl);
-            mergeImgs.push({ name: f.name, img });
-            renderMergeList();
-        };
-        img.onerror = () => {
-            URL.revokeObjectURL(tempUrl);
-        };
-        img.src = tempUrl;
-    });
+    const loadedItems = await Promise.all(
+        files.map(f => new Promise<MergeImageItem | null>((resolve) => {
+            const tempUrl = URL.createObjectURL(f);
+            const img = new Image();
+            img.onload = () => {
+                URL.revokeObjectURL(tempUrl);
+                resolve({ name: f.name, img });
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(tempUrl);
+                resolve(null);
+            };
+            img.src = tempUrl;
+        }))
+    );
+
+    const validItems = loadedItems.filter((item): item is MergeImageItem => item !== null);
+    if (validItems.length > 0) {
+        mergeImgs.push(...validItems);
+        renderMergeList();
+    }
 }
 
 export function initImageMerger(): void {

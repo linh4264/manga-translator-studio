@@ -29,7 +29,7 @@ import {
 import { normalizeAiBlockBox } from './ocr/ocr-service';
 import { getTranslationContext } from './ai/ai-state';
 import { getCharacterDossier, getLorebook, setCharacterDossier, setLorebook } from './dossier-lorebook';
-import { MangaPage } from '../types/index';
+import { MangaPage, BoundingBox } from '../types/index';
 
 
 export interface BatchExportOptions {
@@ -1056,6 +1056,52 @@ export function parseTxtScript(text: string): any[] {
     return pages;
 }
 
+export function parseScriptBox(rawBox: any): BoundingBox | null {
+    if (!rawBox) return null;
+    let x = 0, y = 0, w = 10, h = 10;
+    if (Array.isArray(rawBox)) {
+        if (rawBox.length >= 4) {
+            x = Number(rawBox[0]);
+            y = Number(rawBox[1]);
+            w = Number(rawBox[2]);
+            h = Number(rawBox[3]);
+        } else if (rawBox.length === 2) {
+            x = Number(rawBox[0]);
+            y = Number(rawBox[1]);
+            w = 20;
+            h = 10;
+        } else {
+            return null;
+        }
+    } else if (typeof rawBox === 'object') {
+        x = Number(rawBox.x !== undefined ? rawBox.x : rawBox.left || 0);
+        y = Number(rawBox.y !== undefined ? rawBox.y : rawBox.top || 0);
+        w = Number(rawBox.w !== undefined ? rawBox.w : rawBox.width || 10);
+        h = Number(rawBox.h !== undefined ? rawBox.h : rawBox.height || 10);
+    } else {
+        return null;
+    }
+    if (isNaN(x)) x = 0;
+    if (isNaN(y)) y = 0;
+    if (isNaN(w) || w <= 0) w = 10;
+    if (isNaN(h) || h <= 0) h = 10;
+
+    // If coordinates are in 0-1000 scale (values exceed 100), convert to 0-100%
+    if (x > 100 || y > 100 || w > 100 || h > 100) {
+        x = x / 10;
+        y = y / 10;
+        w = w / 10;
+        h = h / 10;
+    }
+
+    return {
+        x: Math.max(0, Math.min(100, Math.round(x * 100) / 100)),
+        y: Math.max(0, Math.min(100, Math.round(y * 100) / 100)),
+        w: Math.max(0.5, Math.min(100 - x, Math.round(w * 100) / 100)),
+        h: Math.max(0.5, Math.min(100 - y, Math.round(h * 100) / 100))
+    };
+}
+
 export function applyScriptPagesToProject(pagesArray: any[]): { matchedPages: number; matchedBlocks: number } {
     let matchedPages = 0;
     let matchedBlocks = 0;
@@ -1119,7 +1165,8 @@ export function applyScriptPagesToProject(pagesArray: any[]): { matchedPages: nu
                 matchedBlocks++;
             }
             if (scriptBlock.box || scriptBlock.positionPercent) {
-                targetBlock.box = normalizeAiBlockBox(scriptBlock.box || scriptBlock.positionPercent);
+                const parsedBox = parseScriptBox(scriptBlock.box || scriptBlock.positionPercent);
+                if (parsedBox) targetBlock.box = parsedBox;
             }
             if (scriptBlock.speaker) {
                 targetBlock.speaker = scriptBlock.speaker;
@@ -1180,7 +1227,8 @@ export function applyFlatScriptBlocksToProject(flatBlocksArray: any[]): { matche
                 matchedBlocks++;
             }
             if (scriptBlock.box || scriptBlock.positionPercent) {
-                targetBlock.box = normalizeAiBlockBox(scriptBlock.box || scriptBlock.positionPercent);
+                const parsedBox = parseScriptBox(scriptBlock.box || scriptBlock.positionPercent);
+                if (parsedBox) targetBlock.box = parsedBox;
             }
             if (scriptBlock.speaker) {
                 targetBlock.speaker = scriptBlock.speaker;
@@ -1341,11 +1389,29 @@ export async function buildProjectBackupJSON(): Promise<any> {
     const pagesData: any[] = [];
     for (const page of globalState.pages) {
         const imgDataURL = await getPageDataURL(page);
+        let eraserLayerDataURL: string | null = null;
+        if (page.eraserLayerBlob) {
+            try {
+                eraserLayerDataURL = await new Promise<string>((resolve) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+                    reader.onerror = () => resolve('');
+                    reader.readAsDataURL(page.eraserLayerBlob as Blob);
+                });
+            } catch {
+                eraserLayerDataURL = null;
+            }
+        }
         pagesData.push({
             id: page.id,
             name: page.name,
             status: page.status,
+            width: page.width,
+            height: page.height,
+            apiWidth: page.apiWidth,
+            apiHeight: page.apiHeight,
             src: imgDataURL,
+            eraserLayerSrc: eraserLayerDataURL,
             blocks: (page.blocks || []).map(b => ({
                 id: b.id,
                 type: b.type,
@@ -1353,7 +1419,12 @@ export async function buildProjectBackupJSON(): Promise<any> {
                 original: b.original,
                 translated: b.translated,
                 box: { ...b.box },
-                style: { ...b.style }
+                style: { ...b.style },
+                speaker: b.speaker !== undefined ? b.speaker : undefined,
+                target: (b as any).target !== undefined ? (b as any).target : undefined,
+                vertical: b.vertical !== undefined ? b.vertical : undefined,
+                textAnchor: b.textAnchor ? { ...b.textAnchor } : undefined,
+                positionKnown: b.positionKnown
             }))
         });
     }
@@ -1448,6 +1519,14 @@ export async function importProjectBackup(files: FileList | File[]): Promise<voi
                         p.thumbnailSrc = URL.createObjectURL(blob);
                     } catch (err) {
                         console.warn("Không thể chuyển data URL thành Blob cho trang:", p.name, err);
+                    }
+                }
+                if (p.eraserLayerSrc && p.eraserLayerSrc.startsWith('data:')) {
+                    try {
+                        const eraserBlob = await dataURLtoBlob(p.eraserLayerSrc);
+                        p.eraserLayerBlob = eraserBlob;
+                    } catch (err) {
+                        console.warn("Không thể chuyển eraserLayerSrc sang Blob cho trang:", p.name, err);
                     }
                 }
             }

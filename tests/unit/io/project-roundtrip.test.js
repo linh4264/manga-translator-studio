@@ -4,6 +4,7 @@ import '../../setup/browser-env.js';
 import '../../setup/indexeddb-mock.js';
 
 import { globalState } from '../../../src/core/state.ts';
+import { buildProjectBackupJSON } from '../../../src/features/io.ts';
 
 // Project serialization & deserialization helpers (matching MTS Project Schema)
 function serializeMtsProject(state = globalState) {
@@ -225,4 +226,54 @@ test('IO Project - Backward Compatibility (Legacy v1.0 Project File Migration)',
     assert.strictEqual(target.pages[0].blocks[0].style.arcAngle, 0, 'Must fallback safely to default arcAngle');
     assert.strictEqual(Array.isArray(target.lorebook), true);
     assert.strictEqual(Array.isArray(target.characterDossier), true);
+});
+
+test('IO Project - buildProjectBackupJSON Serializes Inpainting Layer, Speakers, Dimensions & Anchors', async () => {
+    const mockBlob = new Blob(['mock-png-data'], { type: 'image/png' });
+    globalState.pages = [
+        {
+            id: 'p_full_1',
+            name: 'Page 1',
+            status: 'completed',
+            width: 800,
+            height: 1200,
+            apiWidth: 800,
+            apiHeight: 1200,
+            src: 'blob:http://localhost/page1',
+            originalFile: mockBlob,
+            eraserLayerBlob: mockBlob,
+            blocks: [
+                {
+                    id: 'b1',
+                    type: 'dialogue',
+                    original: 'Orig text',
+                    translated: 'Trans text',
+                    speaker: 'Naruto',
+                    target: 'Sasuke',
+                    vertical: true,
+                    textAnchor: { x: 25, y: 35 },
+                    positionKnown: true,
+                    box: { x: 20, y: 30, w: 15, h: 25 },
+                    style: { fontSize: 16, vertical: true }
+                }
+            ]
+        }
+    ];
+
+    const backup = await buildProjectBackupJSON();
+    assert.strictEqual(backup.pages.length, 1);
+
+    const bp = backup.pages[0];
+    assert.strictEqual(bp.width, 800);
+    assert.strictEqual(bp.height, 1200);
+    assert.strictEqual(bp.apiWidth, 800);
+    assert.strictEqual(bp.apiHeight, 1200);
+    assert.ok(typeof bp.eraserLayerSrc === 'string' && bp.eraserLayerSrc.startsWith('data:'), 'eraserLayerSrc must be serialized as data URL');
+
+    const bb = bp.blocks[0];
+    assert.strictEqual(bb.speaker, 'Naruto');
+    assert.strictEqual(bb.target, 'Sasuke');
+    assert.strictEqual(bb.vertical, true);
+    assert.deepStrictEqual(bb.textAnchor, { x: 25, y: 35 });
+    assert.strictEqual(bb.positionKnown, true);
 });

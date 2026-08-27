@@ -457,19 +457,48 @@ export function setupBrowserEnvironment() {
         globalThis.URL.revokeObjectURL = () => {};
     }
 
-    if (typeof globalThis.FormData === 'undefined') {
-        globalThis.FormData = class FormData {
+    if (typeof globalThis.FileReader === 'undefined') {
+        globalThis.FileReader = class FileReader {
             constructor() {
-                this._data = new Map();
+                this.result = '';
+                this.onloadend = null;
+                this.onerror = null;
             }
-            append(key, val) {
-                this._data.set(key, val);
+            readAsDataURL(blob) {
+                setTimeout(async () => {
+                    try {
+                        let base64 = '';
+                        if (blob && typeof blob.arrayBuffer === 'function') {
+                            const buffer = await blob.arrayBuffer();
+                            base64 = Buffer.from(buffer).toString('base64');
+                        } else if (blob && typeof blob.text === 'function') {
+                            const txt = await blob.text();
+                            base64 = Buffer.from(txt).toString('base64');
+                        }
+                        const mime = blob?.type || 'image/png';
+                        this.result = `data:${mime};base64,${base64}`;
+                        if (this.onloadend) this.onloadend();
+                    } catch (err) {
+                        if (this.onerror) this.onerror(err);
+                    }
+                }, 0);
             }
-            get(key) {
-                return this._data.get(key);
+            readAsText(blob) {
+                setTimeout(async () => {
+                    try {
+                        let text = '';
+                        if (blob && typeof blob.text === 'function') {
+                            text = await blob.text();
+                        }
+                        this.result = text;
+                        if (this.onloadend) this.onloadend();
+                    } catch (err) {
+                        if (this.onerror) this.onerror(err);
+                    }
+                }, 0);
             }
         };
-        globalThis.window.FormData = globalThis.FormData;
+        globalThis.window.FileReader = globalThis.FileReader;
     }
 }
 

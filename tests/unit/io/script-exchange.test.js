@@ -5,7 +5,8 @@ import {
     generateTxtScript,
     parseTxtScript,
     parseTxtBlocksSection,
-    applyScriptPagesToProject
+    applyScriptPagesToProject,
+    parseScriptBox
 } from '../../../src/features/io.ts';
 import { globalState } from '../../../src/core/state.ts';
 
@@ -292,5 +293,44 @@ Bản dịch A
     // Because matching prioritizes original text, B matched B and A matched A even though order in txt was reversed!
     assert.strictEqual(globalState.pages[0].blocks[0].translated, 'Bản dịch A');
     assert.strictEqual(globalState.pages[0].blocks[1].translated, 'Bản dịch B');
+});
+
+test('IO Script - parseScriptBox Preserves 0-100% Coordinates and Converts 0-1000 AI Scales', () => {
+    // 0-100% percentage scale coordinates from exported script
+    const percentBoxArr = [15.5, 25.0, 30.0, 45.0];
+    const parsedPercentArr = parseScriptBox(percentBoxArr);
+    assert.deepStrictEqual(parsedPercentArr, { x: 15.5, y: 25.0, w: 30.0, h: 45.0 });
+
+    const percentBoxObj = { x: 12.34, y: 56.78, w: 20.0, h: 10.0 };
+    const parsedPercentObj = parseScriptBox(percentBoxObj);
+    assert.deepStrictEqual(parsedPercentObj, { x: 12.34, y: 56.78, w: 20.0, h: 10.0 });
+
+    // 0-1000 scale from AI payload (> 100) should be divided by 10
+    const aiBoxArr = [150, 250, 300, 450];
+    const parsedAiArr = parseScriptBox(aiBoxArr);
+    assert.deepStrictEqual(parsedAiArr, { x: 15.0, y: 25.0, w: 30.0, h: 45.0 });
+
+    // Apply script with percentage box to project page
+    globalState.pages = [
+        {
+            id: 'p1',
+            name: 'Page 1',
+            blocks: [
+                { id: 'b1', original: 'Hello', translated: '', box: { x: 0, y: 0, w: 10, h: 10 } }
+            ]
+        }
+    ];
+
+    const scriptWithBox = [
+        {
+            pageName: 'Page 1',
+            blocks: [
+                { id: 'b1', translated: 'Xin chào', box: [20, 30, 40, 50] }
+            ]
+        }
+    ];
+
+    applyScriptPagesToProject(scriptWithBox);
+    assert.deepStrictEqual(globalState.pages[0].blocks[0].box, { x: 20, y: 30, w: 40, h: 50 }, 'Box coordinates must retain 20, 30, 40, 50% without 10x shrinkage');
 });
 

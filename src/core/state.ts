@@ -1286,12 +1286,18 @@ export async function getPageDataURL(page: MangaPage | null | undefined): Promis
     }
 
     if (blob && blob instanceof Blob) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
+        if (typeof FileReader !== 'undefined') {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+        if (typeof Buffer !== 'undefined') {
+            const buffer = Buffer.from(await blob.arrayBuffer());
+            return `data:${blob.type || 'image/png'};base64,${buffer.toString('base64')}`;
+        }
     }
 
     if (page.src && page.src.startsWith('data:')) {
@@ -1302,12 +1308,18 @@ export async function getPageDataURL(page: MangaPage | null | undefined): Promis
         try {
             const resp = await fetch(page.src);
             const b = await resp.blob();
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.onerror = reject;
-                reader.readAsDataURL(b);
-            });
+            if (typeof FileReader !== 'undefined') {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(b);
+                });
+            }
+            if (typeof Buffer !== 'undefined') {
+                const buffer = Buffer.from(await b.arrayBuffer());
+                return `data:${b.type || 'image/png'};base64,${buffer.toString('base64')}`;
+            }
         } catch (err) {
             console.warn("getPageDataURL fetch blob error:", err);
         }
