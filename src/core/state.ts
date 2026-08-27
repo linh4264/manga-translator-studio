@@ -674,10 +674,11 @@ export function executeRedo(): void {
 
 // --- INDEXEDDB PERSISTENCE MANAGER FOR AUTO-SAVE & RESTORE ---
 const DB_NAME = 'MangaTranslatorDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_PAGES = 'pages';
 const STORE_META = 'meta';
 const STORE_FONTS = 'fonts';
+const STORE_TRANSLATION_CACHE = 'translation_cache';
 let dbInstance: IDBDatabase | null = null;
 let savePageDebounceTimer: any = null;
 
@@ -725,6 +726,9 @@ export function initDB(): Promise<IDBDatabase> {
             }
             if (!database.objectStoreNames.contains(STORE_FONTS)) {
                 database.createObjectStore(STORE_FONTS, { keyPath: 'family' });
+            }
+            if (!database.objectStoreNames.contains(STORE_TRANSLATION_CACHE)) {
+                database.createObjectStore(STORE_TRANSLATION_CACHE, { keyPath: 'hash' });
             }
         };
         request.onsuccess = (e: any) => {

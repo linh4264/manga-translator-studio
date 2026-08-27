@@ -1663,7 +1663,7 @@ export function copyFontName(name: string): void {
 
 // --- CUSTOM FONT MANAGER (INDEXEDDB PERSISTENCE & DYNAMIC @FONT-FACE) ---
 const DB_NAME_FONTS = 'MangaTranslatorDB';
-const DB_VERSION_FONTS = 2;
+const DB_VERSION_FONTS = 3;
 const STORE_FONTS_NAME = 'fonts';
 const fontBlobUrlsMap = new Map<string, string>();
 
@@ -1707,6 +1707,9 @@ export function openFontsDB(): Promise<IDBDatabase> {
             }
             if (!db.objectStoreNames.contains('meta')) {
                 db.createObjectStore('meta');
+            }
+            if (!db.objectStoreNames.contains('translation_cache')) {
+                db.createObjectStore('translation_cache', { keyPath: 'hash' });
             }
         };
         req.onsuccess = (e: any) => resolve(e.target.result);

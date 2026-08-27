@@ -212,7 +212,7 @@ function writeStandalonePSD(width: number, height: number, cleanCanvas: HTMLCanv
     writeUint32(0);
 
     // 3. Image Resources
-    writeUint32(16); // Image resources length
+    writeUint32(28); // Image resources length (4 + 2 + 2 + 4 + 16 = 28 bytes)
     writeStr('8BIM');
     writeUint16(0x03ED);
     writeUint16(0); // Name length 0

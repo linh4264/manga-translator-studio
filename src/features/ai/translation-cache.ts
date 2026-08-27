@@ -127,6 +127,15 @@ export async function getCacheDB(): Promise<IDBDatabase | null> {
                 if (!db.objectStoreNames.contains(STORE_TRANSLATION_CACHE)) {
                     db.createObjectStore(STORE_TRANSLATION_CACHE, { keyPath: 'hash' });
                 }
+                if (!db.objectStoreNames.contains('pages')) {
+                    db.createObjectStore('pages', { keyPath: 'id' });
+                }
+                if (!db.objectStoreNames.contains('meta')) {
+                    db.createObjectStore('meta');
+                }
+                if (!db.objectStoreNames.contains('fonts')) {
+                    db.createObjectStore('fonts', { keyPath: 'family' });
+                }
             };
             req.onsuccess = (e: any) => {
                 isDbInitialized = true;
