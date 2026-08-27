@@ -9,6 +9,11 @@ let enhanceFileName = 'Enhanced_Image.png';
 
 export function resetEnhance(): void {
     enhanceImg = null;
+    const canvas = document.getElementById('enhance-canvas') as HTMLCanvasElement | null;
+    if (canvas) {
+        canvas.width = 0;
+        canvas.height = 0;
+    }
     const panel = document.getElementById('enhance-panel');
     if (panel) panel.classList.add('hidden');
     const upload = document.getElementById('enhance-upload');

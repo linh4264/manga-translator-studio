@@ -55,8 +55,8 @@ export function renderMergeList(): void {
     const order = (document.getElementById('merge-order') as HTMLSelectElement)?.value || 'ltr';
 
     let itemsToRender = [...mergeImgs];
-    if (dir === 'horizontal' && order === 'rtl' && itemsToRender.length === 2) {
-        itemsToRender = [mergeImgs[1], mergeImgs[0]];
+    if (dir === 'horizontal' && order === 'rtl') {
+        itemsToRender = [...itemsToRender].reverse();
     }
 
     itemsToRender.forEach((item, idx) => {
@@ -103,8 +103,8 @@ export async function executeMergeImages(): Promise<void> {
     const order = (document.getElementById('merge-order') as HTMLSelectElement)?.value || 'ltr';
 
     let itemsToMerge = [...mergeImgs];
-    if (dir === 'horizontal' && order === 'rtl' && itemsToMerge.length === 2) {
-        itemsToMerge = [mergeImgs[1], mergeImgs[0]];
+    if (dir === 'horizontal' && order === 'rtl') {
+        itemsToMerge = [...itemsToMerge].reverse();
     }
 
     if (dir === 'vertical') {

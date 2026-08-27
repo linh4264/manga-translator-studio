@@ -2529,10 +2529,10 @@ export function isFuzzyDuplicate(keyA: string, keyB: string): boolean {
     if (keyA === keyB) return true;
     const short = keyA.length < keyB.length ? keyA : keyB;
     const long = keyA.length < keyB.length ? keyB : keyA;
-    if (long.length > 0 && short.length >= 4) {
+    if (long.length > 0 && short.length >= 5) {
         const shortConsonants = short.replace(/[aeiouy]/g, '');
         const longConsonants = long.replace(/[aeiouy]/g, '');
-        if (shortConsonants.length >= 3 && shortConsonants === longConsonants) {
+        if (shortConsonants.length >= 4 && shortConsonants === longConsonants && (long.includes(short) || Math.abs(long.length - short.length) <= 2)) {
             return true;
         }
     }

@@ -386,7 +386,7 @@ export function speakActiveBlock(): void {
     const gender = getCharacterGenderForBlock(block);
     const utterance = new SpeechSynthesisUtterance(block.translated.trim());
     const targetLang = getTranslationContext().targetLanguage || 'vi';
-    utterance.lang = targetLang === 'vi' ? 'vi-VN' : 'en-US';
+    utterance.lang = getSpeechLangCode(targetLang);
 
     const settings = getAudioSettings();
     const baseRate = settings.rate || 1.0;
@@ -421,7 +421,7 @@ export function testVoice(gender: string = 'neutral'): void {
 
     const utterance = new SpeechSynthesisUtterance(sampleText);
     const targetLang = getTranslationContext().targetLanguage || 'vi';
-    utterance.lang = targetLang === 'vi' ? 'vi-VN' : 'en-US';
+    utterance.lang = getSpeechLangCode(targetLang);
 
     const settings = getAudioSettings();
     const baseRate = settings.rate || 1.0;
@@ -431,6 +431,9 @@ export function testVoice(gender: string = 'neutral'): void {
     } else if (gender === 'male') {
         utterance.pitch = settings.malePitch || 0.92;
         utterance.rate = baseRate * 0.98;
+    } else {
+        utterance.pitch = settings.narratorPitch || 1.0;
+        utterance.rate = baseRate;
     }
 
     const voice = getVoiceForGender(gender);
@@ -450,6 +453,7 @@ export function updateAudioSettingsFromUI(): void {
     const rateInput = document.getElementById('audio-rate-input') as HTMLInputElement | null;
     const malePitchInput = document.getElementById('audio-male-pitch-input') as HTMLInputElement | null;
     const femalePitchInput = document.getElementById('audio-female-pitch-input') as HTMLInputElement | null;
+    const narratorPitchInput = document.getElementById('audio-narrator-pitch-input') as HTMLInputElement | null;
 
     setAudioSettings({
         maleVoiceURI: maleSelect?.value || '',
@@ -457,7 +461,8 @@ export function updateAudioSettingsFromUI(): void {
         narratorVoiceURI: narratorSelect?.value || '',
         rate: rateInput ? (parseFloat(rateInput.value) || 1.0) : 1.0,
         malePitch: malePitchInput ? (parseFloat(malePitchInput.value) || 0.92) : 0.92,
-        femalePitch: femalePitchInput ? (parseFloat(femalePitchInput.value) || 1.08) : 1.08
+        femalePitch: femalePitchInput ? (parseFloat(femalePitchInput.value) || 1.08) : 1.08,
+        narratorPitch: narratorPitchInput ? (parseFloat(narratorPitchInput.value) || 1.0) : (getAudioSettings().narratorPitch || 1.0)
     });
 }
 

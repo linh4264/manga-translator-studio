@@ -136,13 +136,19 @@ function syncBlockTextInputs(block: MangaBlock): void {
 
 export function setBlockType(type: 'dialogue' | 'narration' | 'thought' | 'sfx' | 'image'): void {
     const activeBlock = getActiveBlock();
-    if (!activeBlock || activeBlock.type === 'image') return;
+    if (!activeBlock) return;
+
+    const previousType = activeBlock.type;
     activeBlock.type = type;
+
+    if (previousType === 'image' && type !== 'image') {
+        delete activeBlock.imageUrl;
+    }
 
     const defaultFontForType = type === 'narration' ? (globalState.defaultNarrationFont || 'font-vietnamese')
         : (type === 'thought' ? (globalState.defaultThoughtFont || 'font-comicneue')
             : (type === 'sfx' ? (globalState.defaultSfxFont || 'font-impact')
-                : (globalState.defaultDialogueFont || globalState.defaultFont || 'font-manga')));
+                : (type === 'image' ? undefined : (globalState.defaultDialogueFont || globalState.defaultFont || 'font-manga'))));
 
     if (defaultFontForType) {
         if (!activeBlock.style) activeBlock.style = {} as BlockStyle;
@@ -161,7 +167,12 @@ export function setBlockType(type: 'dialogue' | 'narration' | 'thought' | 'sfx' 
     activeBlock.autoFitCache = null;
     activeBlock.maskCache = null;
 
-    syncBlockTypeUI(activeBlock);
+    if (previousType === 'image' || type === 'image') {
+        updateActiveBlockEditor();
+    } else {
+        syncBlockTypeUI(activeBlock);
+    }
+
     requestOverlayRender();
     const page = globalState.pages[globalState.activePageIndex];
     if (page) savePageToDB(page);

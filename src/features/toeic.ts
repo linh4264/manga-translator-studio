@@ -256,7 +256,9 @@ export async function analyzeBlockForToeic(): Promise<void> {
     try {
         const modelToUse = aiConfig.selectedModel || DEFAULT_MODEL;
         if (getConfiguredAiProvider() !== 'gemini') {
-            throw new Error('Provider hiện tại chưa có adapter thực thi cho luồng TOEIC này.');
+            showToast("Tính năng phân tích ngữ pháp TOEIC hiện yêu cầu Google Gemini. Vui lòng chọn Gemini trong Cài đặt.", "warn");
+            resetToeicAnalysisUI();
+            return;
         }
 
         const apiUrl = getGeminiGenerateContentUrl(modelToUse, keyToUse);

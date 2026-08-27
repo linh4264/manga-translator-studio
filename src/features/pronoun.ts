@@ -1,4 +1,4 @@
-import { showToast } from '../core/utils';
+import { showToast, escapeHTML } from '../core/utils';
 import {
     PronounMatrixData,
     getParsedPronounMatrix,
@@ -86,8 +86,8 @@ export function renderPronounMatrixTable(): void {
         html += `
             <th class="p-1.5 text-center font-bold text-slate-400 border-r border-slate-800 min-w-[100px]">
                 <div class="flex items-center justify-between gap-1">
-                    <span class="truncate max-w-[70px]">${name}</span>
-                    <button onclick="removeCharacterFromMatrix('${name}')" type="button" 
+                    <span class="truncate max-w-[70px]" title="${escapeHTML(name)}">${escapeHTML(name)}</span>
+                    <button data-action="remove-char" data-char="${escapeHTML(name)}" type="button" 
                         class="text-red-400 hover:text-red-300 text-[8px] p-0.5" title="Xoá nhân vật">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
@@ -105,7 +105,7 @@ export function renderPronounMatrixTable(): void {
     chars.forEach(speaker => {
         html += `
             <tr class="border-b border-slate-900">
-                <td class="p-1.5 font-bold text-slate-300 sticky left-0 bg-slate-900 border-r border-slate-800 truncate max-w-[80px]">${speaker}</td>
+                <td class="p-1.5 font-bold text-slate-300 sticky left-0 bg-slate-900 border-r border-slate-800 truncate max-w-[80px]" title="${escapeHTML(speaker)}">${escapeHTML(speaker)}</td>
         `;
 
         chars.forEach(listener => {
@@ -116,9 +116,11 @@ export function renderPronounMatrixTable(): void {
                 html += `
                     <td class="p-1 border-r border-slate-800">
                         <input type="text" 
-                            value="${currentVal}"
+                            value="${escapeHTML(currentVal)}"
                             placeholder="vd: cậu - tớ"
-                            oninput="updateRelationship('${speaker}', '${listener}', this.value)"
+                            data-action="update-rel"
+                            data-speaker="${escapeHTML(speaker)}"
+                            data-listener="${escapeHTML(listener)}"
                             class="w-full bg-slate-900 border border-slate-800/80 rounded px-1 py-0.5 text-[10px] text-slate-200 focus:outline-none focus:border-indigo-500">
                     </td>
                 `;
@@ -134,6 +136,21 @@ export function renderPronounMatrixTable(): void {
     `;
 
     wrapper.innerHTML = html;
+
+    wrapper.querySelectorAll<HTMLButtonElement>('[data-action="remove-char"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const charName = btn.getAttribute('data-char');
+            if (charName) removeCharacterFromMatrix(charName);
+        });
+    });
+
+    wrapper.querySelectorAll<HTMLInputElement>('[data-action="update-rel"]').forEach(inp => {
+        inp.addEventListener('input', () => {
+            const spk = inp.getAttribute('data-speaker');
+            const lis = inp.getAttribute('data-listener');
+            if (spk && lis) updateRelationship(spk, lis, inp.value);
+        });
+    });
 }
 
 export function compilePronounMatrixPrompt(matrixData?: PronounMatrixData): string {
