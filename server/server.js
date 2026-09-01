@@ -64,11 +64,20 @@ try {
     }
 }
 
+const projectRoot = path.resolve(__dirname, '..');
+const publicPath = path.join(projectRoot, 'public');
+
+function isPathInsideRoot(targetPath) {
+    const resolved = path.resolve(targetPath);
+    return resolved.startsWith(projectRoot + path.sep) || resolved === projectRoot;
+}
+
 function resolveTsImports(code, currentDir) {
     return code
         .replace(/(import|export)\s+([\s\S]*?from\s+['"])([\.\/][^'"]+)(['"])/g, (match, p1, p2, p3, p4) => {
             if (p3.endsWith('.js') || p3.endsWith('.ts') || p3.endsWith('.json') || p3.endsWith('.css')) return match;
             const absTarget = path.resolve(currentDir, p3);
+            if (!isPathInsideRoot(absTarget)) return match;
             if (fs.existsSync(absTarget + '.ts')) return `${p1} ${p2}${p3}.ts${p4}`;
             if (fs.existsSync(path.join(absTarget, 'index.ts'))) return `${p1} ${p2}${p3}/index.ts${p4}`;
             if (fs.existsSync(absTarget + '.js')) return `${p1} ${p2}${p3}.js${p4}`;
@@ -77,6 +86,7 @@ function resolveTsImports(code, currentDir) {
         .replace(/import\s+['"]([\.\/][^'"]+)['"]/g, (match, p1) => {
             if (p1.endsWith('.js') || p1.endsWith('.ts') || p1.endsWith('.json') || p1.endsWith('.css')) return match;
             const absTarget = path.resolve(currentDir, p1);
+            if (!isPathInsideRoot(absTarget)) return match;
             if (fs.existsSync(absTarget + '.ts')) return `import '${p1}.ts'`;
             if (fs.existsSync(path.join(absTarget, 'index.ts'))) return `import '${p1}/index.ts'`;
             if (fs.existsSync(absTarget + '.js')) return `import '${p1}.js'`;
@@ -85,10 +95,16 @@ function resolveTsImports(code, currentDir) {
         .replace(/import\s*\(\s*['"]([\.\/][^'"]+)['"]\s*\)/g, (match, p1) => {
             if (p1.endsWith('.js') || p1.endsWith('.ts') || p1.endsWith('.json') || p1.endsWith('.css')) return match;
             const absTarget = path.resolve(currentDir, p1);
+            if (!isPathInsideRoot(absTarget)) return match;
             if (fs.existsSync(absTarget + '.ts')) return `import('${p1}.ts')`;
             if (fs.existsSync(path.join(absTarget, 'index.ts'))) return `import('${p1}/index.ts')`;
             return match;
         });
+}
+
+function getSafeRedirectUrl(targetRelativePath, query) {
+    const cleanPath = '/' + String(targetRelativePath || '').replace(/^[\/\\]+/, '') + '/';
+    return query ? `${cleanPath}?${query}` : cleanPath;
 }
 
 const server = http.createServer((req, res) => {
@@ -111,10 +127,10 @@ const server = http.createServer((req, res) => {
         decodedUrl = req.url;
     }
 
-    // Extract path name without query strings
-    const urlPath = decodedUrl.split('?')[0].split('#')[0];
-    const projectRoot = path.resolve(__dirname, '..');
-    const publicPath = path.join(projectRoot, 'public');
+    // Extract path name and query string safely
+    const urlParts = decodedUrl.split('?');
+    const urlPath = urlParts[0].split('#')[0];
+    const queryString = urlParts.length > 1 ? urlParts[1].split('#')[0] : '';
 
     // Clean and normalize requested path
     const cleanUrlPath = urlPath.replace(/\0/g, '');
@@ -140,7 +156,7 @@ const server = http.createServer((req, res) => {
     }
 
     let filePath = path.resolve(projectRoot, safePath);
-    if (!filePath.startsWith(projectRoot + path.sep) && filePath !== projectRoot) {
+    if (!isPathInsideRoot(filePath)) {
         res.statusCode = 403;
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         res.end('403 Cấm truy cập: Yêu cầu ngoài phạm vi thư mục dự án.');
@@ -148,12 +164,12 @@ const server = http.createServer((req, res) => {
     }
 
     // Handle directory redirect: If requesting a directory without trailing slash, redirect (301)
-    // so relative paths (e.g. ./style.css, ./src/main.ts) resolve relative to the directory.
+    // so relative paths resolve safely strictly within site origin.
     if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
         if (!urlPath.endsWith('/')) {
-            const redirectTarget = `${urlPath}/${queryString ? '?' + queryString : ''}`;
-            res.writeHead(301, { 'Location': redirectTarget });
-            res.end();
+            const redirectTarget = getSafeRedirectUrl(normalizedRelative, queryString);
+            res.writeHead(301, { 'Location': redirectTarget, 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end(`Redirecting to ${escapeHTML(redirectTarget)}`);
             return;
         }
         if (fs.existsSync(path.join(filePath, 'index.html'))) {
@@ -171,9 +187,9 @@ const server = http.createServer((req, res) => {
         if (pubCandidate.startsWith(publicPath) && fs.existsSync(pubCandidate)) {
             if (fs.statSync(pubCandidate).isDirectory()) {
                 if (!urlPath.endsWith('/')) {
-                    const redirectTarget = `${urlPath}/${queryString ? '?' + queryString : ''}`;
-                    res.writeHead(301, { 'Location': redirectTarget });
-                    res.end();
+                    const redirectTarget = getSafeRedirectUrl(normalizedRelative, queryString);
+                    res.writeHead(301, { 'Location': redirectTarget, 'Content-Type': 'text/plain; charset=utf-8' });
+                    res.end(`Redirecting to ${escapeHTML(redirectTarget)}`);
                     return;
                 }
                 if (fs.existsSync(path.join(pubCandidate, 'index.html'))) {
@@ -194,9 +210,9 @@ const server = http.createServer((req, res) => {
             filePath = filePath + '.js';
         } else if (fs.existsSync(path.join(filePath, 'index.html'))) {
             if (!urlPath.endsWith('/')) {
-                const redirectTarget = `${urlPath}/${queryString ? '?' + queryString : ''}`;
-                res.writeHead(301, { 'Location': redirectTarget });
-                res.end();
+                const redirectTarget = getSafeRedirectUrl(normalizedRelative, queryString);
+                res.writeHead(301, { 'Location': redirectTarget, 'Content-Type': 'text/plain; charset=utf-8' });
+                res.end(`Redirecting to ${escapeHTML(redirectTarget)}`);
                 return;
             }
             filePath = path.join(filePath, 'index.html');
@@ -204,6 +220,7 @@ const server = http.createServer((req, res) => {
             filePath = path.join(filePath, 'index.ts');
         }
     }
+
 
     fs.stat(filePath, (err, stats) => {
         if (err || (stats && stats.isDirectory())) {
