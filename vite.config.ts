@@ -10,6 +10,23 @@ export default defineConfig({
     open: false,
     cors: true
   },
+  plugins: [
+    {
+      name: 'manga-tools-route-redirect',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          const url = req.url ? req.url.split('?')[0] : '';
+          if (url === '/cong-cu-huu-ich') {
+            const query = req.url?.includes('?') ? '?' + req.url.split('?')[1] : '';
+            res.writeHead(301, { Location: `/cong-cu-huu-ich/${query}` });
+            res.end();
+            return;
+          }
+          next();
+        });
+      }
+    }
+  ],
   resolve: {
     alias: {
       '@': resolve(__dirname, './src')

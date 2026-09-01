@@ -1,6 +1,12 @@
 @echo off
 title Manga Translator Studio Local Server
 cd /d "%~dp0"
+
+REM Auto-detect Node.js in standard installation directories
+if exist "C:\Program Files\nodejs\node.exe" set "PATH=C:\Program Files\nodejs;%PATH%"
+if exist "C:\Program Files (x86)\nodejs\node.exe" set "PATH=C:\Program Files (x86)\nodejs;%PATH%"
+if exist "%APPDATA%\npm" set "PATH=%APPDATA%\npm;%PATH%"
+
 echo =======================================================
 echo   Manga Translator Studio - Khoi dong may chu Cuc bo
 echo =======================================================

@@ -180,6 +180,7 @@ Object.assign(globalScope, {
     determineSlantGrade,
     determineCaseGrade,
     analyzeFontMorphology,
+    handleCustomFontUpload,
     deduplicateCustomFonts,
     reprofileAllCustomFonts,
     clearAllCustomFonts,

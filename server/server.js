@@ -118,7 +118,7 @@ const server = http.createServer((req, res) => {
 
     // Clean and normalize requested path
     const cleanUrlPath = urlPath.replace(/\0/g, '');
-    const normalizedRelative = path.normalize(cleanUrlPath).replace(/^(\.\.[\/\\])+/, '');
+    const normalizedRelative = path.normalize(cleanUrlPath).replace(/^[\/\\]+/, '').replace(/^(\.\.[\/\\])+/, '');
     const segments = normalizedRelative.split(/[/\\]/).filter(Boolean);
 
     // Block hidden files, git, env, config files, and private server folders
@@ -147,15 +147,59 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // Handle directory redirect: If requesting a directory without trailing slash, redirect (301)
+    // so relative paths (e.g. ./style.css, ./src/main.ts) resolve relative to the directory.
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
+        if (!urlPath.endsWith('/')) {
+            const redirectTarget = `${urlPath}/${queryString ? '?' + queryString : ''}`;
+            res.writeHead(301, { 'Location': redirectTarget });
+            res.end();
+            return;
+        }
+        if (fs.existsSync(path.join(filePath, 'index.html'))) {
+            filePath = path.join(filePath, 'index.html');
+        } else if (fs.existsSync(path.join(filePath, 'index.ts'))) {
+            filePath = path.join(filePath, 'index.ts');
+        } else if (fs.existsSync(path.join(filePath, 'index.js'))) {
+            filePath = path.join(filePath, 'index.js');
+        }
+    }
+
     if (!fs.existsSync(filePath)) {
-        // Fallback to public/ directory
+        // Fallback checks
         const pubCandidate = path.resolve(publicPath, safePath);
         if (pubCandidate.startsWith(publicPath) && fs.existsSync(pubCandidate)) {
-            filePath = pubCandidate;
+            if (fs.statSync(pubCandidate).isDirectory()) {
+                if (!urlPath.endsWith('/')) {
+                    const redirectTarget = `${urlPath}/${queryString ? '?' + queryString : ''}`;
+                    res.writeHead(301, { 'Location': redirectTarget });
+                    res.end();
+                    return;
+                }
+                if (fs.existsSync(path.join(pubCandidate, 'index.html'))) {
+                    filePath = path.join(pubCandidate, 'index.html');
+                } else {
+                    filePath = pubCandidate;
+                }
+            } else {
+                filePath = pubCandidate;
+            }
+        } else if (fs.existsSync(filePath + '.html')) {
+            filePath = filePath + '.html';
+        } else if (fs.existsSync(path.join(publicPath, safePath + '.html'))) {
+            filePath = path.join(publicPath, safePath + '.html');
         } else if (fs.existsSync(filePath + '.ts')) {
             filePath = filePath + '.ts';
         } else if (fs.existsSync(filePath + '.js')) {
             filePath = filePath + '.js';
+        } else if (fs.existsSync(path.join(filePath, 'index.html'))) {
+            if (!urlPath.endsWith('/')) {
+                const redirectTarget = `${urlPath}/${queryString ? '?' + queryString : ''}`;
+                res.writeHead(301, { 'Location': redirectTarget });
+                res.end();
+                return;
+            }
+            filePath = path.join(filePath, 'index.html');
         } else if (fs.existsSync(path.join(filePath, 'index.ts'))) {
             filePath = path.join(filePath, 'index.ts');
         }
