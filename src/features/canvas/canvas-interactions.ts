@@ -15,10 +15,19 @@ export function setSpacePanPressed(pressed: boolean): void {
     spacePanActive = pressed;
 }
 
-export function startBlockDrag(e: any, block: MangaBlock): void {
+export function startBlockDrag(e: any, blockOrId: MangaBlock | string): void {
     if (isSpacePanPressed() || e.button === 1 || globalState.isMobileHandMode) return;
-    if (e.target.classList.contains('resize-handle')) return;
-    if (e.target.isContentEditable || (block as any)._isEditingInline) return;
+    if (e.target && e.target.classList && e.target.classList.contains('resize-handle')) return;
+
+    const blockId = typeof blockOrId === 'string' ? blockOrId : blockOrId?.id;
+    const activePage = (globalState.activePageIndex >= 0 && globalState.activePageIndex < globalState.pages.length)
+        ? globalState.pages[globalState.activePageIndex]
+        : null;
+    const rawBlock = activePage?.blocks.find(b => b.id === blockId) || (typeof blockOrId === 'object' ? blockOrId : null);
+    if (!rawBlock || !rawBlock.box) return;
+    const block: MangaBlock = rawBlock;
+
+    if (e.target && (e.target.isContentEditable || (block as any)._isEditingInline)) return;
 
     const isTouch = e.type.startsWith('touch');
     if (isTouch && e.touches && e.touches.length > 1) return;
@@ -40,7 +49,6 @@ export function startBlockDrag(e: any, block: MangaBlock): void {
     const isMulti = e.shiftKey || e.ctrlKey || e.metaKey;
     selectBlock(block.id, isMulti);
 
-    const activePage = globalState.pages[globalState.activePageIndex];
     const selectedIds = globalState.selectedBlockIds || [];
     const isGroupDrag = activePage && selectedIds.length > 1 && selectedIds.includes(block.id);
 
@@ -60,12 +68,15 @@ export function startBlockDrag(e: any, block: MangaBlock): void {
     const startPercentX = block.box.x;
     const startPercentY = block.box.y;
 
-    const container = elements.mangaCanvasContainer || document.getElementById('manga-canvas-container');
-    const containerWidth = Math.max(10, container?.clientWidth || 800);
-    const containerHeight = Math.max(10, container?.clientHeight || 1200);
+    const blockElem = document.getElementById(block.id);
+    const targetContainer = (typeof blockElem?.closest === 'function' ? blockElem.closest('.manga-container') : null) || elements.mangaCanvasContainer || document.getElementById('manga-canvas-container');
+    const imgElement = (typeof targetContainer?.querySelector === 'function' ? targetContainer.querySelector('img') : null) || elements.mangaBgImage || document.getElementById('manga-bg-image');
+    const containerWidth = Math.max(50, imgElement?.clientWidth || targetContainer?.clientWidth || 800);
+    const containerHeight = Math.max(50, imgElement?.clientHeight || targetContainer?.clientHeight || 1200);
 
     let hasMoved = false;
     let dragThresholdPassed = !isTouch;
+
 
     function onDragging(moveEvent: any) {
         if (globalState.isMobileHandMode) return;
@@ -98,9 +109,13 @@ export function startBlockDrag(e: any, block: MangaBlock): void {
         const deltaPercentX = (deltaX / containerWidth) * 100;
         const deltaPercentY = (deltaY / containerHeight) * 100;
 
-        if (isGroupDrag && activePage) {
+        const livePage = (globalState.activePageIndex >= 0 && globalState.activePageIndex < globalState.pages.length)
+            ? globalState.pages[globalState.activePageIndex]
+            : activePage;
+
+        if (isGroupDrag && livePage) {
             groupStartCoords.forEach(item => {
-                const b = activePage.blocks.find(bk => bk.id === item.id);
+                const b = livePage.blocks.find(bk => bk.id === item.id);
                 if (b && b.box) {
                     b.box.x = Math.max(0, Math.min(100 - item.w, item.x + deltaPercentX));
                     b.box.y = Math.max(0, Math.min(100 - item.h, item.y + deltaPercentY));
@@ -122,26 +137,29 @@ export function startBlockDrag(e: any, block: MangaBlock): void {
                 }
             });
         } else {
-            const targetX = Math.max(0, Math.min(100 - block.box.w, startPercentX + deltaPercentX));
-            const targetY = Math.max(0, Math.min(100 - block.box.h, startPercentY + deltaPercentY));
+            const liveBlock = livePage?.blocks.find(bk => bk.id === block.id) || block;
+            const targetX = Math.max(0, Math.min(100 - liveBlock.box.w, startPercentX + deltaPercentX));
+            const targetY = Math.max(0, Math.min(100 - liveBlock.box.h, startPercentY + deltaPercentY));
 
+            liveBlock.box.x = targetX;
+            liveBlock.box.y = targetY;
             block.box.x = targetX;
             block.box.y = targetY;
 
-            const blockElem = document.getElementById(block.id);
-            if (blockElem) {
-                blockElem.style.left = `${block.box.x}%`;
-                blockElem.style.top = `${block.box.y}%`;
+            const elem = document.getElementById(block.id);
+            if (elem) {
+                elem.style.left = `${targetX}%`;
+                elem.style.top = `${targetY}%`;
             }
             const coverEl = document.getElementById(`cover-${block.id}`);
             if (coverEl) {
-                coverEl.style.left = `${block.box.x}%`;
-                coverEl.style.top = `${block.box.y}%`;
+                coverEl.style.left = `${targetX}%`;
+                coverEl.style.top = `${targetY}%`;
             }
             const mirrorCoverEl = document.getElementById(`mirror-cover-${block.id}`);
             if (mirrorCoverEl) {
-                mirrorCoverEl.style.left = `${block.box.x}%`;
-                mirrorCoverEl.style.top = `${block.box.y}%`;
+                mirrorCoverEl.style.left = `${targetX}%`;
+                mirrorCoverEl.style.top = `${targetY}%`;
             }
         }
 
@@ -156,11 +174,16 @@ export function startBlockDrag(e: any, block: MangaBlock): void {
         document.removeEventListener('touchcancel', onDragEnd);
 
         if (hasMoved) {
-            block.maskCache = null;
+            const curPage = (globalState.activePageIndex >= 0 && globalState.activePageIndex < globalState.pages.length)
+                ? globalState.pages[globalState.activePageIndex]
+                : activePage;
+            const curBlock = curPage?.blocks.find(b => b.id === block.id) || block;
+            if (curBlock) {
+                curBlock.maskCache = null;
+            }
             requestOverlayRender();
 
-            const activePage = globalState.pages[globalState.activePageIndex];
-            if (activePage) savePageToDB(activePage);
+            if (curPage) savePageToDB(curPage);
         }
     }
 
@@ -171,10 +194,19 @@ export function startBlockDrag(e: any, block: MangaBlock): void {
     document.addEventListener('touchcancel', onDragEnd);
 }
 
-export function startBlockResize(e: any, block: MangaBlock, handleDir: string): void {
+export function startBlockResize(e: any, blockOrId: MangaBlock | string, handleDir: string): void {
     if (isSpacePanPressed() || e.button === 1 || globalState.isMobileHandMode) return;
     const isTouch = e.type.startsWith('touch');
     if (isTouch && e.touches && e.touches.length > 1) return;
+
+    const blockId = typeof blockOrId === 'string' ? blockOrId : blockOrId?.id;
+    const activePage = (globalState.activePageIndex >= 0 && globalState.activePageIndex < globalState.pages.length)
+        ? globalState.pages[globalState.activePageIndex]
+        : null;
+    const rawBlock = activePage?.blocks.find(b => b.id === blockId) || (typeof blockOrId === 'object' ? blockOrId : null);
+    if (!rawBlock || !rawBlock.box) return;
+    const block: MangaBlock = rawBlock;
+
 
     e.stopPropagation();
     if (!isTouch || e.cancelable) {
@@ -190,11 +222,15 @@ export function startBlockResize(e: any, block: MangaBlock, handleDir: string): 
 
     const startBox = { ...block.box };
 
-    const container = elements.mangaCanvasContainer || document.getElementById('manga-canvas-container');
-    const containerWidth = Math.max(10, container?.clientWidth || 800);
-    const containerHeight = Math.max(10, container?.clientHeight || 1200);
+    const blockElem = document.getElementById(block.id);
+    const targetContainer = (typeof blockElem?.closest === 'function' ? blockElem.closest('.manga-container') : null) || elements.mangaCanvasContainer || document.getElementById('manga-canvas-container');
+    const imgElement = (typeof targetContainer?.querySelector === 'function' ? targetContainer.querySelector('img') : null) || elements.mangaBgImage || document.getElementById('manga-bg-image');
+    const containerWidth = Math.max(50, imgElement?.clientWidth || targetContainer?.clientWidth || 800);
+    const containerHeight = Math.max(50, imgElement?.clientHeight || targetContainer?.clientHeight || 1200);
 
     let resizeRafId: number | null = null;
+
+
 
     function onResizing(moveEvent: any) {
         if (globalState.isMobileHandMode) return;

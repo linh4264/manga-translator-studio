@@ -35,8 +35,15 @@ export function requestOverlayRender(): void {
     overlayRenderRafId = raf(() => {
         overlayRenderRafId = null;
         renderOverlays();
+        if (globalState.viewMode === 'split') {
+            const splitOverlays = document.getElementById('split-overlays-clone');
+            if (splitOverlays) {
+                renderOverlays(splitOverlays);
+            }
+        }
     });
 }
+
 
 export function updateActiveSelectionUI(): void {
     const container = elements.mangaOverlaysContainer;
@@ -121,7 +128,7 @@ export function renderOverlays(
         textsLayer.style.display = '';
     }
 
-    const imgElement = customImgElement || elements.mangaBgImage;
+    const imgElement = customImgElement || (targetContainer ? (targetContainer.parentElement?.querySelector('img') as HTMLImageElement | null) : null) || elements.mangaBgImage;
     if (imgElement && imgElement.clientWidth > 0) {
         const zoomScale = (globalState.zoom || 100) / 100;
         if (!(page as any).lastDisplayWidth || Math.abs(zoomScale - 1.0) < 0.001) {
@@ -176,14 +183,15 @@ export function renderOverlays(
     const { width: refW, height: refH } = getReferenceDisplayDimensions(page, imgElement);
     const naturalW = (imgElement && imgElement.naturalWidth > 0) ? imgElement.naturalWidth : (page?.width || 800);
     const naturalH = (imgElement && imgElement.naturalHeight > 0) ? imgElement.naturalHeight : (page?.height || 1200);
-    const zoomScale = isMirror ? 1 : ((globalState.zoom || 100) / 100);
+    const zoomScale = (globalState.zoom || 100) / 100;
 
     const currentImgWidth = (imgElement && imgElement.clientWidth > 0) ? imgElement.clientWidth : (refW * zoomScale);
     const currentImgHeight = (imgElement && imgElement.clientHeight > 0) ? imgElement.clientHeight : (currentImgWidth * (naturalH / Math.max(1, naturalW)));
 
-    const screenScale = isMirror ? forceExportScale : (currentImgWidth / Math.max(1, refW));
-    const displayW = isMirror ? naturalW : currentImgWidth;
-    const displayH = isMirror ? naturalH : currentImgHeight;
+    const screenScale = (currentImgWidth / Math.max(1, refW)) * forceExportScale;
+    const displayW = currentImgWidth;
+    const displayH = currentImgHeight;
+
 
     page.blocks.forEach((block) => {
         if (!block || !block.box) return;
@@ -629,13 +637,18 @@ export function renderOverlays(
                 let lastMousedownTime = 0;
                 bubble.addEventListener('mousedown', (e: MouseEvent) => {
                     const now = Date.now();
+                    const activePage = (globalState.activePageIndex >= 0 && globalState.activePageIndex < globalState.pages.length)
+                        ? globalState.pages[globalState.activePageIndex]
+                        : null;
+                    const liveBlock = activePage?.blocks.find(b => b.id === block.id) || block;
+
                     if (now - lastMousedownTime < 350) {
                         lastMousedownTime = 0;
                         e.preventDefault();
                         e.stopPropagation();
-                        if (block.type !== 'image') {
+                        if (liveBlock.type !== 'image') {
                             const innerText = maskContent!.querySelector('.inner-text-container') as HTMLElement || maskContent!.firstElementChild as HTMLElement;
-                            startInlineEditing(block, bubble!, maskContent!, innerText);
+                            startInlineEditing(liveBlock, bubble!, maskContent!, innerText);
                         } else {
                             uiSetRightTab('edit');
                             if (elements.editTranslatedText) elements.editTranslatedText.focus();
@@ -643,24 +656,29 @@ export function renderOverlays(
                         return;
                     }
                     lastMousedownTime = now;
-                    startBlockDrag(e, block);
+                    startBlockDrag(e, liveBlock.id);
                 });
 
                 let lastTouchTime = 0;
                 bubble.addEventListener('touchstart', (e: TouchEvent) => {
                     if (globalState.isMobileHandMode) return;
                     const now = Date.now();
+                    const activePage = (globalState.activePageIndex >= 0 && globalState.activePageIndex < globalState.pages.length)
+                        ? globalState.pages[globalState.activePageIndex]
+                        : null;
+                    const liveBlock = activePage?.blocks.find(b => b.id === block.id) || block;
+
                     if (now - lastTouchTime < 350) {
                         lastTouchTime = 0;
                         e.preventDefault();
                         e.stopPropagation();
                         if (window.innerWidth < 1024) {
-                            import('../../ui/layout-ui').then(m => m.openMobileQuickEditor(block.id));
+                            import('../../ui/layout-ui').then(m => m.openMobileQuickEditor(liveBlock.id));
                             return;
                         }
-                        if (block.type !== 'image') {
+                        if (liveBlock.type !== 'image') {
                             const innerText = maskContent!.querySelector('.inner-text-container') as HTMLElement || maskContent!.firstElementChild as HTMLElement;
-                            startInlineEditing(block, bubble!, maskContent!, innerText);
+                            startInlineEditing(liveBlock, bubble!, maskContent!, innerText);
                         } else {
                             uiSetRightTab('edit');
                             if (elements.editTranslatedText) elements.editTranslatedText.focus();
@@ -669,37 +687,38 @@ export function renderOverlays(
                     }
                     lastTouchTime = now;
                     if (e.touches.length === 1) {
-                        startBlockDrag(e, block);
+                        startBlockDrag(e, liveBlock.id);
                     }
                 }, { passive: false });
 
                 const handleSW = document.createElement('div');
                 handleSW.className = "resize-handle resize-sw";
-                handleSW.addEventListener('mousedown', (e) => startBlockResize(e, block, 'sw'));
+                handleSW.addEventListener('mousedown', (e) => startBlockResize(e, block.id, 'sw'));
                 handleSW.addEventListener('touchstart', (e) => {
-                    if (!globalState.isMobileHandMode && e.touches.length === 1) startBlockResize(e, block, 'sw');
+                    if (!globalState.isMobileHandMode && e.touches.length === 1) startBlockResize(e, block.id, 'sw');
                 }, { passive: false });
 
                 const handleSE = document.createElement('div');
                 handleSE.className = "resize-handle resize-se";
-                handleSE.addEventListener('mousedown', (e) => startBlockResize(e, block, 'se'));
+                handleSE.addEventListener('mousedown', (e) => startBlockResize(e, block.id, 'se'));
                 handleSE.addEventListener('touchstart', (e) => {
-                    if (!globalState.isMobileHandMode && e.touches.length === 1) startBlockResize(e, block, 'se');
+                    if (!globalState.isMobileHandMode && e.touches.length === 1) startBlockResize(e, block.id, 'se');
                 }, { passive: false });
 
                 const handleNW = document.createElement('div');
                 handleNW.className = "resize-handle resize-nw";
-                handleNW.addEventListener('mousedown', (e) => startBlockResize(e, block, 'nw'));
+                handleNW.addEventListener('mousedown', (e) => startBlockResize(e, block.id, 'nw'));
                 handleNW.addEventListener('touchstart', (e) => {
-                    if (!globalState.isMobileHandMode && e.touches.length === 1) startBlockResize(e, block, 'nw');
+                    if (!globalState.isMobileHandMode && e.touches.length === 1) startBlockResize(e, block.id, 'nw');
                 }, { passive: false });
 
                 const handleNE = document.createElement('div');
                 handleNE.className = "resize-handle resize-ne";
-                handleNE.addEventListener('mousedown', (e) => startBlockResize(e, block, 'ne'));
+                handleNE.addEventListener('mousedown', (e) => startBlockResize(e, block.id, 'ne'));
                 handleNE.addEventListener('touchstart', (e) => {
-                    if (!globalState.isMobileHandMode && e.touches.length === 1) startBlockResize(e, block, 'ne');
+                    if (!globalState.isMobileHandMode && e.touches.length === 1) startBlockResize(e, block.id, 'ne');
                 }, { passive: false });
+
 
                 bubble.appendChild(handleSW);
                 bubble.appendChild(handleSE);

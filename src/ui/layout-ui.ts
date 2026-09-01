@@ -134,6 +134,9 @@ export function updateSplitView(): void {
         mirrorImg.src = page.src || '';
         mirrorImg.className = "block h-full w-auto max-w-none border border-slate-800 rounded shadow-2xl select-none";
         mirrorImg.style.pointerEvents = 'none';
+        mirrorImg.onload = () => {
+            if (overlaysDiv) renderOverlays(overlaysDiv);
+        };
 
         overlaysDiv = document.createElement('div');
         overlaysDiv.id = "split-overlays-clone";
@@ -144,10 +147,14 @@ export function updateSplitView(): void {
         if (elements.splitEditorAnchor) elements.splitEditorAnchor.appendChild(mirrorContainer);
     } else if (page.src && mirrorImg.src !== page.src) {
         mirrorImg.src = page.src;
+        mirrorImg.onload = () => {
+            if (overlaysDiv) renderOverlays(overlaysDiv);
+        };
     }
 
     if (overlaysDiv) renderOverlays(overlaysDiv);
 }
+
 
 export function changeZoom(amount: number, mouseEvent: MouseEvent | null = null): void {
     const viewport = document.getElementById('workspace-viewport');
