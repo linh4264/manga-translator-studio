@@ -11,7 +11,7 @@ import { runChapterQcScan, autoFixAllQcIssues } from './qc-linter';
 import { getAiConfig, getTranslationContext } from '../ai/ai-state';
 import { getConfiguredApiEndpoint } from '../ai/ai-config';
 import { getBase64, enhanceImageForOcr, ensurePageImageData, executeOcrVisionStep, executeAiJsonRequestWithRetry } from '../ai/ai-client';
-import { refineAiBlockBox, extractTextAnchor } from '../ocr/ocr-service';
+import { refineAiBlockBox, extractTextAnchor, sortMangaReadingOrder } from '../ocr/ocr-service';
 import { getDefaultFontForBlockType, cancelTranslationFlag, setCancelTranslationFlag, setIsBatchTranslating } from '../ai/story-memory';
 import { executeChapterTranslationStep } from '../ai/translation-pipeline';
 import { getCachedTranslation, setCachedTranslation } from '../ai/translation-cache';
@@ -142,8 +142,8 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
 
                     const pageImageData = await ensurePageImageData(page);
                     const isVerticalTarget = ['ja', 'zh', 'ko'].includes(ctx.targetLanguage || 'vi');
-
-                    page.blocks = (detectedRawBlocks || []).map((b, bIdx) => {
+                    const sortedRawBlocks = sortMangaReadingOrder(detectedRawBlocks || []);
+                    page.blocks = sortedRawBlocks.map((b, bIdx) => {
                         const blockType = b.type || 'dialogue';
                         const textAnchor = b.textAnchor || extractTextAnchor(b.box);
                         const normalisedBox = b.positionKnown === false

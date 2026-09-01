@@ -1,44 +1,28 @@
 import { test, expect } from 'vitest';
 import assert from 'node:assert';
 import '../../setup/browser-env.js';
+import { sortMangaReadingOrder, sortManhwaReadingOrder } from '../../../src/features/ocr/ocr-service';
 
-// Manga Reading Order sorting utility (Top-to-Bottom, Right-to-Left for Manga)
-function sortMangaReadingOrder(blocks) {
-    return [...blocks].sort((a, b) => {
-        // Vertical difference threshold: If vertically distant (> 8%), top comes first
-        const yDiff = a.box.y - b.box.y;
-        if (Math.abs(yDiff) > 8) {
-            return yDiff;
-        }
-        // In the same horizontal tier: Right comes before Left (Manga RTL standard)
-        return b.box.x - a.box.x;
-    });
-}
-
-function sortManhwaReadingOrder(blocks) {
-    return [...blocks].sort((a, b) => {
-        const yDiff = a.box.y - b.box.y;
-        if (Math.abs(yDiff) > 8) {
-            return yDiff;
-        }
-        // In the same horizontal tier: Left comes before Right (Webtoon/Comic LTR standard)
-        return a.box.x - b.box.x;
-    });
-}
-
-test('OCR Reading Order - Japanese Manga (Right-to-Left, Top-to-Bottom)', () => {
+test('OCR Reading Order - Japanese Manga (Right-to-Left priority, then Top-to-Bottom)', () => {
+    // 4 blocks mimicking manga page layout (Right column, Center column, Left top, Left bottom)
     const blocks = [
-        { id: 'b_left_top', box: { x: 10, y: 10, w: 20, h: 20 } },
-        { id: 'b_right_top', box: { x: 70, y: 10, w: 20, h: 20 } },
-        { id: 'b_middle_bottom', box: { x: 50, y: 60, w: 20, h: 20 } }
+        { id: 'b_left_top', box: { x: 15, y: 15, w: 15, h: 20 } },
+        { id: 'b_center', box: { x: 45, y: 30, w: 15, h: 20 } },
+        { id: 'b_right_bottom', box: { x: 75, y: 70, w: 15, h: 20 } },
+        { id: 'b_left_bottom', box: { x: 12, y: 75, w: 15, h: 20 } }
     ];
 
     const sortedManga = sortMangaReadingOrder(blocks);
 
-    // In Japanese manga, top-right bubble should be read 1st, top-left 2nd, bottom 3rd
-    assert.strictEqual(sortedManga[0].id, 'b_right_top', 'Top-Right is 1st');
-    assert.strictEqual(sortedManga[1].id, 'b_left_top', 'Top-Left is 2nd');
-    assert.strictEqual(sortedManga[2].id, 'b_middle_bottom', 'Bottom is 3rd');
+    // In Japanese manga RTL priority:
+    // 1st: Rightmost panel/column ('b_right_bottom')
+    // 2nd: Center panel/column ('b_center')
+    // 3rd: Left column Top ('b_left_top')
+    // 4th: Left column Bottom ('b_left_bottom')
+    assert.strictEqual(sortedManga[0].id, 'b_right_bottom', 'Rightmost panel is 1st');
+    assert.strictEqual(sortedManga[1].id, 'b_center', 'Center panel is 2nd');
+    assert.strictEqual(sortedManga[2].id, 'b_left_top', 'Left-Top is 3rd');
+    assert.strictEqual(sortedManga[3].id, 'b_left_bottom', 'Left-Bottom is 4th');
 });
 
 test('OCR Reading Order - Korean Webtoon / Western Comic (Left-to-Right, Top-to-Bottom)', () => {
@@ -55,3 +39,4 @@ test('OCR Reading Order - Korean Webtoon / Western Comic (Left-to-Right, Top-to-
     assert.strictEqual(sortedManhwa[1].id, 'b_right_top', 'Top-Right is 2nd');
     assert.strictEqual(sortedManhwa[2].id, 'b_bottom', 'Bottom is 3rd');
 });
+

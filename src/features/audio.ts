@@ -6,6 +6,7 @@ import { ensureModalElement } from '../core/component-loader';
 import { MangaBlock, MangaPage, AudioSettings } from '../types/index';
 import { getCharacterDossier } from './dossier-lorebook';
 import { getTranslationContext } from './ai/ai-state';
+import { sortMangaReadingOrder } from './ocr/ocr-service';
 
 export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
     maleVoiceURI: '',
@@ -244,14 +245,7 @@ function clearSpeakingHighlights(): void {
 
 function getSortedBlocksForPage(page: MangaPage): MangaBlock[] {
     if (!page || !page.blocks || page.blocks.length === 0) return [];
-    
-    return [...page.blocks].sort((a, b) => {
-        const yDiff = a.box.y - b.box.y;
-        if (Math.abs(yDiff) > 8) {
-            return yDiff;
-        }
-        return b.box.x - a.box.x;
-    });
+    return sortMangaReadingOrder(page.blocks);
 }
 
 export function playNextBlockInQueue(): void {

@@ -17,7 +17,7 @@ import {
 } from '../../config/constants';
 import { elements } from '../../core/elements';
 import { showToast } from '../../core/utils';
-import { refineAiBlockBox, mergeOverlappingAiBlocks, extractTextAnchor } from '../ocr/ocr-service';
+import { refineAiBlockBox, mergeOverlappingAiBlocks, extractTextAnchor, sortMangaReadingOrder } from '../ocr/ocr-service';
 import { requestOverlayRender, autoMatchBlockStyle, autoFitBlock, isBlockAutoFit, getReferenceDisplayDimensions } from '../canvas/canvas-service';
 import { getConfiguredApiEndpoint, getGeminiGenerateContentUrl } from './ai-config';
 import {
@@ -226,7 +226,8 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
             if (!detectedRawBlocks || detectedRawBlocks.length === 0) {
                 finalBlocks = [];
             } else {
-                detectedRawBlocks = detectedRawBlocks.map((b, bIdx) => ({
+                const sortedRawBlocks = sortMangaReadingOrder(detectedRawBlocks);
+                detectedRawBlocks = sortedRawBlocks.map((b, bIdx) => ({
                     ...b,
                     id: `p${pageIndex + 1}_b${bIdx + 1}`
                 }));
@@ -656,7 +657,8 @@ export async function runBatchTranslation(): Promise<void> {
                         const pageImageData = await ensurePageImageData(page);
 
                         const isVerticalTarget = ['ja', 'zh', 'ko'].includes(targetLang);
-                        page.blocks = (detectedRawBlocks || []).map((b, bIdx) => {
+                        const sortedRawBlocks = sortMangaReadingOrder(detectedRawBlocks || []);
+                        page.blocks = sortedRawBlocks.map((b, bIdx) => {
                             const blockType = b.type || 'dialogue';
                             const textAnchor = b.textAnchor || extractTextAnchor(b.box);
                             const normalisedBox = b.positionKnown === false

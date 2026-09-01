@@ -1268,6 +1268,80 @@ export function mergeOverlappingAiBlocks(blocks: any[], overlapThreshold: number
     return result;
 }
 
+export function sortMangaReadingOrder<T extends { box?: any }>(blocks: T[]): T[] {
+    if (!Array.isArray(blocks) || blocks.length <= 1) return blocks || [];
+
+    const getCenter = (b: any): { x: number; y: number } => {
+        if (!b || !b.box) return { x: 50, y: 50 };
+        if (Array.isArray(b.box) && b.box.length === 2) {
+            const rawX = b.box[0] > 100 ? b.box[0] / 10 : b.box[0];
+            const rawY = b.box[1] > 100 ? b.box[1] / 10 : b.box[1];
+            return { x: rawX, y: rawY };
+        }
+        const x = typeof b.box.x === 'number' ? b.box.x : 0;
+        const y = typeof b.box.y === 'number' ? b.box.y : 0;
+        const w = typeof b.box.w === 'number' ? b.box.w : 0;
+        const h = typeof b.box.h === 'number' ? b.box.h : 0;
+        return { x: x + w / 2, y: y + h / 2 };
+    };
+
+    return [...blocks].sort((a, b) => {
+        const cA = getCenter(a);
+        const cB = getCenter(b);
+
+        // 1. Horizontal distance (Right to Left priority: higher X comes first in Manga)
+        const xDiff = cB.x - cA.x;
+
+        // If blocks are in distinct horizontal columns/panels (> 10% width difference),
+        // the right panel/column takes absolute priority (Manga RTL flow).
+        if (Math.abs(xDiff) > 10) {
+            return xDiff;
+        }
+
+        // 2. In the same vertical column/strip (horizontal diff <= 10%),
+        // the upper bubble comes first (Top to Bottom: smaller Y comes first).
+        const yDiff = cA.y - cB.y;
+        if (Math.abs(yDiff) > 5) {
+            return yDiff;
+        }
+
+        // 3. Fallback: rightmost still takes priority
+        return xDiff;
+    });
+}
+
+export function sortManhwaReadingOrder<T extends { box?: any }>(blocks: T[]): T[] {
+    if (!Array.isArray(blocks) || blocks.length <= 1) return blocks || [];
+
+    const getCenter = (b: any): { x: number; y: number } => {
+        if (!b || !b.box) return { x: 50, y: 50 };
+        if (Array.isArray(b.box) && b.box.length === 2) {
+            const rawX = b.box[0] > 100 ? b.box[0] / 10 : b.box[0];
+            const rawY = b.box[1] > 100 ? b.box[1] / 10 : b.box[1];
+            return { x: rawX, y: rawY };
+        }
+        const x = typeof b.box.x === 'number' ? b.box.x : 0;
+        const y = typeof b.box.y === 'number' ? b.box.y : 0;
+        const w = typeof b.box.w === 'number' ? b.box.w : 0;
+        const h = typeof b.box.h === 'number' ? b.box.h : 0;
+        return { x: x + w / 2, y: y + h / 2 };
+    };
+
+    return [...blocks].sort((a, b) => {
+        const cA = getCenter(a);
+        const cB = getCenter(b);
+
+        // Vertical distance (Top to Bottom for Webtoon/Manhwa)
+        const yDiff = cA.y - cB.y;
+        if (Math.abs(yDiff) > 8) {
+            return yDiff;
+        }
+        // Left to Right within tier
+        return cA.x - cB.x;
+    });
+}
+
+
 export function snapBoxToContours(box: BoundingBox, imageData: ImageData | null, options: any = {}): BoundingBox {
     if (!imageData) return box;
 

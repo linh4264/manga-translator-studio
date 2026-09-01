@@ -393,6 +393,7 @@ export async function executeOcrVisionStep({
         "  5. Multi-column vertical Japanese text (縦書き): Read EVERY column from Right to Left.",
         "  6. Hand-drawn Sound Effects (SFX) and background text signs.",
         "BLOCK TYPE CLASSIFICATION RULE: 'dialogue', 'narration', 'thought', 'sfx'.",
+        "MANGA READING ORDER MANDATE: Output blocks in authentic Manga reading order: From Right to Left (RTL) first across columns/panels, then Top to Bottom (TTB) within each column/panel.",
         "STRICT SEPARATION RULE: Every individual speech bubble must be output as its own separate block with distinct center anchor [x, y].",
         "POSITION FORMULA:",
         "Output exactly two integers [x, y] on a 0–1000 coordinate scale.",
