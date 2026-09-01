@@ -48,6 +48,7 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
 
     const aiConfig = getAiConfig();
     const ctx = getTranslationContext();
+
     const provider = aiConfig.aiProvider;
     const keyToUse = aiConfig.apiKey || (provider === 'custom' ? 'local' : '');
     if (!keyToUse && provider !== 'custom') {
@@ -58,6 +59,7 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
 
     isAutoPilotRunning = true;
     setCancelTranslationFlag(false);
+
     setIsBatchTranslating(true);
 
     const pipeline = getPipelineData();

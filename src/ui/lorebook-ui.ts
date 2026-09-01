@@ -21,6 +21,8 @@ export async function openLorebookModal(): Promise<void> {
     }
 }
 
+
+
 export function closeLorebookModal(): void {
     document.getElementById('lorebook-dossier-modal')?.classList.add('hidden');
 }

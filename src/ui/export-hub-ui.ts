@@ -7,6 +7,8 @@ import { elements } from '../core/elements';
 import { showToast, escapeHTML } from '../core/utils';
 import { runBatchExport, runPdfExport, exportProjectBackupJSON } from '../features/io';
 import { recalculateChapterStats, setPipelineStage, updateStageStatus } from '../features/pipeline/pipeline-manager';
+import { isProUser, requireProFeature } from '../features/auth/auth-manager';
+import { exportPagesToPsd } from '../features/psd-exporter';
 
 let isExportHubOpen = false;
 
@@ -43,7 +45,7 @@ export function closeExportHubModal(): void {
 function createExportHubModalDOM(): HTMLElement {
     const modal = document.createElement('div');
     modal.id = 'export-hub-modal';
-    modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 sm:p-4 animate-fade-in select-none';
+    modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-2 sm:p-4 animate-fade-in select-none';
 
     modal.innerHTML = `
         <div class="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden text-slate-100">
@@ -82,6 +84,7 @@ export function renderExportHubContent(): void {
     const stats = recalculateChapterStats();
     const totalPages = globalState.pages.length;
     const hoursSaved = (stats.estimatedSavedMinutes / 60).toFixed(1);
+    const isPro = isProUser();
 
     body.innerHTML = `
         <!-- Chapter Summary Card -->
@@ -132,7 +135,8 @@ export function renderExportHubContent(): void {
         <div>
             <div class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3">Chọn Định Dạng Xuất Bản</div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                <!-- 1. Web-Ready ZIP (WebP / JPG) -->
+                
+                <!-- 1. Web-Ready ZIP (WebP / JPG) [FREE & PRO] -->
                 <div class="p-4 rounded-xl bg-slate-950/70 hover:bg-slate-950 border border-slate-800 hover:border-indigo-500/50 transition-all flex flex-col justify-between group">
                     <div class="flex items-start gap-3">
                         <div class="w-10 h-10 rounded-xl bg-indigo-500/15 text-indigo-400 flex items-center justify-center font-bold text-base shrink-0 group-hover:scale-105 transition-all">
@@ -141,7 +145,7 @@ export function renderExportHubContent(): void {
                         <div>
                             <div class="text-xs font-bold text-white flex items-center gap-1.5">
                                 <span>Gói ZIP Web-Ready</span>
-                                <span class="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-semibold uppercase">Đề xuất cho Web</span>
+                                <span class="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 font-semibold uppercase">Đề xuất Web</span>
                             </div>
                             <p class="text-[11px] text-slate-400 mt-1">Định dạng nén WebP/JPG tối ưu dung lượng nhẹ, tải siêu nhanh cho độc giả online.</p>
                         </div>
@@ -151,7 +155,7 @@ export function renderExportHubContent(): void {
                     </button>
                 </div>
 
-                <!-- 2. Master HD ZIP (PNG) -->
+                <!-- 2. Master HD ZIP (PNG) [FREE & PRO] -->
                 <div class="p-4 rounded-xl bg-slate-950/70 hover:bg-slate-950 border border-slate-800 hover:border-emerald-500/50 transition-all flex flex-col justify-between group">
                     <div class="flex items-start gap-3">
                         <div class="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center font-bold text-base shrink-0 group-hover:scale-105 transition-all">
@@ -160,7 +164,7 @@ export function renderExportHubContent(): void {
                         <div>
                             <div class="text-xs font-bold text-white flex items-center gap-1.5">
                                 <span>Gói ZIP Master HD (Lossless)</span>
-                                <span class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-semibold uppercase">Lưu trữ</span>
+                                <span class="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-semibold uppercase">Lossless</span>
                             </div>
                             <p class="text-[11px] text-slate-400 mt-1">Giữ nguyên định dạng PNG gốc độ nét cực cao, không suy hao chi tiết nét vẽ.</p>
                         </div>
@@ -170,7 +174,26 @@ export function renderExportHubContent(): void {
                     </button>
                 </div>
 
-                <!-- 3. High-Definition PDF -->
+                <!-- 3. Multi-layer PSD (Photoshop) [PRO EXCLUSIVE] -->
+                <div class="p-4 rounded-xl bg-slate-950/70 hover:bg-slate-950 border border-slate-800 hover:border-amber-500/50 transition-all flex flex-col justify-between group relative overflow-hidden">
+                    <div class="flex items-start gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-indigo-500/20 border border-amber-500/30 text-amber-300 flex items-center justify-center font-black text-sm shrink-0 group-hover:scale-105 transition-all">
+                            PSD
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-xs font-bold text-white">Photoshop Multi-Layer (PSD)</span>
+                                <span class="text-[8.5px] px-1.5 py-0.2 rounded font-black uppercase tracking-wider bg-amber-500/25 text-amber-300 border border-amber-500/50">👑 PRO</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400 mt-1">Xuất tách riêng 3 Layer: Nền gốc + Layer xóa sạch chữ + Layer Text Typeset để hậu kỳ trong Adobe Photoshop.</p>
+                        </div>
+                    </div>
+                    <button id="btn-export-psd" class="mt-4 w-full py-2 rounded-lg bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-amber-500/20">
+                        <i class="fa-solid fa-layer-group"></i> Xuất File PSD Tách Lớp
+                    </button>
+                </div>
+
+                <!-- 4. High-Definition PDF [PRO & FREE PREVIEW] -->
                 <div class="p-4 rounded-xl bg-slate-950/70 hover:bg-slate-950 border border-slate-800 hover:border-rose-500/50 transition-all flex flex-col justify-between group">
                     <div class="flex items-start gap-3">
                         <div class="w-10 h-10 rounded-xl bg-rose-500/15 text-rose-400 flex items-center justify-center font-bold text-base shrink-0 group-hover:scale-105 transition-all">
@@ -189,29 +212,30 @@ export function renderExportHubContent(): void {
                     </button>
                 </div>
 
-                <!-- 4. Project Archive (.json) & GDrive -->
-                <div class="p-4 rounded-xl bg-slate-950/70 hover:bg-slate-950 border border-slate-800 hover:border-amber-500/50 transition-all flex flex-col justify-between group">
+                <!-- 5. Project Archive (.json) & GDrive Cloud Sync [PRO ENHANCED] -->
+                <div class="p-4 rounded-xl bg-slate-950/70 hover:bg-slate-950 border border-slate-800 hover:border-amber-500/50 transition-all flex flex-col justify-between group md:col-span-2">
                     <div class="flex items-start gap-3">
                         <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center font-bold text-base shrink-0 group-hover:scale-105 transition-all">
                             <i class="fa-solid fa-box-archive"></i>
                         </div>
-                        <div>
-                            <div class="text-xs font-bold text-white flex items-center gap-1.5">
-                                <span>Lưu Trữ Dự Án (.JSON)</span>
-                                <span class="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-semibold uppercase">Backup</span>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-xs font-bold text-white">Lưu Trữ Dự Án (.JSON) & Đồng Bộ Google Drive</span>
+                                <span class="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-semibold uppercase">Cloud Sync</span>
                             </div>
-                            <p class="text-[11px] text-slate-400 mt-1">Đóng gói toàn bộ tọa độ, bản dịch và layer để mở lại chỉnh sửa bất kỳ lúc nào.</p>
+                            <p class="text-[11px] text-slate-400 mt-1">Đóng gói toàn bộ tọa độ, bản dịch và layer để mở lại chỉnh sửa hoặc đồng bộ 2 chiều lên Google Drive.</p>
                         </div>
                     </div>
                     <div class="mt-4 flex items-center gap-2">
                         <button id="btn-export-project-json" class="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                            <i class="fa-solid fa-code"></i> Tải File Backup
+                            <i class="fa-solid fa-code"></i> Tải File Backup (.JSON)
                         </button>
-                        <button id="btn-export-gdrive" class="px-3.5 py-2 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-300 text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer">
-                            <i class="fa-brands fa-google-drive"></i> GDrive
+                        <button id="btn-export-gdrive" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md shadow-indigo-900/30">
+                            <i class="fa-brands fa-google-drive"></i> Đồng Bộ Google Drive 👑
                         </button>
                     </div>
                 </div>
+
             </div>
         </div>
     `;
@@ -229,6 +253,12 @@ export function renderExportHubContent(): void {
         updateStageStatus('export', 'completed');
     });
 
+    body.querySelector('#btn-export-psd')?.addEventListener('click', async () => {
+        showToast("Đang đóng gói file PSD tách lớp...", "info");
+        await exportPagesToPsd();
+        updateStageStatus('export', 'completed');
+    });
+
     body.querySelector('#btn-export-pdf')?.addEventListener('click', async () => {
         showToast("Đang tạo file PDF Chapter...", "info");
         await runPdfExport({ quality: 'hd' });
@@ -243,3 +273,4 @@ export function renderExportHubContent(): void {
         import('../features/gdrive').then(m => m.openGDriveModal());
     });
 }
+

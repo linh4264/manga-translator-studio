@@ -7,19 +7,22 @@ import { detectSpeechBubbleAtPoint, detectSpeechBubbleAtPointAsync } from '../oc
 import { autoFitBlock, isBlockAutoFit } from './canvas-styling';
 import { selectBlock, isSpacePanPressed } from './canvas-interactions';
 import { requestOverlayRender } from './canvas-renderer';
+import { requireProFeature } from '../auth/auth-manager';
 
 export { detectSpeechBubbleAtPoint, detectSpeechBubbleAtPointAsync };
 
 export let isMagicWandActive = false;
 
 export function toggleMagicWandMode(forceState?: boolean): void {
-    if (forceState !== undefined) {
-        isMagicWandActive = !!forceState;
-    } else {
-        isMagicWandActive = !isMagicWandActive;
-    }
+    const targetState = forceState !== undefined ? !!forceState : !isMagicWandActive;
+    executeToggleMagicWand(targetState);
+}
 
+function executeToggleMagicWand(nextState: boolean): void {
+
+    isMagicWandActive = nextState;
     (globalState as any).magicWandActive = isMagicWandActive;
+
 
     const btn = elements.btnMagicWand || document.getElementById('btn-magic-wand');
     const container = elements.mangaCanvasContainer || document.getElementById('manga-canvas-container');

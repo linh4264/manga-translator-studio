@@ -49,18 +49,31 @@ export interface StoryMemoryState {
     chapterStoryMemory: StoryMemoryItem[];
 }
 
+import { isProUser } from '../auth/auth-manager';
+
 export function getAiConfig(): AiConfigState {
+    const isPro = isProUser();
+    const provider = (globalState.aiProvider || 'gemini') as any;
+
+    // In Basic version with Gemini provider, lock model to Gemini 3.1 Flash-Lite for 100% reliable free execution
+    const isBasicGemini = !isPro && provider === 'gemini';
+    const selectedModel = isBasicGemini ? 'gemini-3.1-flash-lite' : (globalState.selectedModel || DEFAULT_MODEL);
+    const ocrModel = isBasicGemini ? 'gemini-3.1-flash-lite' : (globalState.ocrModel || DEFAULT_OCR_MODEL);
+    const translationModel = isBasicGemini ? 'gemini-3.1-flash-lite' : (globalState.translationModel || DEFAULT_TRANSLATION_MODEL);
+
     return {
         apiKey: (globalState.apiKey || '').trim(),
-        aiProvider: (globalState.aiProvider || 'gemini') as any,
+        aiProvider: provider,
         apiEndpoint: (globalState.apiEndpoint || 'https://generativelanguage.googleapis.com/v1beta').trim(),
-        selectedModel: globalState.selectedModel || DEFAULT_MODEL,
-        ocrModel: globalState.ocrModel || DEFAULT_OCR_MODEL,
-        translationModel: globalState.translationModel || DEFAULT_TRANSLATION_MODEL,
+        selectedModel,
+        ocrModel,
+        translationModel,
         apiDelay: typeof globalState.apiDelay === 'number' ? globalState.apiDelay : 2,
         maxRetries: typeof globalState.maxRetries === 'number' ? globalState.maxRetries : 3
     };
 }
+
+
 
 export function getTranslationContext(override?: Partial<TranslationContextOptions>): TranslationContextOptions {
     const defaultGenres = Array.isArray(globalState.comicGenres) && globalState.comicGenres.length > 0

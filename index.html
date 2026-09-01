@@ -68,7 +68,8 @@
 
     <!-- TOP APP STUDIO HEADER -->
     <header id="app-header"
-        class="h-12 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-3 shrink-0 z-30 select-none">
+        class="h-12 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-3 shrink-0 z-40 relative select-none">
+
         
         <!-- Left: Brand Logo & Chapter Info -->
         <div class="flex items-center gap-2.5 min-w-0">
@@ -141,6 +142,11 @@
                         <span>Đọc truyện mẫu</span>
                     </a>
                 </div>
+            </div>
+
+            <!-- Pro Upgrade / User Profile Container -->
+            <div id="header-user-profile-container" class="flex items-center">
+                <!-- Dynamically rendered by user-profile-ui.ts -->
             </div>
 
             <div class="h-3.5 w-px bg-slate-800 mx-0.5"></div>
@@ -225,8 +231,8 @@
                         onchange="import('../features/io.js').then(io => io.handleUploadedFiles(this.files))">
                 </div>
 
-                <!-- Chapter Production Pipeline Quick Trigger Bar -->
-                <div class="pt-1.5 border-t border-slate-800/80 grid grid-cols-3 gap-1">
+                <!-- Chapter Production Pipeline Quick Trigger Bar (Pro Studio Exclusive) -->
+                <div id="chapter-pipeline-quick-triggers" class="pt-1.5 border-t border-slate-800/80 grid grid-cols-3 gap-1">
                     <button type="button" data-action="runAutoPilotChapterPipeline"
                         class="h-6.5 px-1.5 rounded-lg bg-gradient-to-r from-pink-600/25 to-indigo-600/25 hover:from-pink-600/40 hover:to-indigo-600/40 border border-indigo-500/30 text-indigo-200 text-[10px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer truncate"
                         title="Tự động hóa 100%: Quét OCR ➔ Dịch Chapter ➔ Typeset ➔ Quét QC">
@@ -248,6 +254,7 @@
                         <span>QC Linter</span>
                     </button>
                 </div>
+
             </div>
 
             <!-- Connected Local Folder Live Indicator Badge -->
@@ -447,7 +454,8 @@
 
             <!-- STUDIO CANVAS TOP BAR (Fixed above canvas, NEVER obscuring manga page) -->
             <div id="canvas-top-bar"
-                class="h-10 bg-slate-900/95 border-b border-slate-800/90 px-3 flex items-center justify-between shrink-0 z-30 select-none backdrop-blur-md gap-3">
+                class="h-10 bg-slate-900/95 border-b border-slate-800/90 px-3 flex items-center justify-between shrink-0 z-10 select-none backdrop-blur-md gap-3">
+
 
                 <!-- Left: View Mode Toggle -->
                 <div
@@ -2542,7 +2550,7 @@
                             </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div class="space-y-1">
+                                <div id="ai-provider-container" class="space-y-1">
                                     <label
                                         class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                                         <span data-i18n="ai-provider-label">Nhà cung cấp AI (Provider)</span>
@@ -2591,8 +2599,10 @@
                                     http://localhost:11434/v1 | LM Studio: http://localhost:1234/v1</p>
                             </div>
 
+
                             <!-- 2-Step Models Container -->
                             <div id="two-step-models-container" class="space-y-3 pt-3 border-t border-slate-800/80">
+
                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                     <!-- OCR & Vision Model -->
                                     <div class="space-y-1.5 bg-slate-900/60 p-3 rounded-xl border border-slate-800/90">

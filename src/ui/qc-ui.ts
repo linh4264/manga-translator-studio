@@ -34,6 +34,8 @@ export function openQcModal(): void {
     renderQcContent();
 }
 
+
+
 export function closeQcModal(): void {
     const modal = document.getElementById('qc-dashboard-modal');
     if (modal) {

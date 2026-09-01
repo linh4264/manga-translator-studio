@@ -38,6 +38,8 @@ export function openScriptReviewModal(): void {
     renderScriptReviewContent();
 }
 
+
+
 export function closeScriptReviewModal(): void {
     const modal = document.getElementById('script-review-modal');
     if (modal) {

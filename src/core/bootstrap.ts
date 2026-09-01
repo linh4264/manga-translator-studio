@@ -49,13 +49,20 @@ export async function initApplication(): Promise<void> {
     // Initialize UI language translation (i18n)
     initI18n();
 
+    // Initialize Auth & User Tier System (Basic vs Pro)
+    const { initAuthManager } = await import('../features/auth/auth-manager');
+    initAuthManager();
+
     // Initialize Centralized Global Bridge for HTML inline event handlers
     initGlobalBridge();
 
-    // Initialize 7-Step Chapter Production Pipeline Header
+    // Initialize 7-Step Chapter Production Pipeline Header & Layout
     import('../ui/pipeline-header-ui').then(m => m.initPipelineHeader());
+    import('../ui/layout-ui').then(m => m.syncUserTierLayout());
 
     // Register actions for global event delegation router
+    registerAction('openProUpgradeModal', () => import('../ui/pro-modal-ui').then(m => m.openProUpgradeModal()));
+    registerAction('closeProUpgradeModal', () => import('../ui/pro-modal-ui').then(m => m.closeProUpgradeModal()));
     registerAction('openScriptReviewModal', () => import('../ui/script-review-ui').then(m => m.openScriptReviewModal()));
     registerAction('closeScriptReviewModal', () => import('../ui/script-review-ui').then(m => m.closeScriptReviewModal()));
     registerAction('openQcModal', () => import('../ui/qc-ui').then(m => m.openQcModal()));
@@ -64,6 +71,7 @@ export async function initApplication(): Promise<void> {
     registerAction('closeExportHubModal', () => import('../ui/export-hub-ui').then(m => m.closeExportHubModal()));
     registerAction('runAutoPilotChapterPipeline', () => import('../features/pipeline/pipeline-orchestrator').then(m => m.runAutoPilotChapterPipeline()));
     registerAction('stopAutoPilot', () => import('../features/pipeline/pipeline-orchestrator').then(m => m.stopAutoPilot()));
+
 
     registerAction('openSettingsModal', openSettingsModal);
     registerAction('closeSettingsModal', closeSettingsModal);

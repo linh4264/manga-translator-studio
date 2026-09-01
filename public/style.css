@@ -902,3 +902,60 @@ button.bg-black,
     padding: 9% 12%;
     box-sizing: border-box;
 }
+
+/* ==========================================================================
+   Manga Studio Pro & UX Tiering Styling
+   ========================================================================== */
+
+.badge-pro-gold {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.35) 100%);
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    color: #fde68a;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+.btn-pro-gold {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #0f172a;
+    font-weight: 800;
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-pro-gold:hover {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.5);
+}
+
+/* Pro Glow Shimmer */
+@keyframes proGoldShimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.pro-gold-shimmer {
+    background: linear-gradient(90deg, #f59e0b 0%, #fef08a 50%, #f59e0b 100%);
+    background-size: 200% 100%;
+    animation: proGoldShimmer 3s infinite linear;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Header & Dropdown Stacking Context Fix */
+#app-header {
+    position: relative !important;
+    z-index: 40 !important;
+}
+
+#header-tools-dropdown,
+#header-user-dropdown {
+    z-index: 60 !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+
+#canvas-top-bar {
+    position: relative !important;
+    z-index: 10 !important;
+}
+

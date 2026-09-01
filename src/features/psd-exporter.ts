@@ -345,3 +345,65 @@ function writeStandalonePSD(width: number, height: number, cleanCanvas: HTMLCanv
 
     return new Blob(parts as any, { type: 'image/vnd.adobe.photoshop' });
 }
+
+/**
+ * Export all chapter pages as multi-layer PSD files (Direct download or zipped)
+ */
+export async function exportPagesToPsd(): Promise<void> {
+    const { globalState } = await import('../core/state');
+    const { showToast } = await import('../core/utils');
+
+    const pages = globalState.pages || [];
+    if (pages.length === 0) {
+        showToast("Không có trang nào để xuất PSD.", "warn");
+        return;
+    }
+
+    if (pages.length === 1) {
+        const page = pages[0];
+        const psdBlob = await createMangaPSD(page);
+        const fileName = (page.name || 'manga_page').replace(/\.[^/.]+$/, "") + ".psd";
+        downloadBlob(psdBlob, fileName);
+        showToast("Đã xuất file PSD thành công!", "success");
+        return;
+    }
+
+    showToast(`Đang kết xuất ${pages.length} file PSD...`, "info");
+    const filesToZip: { name: string; blob: Blob }[] = [];
+
+    for (let i = 0; i < pages.length; i++) {
+        const page = pages[i];
+        const psdBlob = await createMangaPSD(page);
+        const padIndex = String(i + 1).padStart(3, '0');
+        const fileName = `${padIndex}_${(page.name || 'page').replace(/\.[^/.]+$/, "")}.psd`;
+        filesToZip.push({ name: fileName, blob: psdBlob });
+    }
+
+    const JSZipGlobal = (typeof window !== 'undefined' ? (window as any).JSZip : undefined);
+    if (JSZipGlobal) {
+        const zip = new JSZipGlobal();
+        filesToZip.forEach(f => zip.file(f.name, f.blob));
+        const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+        downloadBlob(zipBlob, `manga_chapter_psd_${Date.now()}.zip`);
+        showToast("Đã xuất toàn bộ file PSD Chapter thành công!", "success");
+    } else {
+        // Fallback: trigger individual downloads
+        for (const file of filesToZip) {
+            downloadBlob(file.blob, file.name);
+            await new Promise(r => setTimeout(r, 200));
+        }
+        showToast(`Đã xuất ${filesToZip.length} file PSD thành công!`, "success");
+    }
+}
+
+function downloadBlob(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+

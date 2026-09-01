@@ -27,10 +27,19 @@ export function updatePipelineMode(mode: 'two-step' | 'legacy' | 'single-step'):
     syncPipelineModeUI(val);
 }
 
+import { isProUser } from '../features/auth/auth-manager';
+
 export function syncPipelineModeUI(mode?: string): void {
     const twoStepContainer = document.getElementById('two-step-models-container');
-    if (twoStepContainer) twoStepContainer.classList.remove('hidden');
+    if (twoStepContainer) {
+        if (isProUser()) {
+            twoStepContainer.classList.remove('hidden');
+        } else {
+            twoStepContainer.classList.add('hidden');
+        }
+    }
 }
+
 
 export function updateOcrModel(val: string): void {
     const customInput = document.getElementById('custom-ocr-model-input') as HTMLInputElement | null;
@@ -419,8 +428,25 @@ export function syncSettingsUI(): void {
     syncPipelineModeUI(globalState.translationPipelineMode || 'two-step');
     syncGenrePresetCheckboxes();
 
+    const isPro = isProUser();
+    const twoStepContainer = document.getElementById('two-step-models-container');
+    const aiProviderContainer = document.getElementById('ai-provider-container');
+    const refreshModelsBtn = document.getElementById('btn-refresh-models');
+
+    if (!isPro) {
+        if (twoStepContainer) twoStepContainer.classList.add('hidden');
+        if (aiProviderContainer) aiProviderContainer.classList.add('hidden');
+        if (refreshModelsBtn) refreshModelsBtn.classList.add('hidden');
+    } else {
+        if (twoStepContainer) twoStepContainer.classList.remove('hidden');
+        if (aiProviderContainer) aiProviderContainer.classList.remove('hidden');
+        if (refreshModelsBtn) refreshModelsBtn.classList.remove('hidden');
+    }
+
+
     updateAllModelDropdowns(cachedGeminiModels);
     updateModelLockingUI();
+
 
     const defaultFontSelect = document.getElementById('default-font') as HTMLSelectElement | null;
     if (defaultFontSelect) defaultFontSelect.value = globalState.defaultFont || globalState.defaultDialogueFont || 'font-manga';

@@ -10,15 +10,20 @@ import { runAutoPilotChapterPipeline, stopAutoPilot, getIsAutoPilotRunning } fro
 import { openScriptReviewModal } from './script-review-ui';
 import { openQcModal } from './qc-ui';
 import { openExportHubModal } from './export-hub-ui';
+import { initUserProfileUI } from './user-profile-ui';
+import { isProUser, isExpertMode, requireProFeature } from '../features/auth/auth-manager';
 import { showToast } from '../core/utils';
 
 export function initPipelineHeader(): void {
+    initUserProfileUI();
     renderPipelineHeaderStepper();
     initToolsMenuDropdown();
 
     globalBus.subscribe('pipeline:stage-changed', () => renderPipelineHeaderStepper());
     globalBus.subscribe('pipeline:status-changed', () => renderPipelineHeaderStepper());
     globalBus.subscribe('pipeline:metadata-changed', () => renderPipelineHeaderStepper());
+    globalBus.subscribe('auth:tier-changed', () => renderPipelineHeaderStepper());
+    globalBus.subscribe('auth:state-changed', () => renderPipelineHeaderStepper());
     globalBus.subscribe('pages:updated', () => {
         autoUpdatePipelineStages();
         renderPipelineHeaderStepper();
@@ -45,6 +50,21 @@ function initToolsMenuDropdown(): void {
 export function renderPipelineHeaderStepper(): void {
     const container = document.getElementById('app-stepper');
     if (!container) return;
+
+    const isPro = isProUser();
+    const isExpert = isExpertMode();
+
+    // In Basic / Zen mode, hide the 7-step stepper for a distraction-free clean experience
+    if (!isPro || !isExpert) {
+        container.classList.add('hidden');
+        container.classList.remove('md:flex');
+        syncHeaderSmartCtaButton();
+        return;
+    }
+
+    // In Pro Studio mode, show full 7-step interactive stepper
+    container.classList.remove('hidden');
+    container.classList.add('md:flex');
 
     const pipeline = getPipelineData();
     const currentStage = pipeline.currentStage;
@@ -107,6 +127,7 @@ function syncHeaderSmartCtaButton(): void {
 
     const pipeline = getPipelineData();
     const isAutoRunning = getIsAutoPilotRunning();
+    const isPro = isProUser();
 
     if (isAutoRunning) {
         ctaBtn.className = "h-7 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 shadow-md shadow-rose-900/40 animate-pulse transition-all cursor-pointer";
@@ -116,7 +137,15 @@ function syncHeaderSmartCtaButton(): void {
         ctaBtn.className = "h-7 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-md shadow-indigo-900/30 transition-all cursor-pointer";
         ctaBtn.innerHTML = `<i class="fa-solid fa-plus text-[9.5px]"></i> <span>Nhập Truyện</span>`;
         ctaBtn.setAttribute('title', 'Tải ảnh truyện lên để bắt đầu');
+    } else if (!isPro) {
+        // Basic user Smart CTA: Clean 1-Click Translate (Batch or Single with Flash-Lite)
+        const pageCount = globalState.pages.length;
+        const btnText = pageCount > 1 ? `Dịch Toàn Bộ (${pageCount})` : `Dịch Trang Này`;
+        ctaBtn.className = "h-7 px-3.5 rounded-lg bg-gradient-to-r from-pink-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-md hover:shadow-indigo-500/25 transition-all cursor-pointer";
+        ctaBtn.innerHTML = `<i class="fa-solid fa-bolt text-yellow-300 text-[10px]"></i> <span>${btnText}</span>`;
+        ctaBtn.setAttribute('title', `Tự động dịch ${pageCount} trang bằng Gemini 3.1 Flash-Lite siêu tốc`);
     } else if (pipeline.stageStatuses.translate !== 'completed') {
+
         ctaBtn.className = "h-7 px-3 rounded-lg bg-gradient-to-r from-pink-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-md hover:shadow-indigo-500/25 transition-all cursor-pointer";
         ctaBtn.innerHTML = `<i class="fa-solid fa-bolt text-yellow-300 text-[10px]"></i> <span>Auto-Pilot</span>`;
         ctaBtn.setAttribute('title', 'Chạy Auto-Pilot tự động toàn bộ Chapter');
@@ -154,4 +183,5 @@ function handleStepClick(stage: PipelineStageId): void {
     } else if (stage === 'export') {
         openExportHubModal();
     }
+
 }

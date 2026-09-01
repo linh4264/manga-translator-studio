@@ -734,3 +734,43 @@ export function updateStepperUI(): void {
     updateMobileNavUI();
 }
 
+/**
+ * Synchronize UI layout based on User Tier (Basic vs Pro) and Expert Mode state
+ */
+export function syncUserTierLayout(): void {
+    import('../features/auth/auth-manager').then(({ isProUser, isExpertMode }) => {
+        const isPro = isProUser();
+        const expert = isExpertMode();
+
+        // 1. Right Panel controls - keep core typesetting accessible
+        const sfxControls = document.getElementById('sfx-controls-container');
+        const textOffsetControls = document.getElementById('text-offset-controls-container');
+        const tabToeicBtn = document.getElementById('tab-toeic');
+
+        if (sfxControls) sfxControls.classList.remove('hidden');
+        if (textOffsetControls) textOffsetControls.classList.remove('hidden');
+
+        if (tabToeicBtn) {
+            if (isPro && expert) tabToeicBtn.classList.remove('hidden');
+            else tabToeicBtn.classList.add('hidden');
+        }
+
+        // 2. Left Panel quick pipeline triggers - always accessible for fast workflow
+        const pipelineQuickTriggers = document.getElementById('chapter-pipeline-quick-triggers');
+        if (pipelineQuickTriggers) {
+            pipelineQuickTriggers.classList.remove('hidden');
+        }
+
+        // 3. Update Pipeline Header Stepper
+        import('./pipeline-header-ui').then(m => m.renderPipelineHeaderStepper());
+    });
+
+}
+
+// Subscribe to auth events
+import('../core/events').then(({ globalBus }) => {
+    globalBus.subscribe('auth:tier-changed', () => syncUserTierLayout());
+    globalBus.subscribe('auth:state-changed', () => syncUserTierLayout());
+});
+
+
