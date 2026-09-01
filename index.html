@@ -99,11 +99,20 @@
         <!-- Right: Primary Actions, Tools Menu & Settings -->
         <div class="flex items-center gap-1.5">
             <!-- Smart CTA Button (Primary Action) -->
-            <button id="header-btn-batch-translate" data-action="runAutoPilotChapterPipeline"
+            <button id="header-btn-batch-translate"
                 class="h-7 px-3 rounded-lg bg-gradient-to-r from-pink-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-md hover:shadow-indigo-500/25 transition-all cursor-pointer">
                 <i class="fa-solid fa-bolt text-yellow-300 text-[10px]"></i>
                 <span>Auto-Pilot</span>
             </button>
+
+            <!-- Export Hub Header Button -->
+            <button id="header-btn-export" data-action="openExportHubModal"
+                class="h-7 px-2.5 sm:px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-md shadow-emerald-900/30 hover:shadow-emerald-500/25 transition-all cursor-pointer"
+                title="Trung tâm Xuất bản (Xuất file ZIP, PSD tách lớp Photoshop, PDF HD, Google Drive)">
+                <i class="fa-solid fa-file-export text-emerald-200 text-[10px]"></i>
+                <span class="tracking-tight">Xuất</span>
+            </button>
+
 
             <!-- Tools Menu Dropdown Popover Container -->
             <div class="relative">
@@ -2589,6 +2598,21 @@
                                 </div>
                             </div>
 
+                            <!-- Toggle to Show / Hide Advanced AI & Model Controls -->
+                            <div class="pt-2.5 pb-1 flex items-center justify-between border-t border-slate-800/80">
+                                <div>
+                                    <div class="flex items-center gap-1.5">
+                                        <i class="fa-solid fa-sliders text-indigo-400 text-xs"></i>
+                                        <span class="text-xs font-bold text-slate-200">Tùy chỉnh Model AI & Nhà cung cấp</span>
+                                    </div>
+                                    <p class="text-[10px] text-slate-400 mt-0.5">Tự do chọn Gemini Flash/Pro, OpenAI GPT-4o, Claude hoặc Local Ollama</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="toggle-advanced-ai-settings" class="sr-only peer" onchange="toggleAdvancedAiSettings(this.checked)">
+                                    <div class="w-8 h-4.5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                </label>
+                            </div>
+
                             <div id="api-endpoint-container" class="hidden space-y-1">
                                 <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">API
                                     Endpoint Base URL</label>
@@ -2598,6 +2622,7 @@
                                 <p class="text-[9px] text-slate-500 leading-relaxed">Ví dụ: Ollama:
                                     http://localhost:11434/v1 | LM Studio: http://localhost:1234/v1</p>
                             </div>
+
 
 
                             <!-- 2-Step Models Container -->

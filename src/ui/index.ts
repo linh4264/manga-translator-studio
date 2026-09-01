@@ -33,7 +33,7 @@ import {
     saveTranslationGenrePresets, updateTranslationGenrePreset, updateTranslationContextPrompt,
     updateComicUniverse, updateComicGenre, toggleComicGenre, updateComicTone,
     updateApiDelay, updateMaxRetries, updateAiProvider, updateApiEndpoint,
-    updateExportFormat, updateExportPdfQuality
+    updateExportFormat, updateExportPdfQuality, toggleAdvancedAiSettings
 } from './settings-ui';
 
 import {
@@ -85,7 +85,7 @@ export {
     toggleStoryMemory, updateStoryMemoryBadge, togglePreserveNames, syncGenrePresetCheckboxes,
     saveTranslationGenrePresets, updateTranslationGenrePreset, updateTranslationContextPrompt,
     updateApiDelay, updateMaxRetries, updateAiProvider, updateApiEndpoint,
-    updateExportFormat, updateExportPdfQuality,
+    updateExportFormat, updateExportPdfQuality, toggleAdvancedAiSettings,
     previewCurrentPage, previewViewMode, previewFitMode, previewZoom, selectedExportPages, activeExportTab,
     openPreviewMode, openExportZipPreview, openExportPdfPreview, closePreviewMode,
     previewKeyHandler, previewPrevPage, previewNextPage, previewJumpToPage,

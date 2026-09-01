@@ -1,9 +1,9 @@
 /**
- * Manga Translator Studio - Pro Upgrade & Feature Gatekeeper Modal UI
- * Glassmorphism modal explaining Pro perks, tier comparison, 1-click Google Sign-in & redeem code.
+ * Manga Translator Studio - Pro Coming Soon Roadmap Modal UI
+ * Displays upcoming high-end AI & Team Cloud roadmap while reassuring users that all core studio tools are 100% free.
  */
 
-import { loginWithGoogle, activateInstantProTrial, redeemProCode, isProUser, getUserProfile } from '../features/auth/auth-manager';
+import { loginWithGoogle, isProUser, getUserProfile } from '../features/auth/auth-manager';
 import { showToast } from '../core/utils';
 
 let activePendingCallback: (() => void) | null = null;
@@ -17,17 +17,6 @@ export function openProUpgradeModal(featureName: string = '', onGranted?: () => 
     if (!modal) {
         modal = createProUpgradeModalDOM();
         document.body.appendChild(modal);
-    }
-
-    const featureBanner = modal.querySelector('#pro-modal-feature-banner');
-    const featureNameEl = modal.querySelector('#pro-modal-feature-name');
-    if (featureBanner && featureNameEl) {
-        if (featureName) {
-            featureBanner.classList.remove('hidden');
-            featureNameEl.textContent = featureName;
-        } else {
-            featureBanner.classList.add('hidden');
-        }
     }
 
     modal.classList.remove('hidden');
@@ -61,28 +50,28 @@ function createProUpgradeModalDOM(): HTMLElement {
     modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-3 sm:p-5 animate-fade-in select-none';
 
     modal.innerHTML = `
-        <div class="bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 border border-amber-500/40 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden text-slate-100 relative">
+        <div class="bg-gradient-to-b from-slate-900 via-slate-950 to-slate-950 border border-indigo-500/40 rounded-2xl w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden text-slate-100 relative">
             
             <!-- Glow Background Effect -->
-            <div class="absolute -top-24 -right-24 w-64 h-64 bg-amber-500/15 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none"></div>
 
             <!-- Top Header Bar -->
             <div class="px-6 py-4 bg-slate-950/80 border-b border-slate-800/80 flex items-center justify-between shrink-0 relative z-10">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/20 text-lg">
-                        👑
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/25 text-lg">
+                        ✨
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
-                            <h2 class="text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-400 tracking-tight">
+                            <h2 class="text-base font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-purple-300 to-pink-300 tracking-tight">
                                 MANGA STUDIO PRO
                             </h2>
-                            <span class="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                                Power Suite
+                            <span class="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shadow-sm flex items-center gap-1">
+                                <i class="fa-solid fa-clock-rotate-left text-[8px] animate-pulse"></i> Sắp ra mắt • Coming Soon
                             </span>
                         </div>
-                        <p class="text-xs text-slate-400">Bộ công cụ chuyên nghiệp cho Dịch giả & Nhóm dịch Manga</p>
+                        <p class="text-xs text-slate-400">Lộ trình phát triển các tính năng AI & Team Cloud thế hệ mới</p>
                     </div>
                 </div>
 
@@ -94,87 +83,113 @@ function createProUpgradeModalDOM(): HTMLElement {
             <!-- Modal Body (Scrollable) -->
             <div class="flex-1 overflow-y-auto p-6 space-y-5 relative z-10 custom-scrollbar">
 
-                <!-- Feature Trigger Banner (Dynamic) -->
-                <div id="pro-modal-feature-banner" class="hidden bg-gradient-to-r from-amber-950/50 to-indigo-950/50 border border-amber-500/40 rounded-xl p-3.5 flex items-center gap-3 shadow-md">
-                    <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
-                        <i class="fa-solid fa-lock text-sm"></i>
+                <!-- Reassurance Info Box -->
+                <div class="bg-gradient-to-r from-emerald-950/40 via-slate-900 to-indigo-950/40 border border-emerald-500/30 rounded-xl p-3.5 flex items-start gap-3 shadow-md">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                        <i class="fa-solid fa-circle-check text-sm"></i>
                     </div>
-                    <div class="text-xs">
-                        <span class="text-slate-300">Tính năng <strong id="pro-modal-feature-name" class="text-amber-300"></strong> là đặc quyền của gói Pro.</span>
-                        <p class="text-[11px] text-slate-400 mt-0.5">Đăng nhập bằng Google để mở khóa toàn bộ sức mạnh hoàn toàn miễn phí!</p>
+                    <div class="text-xs leading-relaxed">
+                        <span class="text-emerald-300 font-bold">Toàn bộ công cụ làm truyện hiện tại đang Mở Khóa Miễn Phí 100%!</span>
+                        <p class="text-slate-300 text-[11px] mt-0.5">
+                            Bạn có thể tự do sử dụng Auto-Pilot Chapter, Gậy ma thuật, Script Review, QC Linter, Typesetting Canvas và Xuất ZIP/PSD/PDF không giới hạn trên máy của bạn.
+                        </p>
                     </div>
                 </div>
 
-                <!-- 6 Major Pro Features Grid -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    
-                    <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3.5 flex items-start gap-3 hover:border-amber-500/30 transition-all">
-                        <div class="w-8 h-8 rounded-lg bg-pink-500/15 text-pink-400 flex items-center justify-center shrink-0 font-bold">
-                            <i class="fa-solid fa-bolt text-xs"></i>
-                        </div>
-                        <div>
-                            <h4 class="text-xs font-bold text-slate-100">Auto-Pilot Chapter</h4>
-                            <p class="text-[11px] text-slate-400 mt-0.5">Tự động hóa 100% OCR ➔ Dịch ➔ Xóa nền ➔ Gắn chữ 50+ trang cùng lúc.</p>
-                        </div>
-                    </div>
+                <!-- 6 Future Pro Features Teaser Grid -->
+                <div>
+                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-sparkles text-indigo-400 text-[10px]"></i> Các tính năng Pro dự kiến sẽ ra mắt
+                    </h3>
 
-                    <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3.5 flex items-start gap-3 hover:border-amber-500/30 transition-all">
-                        <div class="w-8 h-8 rounded-lg bg-teal-500/15 text-teal-400 flex items-center justify-center shrink-0 font-bold">
-                            <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        
+                        <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3.5 flex items-start gap-3 hover:border-indigo-500/40 transition-all group">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center shrink-0 font-bold group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-brain text-xs"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-slate-100">Multi-LLM Reasoning Hub</h4>
+                                    <span class="text-[8px] font-bold px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-800">Q3</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400 mt-1">Mở khóa chọn tự do Claude 3.5 Sonnet, GPT-4o, DeepSeek R1 & Endpoint riêng cho truyện chuyên sâu.</p>
+                            </div>
                         </div>
-                        <div>
-                            <h4 class="text-xs font-bold text-slate-100">AI Eraser & Screentone</h4>
-                            <p class="text-[11px] text-slate-400 mt-0.5">PatchMatch, LaMa, Mảng vá vân tranh & Tô họa tiết chấm Halftone Manga.</p>
-                        </div>
-                    </div>
 
-                    <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3.5 flex items-start gap-3 hover:border-amber-500/30 transition-all">
-                        <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0 font-bold">
-                            <i class="fa-solid fa-shield-halved text-xs"></i>
+                        <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3.5 flex items-start gap-3 hover:border-indigo-500/40 transition-all group">
+                            <div class="w-8 h-8 rounded-lg bg-pink-500/15 text-pink-400 flex items-center justify-center shrink-0 font-bold group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-users text-xs"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-slate-100">Team Cloud Workspace</h4>
+                                    <span class="text-[8px] font-bold px-1.5 py-0.2 rounded bg-pink-950 text-pink-300 border border-pink-800">Q3</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400 mt-1">Làm việc nhóm thời gian thực — Dịch giả, Editor và Typesetter cùng xử lý chung 1 Chapter trên Cloud.</p>
+                            </div>
                         </div>
-                        <div>
-                            <h4 class="text-xs font-bold text-slate-100">QC Linter & Script Studio</h4>
-                            <p class="text-[11px] text-slate-400 mt-0.5">Tự động phát hiện chữ tràn khung, biên tập kịch bản toàn tập & Regex Find/Replace.</p>
-                        </div>
-                    </div>
 
-                    <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3.5 flex items-start gap-3 hover:border-amber-500/30 transition-all">
-                        <div class="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-400 flex items-center justify-center shrink-0 font-bold">
-                            <i class="fa-solid fa-file-export text-xs"></i>
+                        <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3.5 flex items-start gap-3 hover:border-indigo-500/40 transition-all group">
+                            <div class="w-8 h-8 rounded-lg bg-teal-500/15 text-teal-400 flex items-center justify-center shrink-0 font-bold group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-slate-100">Generative AI Inpaint GPU</h4>
+                                    <span class="text-[8px] font-bold px-1.5 py-0.2 rounded bg-teal-950 text-teal-300 border border-teal-800">Q4</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400 mt-1">Tự động vẽ bù hoàn hảo vân tranh & chi tiết phức tạp khi xóa SFX đè lên mặt nhân vật.</p>
+                            </div>
                         </div>
-                        <div>
-                            <h4 class="text-xs font-bold text-slate-100">Xuất PSD Tách Lớp</h4>
-                            <p class="text-[11px] text-slate-400 mt-0.5">Xuất file PSD đa layer cho Photoshop, PDF Ultra HD, CBZ & Lưu thẳng ổ cứng.</p>
-                        </div>
-                    </div>
 
-                    <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3.5 flex items-start gap-3 hover:border-amber-500/30 transition-all">
-                        <div class="w-8 h-8 rounded-lg bg-sky-500/15 text-sky-400 flex items-center justify-center shrink-0 font-bold">
-                            <i class="fa-brands fa-google-drive text-xs"></i>
+                        <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3.5 flex items-start gap-3 hover:border-indigo-500/40 transition-all group">
+                            <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0 font-bold group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-book-bookmark text-xs"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-slate-100">AI Story Memory Engine</h4>
+                                    <span class="text-[8px] font-bold px-1.5 py-0.2 rounded bg-amber-950 text-amber-300 border border-amber-800">Q4</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400 mt-1">Ghi nhớ xuyên suốt cốt truyện hàng trăm chapter, tự động duy trì chuẩn danh xưng theo diễn biến tâm lý.</p>
+                            </div>
                         </div>
-                        <div>
-                            <h4 class="text-xs font-bold text-slate-100">Google Drive Auto-Sync</h4>
-                            <p class="text-[11px] text-slate-400 mt-0.5">Đồng bộ 2 chiều đám mây, tự động lưu trữ dự án an toàn, mở lại mọi nơi.</p>
-                        </div>
-                    </div>
 
-                    <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-3.5 flex items-start gap-3 hover:border-amber-500/30 transition-all">
-                        <div class="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0 font-bold">
-                            <i class="fa-solid fa-address-card text-xs"></i>
+                        <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3.5 flex items-start gap-3 hover:border-indigo-500/40 transition-all group">
+                            <div class="w-8 h-8 rounded-lg bg-sky-500/15 text-sky-400 flex items-center justify-center shrink-0 font-bold group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-graduation-cap text-xs"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-slate-100">Song Ngữ & Học Tập (JLPT/TOEIC)</h4>
+                                    <span class="text-[8px] font-bold px-1.5 py-0.2 rounded bg-sky-950 text-sky-300 border border-sky-800">Roadmap</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400 mt-1">Bóc tách từ vựng, ngữ pháp & phân loại cấp độ khó trực tiếp theo từng khung thoại cho người học.</p>
+                            </div>
                         </div>
-                        <div>
-                            <h4 class="text-xs font-bold text-slate-100">Lorebook & Typography Pro</h4>
-                            <p class="text-[11px] text-slate-400 mt-0.5">Hồ sơ danh xưng nhân vật, Arc Text uốn cong, D-pad 4 hướng & Custom Fonts.</p>
-                        </div>
-                    </div>
 
+                        <div class="bg-slate-900/60 border border-slate-800/80 rounded-xl p-3.5 flex items-start gap-3 hover:border-indigo-500/40 transition-all group">
+                            <div class="w-8 h-8 rounded-lg bg-purple-500/15 text-purple-400 flex items-center justify-center shrink-0 font-bold group-hover:scale-110 transition-transform">
+                                <i class="fa-solid fa-cloud-arrow-up text-xs"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-slate-100">Auto Cloud Sync & Backup</h4>
+                                    <span class="text-[8px] font-bold px-1.5 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-800">Roadmap</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400 mt-1">Tự động sao lưu tiến độ chapter lên Google Drive / Cloud Storage, chuyển đổi máy làm việc tức thì.</p>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
 
-                <!-- Primary CTA Section -->
+                <!-- Action Section -->
                 <div class="bg-gradient-to-b from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-5 text-center space-y-4">
                     <div>
-                        <h3 class="text-sm font-extrabold text-white">Bắt đầu Trải nghiệm Pro Ngay Hôm Nay</h3>
-                        <p class="text-xs text-slate-400 mt-1">Đăng nhập tài khoản Google để kích hoạt đầy đủ tính năng Pro (Miễn phí 100%)</p>
+                        <h3 class="text-sm font-extrabold text-white">Đăng ký Nhận Thông Báo Sớm</h3>
+                        <p class="text-xs text-slate-400 mt-1">Đăng nhập với Google để lưu thiết lập cá nhân & nhận đặc quyền trải nghiệm Pro khi ra mắt</p>
                     </div>
 
                     <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -190,21 +205,11 @@ function createProUpgradeModalDOM(): HTMLElement {
                             <span>Đăng nhập với Google</span>
                         </button>
 
-                        <!-- Instant Trial Button -->
-                        <button id="btn-modal-instant-trial"
-                            class="w-full sm:w-auto px-5 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-500/25 cursor-pointer">
-                            <i class="fa-solid fa-play"></i>
-                            <span>Dùng Thử Pro Ngay</span>
-                        </button>
-                    </div>
-
-                    <!-- Promo / Redeem Code Input -->
-                    <div class="pt-3 border-t border-slate-800/80 max-w-sm mx-auto flex items-center gap-2">
-                        <input type="text" id="input-pro-redeem-code" placeholder="Nhập mã kích hoạt Pro..."
-                            class="flex-1 bg-slate-950 border border-slate-800 focus:border-amber-500/60 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none uppercase font-mono transition-colors">
-                        <button id="btn-pro-redeem-code"
-                            class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold text-xs transition-colors cursor-pointer">
-                            Kích hoạt
+                        <!-- Dismiss & Continue using Studio -->
+                        <button id="btn-modal-continue-free"
+                            class="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer border border-slate-700">
+                            <i class="fa-solid fa-palette text-indigo-400"></i>
+                            <span>Bắt đầu làm truyện ngay</span>
                         </button>
                     </div>
                 </div>
@@ -213,8 +218,8 @@ function createProUpgradeModalDOM(): HTMLElement {
 
             <!-- Footer -->
             <div class="px-6 py-3 bg-slate-950/90 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-500 shrink-0 relative z-10">
-                <span class="flex items-center gap-1.5"><i class="fa-solid fa-lock text-emerald-400"></i> Dữ liệu bảo mật 100% trên thiết bị của bạn</span>
-                <span>Manga Translator Studio v2026</span>
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-lock text-emerald-400"></i> Dữ liệu truyện lưu trữ 100% an toàn trên trình duyệt của bạn</span>
+                <span>Manga Translator Studio Roadmap</span>
             </div>
 
         </div>
@@ -222,28 +227,13 @@ function createProUpgradeModalDOM(): HTMLElement {
 
     // Event Bindings
     modal.querySelector('#btn-close-pro-modal')?.addEventListener('click', closeProUpgradeModal);
+    modal.querySelector('#btn-modal-continue-free')?.addEventListener('click', closeProUpgradeModal);
 
     modal.querySelector('#btn-modal-google-login')?.addEventListener('click', () => {
         loginWithGoogle();
         handleProActivationSuccess();
     });
 
-    modal.querySelector('#btn-modal-instant-trial')?.addEventListener('click', () => {
-        activateInstantProTrial();
-        handleProActivationSuccess();
-    });
-
-    modal.querySelector('#btn-pro-redeem-code')?.addEventListener('click', () => {
-        const input = modal.querySelector('#input-pro-redeem-code') as HTMLInputElement | null;
-        if (input && input.value) {
-            const success = redeemProCode(input.value);
-            if (success) {
-                handleProActivationSuccess();
-            }
-        } else {
-            showToast("Vui lòng nhập mã kích hoạt Pro.", "warn");
-        }
-    });
-
     return modal;
 }
+

@@ -429,11 +429,16 @@ export function syncSettingsUI(): void {
     syncGenrePresetCheckboxes();
 
     const isPro = isProUser();
+    const customModelsStored = localStorage.getItem('manga_show_custom_models') === 'true';
+    const showCustom = isPro || customModelsStored;
+    const toggleInput = document.getElementById('toggle-advanced-ai-settings') as HTMLInputElement | null;
+    if (toggleInput) toggleInput.checked = showCustom;
+
     const twoStepContainer = document.getElementById('two-step-models-container');
     const aiProviderContainer = document.getElementById('ai-provider-container');
     const refreshModelsBtn = document.getElementById('btn-refresh-models');
 
-    if (!isPro) {
+    if (!showCustom) {
         if (twoStepContainer) twoStepContainer.classList.add('hidden');
         if (aiProviderContainer) aiProviderContainer.classList.add('hidden');
         if (refreshModelsBtn) refreshModelsBtn.classList.add('hidden');
@@ -443,9 +448,9 @@ export function syncSettingsUI(): void {
         if (refreshModelsBtn) refreshModelsBtn.classList.remove('hidden');
     }
 
-
     updateAllModelDropdowns(cachedGeminiModels);
     updateModelLockingUI();
+
 
 
     const defaultFontSelect = document.getElementById('default-font') as HTMLSelectElement | null;
@@ -1055,4 +1060,27 @@ export function updateExportPdfQuality(value: string): void {
     globalState.pdfQuality = value || 'hd';
     safeSetLocalStorage('manga_pdf_quality', globalState.pdfQuality);
 }
+
+export function toggleAdvancedAiSettings(enabled: boolean): void {
+    safeSetLocalStorage('manga_show_custom_models', enabled ? 'true' : 'false');
+    const twoStepContainer = document.getElementById('two-step-models-container');
+    const aiProviderContainer = document.getElementById('ai-provider-container');
+    const refreshModelsBtn = document.getElementById('btn-refresh-models');
+    const endpointContainer = document.getElementById('api-endpoint-container');
+
+    if (!enabled) {
+        if (twoStepContainer) twoStepContainer.classList.add('hidden');
+        if (aiProviderContainer) aiProviderContainer.classList.add('hidden');
+        if (refreshModelsBtn) refreshModelsBtn.classList.add('hidden');
+        if (endpointContainer) endpointContainer.classList.add('hidden');
+    } else {
+        if (twoStepContainer) twoStepContainer.classList.remove('hidden');
+        if (aiProviderContainer) aiProviderContainer.classList.remove('hidden');
+        if (refreshModelsBtn) refreshModelsBtn.classList.remove('hidden');
+        if (endpointContainer && (globalState.aiProvider === 'openai' || globalState.aiProvider === 'claude' || globalState.aiProvider === 'custom')) {
+            endpointContainer.classList.remove('hidden');
+        }
+    }
+}
+
 

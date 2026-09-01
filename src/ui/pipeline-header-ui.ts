@@ -19,6 +19,22 @@ export function initPipelineHeader(): void {
     renderPipelineHeaderStepper();
     initToolsMenuDropdown();
 
+    const ctaBtn = document.getElementById('header-btn-batch-translate');
+    if (ctaBtn) {
+        ctaBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (getIsAutoPilotRunning()) {
+                stopAutoPilot();
+            } else if (globalState.pages.length === 0) {
+                const uploadBtn = document.getElementById('btn-upload-files') || document.getElementById('file-input');
+                uploadBtn?.click();
+            } else {
+                runAutoPilotChapterPipeline();
+            }
+        };
+    }
+
     globalBus.subscribe('pipeline:stage-changed', () => renderPipelineHeaderStepper());
     globalBus.subscribe('pipeline:status-changed', () => renderPipelineHeaderStepper());
     globalBus.subscribe('pipeline:metadata-changed', () => renderPipelineHeaderStepper());
@@ -29,6 +45,7 @@ export function initPipelineHeader(): void {
         renderPipelineHeaderStepper();
     });
 }
+
 
 function initToolsMenuDropdown(): void {
     const btn = document.getElementById('btn-header-tools-menu');
@@ -127,42 +144,30 @@ function syncHeaderSmartCtaButton(): void {
 
     const pipeline = getPipelineData();
     const isAutoRunning = getIsAutoPilotRunning();
-    const isPro = isProUser();
 
     if (isAutoRunning) {
         ctaBtn.className = "h-7 px-3 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 shadow-md shadow-rose-900/40 animate-pulse transition-all cursor-pointer";
-        ctaBtn.innerHTML = `<i class="fa-solid fa-stop text-[9.5px]"></i> <span>Dừng (${pipeline.autoPilotProgress}%)</span>`;
-        ctaBtn.setAttribute('title', 'Tạm dừng tiến trình Auto-Pilot');
+        ctaBtn.innerHTML = `<i class="fa-solid fa-stop text-[9.5px]"></i> <span>Dừng (${pipeline.autoPilotProgress || 0}%)</span>`;
+        ctaBtn.setAttribute('title', 'Nhấn để tạm dừng tiến trình Auto-Pilot');
     } else if (globalState.pages.length === 0) {
         ctaBtn.className = "h-7 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-md shadow-indigo-900/30 transition-all cursor-pointer";
         ctaBtn.innerHTML = `<i class="fa-solid fa-plus text-[9.5px]"></i> <span>Nhập Truyện</span>`;
         ctaBtn.setAttribute('title', 'Tải ảnh truyện lên để bắt đầu');
-    } else if (!isPro) {
-        // Basic user Smart CTA: Clean 1-Click Translate (Batch or Single with Flash-Lite)
-        const pageCount = globalState.pages.length;
-        const btnText = pageCount > 1 ? `Dịch Toàn Bộ (${pageCount})` : `Dịch Trang Này`;
-        ctaBtn.className = "h-7 px-3.5 rounded-lg bg-gradient-to-r from-pink-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-md hover:shadow-indigo-500/25 transition-all cursor-pointer";
-        ctaBtn.innerHTML = `<i class="fa-solid fa-bolt text-yellow-300 text-[10px]"></i> <span>${btnText}</span>`;
-        ctaBtn.setAttribute('title', `Tự động dịch ${pageCount} trang bằng Gemini 3.1 Flash-Lite siêu tốc`);
-    } else if (pipeline.stageStatuses.translate !== 'completed') {
+    } else {
+        const totalPages = globalState.pages.length;
+        const pendingPages = globalState.pages.filter(p => p.status !== 'done').length;
+        const btnText = (pendingPages > 0 && pendingPages < totalPages)
+            ? `Auto-Pilot (${pendingPages})`
+            : `Auto-Pilot`;
 
         ctaBtn.className = "h-7 px-3 rounded-lg bg-gradient-to-r from-pink-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-md hover:shadow-indigo-500/25 transition-all cursor-pointer";
-        ctaBtn.innerHTML = `<i class="fa-solid fa-bolt text-yellow-300 text-[10px]"></i> <span>Auto-Pilot</span>`;
-        ctaBtn.setAttribute('title', 'Chạy Auto-Pilot tự động toàn bộ Chapter');
-    } else if (pipeline.stageStatuses.review !== 'completed') {
-        ctaBtn.className = "h-7 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-md shadow-amber-900/30 transition-all cursor-pointer";
-        ctaBtn.innerHTML = `<i class="fa-solid fa-pen-to-square text-[9.5px]"></i> <span>Kịch Bản</span>`;
-        ctaBtn.setAttribute('title', 'Mở bảng biên tập kịch bản toàn Chapter');
-    } else if (!pipeline.lastQcResult || !pipeline.lastQcResult.passed) {
-        ctaBtn.className = "h-7 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-md shadow-indigo-900/30 transition-all cursor-pointer";
-        ctaBtn.innerHTML = `<i class="fa-solid fa-shield-halved text-[9.5px]"></i> <span>Kiểm Tra QC</span>`;
-        ctaBtn.setAttribute('title', 'Kiểm duyệt chất lượng toàn Chapter');
-    } else {
-        ctaBtn.className = "h-7 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-extrabold flex items-center gap-1.5 shadow-md shadow-emerald-900/40 transition-all cursor-pointer";
-        ctaBtn.innerHTML = `<i class="fa-solid fa-file-export text-[9.5px]"></i> <span>Xuất Bản</span>`;
-        ctaBtn.setAttribute('title', 'Mở trung tâm xuất bản Chapter');
+        ctaBtn.innerHTML = `<i class="fa-solid fa-bolt text-yellow-300 text-[10px]"></i> <span>${btnText}</span>`;
+        ctaBtn.setAttribute('title', pendingPages === 0
+            ? `Tất cả ${totalPages} trang đã dịch xong. Nhấn để chạy lại Auto-Pilot.`
+            : `Tự động quét OCR và dịch ${pendingPages} trang còn lại trong Chapter`);
     }
 }
+
 
 function handleStepClick(stage: PipelineStageId): void {
     setPipelineStage(stage);

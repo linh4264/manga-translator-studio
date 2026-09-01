@@ -5,6 +5,7 @@
 import { globalState, savePageToDB, activatePage, deactivatePage, garbageCollectPageCaches, uiUpdatePageListUI, uiUpdateBackgroundTaskOverlay } from '../../core/state';
 import { elements } from '../../core/elements';
 import { showToast } from '../../core/utils';
+import { globalBus } from '../../core/events';
 import { getPipelineData, updateStageStatus, setPipelineStage, recalculateChapterStats } from './pipeline-manager';
 import { runChapterQcScan, autoFixAllQcIssues } from './qc-linter';
 import { getAiConfig, getTranslationContext } from '../ai/ai-state';
@@ -24,14 +25,16 @@ export function getIsAutoPilotRunning(): boolean {
 }
 
 export function stopAutoPilot(): void {
-    if (!isAutoPilotRunning) return;
     setCancelTranslationFlag(true);
     isAutoPilotRunning = false;
     const pipeline = getPipelineData();
     pipeline.autoPilotRunning = false;
     updateStageStatus(pipeline.currentStage, 'idle');
+    setIsBatchTranslating(false);
     uiUpdateBackgroundTaskOverlay(false);
-    showToast("Đã tạm dừng Auto-Pilot Pipeline.", "warn");
+    globalBus.publish('pipeline:status-changed', pipeline);
+    globalBus.publish('pipeline:metadata-changed', pipeline);
+    showToast("Đã dừng Auto-Pilot Pipeline.", "warn");
 }
 
 export async function runAutoPilotChapterPipeline(): Promise<boolean> {
@@ -39,6 +42,7 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
         showToast("Auto-Pilot đang chạy ngầm!", "warn");
         return false;
     }
+
 
     const pages = globalState.pages || [];
     if (pages.length === 0) {
@@ -66,6 +70,8 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
     pipeline.autoPilotRunning = true;
     pipeline.autoPilotProgress = 5;
     pipeline.autoPilotStageMessage = "Khởi động Pipeline...";
+    globalBus.publish('pipeline:status-changed', pipeline);
+    globalBus.publish('pipeline:metadata-changed', pipeline);
 
     const totalPages = pages.length;
     showToast(`🚀 Bắt đầu Auto-Pilot cho Chapter (${totalPages} trang)...`, "success");
@@ -107,6 +113,7 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
                 const pageProgress = Math.round(5 + ((idx + 1) / pagesNeedingOcr.length) * 35);
                 pipeline.autoPilotProgress = pageProgress;
                 pipeline.autoPilotStageMessage = `Quét OCR Trang ${pageIndex + 1}/${totalPages}...`;
+                globalBus.publish('pipeline:metadata-changed', pipeline);
 
                 uiUpdateBackgroundTaskOverlay(
                     true,
@@ -114,6 +121,7 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
                     `Trang ${pageIndex + 1}/${totalPages}: Nhận diện văn bản...`,
                     pageProgress
                 );
+
 
                 try {
                     await activatePage(page);
@@ -214,6 +222,8 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
         updateStageStatus('translate', 'running');
         pipeline.autoPilotProgress = 45;
         pipeline.autoPilotStageMessage = "Dịch mạch truyện toàn bộ Chapter...";
+        globalBus.publish('pipeline:status-changed', pipeline);
+        globalBus.publish('pipeline:metadata-changed', pipeline);
 
         const targetLang = ctx.targetLanguage || 'vi';
         const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
@@ -274,6 +284,8 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
                 `Đang dịch ${blocksToTranslate.length} câu thoại mới theo mạch ngữ cảnh...`,
                 55
             );
+            pipeline.autoPilotProgress = 55;
+            globalBus.publish('pipeline:metadata-changed', pipeline);
 
             const translatedChapterBlocks = await executeChapterTranslationStep({
                 allChapterBlocks: blocksToTranslate,
@@ -363,5 +375,8 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
         setIsBatchTranslating(false);
         uiUpdateBackgroundTaskOverlay(false);
         garbageCollectPageCaches();
+        globalBus.publish('pipeline:status-changed', pipeline);
+        globalBus.publish('pipeline:metadata-changed', pipeline);
     }
 }
+

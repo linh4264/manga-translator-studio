@@ -214,6 +214,8 @@ export function initGlobalBridge(): void {
         updateOcrModel: settingsUI.updateOcrModel,
         updateTranslationModel: settingsUI.updateTranslationModel,
         updateAllModelDropdowns: settingsUI.updateAllModelDropdowns,
+        toggleAdvancedAiSettings: settingsUI.toggleAdvancedAiSettings,
+
 
         // Presets UI
         renderCustomPresetsUI: presetUI.renderCustomPresetsUI,

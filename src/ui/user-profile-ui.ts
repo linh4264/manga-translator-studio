@@ -31,13 +31,13 @@ export function renderUserProfileHeader(): void {
     const profile = getUserProfile();
 
     if (!isPro || !profile) {
-        // BASIC TIER: Render Glowing "Nâng cấp Pro" Button + Google Login
+        // BASIC TIER: Render "Pro (Sắp ra mắt)" Button + Google Login
         container.innerHTML = `
             <div class="flex items-center gap-1.5">
                 <button id="header-btn-upgrade-pro" type="button"
-                    class="h-7 px-2.5 sm:px-3 rounded-lg bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-[11px] flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer hover:scale-[1.02]">
-                    <span class="text-[10px]">👑</span>
-                    <span class="tracking-tight">Nâng cấp Pro</span>
+                    class="h-7 px-2.5 sm:px-3 rounded-lg bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-400 hover:to-pink-400 text-white font-extrabold text-[11px] flex items-center gap-1.5 shadow-md shadow-indigo-500/20 transition-all cursor-pointer hover:scale-[1.02]">
+                    <span class="text-[10px]">✨</span>
+                    <span class="tracking-tight">Pro (Sắp ra mắt)</span>
                 </button>
 
                 <button id="header-btn-quick-login" type="button"
@@ -53,6 +53,7 @@ export function renderUserProfileHeader(): void {
         container.querySelector('#header-btn-quick-login')?.addEventListener('click', () => openProUpgradeModal());
         return;
     }
+
 
     // PRO TIER: Render Avatar + PRO Badge + Dropdown
     const avatarContent = profile.picture

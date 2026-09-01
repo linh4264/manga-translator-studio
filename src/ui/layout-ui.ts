@@ -726,6 +726,7 @@ export function updateStepperUI(): void {
 
     const headerBtnBatchTranslate = document.getElementById('header-btn-batch-translate') as HTMLButtonElement | null;
     const headerBtnBatchExport = document.getElementById('header-btn-batch-export') as HTMLButtonElement | null;
+    const headerBtnExport = document.getElementById('header-btn-export') as HTMLButtonElement | null;
     const headerPageCountText = document.getElementById('header-page-count-text');
 
     if (headerBtnBatchTranslate) {
@@ -733,6 +734,9 @@ export function updateStepperUI(): void {
     }
     if (headerBtnBatchExport) {
         headerBtnBatchExport.disabled = pageCount === 0;
+    }
+    if (headerBtnExport) {
+        headerBtnExport.disabled = pageCount === 0;
     }
     if (headerPageCountText) {
         headerPageCountText.innerText = pageCount > 0 ? `${pageCount} trang` : "Chưa có trang";
