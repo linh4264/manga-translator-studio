@@ -13,6 +13,7 @@ import { getBase64, enhanceImageForOcr, ensurePageImageData, executeOcrVisionSte
 import { refineAiBlockBox, extractTextAnchor } from '../ocr/ocr-service';
 import { getDefaultFontForBlockType, cancelTranslationFlag, setCancelTranslationFlag, setIsBatchTranslating } from '../ai/story-memory';
 import { executeChapterTranslationStep } from '../ai/translation-pipeline';
+import { getCachedTranslation, setCachedTranslation } from '../ai/translation-cache';
 import { autoMatchBlockStyle, autoFitBlock, isBlockAutoFit, getReferenceDisplayDimensions, requestOverlayRender } from '../canvas/canvas-service';
 import { DEFAULT_AI_BLOCK_BOX, TARGET_LANG_MAP } from '../../config/constants';
 
@@ -138,17 +139,12 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
                             ? (typeof b.vertical === 'boolean' ? b.vertical : true)
                             : false;
 
+                        const isSfx = blockType === 'sfx';
                         const chosenFont = b.style?.fontFamily || getDefaultFontForBlockType(blockType);
-                        let maskShape = b.style?.maskShape || globalState.globalStyle.maskShape;
-                        let italic = typeof b.style?.italic === 'boolean' ? b.style.italic : false;
+                        const maskShape = isSfx ? (b.style?.maskShape || 'none') : 'bubble-fit';
+                        const maskSize = isSfx ? (b.style?.maskSize || 'snug') : 'full';
+                        let italic = typeof b.style?.italic === 'boolean' ? b.style.italic : (blockType === 'thought');
                         const bold = typeof b.style?.bold === 'boolean' ? b.style.bold : globalState.globalStyle.bold;
-
-                        if (blockType === 'narration') {
-                            maskShape = 'rect';
-                        } else if (blockType === 'thought') {
-                            maskShape = 'bubble-fit';
-                            italic = true;
-                        }
 
                         return {
                             id: `p${pageIndex + 1}_b${bIdx + 1}`,
@@ -163,7 +159,7 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
                                 letterSpacing: 0,
                                 textColor: '#000000',
                                 bgColor: '#ffffff',
-                                bgOpacity: 100,
+                                bgOpacity: isSfx ? 0 : 100,
                                 padding: 8,
                                 rotate: 0,
                                 vertical: blockVertical,
@@ -171,7 +167,7 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
                                 italic,
                                 align: 'center',
                                 maskShape,
-                                maskSize: 'snug',
+                                maskSize,
                                 strokeColor: '#ffffff',
                                 strokeWidth: 0,
                                 shadowColor: '#000000',
@@ -205,19 +201,40 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
         }
 
         // ==========================================
-        // STAGE 3: TRANSLATE CHAPTER
+        // STAGE 3: TRANSLATE CHAPTER (WITH CACHE & RESUME)
         // ==========================================
         setPipelineStage('translate');
         updateStageStatus('translate', 'running');
         pipeline.autoPilotProgress = 45;
         pipeline.autoPilotStageMessage = "Dịch mạch truyện toàn bộ Chapter...";
 
-        const allChapterBlocks: any[] = [];
-        pages.forEach((p, pIdx) => {
+        const targetLang = ctx.targetLanguage || 'vi';
+        const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
+
+        // Step 3.1: Check existing translations and Two-Tier Cache first (0ms, 0 tokens)
+        const blocksToTranslate: any[] = [];
+        let cacheHitCount = 0;
+
+        for (let pIdx = 0; pIdx < pages.length; pIdx++) {
+            const p = pages[pIdx];
             if (p.blocks) {
-                p.blocks.forEach(b => {
-                    if (b.original && b.original.trim()) {
-                        allChapterBlocks.push({
+                for (const b of p.blocks) {
+                    if (!b.original || !b.original.trim()) continue;
+
+                    // If already translated (Resume mode), preserve existing translation
+                    if (b.translated && b.translated.trim()) continue;
+
+                    // Try Two-Tier Hash Cache
+                    const cached = await getCachedTranslation(b.original, targetLang, {
+                        speaker: b.speaker,
+                        target: b.target
+                    });
+
+                    if (cached && cached.translated) {
+                        b.translated = cached.translated;
+                        cacheHitCount++;
+                    } else {
+                        blocksToTranslate.push({
                             id: b.id,
                             original: b.original,
                             pageIndex: pIdx,
@@ -225,14 +242,17 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
                             target: b.target
                         });
                     }
-                });
+                }
             }
-        });
+        }
 
-        if (allChapterBlocks.length > 0) {
+        if (cacheHitCount > 0) {
+            showToast(`⚡ Đã tái sử dụng ${cacheHitCount} câu từ bộ nhớ đệm (Cache Hit)!`, "info");
+        }
+
+        // Step 3.2: Translate uncached / pending blocks in story context
+        if (blocksToTranslate.length > 0) {
             const transModelToUse = aiConfig.translationModel || 'gemini-2.5-flash';
-            const targetLang = ctx.targetLanguage || 'vi';
-            const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
             const glossaryNames = ctx.preserveNames ? (ctx.glossaryNames || '').trim() : "";
             const endpoint = getConfiguredApiEndpoint();
             const isOpenAiFormat = provider === 'openai' || (provider === 'custom' && !endpoint.includes('generateContent'));
@@ -243,13 +263,13 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
 
             uiUpdateBackgroundTaskOverlay(
                 true,
-                `Auto-Pilot [Bước 2/4: Dịch Chapter]`,
-                `Đang gửi ${allChapterBlocks.length} câu thoại theo mạch cốt truyện...`,
+                `Auto-Pilot [Bước 2/2: Dịch Chapter]`,
+                `Đang dịch ${blocksToTranslate.length} câu thoại mới theo mạch ngữ cảnh...`,
                 55
             );
 
             const translatedChapterBlocks = await executeChapterTranslationStep({
-                allChapterBlocks,
+                allChapterBlocks: blocksToTranslate,
                 translationModel: transModelToUse,
                 targetLangName,
                 glossaryNames,
@@ -274,13 +294,23 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
                         const expectedId = `p${i + 1}_b${bIdx + 1}`;
                         const rawTrans = lookupMap.get(String(b.id)) ||
                             lookupMap.get(expectedId) ||
-                            lookupMap.get(expectedId.toLowerCase()) ||
-                            b.translated || '';
-                        b.translated = rawTrans;
+                            lookupMap.get(expectedId.toLowerCase());
+
+                        if (rawTrans) {
+                            b.translated = rawTrans;
+                            // Cache newly translated dialogue
+                            setCachedTranslation(b.original, rawTrans, targetLang, {
+                                speaker: b.speaker,
+                                target: b.target
+                            });
+                        }
                     });
                     savePageToDB(p);
                 }
             });
+        } else {
+            // All blocks were either already translated or retrieved from cache
+            pages.forEach(p => savePageToDB(p));
         }
 
         updateStageStatus('translate', 'completed');

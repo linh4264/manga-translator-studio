@@ -388,17 +388,12 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 ? (typeof b.vertical === 'boolean' ? b.vertical : ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true))
                 : false;
 
+            const isSfx = blockType === 'sfx';
             const chosenFont = b.style?.fontFamily || getDefaultFontForBlockType(blockType);
-            let maskShape = b.style?.maskShape || globalState.globalStyle.maskShape;
-            let italic = typeof b.style?.italic === 'boolean' ? b.style.italic : false;
+            const maskShape = isSfx ? (b.style?.maskShape || 'none') : 'bubble-fit';
+            const maskSize = isSfx ? (b.style?.maskSize || 'snug') : 'full';
+            let italic = typeof b.style?.italic === 'boolean' ? b.style.italic : (blockType === 'thought');
             const bold = typeof b.style?.bold === 'boolean' ? b.style.bold : globalState.globalStyle.bold;
-
-            if (blockType === 'narration') {
-                maskShape = 'rect';
-            } else if (blockType === 'thought') {
-                maskShape = 'bubble-fit';
-                italic = true;
-            }
 
             const blockStyle = {
                 fontFamily: chosenFont,
@@ -407,7 +402,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 letterSpacing: b.style?.letterSpacing !== undefined ? b.style.letterSpacing : (globalState.defaultLetterSpacing !== undefined ? globalState.defaultLetterSpacing : (globalState.globalStyle.letterSpacing !== undefined ? globalState.globalStyle.letterSpacing : 0)),
                 textColor: b.style?.textColor || '#000000',
                 bgColor: b.style?.bgColor || '#ffffff',
-                bgOpacity: b.style?.bgOpacity !== undefined ? b.style.bgOpacity : 100,
+                bgOpacity: b.style?.bgOpacity !== undefined ? b.style.bgOpacity : (isSfx ? 0 : 100),
                 padding: b.style?.padding !== undefined ? b.style.padding : globalState.globalStyle.padding,
                 rotate: b.style?.rotate || 0,
                 vertical: blockVertical,
@@ -415,7 +410,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 italic: italic,
                 align: b.style?.align || globalState.globalStyle.align,
                 maskShape: maskShape,
-                maskSize: b.style?.maskSize || globalState.globalStyle.maskSize,
+                maskSize: maskSize,
                 strokeColor: b.style?.strokeColor || '#ffffff',
                 strokeWidth: b.style?.strokeWidth !== undefined ? b.style.strokeWidth : 0,
                 shadowColor: b.style?.shadowColor || '#000000',
@@ -642,17 +637,12 @@ export async function runBatchTranslation(): Promise<void> {
                                 ? (typeof b.vertical === 'boolean' ? b.vertical : ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true))
                                 : false;
 
+                            const isSfx = blockType === 'sfx';
                             const chosenFont = b.style?.fontFamily || getDefaultFontForBlockType(blockType);
-                            let maskShape = b.style?.maskShape || globalState.globalStyle.maskShape;
-                            let italic = typeof b.style?.italic === 'boolean' ? b.style.italic : false;
+                            const maskShape = isSfx ? (b.style?.maskShape || 'none') : 'bubble-fit';
+                            const maskSize = isSfx ? (b.style?.maskSize || 'snug') : 'full';
+                            let italic = typeof b.style?.italic === 'boolean' ? b.style.italic : (blockType === 'thought');
                             const bold = typeof b.style?.bold === 'boolean' ? b.style.bold : globalState.globalStyle.bold;
-
-                            if (blockType === 'narration') {
-                                maskShape = 'rect';
-                            } else if (blockType === 'thought') {
-                                maskShape = 'bubble-fit';
-                                italic = true;
-                            }
 
                             return {
                                 id: `p${pageIndex + 1}_b${bIdx + 1}`,
@@ -667,7 +657,7 @@ export async function runBatchTranslation(): Promise<void> {
                                     letterSpacing: b.style?.letterSpacing !== undefined ? b.style.letterSpacing : (globalState.defaultLetterSpacing !== undefined ? globalState.defaultLetterSpacing : (globalState.globalStyle.letterSpacing !== undefined ? globalState.globalStyle.letterSpacing : 0)),
                                     textColor: b.style?.textColor || '#000000',
                                     bgColor: b.style?.bgColor || '#ffffff',
-                                    bgOpacity: b.style?.bgOpacity !== undefined ? b.style.bgOpacity : 100,
+                                    bgOpacity: b.style?.bgOpacity !== undefined ? b.style.bgOpacity : (isSfx ? 0 : 100),
                                     padding: b.style?.padding !== undefined ? b.style.padding : globalState.globalStyle.padding,
                                     rotate: b.style?.rotate || 0,
                                     vertical: blockVertical,
@@ -675,7 +665,7 @@ export async function runBatchTranslation(): Promise<void> {
                                     italic: italic,
                                     align: b.style?.align || globalState.globalStyle.align,
                                     maskShape: maskShape,
-                                    maskSize: b.style?.maskSize || globalState.globalStyle.maskSize,
+                                    maskSize: maskSize,
                                     strokeColor: b.style?.strokeColor || '#ffffff',
                                     strokeWidth: b.style?.strokeWidth !== undefined ? b.style.strokeWidth : 0,
                                     shadowColor: b.style?.shadowColor || '#000000',

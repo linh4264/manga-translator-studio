@@ -11,6 +11,8 @@ import {
     checkBlockOverflow,
     checkUntranslated,
     checkFontAnomaly,
+    checkGeometryAnomaly,
+    checkTerminologyInconsistency,
     runChapterQcScan,
     autoFixAllQcIssues
 } from '../../../src/features/pipeline/qc-linter';
@@ -129,6 +131,26 @@ describe('Chapter Production Pipeline Architecture', () => {
 
             const normal = { id: 'b3', style: { fontSize: 18 } };
             expect(checkFontAnomaly(normal).hasAnomaly).toBe(false);
+        });
+
+        it('6.1. Detects invalid bounding box geometry', () => {
+            const outOfBounds = { id: 'b1', box: { x: -5, y: 10, w: 20, h: 20 } };
+            expect(checkGeometryAnomaly(outOfBounds).hasAnomaly).toBe(true);
+
+            const zeroDimension = { id: 'b2', box: { x: 10, y: 10, w: 0, h: 20 } };
+            expect(checkGeometryAnomaly(zeroDimension).hasAnomaly).toBe(true);
+
+            const valid = { id: 'b3', box: { x: 10, y: 10, w: 30, h: 40 } };
+            expect(checkGeometryAnomaly(valid).hasAnomaly).toBe(false);
+        });
+
+        it('6.2. Detects terminology inconsistency against Glossary', () => {
+            globalState.glossaryNames = "Naruto = Uzumaki Naruto\nSasuke: Uchiha Sasuke";
+            const inconsistentBlock = { id: 'b1', original: 'Hello Naruto!', translated: 'Xin chào anh chàng tóc vàng!' };
+            expect(checkTerminologyInconsistency(inconsistentBlock).hasInconsistency).toBe(true);
+
+            const consistentBlock = { id: 'b2', original: 'Hello Naruto!', translated: 'Xin chào Uzumaki Naruto!' };
+            expect(checkTerminologyInconsistency(consistentBlock).hasInconsistency).toBe(false);
         });
 
         it('7. Runs full chapter QC scan and returns score and categorized issues', () => {

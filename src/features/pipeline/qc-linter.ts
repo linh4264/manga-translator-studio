@@ -3,7 +3,7 @@
  */
 
 import { MangaBlock, MangaPage } from '../../types';
-import { QcIssue, QcScanResult, QcIssueSeverity, QcIssueType } from '../../types/pipeline-types';
+import { QcIssue, QcScanResult, QcIssueSeverity } from '../../types/pipeline-types';
 import { globalState, savePageToDB, pushStateToHistory } from '../../core/state';
 import { autoFitBlock, isBlockAutoFit } from '../canvas/canvas-service';
 import { elements } from '../../core/elements';
@@ -70,8 +70,8 @@ export function checkFontAnomaly(block: MangaBlock): { hasAnomaly: boolean; reas
         return { hasAnomaly: true, reason: 'Chưa cấu hình cỡ chữ (fontSize)', severity: 'warning' };
     }
 
-    if (fontSize < 10) {
-        return { hasAnomaly: true, reason: `Cỡ chữ quá nhỏ (${fontSize}px), khó đọc khi xuất bản`, severity: 'warning' };
+    if (fontSize < 11) {
+        return { hasAnomaly: true, reason: `Cỡ chữ quá nhỏ (${fontSize}px), khó đọc trên thiết bị di động`, severity: 'warning' };
     }
 
     if (fontSize > 65) {
@@ -79,6 +79,59 @@ export function checkFontAnomaly(block: MangaBlock): { hasAnomaly: boolean; reas
     }
 
     return { hasAnomaly: false, reason: '', severity: 'info' };
+}
+
+/**
+ * Checks for invalid or distorted bounding box geometry
+ */
+export function checkGeometryAnomaly(block: MangaBlock): { hasAnomaly: boolean; reason: string; fixable: boolean } {
+    const box = block.box;
+    if (!box) {
+        return { hasAnomaly: true, reason: 'Thiếu thông tin bounding box', fixable: true };
+    }
+
+    if (box.w <= 0 || box.h <= 0) {
+        return { hasAnomaly: true, reason: `Kích thước khung không hợp lệ (w: ${box.w}%, h: ${box.h}%)`, fixable: true };
+    }
+
+    if (box.x < 0 || box.y < 0 || box.x + box.w > 105 || box.y + box.h > 105) {
+        return { hasAnomaly: true, reason: `Tọa độ khung vượt ra ngoài mép trang truyện (x:${box.x.toFixed(1)}%, y:${box.y.toFixed(1)}%)`, fixable: true };
+    }
+
+    return { hasAnomaly: false, reason: '', fixable: false };
+}
+
+/**
+ * Checks for terminology and character naming consistency against Glossary / Dossier
+ */
+export function checkTerminologyInconsistency(block: MangaBlock): { hasInconsistency: boolean; reason: string; expectedTerm?: string } {
+    const orig = (block.original || '').trim();
+    const trans = (block.translated || '').trim();
+    if (!orig || !trans) return { hasInconsistency: false, reason: '' };
+
+    const glossaryRaw = globalState.glossaryNames || '';
+    if (!glossaryRaw.trim()) return { hasInconsistency: false, reason: '' };
+
+    // Format of glossary entries: "Original = Translated" or "Original: Translated"
+    const lines = glossaryRaw.split(/[\n,;]+/);
+    for (const line of lines) {
+        const parts = line.split(/[=:]+/);
+        if (parts.length >= 2) {
+            const rawOrig = parts[0].trim();
+            const expectedTrans = parts[1].trim();
+            if (rawOrig && expectedTrans && orig.toLowerCase().includes(rawOrig.toLowerCase())) {
+                if (!trans.toLowerCase().includes(expectedTrans.toLowerCase())) {
+                    return {
+                        hasInconsistency: true,
+                        reason: `Câu gốc chứa thuật ngữ "${rawOrig}" nhưng bản dịch chưa dùng từ chuẩn "${expectedTrans}"`,
+                        expectedTerm: expectedTrans
+                    };
+                }
+            }
+        }
+    }
+
+    return { hasInconsistency: false, reason: '' };
 }
 
 /**
@@ -120,7 +173,23 @@ export function runChapterQcScan(pages: MangaPage[] = globalState.pages): QcScan
         blocks.forEach((block, blockIndex) => {
             const blockId = block.id || `p${pageIndex + 1}_b${blockIndex + 1}`;
 
-            // 1. Untranslated / Empty check
+            // 1. Geometry anomaly check
+            const { hasAnomaly: hasGeoAnomaly, reason: geoReason, fixable: geoFixable } = checkGeometryAnomaly(block);
+            if (hasGeoAnomaly) {
+                issues.push({
+                    id: `qc_${blockId}_geo`,
+                    pageIndex,
+                    blockId,
+                    type: 'geometry_anomaly',
+                    severity: 'critical',
+                    message: `Trang ${pageIndex + 1} - [${blockId}]: ${geoReason}`,
+                    suggestion: 'Chuẩn hóa lại tọa độ bounding box về kích thước hợp lệ',
+                    autoFixable: geoFixable,
+                    data: { block }
+                });
+            }
+
+            // 2. Untranslated / Empty check
             const { isUntranslated, reason: untransReason } = checkUntranslated(block);
             if (isUntranslated) {
                 issues.push({
@@ -136,7 +205,7 @@ export function runChapterQcScan(pages: MangaPage[] = globalState.pages): QcScan
                 });
             }
 
-            // 2. Text Overflow check
+            // 3. Text Overflow check
             if (block.translated && block.translated.trim()) {
                 const isOverflow = checkBlockOverflow(block, page);
                 if (isOverflow) {
@@ -154,7 +223,7 @@ export function runChapterQcScan(pages: MangaPage[] = globalState.pages): QcScan
                 }
             }
 
-            // 3. Font Anomaly check
+            // 4. Font Anomaly check
             const { hasAnomaly, reason: fontReason, severity: fontSev } = checkFontAnomaly(block);
             if (hasAnomaly) {
                 issues.push({
@@ -164,27 +233,38 @@ export function runChapterQcScan(pages: MangaPage[] = globalState.pages): QcScan
                     type: 'font_anomaly',
                     severity: fontSev,
                     message: `Trang ${pageIndex + 1} - [${blockId}]: ${fontReason}`,
-                    suggestion: 'Điều chỉnh cỡ chữ về khoảng tiêu chuẩn (14px - 32px)',
+                    suggestion: 'Điều chỉnh cỡ chữ về khoảng tiêu chuẩn (12px - 45px)',
                     autoFixable: true,
+                    data: { block }
+                });
+            }
+
+            // 5. Inconsistency check
+            const { hasInconsistency, reason: inconsReason } = checkTerminologyInconsistency(block);
+            if (hasInconsistency) {
+                issues.push({
+                    id: `qc_${blockId}_inconsistency`,
+                    pageIndex,
+                    blockId,
+                    type: 'inconsistency',
+                    severity: 'warning',
+                    message: `Trang ${pageIndex + 1} - [${blockId}]: ${inconsReason}`,
+                    suggestion: 'Kiểm tra và chuẩn hóa tên nhân vật/thuật ngữ theo bảng Glossary',
+                    autoFixable: false,
                     data: { block }
                 });
             }
         });
     });
 
-    let criticalCount = 0;
-    let warningCount = 0;
-    let infoCount = 0;
+    const criticalCount = issues.filter(i => i.severity === 'critical').length;
+    const warningCount = issues.filter(i => i.severity === 'warning').length;
+    const infoCount = issues.filter(i => i.severity === 'info').length;
 
-    issues.forEach(issue => {
-        if (issue.severity === 'critical') criticalCount++;
-        else if (issue.severity === 'warning') warningCount++;
-        else infoCount++;
-    });
-
-    // Score deduction algorithm: 100 - (critical * 15) - (warning * 3) - (info * 0.5)
-    let score = Math.max(0, Math.round(100 - (criticalCount * 15) - (warningCount * 3) - (infoCount * 0.5)));
-    if (issues.length === 0) score = 100;
+    // Quality Score Calculation (100 base, -15 per critical, -5 per warning, -1 per info)
+    const deduction = (criticalCount * 15) + (warningCount * 5) + (infoCount * 1);
+    const score = Math.max(0, Math.min(100, 100 - deduction));
+    const passed = criticalCount === 0 && warningCount <= 3;
 
     const result: QcScanResult = {
         totalIssues: issues.length,
@@ -194,7 +274,7 @@ export function runChapterQcScan(pages: MangaPage[] = globalState.pages): QcScan
         score,
         issues,
         scannedAt: Date.now(),
-        passed: criticalCount === 0 && warningCount <= 2
+        passed
     };
 
     if (globalState.pipeline) {
@@ -227,10 +307,21 @@ export function autoFixAllQcIssues(scanResult?: QcScanResult): { fixedCount: num
         const block = page.blocks.find(b => b.id === issue.blockId);
         if (!block) return;
 
-        if (issue.type === 'overflow') {
+        if (issue.type === 'geometry_anomaly') {
+            if (!block.box) {
+                block.box = { x: 10, y: 10, w: 25, h: 15 };
+            } else {
+                block.box.x = Math.max(0, Math.min(90, block.box.x || 0));
+                block.box.y = Math.max(0, Math.min(90, block.box.y || 0));
+                block.box.w = Math.max(5, Math.min(100 - block.box.x, block.box.w || 20));
+                block.box.h = Math.max(5, Math.min(100 - block.box.y, block.box.h || 15));
+            }
+            modifiedPages.add(issue.pageIndex);
+            fixedCount++;
+        } else if (issue.type === 'overflow') {
             // Apply Auto-fit or scale down by 15%
             const currentSize = block.style?.fontSize || 16;
-            const newSize = Math.max(10, Math.round(currentSize * 0.85));
+            const newSize = Math.max(11, Math.round(currentSize * 0.85));
             if (!block.style) {
                 block.style = { ...globalState.globalStyle };
             }
@@ -251,7 +342,7 @@ export function autoFixAllQcIssues(scanResult?: QcScanResult): { fixedCount: num
                 block.style = { ...globalState.globalStyle };
             }
             const currentSize = block.style.fontSize || 16;
-            if (currentSize < 10) block.style.fontSize = 13;
+            if (currentSize < 11) block.style.fontSize = 14;
             else if (currentSize > 65) block.style.fontSize = 32;
             block.autoFitCache = null;
 

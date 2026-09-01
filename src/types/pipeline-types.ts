@@ -85,6 +85,8 @@ export type QcIssueType =
     | 'untranslated'
     | 'empty'
     | 'font_anomaly'
+    | 'geometry_anomaly'
+    | 'inconsistency'
     | 'dirty_mask'
     | 'duplicate';
 
