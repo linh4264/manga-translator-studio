@@ -8,6 +8,8 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '..');
+const publicPath = path.join(projectRoot, 'public');
 
 const PORT = 3000;
 
@@ -64,12 +66,9 @@ try {
     }
 }
 
-const projectRoot = path.resolve(__dirname, '..');
-const publicPath = path.join(projectRoot, 'public');
-
-function isPathInsideRoot(targetPath) {
-    const resolved = path.resolve(targetPath);
-    return resolved.startsWith(projectRoot + path.sep) || resolved === projectRoot;
+function isSafePath(targetPath) {
+    const rel = path.relative(projectRoot, targetPath);
+    return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
 }
 
 function resolveTsImports(code, currentDir) {
@@ -77,7 +76,8 @@ function resolveTsImports(code, currentDir) {
         .replace(/(import|export)\s+([\s\S]*?from\s+['"])([\.\/][^'"]+)(['"])/g, (match, p1, p2, p3, p4) => {
             if (p3.endsWith('.js') || p3.endsWith('.ts') || p3.endsWith('.json') || p3.endsWith('.css')) return match;
             const absTarget = path.resolve(currentDir, p3);
-            if (!isPathInsideRoot(absTarget)) return match;
+            const rel = path.relative(projectRoot, absTarget);
+            if (rel.startsWith('..') || path.isAbsolute(rel)) return match;
             if (fs.existsSync(absTarget + '.ts')) return `${p1} ${p2}${p3}.ts${p4}`;
             if (fs.existsSync(path.join(absTarget, 'index.ts'))) return `${p1} ${p2}${p3}/index.ts${p4}`;
             if (fs.existsSync(absTarget + '.js')) return `${p1} ${p2}${p3}.js${p4}`;
@@ -86,7 +86,8 @@ function resolveTsImports(code, currentDir) {
         .replace(/import\s+['"]([\.\/][^'"]+)['"]/g, (match, p1) => {
             if (p1.endsWith('.js') || p1.endsWith('.ts') || p1.endsWith('.json') || p1.endsWith('.css')) return match;
             const absTarget = path.resolve(currentDir, p1);
-            if (!isPathInsideRoot(absTarget)) return match;
+            const rel = path.relative(projectRoot, absTarget);
+            if (rel.startsWith('..') || path.isAbsolute(rel)) return match;
             if (fs.existsSync(absTarget + '.ts')) return `import '${p1}.ts'`;
             if (fs.existsSync(path.join(absTarget, 'index.ts'))) return `import '${p1}/index.ts'`;
             if (fs.existsSync(absTarget + '.js')) return `import '${p1}.js'`;
@@ -95,7 +96,8 @@ function resolveTsImports(code, currentDir) {
         .replace(/import\s*\(\s*['"]([\.\/][^'"]+)['"]\s*\)/g, (match, p1) => {
             if (p1.endsWith('.js') || p1.endsWith('.ts') || p1.endsWith('.json') || p1.endsWith('.css')) return match;
             const absTarget = path.resolve(currentDir, p1);
-            if (!isPathInsideRoot(absTarget)) return match;
+            const rel = path.relative(projectRoot, absTarget);
+            if (rel.startsWith('..') || path.isAbsolute(rel)) return match;
             if (fs.existsSync(absTarget + '.ts')) return `import('${p1}.ts')`;
             if (fs.existsSync(path.join(absTarget, 'index.ts'))) return `import('${p1}/index.ts')`;
             return match;
@@ -105,6 +107,83 @@ function resolveTsImports(code, currentDir) {
 function getSafeRedirectUrl(targetRelativePath, query) {
     const cleanPath = '/' + String(targetRelativePath || '').replace(/^[\/\\]+/, '') + '/';
     return query ? `${cleanPath}?${query}` : cleanPath;
+}
+
+function resolveTargetFile(rawUrl) {
+    let decoded;
+    try {
+        decoded = decodeURIComponent(rawUrl);
+    } catch {
+        decoded = rawUrl;
+    }
+
+    const urlParts = decoded.split('?');
+    const urlPathOnly = urlParts[0].split('#')[0];
+    const cleanPath = urlPathOnly.replace(/\0/g, '');
+    const normalized = path.normalize(cleanPath).replace(/^[\/\\]+/, '').replace(/^(\.\.[\/\\])+/, '');
+    const queryString = urlParts.length > 1 ? urlParts[1].split('#')[0] : '';
+
+    const segments = normalized.split(/[/\\]/).filter(Boolean);
+    if (
+        segments.some(s => s.startsWith('.')) ||
+        segments.includes('server') ||
+        (segments.includes('node_modules') && !normalized.includes('typescript')) ||
+        ['package.json', 'package-lock.json', 'bun.lock', 'bun.lockb', 'tsconfig.json', 'vite.config.ts'].includes(normalized.toLowerCase())
+    ) {
+        return { status: 403, error: '403 Cấm truy cập: Tệp tin hoặc thư mục được bảo vệ.' };
+    }
+
+    const relPath = normalized === '' || normalized === '.' ? 'index.html' : normalized;
+    const targetFile = path.resolve(projectRoot, relPath);
+
+    const relFromRoot = path.relative(projectRoot, targetFile);
+    if (relFromRoot.startsWith('..') || path.isAbsolute(relFromRoot)) {
+        return { status: 403, error: '403 Cấm truy cập: Yêu cầu ngoài phạm vi thư mục dự án.' };
+    }
+
+    if (fs.existsSync(targetFile)) {
+        const stats = fs.statSync(targetFile);
+        if (stats.isDirectory()) {
+            if (!urlPathOnly.endsWith('/')) {
+                return { status: 301, redirect: getSafeRedirectUrl(relPath, queryString) };
+            }
+            const indexHtml = path.join(targetFile, 'index.html');
+            if (isSafePath(indexHtml) && fs.existsSync(indexHtml)) return { status: 200, filePath: indexHtml };
+            const indexTs = path.join(targetFile, 'index.ts');
+            if (isSafePath(indexTs) && fs.existsSync(indexTs)) return { status: 200, filePath: indexTs };
+            const indexJs = path.join(targetFile, 'index.js');
+            if (isSafePath(indexJs) && fs.existsSync(indexJs)) return { status: 200, filePath: indexJs };
+            return { status: 404, error: 'Thư mục không có tệp tin khởi đầu.' };
+        }
+        return { status: 200, filePath: targetFile };
+    }
+
+    const candidates = [
+        path.resolve(publicPath, relPath),
+        targetFile + '.html',
+        path.join(publicPath, relPath + '.html'),
+        targetFile + '.ts',
+        targetFile + '.js',
+        path.join(targetFile, 'index.html'),
+        path.join(targetFile, 'index.ts')
+    ];
+
+    for (const cand of candidates) {
+        if (isSafePath(cand) && fs.existsSync(cand)) {
+            const candStat = fs.statSync(cand);
+            if (candStat.isDirectory()) {
+                if (!urlPathOnly.endsWith('/')) {
+                    return { status: 301, redirect: getSafeRedirectUrl(relPath, queryString) };
+                }
+                const subIndex = path.join(cand, 'index.html');
+                if (isSafePath(subIndex) && fs.existsSync(subIndex)) return { status: 200, filePath: subIndex };
+            } else {
+                return { status: 200, filePath: cand };
+            }
+        }
+    }
+
+    return { status: 404, error: `Tệp tin không tồn tại: ${escapeHTML(cleanPath)}` };
 }
 
 const server = http.createServer((req, res) => {
@@ -119,190 +198,104 @@ const server = http.createServer((req, res) => {
         return;
     }
 
-    // Decode URI component to support file names with spaces or special characters
-    let decodedUrl;
-    try {
-        decodedUrl = decodeURIComponent(req.url);
-    } catch (e) {
-        decodedUrl = req.url;
-    }
+    const resolved = resolveTargetFile(req.url || '/');
 
-    // Extract path name and query string safely
-    const urlParts = decodedUrl.split('?');
-    const urlPath = urlParts[0].split('#')[0];
-    const queryString = urlParts.length > 1 ? urlParts[1].split('#')[0] : '';
-
-    // Clean and normalize requested path
-    const cleanUrlPath = urlPath.replace(/\0/g, '');
-    const normalizedRelative = path.normalize(cleanUrlPath).replace(/^[\/\\]+/, '').replace(/^(\.\.[\/\\])+/, '');
-    const segments = normalizedRelative.split(/[/\\]/).filter(Boolean);
-
-    // Block hidden files, git, env, config files, and private server folders
-    const isSensitive = segments.some(seg => seg.startsWith('.')) ||
-        segments.includes('server') ||
-        (segments.includes('node_modules') && !normalizedRelative.includes('typescript')) ||
-        ['package.json', 'package-lock.json', 'bun.lock', 'bun.lockb', 'tsconfig.json', 'vite.config.ts'].includes(normalizedRelative.toLowerCase());
-
-    if (isSensitive) {
-        res.statusCode = 403;
-        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-        res.end('403 Cấm truy cập: Tệp tin hoặc thư mục được bảo vệ.');
+    if (resolved.status === 301 && resolved.redirect) {
+        res.writeHead(301, {
+            'Location': resolved.redirect,
+            'Content-Type': 'text/plain; charset=utf-8'
+        });
+        res.end(`Redirecting to ${escapeHTML(resolved.redirect)}`);
         return;
     }
 
-    let safePath = normalizedRelative;
-    if (safePath === '/' || safePath === '.' || safePath === '\\' || safePath === '') {
-        safePath = 'index.html';
-    }
-
-    let filePath = path.resolve(projectRoot, safePath);
-    if (!isPathInsideRoot(filePath)) {
+    if (resolved.status === 403) {
         res.statusCode = 403;
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-        res.end('403 Cấm truy cập: Yêu cầu ngoài phạm vi thư mục dự án.');
+        res.end(resolved.error || '403 Cấm truy cập.');
         return;
     }
 
-    // Handle directory redirect: If requesting a directory without trailing slash, redirect (301)
-    // so relative paths resolve safely strictly within site origin.
-    if (fs.existsSync(filePath) && fs.statSync(filePath).isDirectory()) {
-        if (!urlPath.endsWith('/')) {
-            const redirectTarget = getSafeRedirectUrl(normalizedRelative, queryString);
-            res.writeHead(301, { 'Location': redirectTarget, 'Content-Type': 'text/plain; charset=utf-8' });
-            res.end(`Redirecting to ${escapeHTML(redirectTarget)}`);
-            return;
-        }
-        if (fs.existsSync(path.join(filePath, 'index.html'))) {
-            filePath = path.join(filePath, 'index.html');
-        } else if (fs.existsSync(path.join(filePath, 'index.ts'))) {
-            filePath = path.join(filePath, 'index.ts');
-        } else if (fs.existsSync(path.join(filePath, 'index.js'))) {
-            filePath = path.join(filePath, 'index.js');
-        }
+    if (resolved.status === 404 || !resolved.filePath) {
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.statusCode = 404;
+        res.end(`
+            <div style="font-family: sans-serif; text-align: center; padding: 50px; background: #0f172a; color: #f8fafc; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <h1 style="color: #f43f5e; font-size: 48px; margin: 0 0 10px 0;">404 Not Found</h1>
+                <p style="color: #94a3b8; font-size: 16px;">${resolved.error || 'Tệp tin không tồn tại'}</p>
+                <a href="/" style="margin-top: 20px; color: #6366f1; text-decoration: none; font-weight: bold; border: 1px solid #6366f1; padding: 10px 20px; border-radius: 8px; background: rgba(99,102,241,0.1);">Về Trang Chủ</a>
+            </div>
+        `);
+        return;
     }
 
-    if (!fs.existsSync(filePath)) {
-        // Fallback checks
-        const pubCandidate = path.resolve(publicPath, safePath);
-        if (pubCandidate.startsWith(publicPath) && fs.existsSync(pubCandidate)) {
-            if (fs.statSync(pubCandidate).isDirectory()) {
-                if (!urlPath.endsWith('/')) {
-                    const redirectTarget = getSafeRedirectUrl(normalizedRelative, queryString);
-                    res.writeHead(301, { 'Location': redirectTarget, 'Content-Type': 'text/plain; charset=utf-8' });
-                    res.end(`Redirecting to ${escapeHTML(redirectTarget)}`);
-                    return;
-                }
-                if (fs.existsSync(path.join(pubCandidate, 'index.html'))) {
-                    filePath = path.join(pubCandidate, 'index.html');
-                } else {
-                    filePath = pubCandidate;
-                }
-            } else {
-                filePath = pubCandidate;
-            }
-        } else if (fs.existsSync(filePath + '.html')) {
-            filePath = filePath + '.html';
-        } else if (fs.existsSync(path.join(publicPath, safePath + '.html'))) {
-            filePath = path.join(publicPath, safePath + '.html');
-        } else if (fs.existsSync(filePath + '.ts')) {
-            filePath = filePath + '.ts';
-        } else if (fs.existsSync(filePath + '.js')) {
-            filePath = filePath + '.js';
-        } else if (fs.existsSync(path.join(filePath, 'index.html'))) {
-            if (!urlPath.endsWith('/')) {
-                const redirectTarget = getSafeRedirectUrl(normalizedRelative, queryString);
-                res.writeHead(301, { 'Location': redirectTarget, 'Content-Type': 'text/plain; charset=utf-8' });
-                res.end(`Redirecting to ${escapeHTML(redirectTarget)}`);
+    const filePath = resolved.filePath;
+    const ext = path.extname(filePath).toLowerCase();
+
+    if (ext === '.ts') {
+        fs.readFile(filePath, 'utf-8', (readErr, tsContent) => {
+            if (readErr) {
+                res.statusCode = 500;
+                res.end(`<h1>Lỗi Đọc File TypeScript: ${escapeHTML(readErr.code)}</h1>`);
                 return;
             }
-            filePath = path.join(filePath, 'index.html');
-        } else if (fs.existsSync(path.join(filePath, 'index.ts'))) {
-            filePath = path.join(filePath, 'index.ts');
-        }
-    }
 
-
-    fs.stat(filePath, (err, stats) => {
-        if (err || (stats && stats.isDirectory())) {
-            res.setHeader('Content-Type', 'text/html; charset=utf-8');
-            res.statusCode = 404;
-            res.end(`
-                <div style="font-family: sans-serif; text-align: center; padding: 50px; background: #0f172a; color: #f8fafc; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                    <h1 style="color: #f43f5e; font-size: 48px; margin: 0 0 10px 0;">404 Not Found</h1>
-                    <p style="color: #94a3b8; font-size: 16px;">Tệp tin không tồn tại: <code>${escapeHTML(urlPath)}</code></p>
-                    <a href="/" style="margin-top: 20px; color: #6366f1; text-decoration: none; font-weight: bold; border: 1px solid #6366f1; padding: 10px 20px; border-radius: 8px; background: rgba(99,102,241,0.1);">Về Trang Chủ</a>
-                </div>
-            `);
-            return;
-        }
-
-        const ext = path.extname(filePath).toLowerCase();
-
-        if (ext === '.ts') {
-            fs.readFile(filePath, 'utf-8', (readErr, tsContent) => {
-                if (readErr) {
-                    res.statusCode = 500;
-                    res.end(`<h1>Lỗi Đọc File TypeScript: ${escapeHTML(readErr.code)}</h1>`);
-                    return;
-                }
-
-                if (bunTranspiler) {
-                    try {
-                        const resolvedTs = resolveTsImports(tsContent, path.dirname(filePath));
-                        const jsCode = bunTranspiler.transformSync(resolvedTs);
-                        res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' });
-                        res.end(jsCode, 'utf-8');
-                        return;
-                    } catch (bErr) {
-                        console.error('Lỗi Bun Transpiler:', bErr);
-                    }
-                }
-
-                if (!ts) {
-                    res.statusCode = 500;
-                    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-                    res.end(`
-                        <div style="font-family: sans-serif; text-align: center; padding: 50px; background: #0f172a; color: #f8fafc; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                            <h1 style="color: #f43f5e; font-size: 32px; margin: 0 0 10px 0;">Thiếu Module TypeScript</h1>
-                            <p style="color: #94a3b8; font-size: 16px;">Server cần runtime Bun hoặc module <code>typescript</code> để biên dịch trực tiếp các file <code>.ts</code>.</p>
-                            <p style="color: #cbd5e1; font-size: 14px;">Vui lòng chạy lệnh <code>bun server/server.js</code> hoặc <code>npm run dev</code>.</p>
-                        </div>
-                    `);
-                    return;
-                }
-
+            if (bunTranspiler) {
                 try {
                     const resolvedTs = resolveTsImports(tsContent, path.dirname(filePath));
-                    const resObj = ts.transpileModule(resolvedTs, {
-                        compilerOptions: {
-                            module: ts.ModuleKind.ESNext,
-                            target: ts.ScriptTarget.ES2022,
-                            isolatedModules: true
-                        }
-                    });
-                    const jsCode = resObj.outputText;
+                    const jsCode = bunTranspiler.transformSync(resolvedTs);
                     res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' });
                     res.end(jsCode, 'utf-8');
-                } catch (compileErr) {
-                    console.error('Lỗi biên dịch TypeScript:', compileErr);
-                    res.statusCode = 500;
-                    res.end(`console.error("TypeScript Error: ${escapeHTML(compileErr.message)}");`);
+                    return;
+                } catch (bErr) {
+                    console.error('Lỗi Bun Transpiler:', bErr);
                 }
-            });
-            return;
-        }
+            }
 
-        const contentType = MIME_TYPES[ext] || 'application/octet-stream';
-        res.writeHead(200, { 'Content-Type': contentType });
-        const stream = fs.createReadStream(filePath);
-        stream.on('error', (streamErr) => {
-            if (!res.headersSent) {
+            if (!ts) {
                 res.statusCode = 500;
-                res.end(`<h1>Lỗi Máy Chủ: ${escapeHTML(streamErr.code)}</h1>`);
+                res.setHeader('Content-Type', 'text/html; charset=utf-8');
+                res.end(`
+                    <div style="font-family: sans-serif; text-align: center; padding: 50px; background: #0f172a; color: #f8fafc; height: 100vh; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                        <h1 style="color: #f43f5e; font-size: 32px; margin: 0 0 10px 0;">Thiếu Module TypeScript</h1>
+                        <p style="color: #94a3b8; font-size: 16px;">Server cần runtime Bun hoặc module <code>typescript</code> để biên dịch trực tiếp các file <code>.ts</code>.</p>
+                        <p style="color: #cbd5e1; font-size: 14px;">Vui lòng chạy lệnh <code>bun server/server.js</code> hoặc <code>npm run dev</code>.</p>
+                    </div>
+                `);
+                return;
+            }
+
+            try {
+                const resolvedTs = resolveTsImports(tsContent, path.dirname(filePath));
+                const resObj = ts.transpileModule(resolvedTs, {
+                    compilerOptions: {
+                        module: ts.ModuleKind.ESNext,
+                        target: ts.ScriptTarget.ES2022,
+                        isolatedModules: true
+                    }
+                });
+                const jsCode = resObj.outputText;
+                res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' });
+                res.end(jsCode, 'utf-8');
+            } catch (compileErr) {
+                console.error('Lỗi biên dịch TypeScript:', compileErr);
+                res.statusCode = 500;
+                res.end(`console.error("TypeScript Error: ${escapeHTML(compileErr.message)}");`);
             }
         });
-        stream.pipe(res);
+        return;
+    }
+
+    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+    res.writeHead(200, { 'Content-Type': contentType });
+    const stream = fs.createReadStream(filePath);
+    stream.on('error', (streamErr) => {
+        if (!res.headersSent) {
+            res.statusCode = 500;
+            res.end(`<h1>Lỗi Máy Chủ: ${escapeHTML(streamErr.code)}</h1>`);
+        }
     });
+    stream.pipe(res);
 });
 
 let currentPort = PORT;
