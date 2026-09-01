@@ -5,6 +5,7 @@ import { requestOverlayRender, syncActiveBlockStyle, syncActiveBlockTranslation,
 import { saveEraserDrawingToPage } from '../features/inpainting';
 import { MangaBlock, BlockStyle } from '../types/index';
 import { renderQuickPresetsBar } from './preset-ui';
+import { updateFontPickerDisplay } from './font-ui';
 
 export function updateActiveBlockEditor(): void {
     const activeBlock = getActiveBlock();
@@ -277,7 +278,9 @@ function syncBlockStyleInputs(block: MangaBlock): void {
 
     const isAutoFit = isBlockAutoFit(block);
     if (elements.styleAutoFit) elements.styleAutoFit.checked = isAutoFit;
-    if (elements.styleFont) elements.styleFont.value = block.style.fontFamily || globalState.defaultFont || 'font-manga';
+    const curFont = block.style.fontFamily || globalState.defaultFont || 'font-manga';
+    if (elements.styleFont) elements.styleFont.value = curFont;
+    updateFontPickerDisplay(curFont);
     if (elements.styleFontSize) elements.styleFontSize.value = String(block.style.fontSize || 17);
     const fontSizeLbl = document.getElementById('lbl-font-size') || elements.lblFontSize;
     if (fontSizeLbl) fontSizeLbl.innerText = `${block.style.fontSize || 17}px${isAutoFit ? ' (Auto)' : ''}`;

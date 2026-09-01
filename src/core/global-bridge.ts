@@ -240,6 +240,9 @@ export function initGlobalBridge(): void {
         renderCustomFontsListUI: fontUI.renderCustomFontsListUI,
         onSearchCustomFonts: fontUI.onSearchCustomFonts,
         loadMoreCustomFonts: fontUI.loadMoreCustomFonts,
+        initFontLivePreviewPicker: fontUI.initFontLivePreviewPicker,
+        updateFontPickerDisplay: fontUI.updateFontPickerDisplay,
+        closeFontPickerDropdown: fontUI.closeFontPickerDropdown,
 
         // Inpainting & Eraser
         autoCleanActiveBlock: inpainting.autoCleanActiveBlock,

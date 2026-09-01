@@ -1,5 +1,19 @@
 import { showToast, escapeHTML } from '../core/utils';
-import { requestOverlayRender } from '../features/canvas/canvas-service';
+import { requestOverlayRender, syncActiveBlockStyle } from '../features/canvas/canvas-service';
+import { globalState } from '../core/state';
+
+export const STANDARD_FONTS = [
+    { id: 'font-manga', name: 'Chuẩn Manga (Nunito Bold)', family: 'font-manga', desc: 'Manga tiêu chuẩn' },
+    { id: 'font-vietnamese', name: 'Việt tối ưu (Be Vietnam Pro)', family: 'font-vietnamese', desc: 'Dễ đọc, tròn trịa' },
+    { id: 'font-comic', name: 'Vui nhộn (Patrick Hand)', family: 'font-comic', desc: 'Hài hước, đời thường' },
+    { id: 'font-comicneue', name: 'Comic mượt (Comic Neue)', family: 'font-comicneue', desc: 'Nét mảnh, tinh tế' },
+    { id: 'font-impact', name: 'Kỳ vĩ / SFX (Bangers)', family: 'font-impact', desc: 'Hét lớn, âm thanh' },
+    { id: 'font-marker', name: 'Cọ vẽ / SFX Đậm (Permanent Marker)', family: 'font-marker', desc: 'Nét cọ đậm' },
+    { id: 'font-bungee', name: 'SFX Khối vuông (Bungee)', family: 'font-bungee', desc: 'Khối 3D cơ khí' },
+    { id: 'font-caveat', name: 'SFX Viết tay (Caveat)', family: 'font-caveat', desc: 'Viết tay mộc mạc' },
+    { id: 'font-tech', name: 'Cơ khí / Robot (Chakra Petch)', family: 'font-tech', desc: 'Viễn tưởng, robot' },
+    { id: 'font-condensed', name: 'Gào thét / Ghi chú (Saira Condensed)', family: 'font-condensed', desc: 'Hẹp dọc, thoại dài' }
+];
 
 const FONT_SELECT_IDS = [
     'style-font',
@@ -14,6 +28,9 @@ let isFontDelegationInit = false;
 let currentCustomFamilies: string[] = [];
 let customFontsSearchQuery = '';
 let customFontsVisibleCount = 40;
+
+let originalBlockFontBeforeHover: string | null = null;
+let currentPreviewingBlockId: string | null = null;
 
 function initFontDelegationOnce(container: HTMLElement): void {
     if (isFontDelegationInit) return;
@@ -148,6 +165,7 @@ export async function populateCustomFontsDropdown(): Promise<void> {
         }
 
         await renderCustomFontsListUI(families);
+        renderFontPickerOptions();
     } catch (e) {
         console.error("Lỗi nạp phông chữ tùy chỉnh từ DB:", e);
     }
@@ -198,6 +216,7 @@ export async function deleteCustomFont(family: string): Promise<void> {
 
         currentCustomFamilies = currentCustomFamilies.filter(f => f !== family);
         renderCustomFontsListRows();
+        renderFontPickerOptions();
 
         requestOverlayRender();
         showToast(`Đã xóa phông chữ "${family}" thành công!`, "info");
@@ -227,105 +246,259 @@ export async function deleteAllCustomFonts(): Promise<void> {
             if (fontSelect) {
                 const customOptions = fontSelect.querySelectorAll('option[data-custom="true"]');
                 customOptions.forEach(opt => opt.remove());
+                fontSelect.value = fontSelect.options[0].value;
             }
         });
 
         const typoOptgroup = document.getElementById('typography-custom-fonts-optgroup');
         if (typoOptgroup) typoOptgroup.replaceChildren();
 
-        const typoSelect = document.getElementById('typography-target-font') as HTMLSelectElement | null;
-        if (typoSelect && typoSelect.value !== '__global__') {
-            typoSelect.value = '__global__';
-            const { onTypographyTargetFontChange } = await import('./settings-ui');
-            onTypographyTargetFontChange('__global__');
-        }
-
         currentCustomFamilies = [];
         renderCustomFontsListRows();
+        renderFontPickerOptions();
 
         requestOverlayRender();
-        showToast(`Đã xóa sạch toàn bộ ${families.length} phông chữ tùy chỉnh thành công!`, "success");
+        showToast("Đã xóa toàn bộ phông chữ tùy chỉnh.", "info");
     } catch (err: any) {
         console.error("Lỗi xóa toàn bộ phông chữ:", err);
-        showToast(`Không thể xóa phông chữ: ${err.message}`, "error");
+        showToast(`Không thể xóa danh sách phông chữ: ${err.message}`, "error");
     }
 }
 
-export async function registerCustomFont(family: string, blob: Blob): Promise<void> {
-    try {
-        const { ensureCustomFontLoaded } = await import('../core/state');
-        await ensureCustomFontLoaded(family);
-
-        FONT_SELECT_IDS.forEach(id => {
-            const fontSelect = document.getElementById(id) as HTMLSelectElement | null;
-            if (fontSelect) {
-                const exists = Array.from(fontSelect.options).some(opt => opt.value === family);
-                if (!exists) {
-                    const opt = document.createElement('option');
-                    opt.value = family;
-                    opt.textContent = `${family} (Tùy chỉnh)`;
-                    opt.setAttribute('data-custom', 'true');
-                    fontSelect.appendChild(opt);
-                }
-            }
-        });
-    } catch (err) {
-        console.error(`Không thể đăng ký phông chữ ${family}:`, err);
-    }
-}
-
-export async function uploadCustomFonts(files: FileList | File[]): Promise<void> {
+export async function uploadCustomFonts(files: FileList | File[] | null): Promise<void> {
     if (!files || files.length === 0) return;
-    showToast(`Đang xử lý ${files.length} phông chữ tùy chỉnh...`, "info");
 
-    const { saveFontsBatchToDB, ensureCustomFontLoaded } = await import('../core/state');
-    const fontBatch: Array<{ family: string; blob: Blob }> = [];
-    const skippedFiles: string[] = [];
-    const validExtensions = ['.ttf', '.otf', '.woff', '.woff2', '.ttc'];
+    const { saveFontToDB } = await import('../core/state');
+    let loadedCount = 0;
 
     for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const fileName = file.name || '';
-        const lastDotIdx = fileName.lastIndexOf('.');
-        const ext = lastDotIdx !== -1 ? fileName.substring(lastDotIdx).toLowerCase() : '';
-        if (!validExtensions.includes(ext)) {
-            skippedFiles.push(fileName);
-            console.warn(`Bỏ qua file không phải định dạng font hợp lệ: ${fileName}`);
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        if (!['ttf', 'otf', 'woff', 'woff2'].includes(ext || '')) {
             continue;
         }
 
-        const cleanName = fileName.replace(/\.[^/.]+$/, '').trim();
-        const family = cleanName.replace(/['"\\;{}]/g, '').replace(/\s+/g, ' ').trim() || `CustomFont_${i + 1}`;
-        if (!family) {
-            skippedFiles.push(fileName);
-            continue;
+        const familyName = file.name.replace(/\.[^/.]+$/, "").trim();
+
+        try {
+            if (typeof FontFace !== 'undefined' && typeof document !== 'undefined' && document.fonts) {
+                try {
+                    const buffer = await file.arrayBuffer();
+                    const fontFace = new FontFace(familyName, buffer);
+                    await fontFace.load();
+                    document.fonts.add(fontFace);
+                } catch (fontErr) {
+                    // Ignore font registration error in headless/mock env
+                }
+            }
+
+            await saveFontToDB(familyName, file);
+            loadedCount++;
+        } catch (e: any) {
+            console.error(`Lỗi tải phông chữ ${file.name}:`, e);
         }
-        fontBatch.push({ family, blob: file });
     }
 
-    if (fontBatch.length === 0) {
-        showToast("Không tìm thấy file phông chữ hợp lệ (.ttf, .otf, .woff, .woff2, .ttc).", "warn");
-        return;
-    }
-
-    try {
-        await saveFontsBatchToDB(fontBatch);
+    if (loadedCount > 0) {
         await populateCustomFontsDropdown();
-        // Eagerly register first batch into memory
-        const topFonts = fontBatch.slice(0, 20);
-        await Promise.all(topFonts.map(f => ensureCustomFontLoaded(f.family, true)));
-        
-        let successMsg = `Đã cài đặt thành công ${fontBatch.length} phông chữ mới!`;
-        if (skippedFiles.length > 0) {
-            successMsg += ` (Bỏ qua ${skippedFiles.length} file không đúng định dạng font)`;
-        }
-        showToast(successMsg, "success");
-        requestOverlayRender();
-    } catch (err: any) {
-        console.error("Lỗi tải lên danh sách phông chữ:", err);
-        showToast(`Lỗi khi lưu phông chữ vào hệ thống: ${err?.message || 'Không xác định'}`, "error");
+        showToast(`Đã thêm ${loadedCount} phông chữ mới thành công!`, "success");
+    } else {
+        showToast("Không tìm thấy file phông chữ hợp lệ (.ttf, .otf, .woff, .woff2).", "warn");
     }
 }
 
+export function registerCustomFont(family: string, fontFace: FontFace): void {
+    try {
+        document.fonts.add(fontFace);
+    } catch (err) {
+        console.error(`Lỗi đăng ký phông chữ ${family}:`, err);
+    }
+}
 
+// =========================================================================
+// 🌟 INTERACTIVE LIVE HOVER-PREVIEW FONT PICKER
+// =========================================================================
 
+export function initFontLivePreviewPicker(): void {
+    const trigger = document.getElementById('font-picker-trigger');
+    const dropdown = document.getElementById('font-picker-dropdown');
+    const searchInput = document.getElementById('font-picker-search') as HTMLInputElement | null;
+
+    if (!trigger || !dropdown) return;
+
+    trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isHidden = dropdown.classList.contains('hidden');
+        if (isHidden) {
+            dropdown.classList.remove('hidden');
+            renderFontPickerOptions();
+            if (searchInput) {
+                searchInput.value = '';
+                setTimeout(() => searchInput.focus(), 50);
+            }
+        } else {
+            closeFontPickerDropdown();
+        }
+    });
+
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const query = (e.target as HTMLInputElement).value.trim().toLowerCase();
+            renderFontPickerOptions(query);
+        });
+        searchInput.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    dropdown.addEventListener('mouseleave', () => {
+        revertHoverFontPreview();
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!dropdown.classList.contains('hidden') && !dropdown.contains(e.target as Node) && e.target !== trigger) {
+            closeFontPickerDropdown();
+        }
+    });
+}
+
+export function closeFontPickerDropdown(): void {
+    const dropdown = document.getElementById('font-picker-dropdown');
+    if (dropdown) dropdown.classList.add('hidden');
+    revertHoverFontPreview();
+}
+
+function previewHoverFont(fontFamily: string): void {
+    if (globalState.activePageIndex === -1 || globalState.selectedBlockId === null) return;
+    const page = globalState.pages[globalState.activePageIndex];
+    if (!page) return;
+    const block = page.blocks?.find(b => b.id === globalState.selectedBlockId);
+    if (!block) return;
+
+    if (originalBlockFontBeforeHover === null || currentPreviewingBlockId !== block.id) {
+        originalBlockFontBeforeHover = block.style?.fontFamily || globalState.defaultFont || 'font-manga';
+        currentPreviewingBlockId = block.id;
+    }
+
+    if (!block.style) block.style = { ...globalState.globalStyle };
+    block.style.fontFamily = fontFamily;
+    block.style.font = fontFamily;
+    block.autoFitCache = null;
+
+    requestOverlayRender();
+}
+
+function revertHoverFontPreview(): void {
+    if (originalBlockFontBeforeHover !== null && globalState.activePageIndex !== -1 && globalState.selectedBlockId !== null) {
+        const page = globalState.pages[globalState.activePageIndex];
+        const block = page?.blocks?.find(b => b.id === globalState.selectedBlockId);
+        if (block && block.style && block.style.fontFamily !== originalBlockFontBeforeHover) {
+            block.style.fontFamily = originalBlockFontBeforeHover;
+            block.style.font = originalBlockFontBeforeHover;
+            block.autoFitCache = null;
+            requestOverlayRender();
+        }
+    }
+}
+
+function commitFontSelection(fontFamily: string, fontName: string): void {
+    originalBlockFontBeforeHover = fontFamily;
+    syncActiveBlockStyle('fontFamily', fontFamily);
+    updateFontPickerDisplay(fontFamily);
+    closeFontPickerDropdown();
+    showToast(`⚡ Đã đổi sang phông: ${fontName}`, "info");
+}
+
+export function updateFontPickerDisplay(fontFamily: string): void {
+    const nameEl = document.getElementById('font-picker-current-name');
+    if (!nameEl) return;
+
+    const std = STANDARD_FONTS.find(f => f.family === fontFamily || f.id === fontFamily);
+    if (std) {
+        nameEl.textContent = std.name;
+        nameEl.style.fontFamily = std.family;
+        return;
+    }
+
+    if (fontFamily) {
+        nameEl.textContent = `${fontFamily} (Tùy chỉnh)`;
+        nameEl.style.fontFamily = fontFamily;
+    } else {
+        nameEl.textContent = "Chuẩn Manga (Nunito Bold)";
+        nameEl.style.fontFamily = 'font-manga';
+    }
+}
+
+export function renderFontPickerOptions(filterQuery: string = ''): void {
+    const container = document.getElementById('font-picker-items');
+    if (!container) return;
+
+    const query = filterQuery.toLowerCase();
+
+    // Standard fonts
+    const filteredStandard = query
+        ? STANDARD_FONTS.filter(f => f.name.toLowerCase().includes(query) || f.desc.toLowerCase().includes(query))
+        : STANDARD_FONTS;
+
+    // Custom fonts
+    const filteredCustom = query
+        ? currentCustomFamilies.filter(f => f.toLowerCase().includes(query))
+        : currentCustomFamilies;
+
+    let html = '';
+
+    if (filteredStandard.length > 0) {
+        html += `<div class="px-2 py-1 text-[9.5px] font-bold text-slate-500 uppercase tracking-wider">Phông chữ tiêu chuẩn</div>`;
+        filteredStandard.forEach(font => {
+            html += `
+                <div class="font-picker-option px-2.5 py-1.5 rounded-lg hover:bg-indigo-600/20 hover:border-indigo-500/40 border border-transparent flex items-center justify-between cursor-pointer transition-colors group"
+                    data-family="${font.family}" data-name="${escapeHTML(font.name)}">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs font-semibold text-slate-200 group-hover:text-white truncate" style="font-family: ${font.family};">${font.name}</p>
+                        <p class="text-[9.5px] text-slate-500 group-hover:text-indigo-300 truncate">${font.desc}</p>
+                    </div>
+                    <span class="text-[9px] px-1 py-0.5 rounded bg-slate-800 text-slate-400 group-hover:bg-indigo-600 group-hover:text-white font-mono shrink-0 ml-2">Aa</span>
+                </div>
+            `;
+        });
+    }
+
+    if (filteredCustom.length > 0) {
+        html += `<div class="px-2 py-1.5 text-[9.5px] font-bold text-indigo-400 uppercase tracking-wider mt-1 border-t border-slate-850">Phông chữ tùy chỉnh (${filteredCustom.length})</div>`;
+        filteredCustom.forEach(family => {
+            const safeFamily = escapeHTML(family);
+            html += `
+                <div class="font-picker-option px-2.5 py-1.5 rounded-lg hover:bg-indigo-600/20 hover:border-indigo-500/40 border border-transparent flex items-center justify-between cursor-pointer transition-colors group"
+                    data-family="${safeFamily}" data-name="${safeFamily}">
+                    <div class="min-w-0 flex-1">
+                        <p class="text-xs font-bold text-indigo-200 group-hover:text-white truncate" style="font-family: '${safeFamily}';">${safeFamily}</p>
+                        <p class="text-[9px] text-slate-500 font-mono">Custom Font</p>
+                    </div>
+                    <span class="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 group-hover:bg-indigo-600 group-hover:text-white font-mono shrink-0 ml-2">Tùy chỉnh</span>
+                </div>
+            `;
+        });
+    }
+
+    if (filteredStandard.length === 0 && filteredCustom.length === 0) {
+        html = `<div class="text-center py-4 text-slate-500 text-xs italic">Không tìm thấy phông chữ phù hợp.</div>`;
+    }
+
+    container.innerHTML = html;
+
+    // Bind Hover and Click events for instant live-preview
+    container.querySelectorAll('.font-picker-option').forEach(el => {
+        const item = el as HTMLElement;
+        const family = item.dataset.family || '';
+        const name = item.dataset.name || family;
+
+        // Hover -> Instant Live Preview on Canvas
+        item.addEventListener('mouseenter', () => {
+            previewHoverFont(family);
+        });
+
+        // Click -> Permanent Confirmation
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            commitFontSelection(family, name);
+        });
+    });
+}

@@ -1649,20 +1649,41 @@
                             onchange="uploadCustomFonts(this.files)">
                     </div>
 
-                    <!-- Font Family Select -->
-                    <select id="style-font" onchange="syncActiveBlockStyle('fontFamily', this.value)"
-                        class="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 font-medium">
-                        <option value="font-comic" selected>Vui nhộn (Patrick Hand)</option>
-                        <option value="font-comicneue">Comic mượt (Comic Neue)</option>
-                        <option value="font-manga">Chuẩn Manga (Nunito Bold)</option>
-                        <option value="font-vietnamese">Việt tối ưu (Be Vietnam Pro)</option>
-                        <option value="font-impact">Kỳ vĩ / SFX (Bangers)</option>
-                        <option value="font-marker">Cọ vẽ / SFX Đậm (Permanent Marker)</option>
-                        <option value="font-bungee">SFX Khối vuông (Bungee)</option>
-                        <option value="font-caveat">SFX Viết tay (Caveat)</option>
-                        <option value="font-tech">Cơ khí / Robot (Chakra Petch)</option>
-                        <option value="font-condensed">Gào thét / Ghi chú (Saira Condensed)</option>
-                    </select>
+                    <!-- Interactive Live Hover-Preview Font Picker Component -->
+                    <div id="font-picker-container" class="relative w-full">
+                        <button type="button" id="font-picker-trigger"
+                            class="w-full bg-slate-900 hover:bg-slate-850 border border-slate-800 hover:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 flex items-center justify-between transition-all cursor-pointer shadow-sm focus:outline-none focus:border-indigo-500">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <i class="fa-solid fa-font text-indigo-400 text-[10px]"></i>
+                                <span id="font-picker-current-name" class="font-medium text-slate-200 truncate">Chuẩn Manga (Nunito Bold)</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-down text-[8px] text-slate-400"></i>
+                        </button>
+
+                        <div id="font-picker-dropdown" class="hidden absolute left-0 right-0 top-9 z-50 bg-slate-950/98 border border-slate-700/80 rounded-xl shadow-2xl backdrop-blur-xl p-1.5 flex flex-col max-h-72 overflow-y-auto animate-fade-in divide-y divide-slate-850">
+                            <div class="p-1 pb-1.5">
+                                <input type="text" id="font-picker-search" placeholder="🔍 Tìm phông chữ..."
+                                    class="w-full bg-slate-900 border border-slate-800 rounded-md px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div id="font-picker-items" class="pt-1 space-y-0.5 max-h-60 overflow-y-auto">
+                                <!-- Populated dynamically with live hover preview -->
+                            </div>
+                        </div>
+
+                        <!-- Hidden select for programmatic form sync & backwards compatibility -->
+                        <select id="style-font" onchange="syncActiveBlockStyle('fontFamily', this.value)" class="hidden">
+                            <option value="font-comic" selected>Vui nhộn (Patrick Hand)</option>
+                            <option value="font-comicneue">Comic mượt (Comic Neue)</option>
+                            <option value="font-manga">Chuẩn Manga (Nunito Bold)</option>
+                            <option value="font-vietnamese">Việt tối ưu (Be Vietnam Pro)</option>
+                            <option value="font-impact">Kỳ vĩ / SFX (Bangers)</option>
+                            <option value="font-marker">Cọ vẽ / SFX Đậm (Permanent Marker)</option>
+                            <option value="font-bungee">SFX Khối vuông (Bungee)</option>
+                            <option value="font-caveat">SFX Viết tay (Caveat)</option>
+                            <option value="font-tech">Cơ khí / Robot (Chakra Petch)</option>
+                            <option value="font-condensed">Gào thét / Ghi chú (Saira Condensed)</option>
+                        </select>
+                    </div>
 
                     <!-- Cỡ chữ Slider + Auto-Fit Checkbox -->
                     <div id="style-font-size-container" class="space-y-1 pt-1">

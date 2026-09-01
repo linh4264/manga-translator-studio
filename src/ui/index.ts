@@ -48,7 +48,7 @@ import {
 } from './preview-ui';
 import { toggleExportModalFit } from '../features/io';
 
-import { populateCustomFontsDropdown, registerCustomFont, uploadCustomFonts } from './font-ui';
+import { populateCustomFontsDropdown, registerCustomFont, uploadCustomFonts, initFontLivePreviewPicker, updateFontPickerDisplay, closeFontPickerDropdown } from './font-ui';
 
 import {
     openLorebookModal, closeLorebookModal, switchLorebookTab,
@@ -96,6 +96,7 @@ export {
     executeGDriveExportFromPreview, executeSinglePageExportFromPreview, copyPreviewPageToClipboard, renderPreviewViewport,
     toggleExportModalFit,
     populateCustomFontsDropdown, registerCustomFont, uploadCustomFonts,
+    initFontLivePreviewPicker, updateFontPickerDisplay, closeFontPickerDropdown,
     openLorebookModal, closeLorebookModal, switchLorebookTab,
     renderCharacterDossierUI, addCharacterDossierEntry, removeCharacterDossierEntry,
     renderLorebookUI, addLorebookTermEntry, removeLorebookTermEntry,

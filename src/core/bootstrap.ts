@@ -19,7 +19,7 @@ import {
     fetchGeminiModels
 } from '../ui/settings-ui';
 import { selectPage, updatePageListUI, triggerReplaceBgImage } from '../ui/pages-ui';
-import { populateCustomFontsDropdown } from '../ui/font-ui';
+import { populateCustomFontsDropdown, initFontLivePreviewPicker } from '../ui/font-ui';
 import { setBilingualMode } from '../ui/block-editor-ui';
 import {
     openPreviewMode,
@@ -222,6 +222,7 @@ export async function initApplication(): Promise<void> {
         await initDB();
         await loadAndRegisterCustomFonts();
         await populateCustomFontsDropdown();
+        initFontLivePreviewPicker();
 
         // 1. NẠP TỪ VỰNG TOEIC ĐỘC LẬP
         try {
