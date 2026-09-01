@@ -80,10 +80,15 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
         const pagesNeedingOcr: number[] = [];
         for (let i = 0; i < totalPages; i++) {
             const p = pages[i];
+            // If page is already completed or has valid translated blocks, skip OCR to avoid shifting boxes
+            if (p.status === 'done' && p.blocks && p.blocks.length > 0 && p.blocks.some(b => b.translated && b.translated.trim())) {
+                continue;
+            }
             if (!p.blocks || p.blocks.length === 0 || !p.blocks.some(b => b.original && b.original.trim())) {
                 pagesNeedingOcr.push(i);
             }
         }
+
 
         if (pagesNeedingOcr.length > 0) {
             const ocrModelToUse = aiConfig.ocrModel || 'gemini-2.5-flash';
@@ -291,7 +296,8 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
             });
 
             pages.forEach((p, i) => {
-                if (p.blocks) {
+                if (p.blocks && p.blocks.length > 0) {
+                    const imgEl = elements.mangaBgImage;
                     p.blocks.forEach((b, bIdx) => {
                         const expectedId = `p${i + 1}_b${bIdx + 1}`;
                         const rawTrans = lookupMap.get(String(b.id)) ||
@@ -306,14 +312,34 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
                                 target: b.target
                             });
                         }
+
+                        b.autoFitCache = null;
+                        if (isBlockAutoFit(b)) {
+                            autoFitBlock(b, imgEl, 1, p);
+                        }
                     });
+
+                    p.status = 'done';
+                    p.lastError = null;
+                    p.failedStep = null;
+                    savePageToDB(p);
+                } else {
+                    p.status = 'done';
+                    p.lastError = null;
+                    p.failedStep = null;
                     savePageToDB(p);
                 }
             });
         } else {
             // All blocks were either already translated or retrieved from cache
-            pages.forEach(p => savePageToDB(p));
+            pages.forEach(p => {
+                p.status = 'done';
+                p.lastError = null;
+                p.failedStep = null;
+                savePageToDB(p);
+            });
         }
+
 
         updateStageStatus('translate', 'completed');
         setPipelineStage('review');

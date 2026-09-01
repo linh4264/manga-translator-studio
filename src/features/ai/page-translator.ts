@@ -43,29 +43,52 @@ import { getAiConfig, getTranslationContext } from './ai-state';
 import { setCachedTranslationsBatch } from './translation-cache';
 
 
-export async function translateActivePage(): Promise<void> {
+export async function translateActivePage(force: boolean = false): Promise<void> {
     if (globalState.activePageIndex === -1) {
         showToast("Vui lòng chọn một trang trước khi dịch.", "warn");
         return;
     }
 
-    await translatePage(globalState.activePageIndex, true);
+    const page = globalState.pages[globalState.activePageIndex];
+    if (page && !force && page.status !== 'error' && (page.status === 'done' || (page.blocks && page.blocks.length > 0 && page.blocks.some(b => b.translated && b.translated.trim())))) {
+        showToast(`Trang ${globalState.activePageIndex + 1} đã được dịch hoàn tất! Giữ nguyên toàn bộ vị trí ô thoại.`, "info");
+        return;
+    }
+
+    await translatePage(globalState.activePageIndex, false, force);
 }
 
-export async function translateSinglePageInBatch(index: number): Promise<void> {
+export async function translateSinglePageInBatch(index: number, force: boolean = false): Promise<void> {
     if (isBatchTranslating) {
         showToast("Tiến trình dịch hàng loạt đang chạy. Vui lòng dừng hoặc chờ hoàn tất trước.", "warn");
         return;
     }
 
-    await translatePage(index, true);
+    const page = globalState.pages[index];
+    if (page && !force && page.status !== 'error' && (page.status === 'done' || (page.blocks && page.blocks.length > 0 && page.blocks.some(b => b.translated && b.translated.trim())))) {
+        showToast(`Trang ${index + 1} đã được dịch hoàn tất! Giữ nguyên toàn bộ vị trí ô thoại.`, "info");
+        return;
+    }
+
+    await translatePage(index, true, force);
 }
 
-export async function translatePage(pageIndex: number, isBackgroundMode: boolean = false): Promise<boolean> {
+export async function translatePage(pageIndex: number, isBackgroundMode: boolean = false, force: boolean = false): Promise<boolean> {
     if (pageIndex < 0 || pageIndex >= globalState.pages.length) return false;
     const page = globalState.pages[pageIndex];
 
+    // If page is already translated and has valid translated blocks, do not re-run or overwrite positions unless forced
+    const isAlreadyTranslated = (page.status === 'done' || (page.blocks && page.blocks.length > 0 && page.blocks.some(b => b.translated && b.translated.trim())));
+    if (isAlreadyTranslated && !force && page.status !== 'error') {
+        page.status = 'done';
+        savePageToDB(page);
+        uiUpdatePageListUI();
+        showToast(`Trang ${pageIndex + 1} đã được dịch hoàn tất! Giữ nguyên toàn bộ vị trí ô thoại.`, "info");
+        return true;
+    }
+
     await activatePage(page);
+
 
     const aiConfig = getAiConfig();
     const ctx = getTranslationContext();
@@ -380,9 +403,16 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
         page.blocks = (finalBlocks || []).map((b, idx) => {
             const blockType = b.type || 'dialogue';
             const textAnchor = b.textAnchor || extractTextAnchor(b.box);
-            const normalisedBox = b.positionKnown === false
-                ? { ...DEFAULT_AI_BLOCK_BOX }
-                : refineAiBlockBox(b.box, pageImageData, globalState.selectedModel, blockType);
+
+            let normalisedBox = b.box;
+            if (!hasExistingBlocks) {
+                normalisedBox = b.positionKnown === false
+                    ? { ...DEFAULT_AI_BLOCK_BOX }
+                    : refineAiBlockBox(b.box, pageImageData, globalState.selectedModel, blockType);
+            } else if (!normalisedBox) {
+                normalisedBox = { ...DEFAULT_AI_BLOCK_BOX };
+            }
+
 
             const blockVertical = isVerticalTarget
                 ? (typeof b.vertical === 'boolean' ? b.vertical : ((b.style && typeof b.style.vertical === 'boolean') ? b.style.vertical : true))
