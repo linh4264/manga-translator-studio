@@ -57,6 +57,11 @@ import {
     exportLorebookJSON, importLorebookJSON
 } from './lorebook-ui';
 
+import { initPipelineHeader, renderPipelineHeaderStepper } from './pipeline-header-ui';
+import { openScriptReviewModal, closeScriptReviewModal, renderScriptReviewContent } from './script-review-ui';
+import { openQcModal, closeQcModal, renderQcContent } from './qc-ui';
+import { openExportHubModal, closeExportHubModal, renderExportHubContent } from './export-hub-ui';
+
 import { globalState, stateEvents, debounceSavePage } from '../core/state';
 import { CUSTOM_MODEL_VALUE } from '../config/constants';
 import { globalBus } from '../core/events';
@@ -94,7 +99,11 @@ export {
     openLorebookModal, closeLorebookModal, switchLorebookTab,
     renderCharacterDossierUI, addCharacterDossierEntry, removeCharacterDossierEntry,
     renderLorebookUI, addLorebookTermEntry, removeLorebookTermEntry,
-    exportLorebookJSON, importLorebookJSON
+    exportLorebookJSON, importLorebookJSON,
+    initPipelineHeader, renderPipelineHeaderStepper,
+    openScriptReviewModal, closeScriptReviewModal, renderScriptReviewContent,
+    openQcModal, closeQcModal, renderQcContent,
+    openExportHubModal, closeExportHubModal, renderExportHubContent
 };
 
 export async function updateUndoRedoUI(): Promise<void> {

@@ -68,112 +68,86 @@
 
     <!-- TOP APP STUDIO HEADER -->
     <header id="app-header"
-        class="h-12 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-3.5 shrink-0 z-30 select-none">
-        <!-- Left: Brand Logo & Title -->
-        <div class="flex items-center gap-3 min-w-0">
+        class="h-12 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 flex items-center justify-between px-3 shrink-0 z-30 select-none">
+        
+        <!-- Left: Brand Logo & Chapter Info -->
+        <div class="flex items-center gap-2.5 min-w-0">
             <div class="flex items-center gap-2">
-                <div
-                    class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md shrink-0">
-                    <span class="text-sm">📖</span>
+                <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md shrink-0">
+                    <span class="text-xs">📖</span>
                 </div>
                 <div>
-                    <div class="flex items-center gap-1.5">
-                        <span class="font-extrabold text-[13px] tracking-tight text-white leading-none">Manga Translator
-                            Studio</span>
-                        <span
-                            class="text-[8.5px] px-1 py-0.2 rounded font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 leading-none">AI
-                            Pro</span>
+                    <div class="flex items-center gap-1.5 leading-none">
+                        <span class="font-extrabold text-[12.5px] tracking-tight text-white">Manga Studio</span>
+                        <span class="text-[8px] px-1 py-0.2 rounded font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Pipeline</span>
                     </div>
-                    <div class="flex items-center gap-1.5 text-[9.5px] text-slate-400 mt-0.5 leading-none">
-                        <span id="header-page-count-text" class="font-medium text-slate-300">Chưa có trang</span>
+                    <div class="flex items-center gap-1 text-[9px] text-slate-400 mt-0.5 leading-none">
+                        <span id="header-page-count-text" class="font-medium text-slate-300 truncate max-w-[100px]">Chưa có trang</span>
                         <span class="text-slate-600">•</span>
-                        <span class="text-emerald-400 font-medium flex items-center gap-1"><i
-                                class="fa-solid fa-bolt text-[7px]"></i> Gemini AI</span>
+                        <span class="text-emerald-400 font-medium flex items-center gap-0.5"><i class="fa-solid fa-bolt text-[6.5px]"></i> AI</span>
                     </div>
                 </div>
             </div>
-
-            <!-- External Reader Site Link -->
-            <a href="https://drive-manga.pages.dev/" target="_blank" rel="noopener noreferrer"
-                class="hidden xl:inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 hover:text-emerald-200 text-[10.5px] font-semibold transition-all shadow-sm no-underline cursor-pointer"
-                title="Xem các bộ truyện mẫu được dịch & biên tập bởi Manga Translator Studio">
-                <i class="fa-solid fa-book-open-reader text-[10px] text-emerald-400"></i>
-                <span>Đọc truyện được edit bởi app</span>
-                <i class="fa-solid fa-arrow-up-right-from-square text-[8px] opacity-70"></i>
-            </a>
         </div>
 
-        <!-- Center: 3-Step Guided Workflow Stepper (Zero-to-Hero) -->
-        <div id="app-stepper"
-            class="hidden md:flex items-center gap-1 bg-slate-950/70 p-0.5 rounded-full border border-slate-800/80 shadow-inner">
-            <!-- Step 1: API Key -->
-            <button id="stepper-step-1" data-action="openSettingsModal"
-                class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-amber-500/15 border border-amber-500/40 text-amber-300 cursor-pointer animate-pulse hover:bg-amber-500/25 transition-all"
-                title="Cài đặt API Key Gemini">
-                <i id="stepper-step-1-icon" class="fa-solid fa-triangle-exclamation text-[10px] text-amber-400"></i>
-                <span id="stepper-step-1-text">1. Nhập API Key</span>
-            </button>
-
-            <i class="fa-solid fa-chevron-right text-[7px] text-slate-600 mx-0.5"></i>
-
-            <!-- Step 2: Upload Manga Pages -->
-            <button id="stepper-step-2" data-action="triggerUploadFiles"
-                class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-medium bg-slate-900 border border-slate-800 text-slate-400 cursor-pointer hover:border-slate-700 transition-all"
-                title="Tải ảnh truyện lên">
-                <i id="stepper-step-2-icon" class="fa-regular fa-images text-[10px] text-slate-500"></i>
-                <span id="stepper-step-2-text">2. Tải ảnh truyện</span>
-            </button>
-
-            <i class="fa-solid fa-chevron-right text-[7px] text-slate-600 mx-0.5"></i>
-
-            <!-- Step 3: Auto Translate & Export -->
-            <button id="stepper-step-3" data-action="triggerBatchTranslate"
-                class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-normal bg-slate-900/50 border border-slate-800/60 text-slate-500 cursor-pointer hover:border-slate-700 transition-all"
-                title="Bắt đầu dịch tự động và xuất truyện">
-                <i id="stepper-step-3-icon" class="fa-solid fa-bolt text-[10px] text-slate-600"></i>
-                <span id="stepper-step-3-text">3. Dịch & Xuất bản</span>
-            </button>
+        <!-- Center: Sleek 7-Step Pipeline Stepper -->
+        <div id="app-stepper" class="hidden md:flex items-center gap-0.5 bg-slate-950/80 px-2 py-0.5 rounded-full border border-slate-800/80 shadow-inner">
+            <!-- Dynamically populated by pipeline-header-ui.ts -->
         </div>
 
-        <!-- Right: Primary Action Buttons & Settings -->
+        <!-- Right: Primary Actions, Tools Menu & Settings -->
         <div class="flex items-center gap-1.5">
-            <!-- Demo Quick Load Button -->
-            <button data-action="loadDemoManga"
-                class="hidden sm:flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 text-[11px] font-semibold hover:text-white transition-all shadow-sm cursor-pointer"
-                title="Dùng thử ngay với 1 trang Manga mẫu (Demo)">
-                <i class="fa-solid fa-play text-amber-400 text-[9px]"></i>
-                <span>Thử ảnh Demo</span>
+            <!-- Smart CTA Button (Primary Action) -->
+            <button id="header-btn-batch-translate" data-action="runAutoPilotChapterPipeline"
+                class="h-7 px-3 rounded-lg bg-gradient-to-r from-pink-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-md hover:shadow-indigo-500/25 transition-all cursor-pointer">
+                <i class="fa-solid fa-bolt text-yellow-300 text-[10px]"></i>
+                <span>Auto-Pilot</span>
             </button>
 
-            <!-- Useful Tools Link -->
-            <a href="/cong-cu-huu-ich/" target="_blank"
-                class="hidden sm:flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-indigo-950/60 hover:bg-indigo-900/80 border border-indigo-500/40 text-indigo-200 hover:text-white text-[11px] font-semibold transition-all shadow-sm cursor-pointer no-underline"
-                title="Mở Bộ Công cụ Hữu ích (Chuyển PDF sang PNG, Cắt/Ghép Webtoon, Nén ảnh, v.v.)">
-                <i class="fa-solid fa-toolbox text-indigo-400 text-[10px]"></i>
-                <span>Công cụ hữu ích</span>
-            </a>
+            <!-- Tools Menu Dropdown Popover Container -->
+            <div class="relative">
+                <button id="btn-header-tools-menu" type="button"
+                    class="h-7 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-300 hover:text-white text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                    title="Menu Tiện ích & Công cụ">
+                    <i class="fa-solid fa-toolbox text-indigo-400 text-[10px]"></i>
+                    <span class="hidden sm:inline">Tiện ích</span>
+                    <i class="fa-solid fa-chevron-down text-[7px] text-slate-400 ml-0.5"></i>
+                </button>
 
-            <!-- Primary Batch Translate CTA -->
-            <button id="header-btn-batch-translate" data-action="triggerBatchTranslate" disabled
-                class="h-7 px-3 rounded-lg bg-gradient-to-r from-pink-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-md hover:shadow-indigo-500/20 transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-                title="Dịch tự động toàn bộ các trang bằng AI (Batch Translate)">
-                <i class="fa-solid fa-wand-magic-sparkles text-yellow-300 text-[11px]"></i>
-                <span>Dịch tất cả</span>
-            </button>
-
-            <!-- Export Dropdown / Action -->
-            <button id="header-btn-batch-export" onclick="openExportZipPreview()" disabled
-                class="h-7 px-2.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-sm transition-all disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
-                title="Xem trước và Xuất gói ZIP truyện đã dịch">
-                <i class="fa-solid fa-download text-[11px] text-sky-100"></i>
-                <span class="hidden sm:inline">Xuất</span>
-            </button>
+                <div id="header-tools-dropdown" class="hidden absolute right-0 top-8.5 z-50 w-52 bg-slate-950/95 border border-slate-800 rounded-xl shadow-2xl backdrop-blur-xl p-1.5 flex flex-col gap-0.5 animate-fade-in">
+                    <button data-action="loadDemoManga" class="w-full px-2.5 py-1.5 text-left text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg flex items-center gap-2 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-play text-amber-400 text-[10px] w-4 text-center"></i>
+                        <span>Thử ảnh Demo</span>
+                    </button>
+                    <button data-action="openScriptReviewModal" class="w-full px-2.5 py-1.5 text-left text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg flex items-center gap-2 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-pen-to-square text-indigo-400 text-[10px] w-4 text-center"></i>
+                        <span>Biên tập Kịch bản</span>
+                    </button>
+                    <button data-action="openQcModal" class="w-full px-2.5 py-1.5 text-left text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg flex items-center gap-2 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-shield-halved text-amber-400 text-[10px] w-4 text-center"></i>
+                        <span>Kiểm duyệt QC</span>
+                    </button>
+                    <button data-action="openExportHubModal" class="w-full px-2.5 py-1.5 text-left text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg flex items-center gap-2 transition-colors cursor-pointer">
+                        <i class="fa-solid fa-file-export text-emerald-400 text-[10px] w-4 text-center"></i>
+                        <span>Trung tâm Xuất bản</span>
+                    </button>
+                    <div class="h-px bg-slate-800 my-1"></div>
+                    <a href="/cong-cu-huu-ich/" target="_blank" class="w-full px-2.5 py-1.5 text-left text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg flex items-center gap-2 transition-colors no-underline">
+                        <i class="fa-solid fa-wrench text-sky-400 text-[10px] w-4 text-center"></i>
+                        <span>Bộ công cụ hữu ích</span>
+                    </a>
+                    <a href="https://drive-manga.pages.dev/" target="_blank" rel="noopener noreferrer" class="w-full px-2.5 py-1.5 text-left text-xs text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-lg flex items-center gap-2 transition-colors no-underline">
+                        <i class="fa-solid fa-book-open-reader text-emerald-400 text-[10px] w-4 text-center"></i>
+                        <span>Đọc truyện mẫu</span>
+                    </a>
+                </div>
+            </div>
 
             <div class="h-3.5 w-px bg-slate-800 mx-0.5"></div>
 
             <!-- Settings Button with API Status Dot -->
             <button data-action="openSettingsModal"
-                class="relative h-7 px-2.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                class="relative h-7 px-2.5 rounded-lg bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
                 title="Cài đặt API Key, Model & Quy tắc dịch">
                 <i class="fa-solid fa-gear text-indigo-400 text-[11px]"></i>
                 <span class="hidden md:inline">Cài đặt</span>
@@ -249,6 +223,30 @@
                     <!-- Hidden Fallback Folder Input -->
                     <input type="file" id="folder-upload-input" webkitdirectory directory multiple class="hidden"
                         onchange="import('../features/io.js').then(io => io.handleUploadedFiles(this.files))">
+                </div>
+
+                <!-- Chapter Production Pipeline Quick Trigger Bar -->
+                <div class="pt-1.5 border-t border-slate-800/80 grid grid-cols-3 gap-1">
+                    <button type="button" data-action="runAutoPilotChapterPipeline"
+                        class="h-6.5 px-1.5 rounded-lg bg-gradient-to-r from-pink-600/25 to-indigo-600/25 hover:from-pink-600/40 hover:to-indigo-600/40 border border-indigo-500/30 text-indigo-200 text-[10px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer truncate"
+                        title="Tự động hóa 100%: Quét OCR ➔ Dịch Chapter ➔ Typeset ➔ Quét QC">
+                        <i class="fa-solid fa-bolt text-yellow-400 text-[9px]"></i>
+                        <span>Auto-Pilot</span>
+                    </button>
+
+                    <button type="button" data-action="openScriptReviewModal"
+                        class="h-6.5 px-1.5 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 hover:text-white text-[10px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer truncate"
+                        title="Biên tập toàn bộ kịch bản Chapter dạng danh sách">
+                        <i class="fa-solid fa-pen-to-square text-indigo-400 text-[9px]"></i>
+                        <span>Kịch bản</span>
+                    </button>
+
+                    <button type="button" data-action="openQcModal"
+                        class="h-6.5 px-1.5 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 hover:text-white text-[10px] font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer truncate"
+                        title="Quét lỗi tràn chữ và kiểm duyệt QC trước khi xuất bản">
+                        <i class="fa-solid fa-shield-halved text-amber-400 text-[9px]"></i>
+                        <span>QC Linter</span>
+                    </button>
                 </div>
             </div>
 

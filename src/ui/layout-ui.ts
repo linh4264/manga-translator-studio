@@ -635,40 +635,51 @@ export function switchHelpTab(tabName: string): void {
 }
 
 export function updateStepperUI(): void {
-    const hasKey = !!(globalState.apiKey || localStorage.getItem('gemini_api_key'));
+    const hasKey = !!(
+        (globalState.apiKey && globalState.apiKey.trim().length > 0) ||
+        (localStorage.getItem('gemini_manga_api_key') && localStorage.getItem('gemini_manga_api_key')!.trim().length > 0) ||
+        (localStorage.getItem('gemini_api_key') && localStorage.getItem('gemini_api_key')!.trim().length > 0)
+    );
     const pageCount = globalState.pages?.length || 0;
     let translatedCount = 0;
     if (pageCount > 0) {
         translatedCount = globalState.pages.filter(p => p.blocks && p.blocks.some(b => b.translated && b.translated.trim().length > 0)).length;
     }
 
+    const headerApiKeyDot = document.getElementById('header-api-status-dot');
+    const emptyStateApiBanner = document.getElementById('empty-state-api-banner');
+
+    if (headerApiKeyDot) {
+        if (hasKey) {
+            headerApiKeyDot.className = "w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]";
+            headerApiKeyDot.setAttribute('title', 'API Key: Đã sẵn sàng');
+        } else {
+            headerApiKeyDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-ping";
+            headerApiKeyDot.setAttribute('title', 'API Key: Chưa nhập');
+        }
+    }
+
+    if (emptyStateApiBanner) {
+        if (hasKey) {
+            emptyStateApiBanner.classList.add('hidden');
+        } else {
+            emptyStateApiBanner.classList.remove('hidden');
+        }
+    }
+
     const step1Pill = document.getElementById('stepper-step-1');
     const step1Icon = document.getElementById('stepper-step-1-icon');
     const step1Text = document.getElementById('stepper-step-1-text');
-    const headerApiKeyDot = document.getElementById('header-api-status-dot');
-    const emptyStateApiBanner = document.getElementById('empty-state-api-banner');
 
     if (step1Pill && step1Icon && step1Text) {
         if (hasKey) {
             step1Pill.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 cursor-pointer hover:bg-emerald-500/20 transition-all";
             step1Icon.className = "fa-solid fa-circle-check text-[11px] text-emerald-400";
             step1Text.innerText = "1. API Key (Sẵn sàng)";
-            if (headerApiKeyDot) {
-                headerApiKeyDot.className = "w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]";
-            }
-            if (emptyStateApiBanner) {
-                emptyStateApiBanner.classList.add('hidden');
-            }
         } else {
             step1Pill.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 border border-amber-500/40 text-amber-300 cursor-pointer animate-pulse hover:bg-amber-500/25 transition-all";
             step1Icon.className = "fa-solid fa-triangle-exclamation text-[11px] text-amber-400";
             step1Text.innerText = "1. Nhập API Key (Chưa có)";
-            if (headerApiKeyDot) {
-                headerApiKeyDot.className = "w-2 h-2 rounded-full bg-amber-400 animate-ping";
-            }
-            if (emptyStateApiBanner) {
-                emptyStateApiBanner.classList.remove('hidden');
-            }
         }
     }
 

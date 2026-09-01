@@ -25,6 +25,10 @@ import * as fontUI from '../ui/font-ui';
 import * as settingsUI from '../ui/settings-ui';
 import * as previewUI from '../ui/preview-ui';
 import * as lorebookUI from '../ui/lorebook-ui';
+import * as scriptReviewUI from '../ui/script-review-ui';
+import * as qcUI from '../ui/qc-ui';
+import * as exportHubUI from '../ui/export-hub-ui';
+import * as pipelineOrchestrator from '../features/pipeline/pipeline-orchestrator';
 import { changeUILanguage } from './i18n';
 import { executeUndo, executeRedo } from './state';
 import { updateUndoRedoUI } from '../ui/index';
@@ -33,6 +37,16 @@ export function initGlobalBridge(): void {
     if (typeof window === 'undefined') return;
 
     Object.assign(window, {
+        // Pipeline Actions
+        openScriptReviewModal: scriptReviewUI.openScriptReviewModal,
+        closeScriptReviewModal: scriptReviewUI.closeScriptReviewModal,
+        openQcModal: qcUI.openQcModal,
+        closeQcModal: qcUI.closeQcModal,
+        openExportHubModal: exportHubUI.openExportHubModal,
+        closeExportHubModal: exportHubUI.closeExportHubModal,
+        runAutoPilotChapterPipeline: pipelineOrchestrator.runAutoPilotChapterPipeline,
+        stopAutoPilot: pipelineOrchestrator.stopAutoPilot,
+
         // UI & Layout
         updateStepperUI: layoutUI.updateStepperUI,
         fitCanvasToScreen: layoutUI.fitCanvasToScreen,

@@ -1704,3 +1704,56 @@ export function executeFindReplaceAll(): void {
 }
 
 export { runBatchExport as exportAllPagesZip };
+
+export function exportProjectBackupJSON(): void {
+    if (!globalState.pages || globalState.pages.length === 0) {
+        showToast("Chưa có dữ liệu dự án để xuất sao lưu.", "warn");
+        return;
+    }
+
+    const backupData = {
+        version: "2.5.0",
+        exportedAt: new Date().toISOString(),
+        settings: {
+            sourceLanguage: globalState.sourceLanguage,
+            targetLanguage: globalState.targetLanguage,
+            defaultFont: globalState.defaultFont,
+            defaultFontSize: globalState.defaultFontSize,
+            autoFitEnabled: globalState.autoFitEnabled,
+            preserveNames: globalState.preserveNames,
+            glossaryNames: globalState.glossaryNames,
+            pronounMatrix: globalState.pronounMatrix
+        },
+        characterDossier: globalState.characterDossier,
+        lorebook: globalState.lorebook,
+        pages: globalState.pages.map(p => ({
+            id: p.id,
+            name: p.name,
+            status: p.status,
+            width: p.width,
+            height: p.height,
+            blocks: (p.blocks || []).map(b => ({
+                id: b.id,
+                type: b.type,
+                original: b.original,
+                translated: b.translated,
+                box: b.box,
+                style: b.style,
+                speaker: b.speaker,
+                target: b.target,
+                vertical: b.vertical
+            }))
+        }))
+    };
+
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Manga_Project_Backup_${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("Đã xuất file sao lưu dự án (.JSON) thành công!", "success");
+}

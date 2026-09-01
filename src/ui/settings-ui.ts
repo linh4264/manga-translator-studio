@@ -506,6 +506,7 @@ export function closeSettingsModal(): void {
     }
     const modal = elements.settingsModal || document.getElementById('settings-modal');
     if (modal) modal.classList.add('hidden');
+    import('./layout-ui').then(m => m.updateStepperUI());
 }
 
 export function updateDefaultTypeFont(type: string, value: string): void {

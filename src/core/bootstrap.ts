@@ -52,7 +52,19 @@ export async function initApplication(): Promise<void> {
     // Initialize Centralized Global Bridge for HTML inline event handlers
     initGlobalBridge();
 
+    // Initialize 7-Step Chapter Production Pipeline Header
+    import('../ui/pipeline-header-ui').then(m => m.initPipelineHeader());
+
     // Register actions for global event delegation router
+    registerAction('openScriptReviewModal', () => import('../ui/script-review-ui').then(m => m.openScriptReviewModal()));
+    registerAction('closeScriptReviewModal', () => import('../ui/script-review-ui').then(m => m.closeScriptReviewModal()));
+    registerAction('openQcModal', () => import('../ui/qc-ui').then(m => m.openQcModal()));
+    registerAction('closeQcModal', () => import('../ui/qc-ui').then(m => m.closeQcModal()));
+    registerAction('openExportHubModal', () => import('../ui/export-hub-ui').then(m => m.openExportHubModal()));
+    registerAction('closeExportHubModal', () => import('../ui/export-hub-ui').then(m => m.closeExportHubModal()));
+    registerAction('runAutoPilotChapterPipeline', () => import('../features/pipeline/pipeline-orchestrator').then(m => m.runAutoPilotChapterPipeline()));
+    registerAction('stopAutoPilot', () => import('../features/pipeline/pipeline-orchestrator').then(m => m.stopAutoPilot()));
+
     registerAction('openSettingsModal', openSettingsModal);
     registerAction('closeSettingsModal', closeSettingsModal);
     registerAction('openPresetModal', () => openPresetModal('create'));

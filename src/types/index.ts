@@ -2,6 +2,9 @@
  * Manga Translator Studio - Type Definitions
  */
 
+export * from './pipeline-types';
+import { ChapterPipelineData } from './pipeline-types';
+
 export interface BoundingBox {
     x: number;
     y: number;
@@ -250,6 +253,7 @@ export interface GlobalState {
     dossierLorebookTab?: string;
     toeicTab?: string;
     isMobileHandMode?: boolean;
+    pipeline?: ChapterPipelineData;
 }
 
 export interface OcrBoundingBox {
