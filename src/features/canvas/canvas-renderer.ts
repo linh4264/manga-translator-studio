@@ -329,11 +329,23 @@ export function renderOverlays(
 
             if (!hasBubbleFitMask) {
                 coverMaskContent.style.backgroundImage = 'none';
-                coverMaskContent.style.backgroundColor = block.style.bgColor || '#FFFFFF';
-                const opacity = (block.style.bgOpacity !== undefined ? block.style.bgOpacity : 100) / 100;
-                coverMaskContent.style.opacity = `${opacity}`;
-                const rad = block.style.borderRadius !== undefined ? block.style.borderRadius : 4;
-                coverMaskContent.style.borderRadius = `${rad}px`;
+                if (currentMaskShape === 'none') {
+                    coverMaskContent.style.backgroundColor = 'transparent';
+                    coverMaskContent.style.opacity = '0';
+                } else {
+                    coverMaskContent.style.backgroundColor = block.style.bgColor || '#FFFFFF';
+                    const opacity = (block.style.bgOpacity !== undefined ? block.style.bgOpacity : 100) / 100;
+                    coverMaskContent.style.opacity = `${opacity}`;
+
+                    if (currentMaskShape === 'ellipse') {
+                        coverMaskContent.style.borderRadius = '50%';
+                    } else if (currentMaskShape === 'rounded') {
+                        coverMaskContent.style.borderRadius = '16px';
+                    } else {
+                        const rad = block.style.borderRadius !== undefined ? block.style.borderRadius : 0;
+                        coverMaskContent.style.borderRadius = `${rad}px`;
+                    }
+                }
             }
         }
 

@@ -286,6 +286,8 @@ function syncBlockStyleInputs(block: MangaBlock): void {
     if (fontSizeLbl) fontSizeLbl.innerText = `${block.style.fontSize || 17}px${isAutoFit ? ' (Auto)' : ''}`;
     if (elements.styleAlign) elements.styleAlign.value = block.style.align || 'center';
     if (elements.styleBold) elements.styleBold.checked = !!block.style.bold;
+    if (elements.styleMaskShape) elements.styleMaskShape.value = block.style.maskShape || 'bubble-fit';
+    if (elements.styleMaskSize) elements.styleMaskSize.value = block.style.maskSize || 'full';
 
     const alignVal = block.style.align || 'center';
     ['left', 'center', 'right'].forEach(a => {

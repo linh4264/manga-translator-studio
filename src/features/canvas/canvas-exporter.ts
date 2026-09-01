@@ -343,6 +343,10 @@ export async function renderPageToCanvas2DDirect(page: MangaPage, bgImageOverrid
             }
 
             const maskShape = block.style?.maskShape || 'bubble-fit';
+            if (maskShape === 'none') {
+                ctx.restore();
+                continue;
+            }
             const maskSize = block.style?.maskSize || 'full';
 
             const insetPad = Math.max(1, Math.round(scaleFactor * 0.8));
