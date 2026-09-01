@@ -66,11 +66,6 @@ try {
     }
 }
 
-function isSafePath(targetPath) {
-    const rel = path.relative(projectRoot, targetPath);
-    return rel === '' || (!rel.startsWith('..') && !path.isAbsolute(rel));
-}
-
 function resolveTsImports(code, currentDir) {
     return code
         .replace(/(import|export)\s+([\s\S]*?from\s+['"])([\.\/][^'"]+)(['"])/g, (match, p1, p2, p3, p4) => {
@@ -105,7 +100,7 @@ function resolveTsImports(code, currentDir) {
 }
 
 function getSafeRedirectUrl(targetRelativePath, query) {
-    const cleanPath = '/' + String(targetRelativePath || '').replace(/^[\/\\]+/, '') + '/';
+    const cleanPath = '/' + String(targetRelativePath || '').replace(/^[\\\/]+/, '').replace(/\\/g, '/') + '/';
     return query ? `${cleanPath}?${query}` : cleanPath;
 }
 
@@ -120,7 +115,7 @@ function resolveTargetFile(rawUrl) {
     const urlParts = decoded.split('?');
     const urlPathOnly = urlParts[0].split('#')[0];
     const cleanPath = urlPathOnly.replace(/\0/g, '');
-    const normalized = path.normalize(cleanPath).replace(/^[\/\\]+/, '').replace(/^(\.\.[\/\\])+/, '');
+    const normalized = path.normalize(cleanPath).replace(/^[\\\/]+/, '').replace(/^(\.\.[\\\/])+/, '');
     const queryString = urlParts.length > 1 ? urlParts[1].split('#')[0] : '';
 
     const segments = normalized.split(/[/\\]/).filter(Boolean);
@@ -148,11 +143,23 @@ function resolveTargetFile(rawUrl) {
                 return { status: 301, redirect: getSafeRedirectUrl(relPath, queryString) };
             }
             const indexHtml = path.join(targetFile, 'index.html');
-            if (isSafePath(indexHtml) && fs.existsSync(indexHtml)) return { status: 200, filePath: indexHtml };
+            const idxRel1 = path.relative(projectRoot, indexHtml);
+            if (!idxRel1.startsWith('..') && !path.isAbsolute(idxRel1) && fs.existsSync(indexHtml)) {
+                return { status: 200, filePath: indexHtml };
+            }
+
             const indexTs = path.join(targetFile, 'index.ts');
-            if (isSafePath(indexTs) && fs.existsSync(indexTs)) return { status: 200, filePath: indexTs };
+            const idxRel2 = path.relative(projectRoot, indexTs);
+            if (!idxRel2.startsWith('..') && !path.isAbsolute(idxRel2) && fs.existsSync(indexTs)) {
+                return { status: 200, filePath: indexTs };
+            }
+
             const indexJs = path.join(targetFile, 'index.js');
-            if (isSafePath(indexJs) && fs.existsSync(indexJs)) return { status: 200, filePath: indexJs };
+            const idxRel3 = path.relative(projectRoot, indexJs);
+            if (!idxRel3.startsWith('..') && !path.isAbsolute(idxRel3) && fs.existsSync(indexJs)) {
+                return { status: 200, filePath: indexJs };
+            }
+
             return { status: 404, error: 'Thư mục không có tệp tin khởi đầu.' };
         }
         return { status: 200, filePath: targetFile };
@@ -169,16 +176,22 @@ function resolveTargetFile(rawUrl) {
     ];
 
     for (const cand of candidates) {
-        if (isSafePath(cand) && fs.existsSync(cand)) {
-            const candStat = fs.statSync(cand);
-            if (candStat.isDirectory()) {
-                if (!urlPathOnly.endsWith('/')) {
-                    return { status: 301, redirect: getSafeRedirectUrl(relPath, queryString) };
+        const candRel = path.relative(projectRoot, cand);
+        if (!candRel.startsWith('..') && !path.isAbsolute(candRel)) {
+            if (fs.existsSync(cand)) {
+                const candStat = fs.statSync(cand);
+                if (candStat.isDirectory()) {
+                    if (!urlPathOnly.endsWith('/')) {
+                        return { status: 301, redirect: getSafeRedirectUrl(relPath, queryString) };
+                    }
+                    const subIndex = path.join(cand, 'index.html');
+                    const subRel = path.relative(projectRoot, subIndex);
+                    if (!subRel.startsWith('..') && !path.isAbsolute(subRel) && fs.existsSync(subIndex)) {
+                        return { status: 200, filePath: subIndex };
+                    }
+                } else {
+                    return { status: 200, filePath: cand };
                 }
-                const subIndex = path.join(cand, 'index.html');
-                if (isSafePath(subIndex) && fs.existsSync(subIndex)) return { status: 200, filePath: subIndex };
-            } else {
-                return { status: 200, filePath: cand };
             }
         }
     }
@@ -201,11 +214,21 @@ const server = http.createServer((req, res) => {
     const resolved = resolveTargetFile(req.url || '/');
 
     if (resolved.status === 301 && resolved.redirect) {
-        res.writeHead(301, {
-            'Location': resolved.redirect,
-            'Content-Type': 'text/plain; charset=utf-8'
-        });
-        res.end(`Redirecting to ${escapeHTML(resolved.redirect)}`);
+        const rawRedirect = String(resolved.redirect || '/');
+        const safeRedirect = '/' + rawRedirect.replace(/^[\\\/]+/, '').replace(/\\/g, '/');
+        if (safeRedirect.startsWith('/') && !safeRedirect.startsWith('//')) {
+            res.writeHead(301, {
+                'Location': safeRedirect,
+                'Content-Type': 'text/plain; charset=utf-8'
+            });
+            res.end(`Redirecting to ${escapeHTML(safeRedirect)}`);
+        } else {
+            res.writeHead(301, {
+                'Location': '/',
+                'Content-Type': 'text/plain; charset=utf-8'
+            });
+            res.end('Redirecting to /');
+        }
         return;
     }
 
@@ -230,6 +253,14 @@ const server = http.createServer((req, res) => {
     }
 
     const filePath = resolved.filePath;
+    const fileRel = path.relative(projectRoot, filePath);
+    if (fileRel.startsWith('..') || path.isAbsolute(fileRel)) {
+        res.statusCode = 403;
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.end('403 Cấm truy cập: Yêu cầu ngoài phạm vi thư mục dự án.');
+        return;
+    }
+
     const ext = path.extname(filePath).toLowerCase();
 
     if (ext === '.ts') {
