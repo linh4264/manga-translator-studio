@@ -4,6 +4,7 @@ import { showToast, setMultilineText, stripRichTextTags, parseRichTextLines, ext
 import { computeBubbleMask } from '../ocr/ocr-service';
 import { autoFitAllBlocksOnPage, autoFitBlock, isBlockAutoFit } from './canvas-styling';
 import { startBlockDrag, startBlockResize } from './canvas-interactions';
+import { isNumberingModeActive, getNumberedIndex, handleNumberingClick } from './block-reorder';
 import { MangaBlock, MangaPage } from '../../types/index';
 export { getReferenceDisplayDimensions } from './canvas-exporter';
 import { getReferenceDisplayDimensions } from './canvas-exporter';
@@ -630,6 +631,26 @@ export function renderOverlays(
 
             bubble.setAttribute('data-original', block.original || '');
             bubble.setAttribute('data-translated', block.translated || '');
+
+            let numBadge = bubble.querySelector(':scope > .numbering-mode-badge') as HTMLElement | null;
+            if (isNumberingModeActive()) {
+                const numIdx = getNumberedIndex(block.id);
+                if (!numBadge) {
+                    numBadge = document.createElement('div');
+                    numBadge.className = 'numbering-mode-badge';
+                    bubble.appendChild(numBadge);
+                }
+                if (numIdx !== null) {
+                    numBadge.className = 'numbering-mode-badge absolute -top-3 -left-3 z-30 min-w-[24px] h-[24px] px-1 rounded-full bg-emerald-600 border-2 border-white text-white font-extrabold text-[11px] flex items-center justify-center shadow-lg pointer-events-none animate-pulse';
+                    numBadge.textContent = `#${numIdx}`;
+                } else {
+                    numBadge.className = 'numbering-mode-badge absolute -top-3 -left-3 z-30 min-w-[24px] h-[24px] px-1 rounded-full bg-slate-900/90 border-2 border-indigo-400 text-indigo-300 font-bold text-[11px] flex items-center justify-center shadow pointer-events-none';
+                    numBadge.textContent = '?';
+                }
+                numBadge.style.display = 'flex';
+            } else if (numBadge) {
+                numBadge.style.display = 'none';
+            }
         }
 
         if (isNewBubble) {
@@ -641,6 +662,13 @@ export function renderOverlays(
                         ? globalState.pages[globalState.activePageIndex]
                         : null;
                     const liveBlock = activePage?.blocks.find(b => b.id === block.id) || block;
+
+                    if (isNumberingModeActive()) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleNumberingClick(liveBlock.id);
+                        return;
+                    }
 
                     if (now - lastMousedownTime < 350) {
                         lastMousedownTime = 0;
@@ -667,6 +695,13 @@ export function renderOverlays(
                         ? globalState.pages[globalState.activePageIndex]
                         : null;
                     const liveBlock = activePage?.blocks.find(b => b.id === block.id) || block;
+
+                    if (isNumberingModeActive()) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleNumberingClick(liveBlock.id);
+                        return;
+                    }
 
                     if (now - lastTouchTime < 350) {
                         lastTouchTime = 0;

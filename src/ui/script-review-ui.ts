@@ -10,6 +10,8 @@ import { getConfiguredApiEndpoint, getGeminiGenerateContentUrl } from '../featur
 import { executeAiJsonRequestWithRetry } from '../features/ai/ai-client';
 import { parseGeminiJsonText } from '../core/utils/json';
 import { requestOverlayRender } from '../features/canvas/canvas-service';
+import { moveBlockOrder } from '../features/canvas/block-reorder';
+import { sortMangaReadingOrder, sortManhwaReadingOrder } from '../features/ocr/ocr-service';
 import { setPipelineStage, updateStageStatus } from '../features/pipeline/pipeline-manager';
 import { runChapterQcScan } from '../features/pipeline/qc-linter';
 import { openQcModal } from './qc-ui';
@@ -196,15 +198,23 @@ export function renderScriptReviewContent(): void {
 
         html += `
             <div class="bg-slate-950/60 border border-slate-800/80 rounded-xl overflow-hidden shadow-sm mb-4">
-                <div class="px-4 py-2 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between">
+                <div class="px-4 py-2 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between flex-wrap gap-2">
                     <div class="flex items-center gap-2">
                         <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
                         <span class="text-xs font-bold text-slate-200">Trang ${pageIndex + 1}</span>
                         <span class="text-[11px] text-slate-500 font-mono">(${page.name || `Trang_${pageIndex + 1}`})</span>
+                        <span class="text-[10.5px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-medium">
+                            ${blocks.length} ô thoại
+                        </span>
                     </div>
-                    <span class="text-[10.5px] px-2 py-0.5 rounded bg-slate-800 text-slate-400 font-medium">
-                        ${blocks.length} ô thoại
-                    </span>
+                    <div class="flex items-center gap-1.5">
+                        <button class="btn-sort-script-manga text-[10.5px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 flex items-center gap-1 cursor-pointer transition-all" data-page="${pageIndex}" title="Sắp xếp lại thứ tự từ Phải qua Trái (Manga)">
+                            <i class="fa-solid fa-arrow-left text-[9px] text-pink-400"></i> Phải qua Trái
+                        </button>
+                        <button class="btn-sort-script-manhwa text-[10.5px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 flex items-center gap-1 cursor-pointer transition-all" data-page="${pageIndex}" title="Sắp xếp lại thứ tự từ Trên xuống Dưới (Webtoon)">
+                            <i class="fa-solid fa-arrow-down text-[9px] text-indigo-400"></i> Trên xuống Dưới
+                        </button>
+                    </div>
                 </div>
 
                 <div class="divide-y divide-slate-800/50 p-2 sm:p-3 space-y-2">
@@ -218,9 +228,20 @@ export function renderScriptReviewContent(): void {
 
                         return `
                             <div class="p-2.5 rounded-lg bg-slate-900/40 hover:bg-slate-900/80 border border-slate-800/50 transition-all flex flex-col md:flex-row items-start gap-3" data-page="${pageIndex}" data-block="${block.id}">
-                                <!-- Left: Meta & Type -->
-                                <div class="w-full md:w-32 shrink-0 flex md:flex-col items-center md:items-start justify-between gap-1">
-                                    <span class="text-[10px] font-mono text-indigo-400 font-bold">[${blockId}]</span>
+                                <!-- Left: Meta & Type & Order Arrows -->
+                                <div class="w-full md:w-36 shrink-0 flex md:flex-col items-center md:items-start justify-between gap-1.5">
+                                    <div class="flex items-center gap-1">
+                                        <span class="text-[10px] font-mono text-indigo-400 font-bold">[${blockId}]</span>
+                                        <div class="flex items-center bg-slate-950 rounded border border-slate-800 p-0.5">
+                                            <button class="btn-script-move-up p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer disabled:opacity-20 disabled:pointer-events-none" data-page="${pageIndex}" data-block="${block.id}" ${blockIndex === 0 ? 'disabled' : ''} title="Đẩy lên trước">
+                                                <i class="fa-solid fa-chevron-up text-[9px]"></i>
+                                            </button>
+                                            <span class="text-[9.5px] font-mono font-bold text-slate-300 px-1">#${blockIndex + 1}</span>
+                                            <button class="btn-script-move-down p-0.5 rounded hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer disabled:opacity-20 disabled:pointer-events-none" data-page="${pageIndex}" data-block="${block.id}" ${blockIndex === matchingBlocks.length - 1 ? 'disabled' : ''} title="Đẩy xuống sau">
+                                                <i class="fa-solid fa-chevron-down text-[9px]"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                     <span class="text-[9.5px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/50 font-medium">${typeLabel}</span>
                                 </div>
 
@@ -286,6 +307,60 @@ export function renderScriptReviewContent(): void {
                     block.autoFitCache = null;
                     debounceSavePage(page);
                 }
+            }
+        });
+    });
+
+    // Bind Block Move Up/Down buttons
+    container.querySelectorAll('.btn-script-move-up').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const target = (e.currentTarget as HTMLElement);
+            const pageIndex = parseInt(target.getAttribute('data-page') || '0', 10);
+            const blockId = target.getAttribute('data-block') || '';
+            moveBlockOrder(pageIndex, blockId, 'up');
+            renderScriptReviewContent();
+        });
+    });
+
+    container.querySelectorAll('.btn-script-move-down').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const target = (e.currentTarget as HTMLElement);
+            const pageIndex = parseInt(target.getAttribute('data-page') || '0', 10);
+            const blockId = target.getAttribute('data-block') || '';
+            moveBlockOrder(pageIndex, blockId, 'down');
+            renderScriptReviewContent();
+        });
+    });
+
+    // Bind Page-level Manga/Manhwa Sort buttons
+    container.querySelectorAll('.btn-sort-script-manga').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const target = (e.currentTarget as HTMLElement);
+            const pageIndex = parseInt(target.getAttribute('data-page') || '0', 10);
+            const page = globalState.pages[pageIndex];
+            if (page && page.blocks && page.blocks.length > 1) {
+                const sorted = sortMangaReadingOrder(page.blocks);
+                page.blocks = sorted.map((b, idx) => ({ ...b, id: `p${pageIndex + 1}_b${idx + 1}` }));
+                savePageToDB(page);
+                requestOverlayRender();
+                showToast(`Đã sắp xếp Trang ${pageIndex + 1} theo Manga (Phải qua Trái)!`, "success");
+                renderScriptReviewContent();
+            }
+        });
+    });
+
+    container.querySelectorAll('.btn-sort-script-manhwa').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const target = (e.currentTarget as HTMLElement);
+            const pageIndex = parseInt(target.getAttribute('data-page') || '0', 10);
+            const page = globalState.pages[pageIndex];
+            if (page && page.blocks && page.blocks.length > 1) {
+                const sorted = sortManhwaReadingOrder(page.blocks);
+                page.blocks = sorted.map((b, idx) => ({ ...b, id: `p${pageIndex + 1}_b${idx + 1}` }));
+                savePageToDB(page);
+                requestOverlayRender();
+                showToast(`Đã sắp xếp Trang ${pageIndex + 1} theo Webtoon (Trên xuống Dưới)!`, "success");
+                renderScriptReviewContent();
             }
         });
     });

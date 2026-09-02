@@ -5,4 +5,5 @@ export * from './canvas-interactions';
 export * from './canvas-styling';
 export * from './canvas-actions';
 export * from './magic-wand';
+export * from './block-reorder';
 

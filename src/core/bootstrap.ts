@@ -164,6 +164,9 @@ export async function initApplication(): Promise<void> {
     registerAction('addNewBlock', () => import('../features/canvas/canvas-service').then(m => m.addNewBlock()));
     registerAction('triggerAddImageBlock', () => import('../features/canvas/canvas-service').then(m => m.triggerAddImageBlock()));
     registerAction('toggleMagicWandMode', () => import('../features/canvas/canvas-service').then(m => m.toggleMagicWandMode()));
+    registerAction('toggleNumberingMode', () => import('../features/canvas/canvas-service').then(m => m.toggleNumberingMode()));
+    registerAction('applyMangaSortToActivePage', () => import('../features/canvas/canvas-service').then(m => m.applyMangaSortToActivePage()));
+    registerAction('applyManhwaSortToActivePage', () => import('../features/canvas/canvas-service').then(m => m.applyManhwaSortToActivePage()));
     registerAction('executeUndo', () => import('../core/state').then(s => s.executeUndo()));
     registerAction('executeRedo', () => import('../core/state').then(s => s.executeRedo()));
     initEventDelegation();

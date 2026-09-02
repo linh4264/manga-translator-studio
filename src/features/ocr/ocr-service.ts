@@ -1289,24 +1289,20 @@ export function sortMangaReadingOrder<T extends { box?: any }>(blocks: T[]): T[]
         const cA = getCenter(a);
         const cB = getCenter(b);
 
-        // 1. Horizontal distance (Right to Left priority: higher X comes first in Manga)
-        const xDiff = cB.x - cA.x;
-
-        // If blocks are in distinct horizontal columns/panels (> 10% width difference),
-        // the right panel/column takes absolute priority (Manga RTL flow).
-        if (Math.abs(xDiff) > 10) {
-            return xDiff;
-        }
-
-        // 2. In the same vertical column/strip (horizontal diff <= 10%),
-        // the upper bubble comes first (Top to Bottom: smaller Y comes first).
+        // 1. Vertical tier difference (Top to Bottom across panel rows / horizontal bands)
         const yDiff = cA.y - cB.y;
-        if (Math.abs(yDiff) > 5) {
+        if (Math.abs(yDiff) > 8) {
             return yDiff;
         }
 
-        // 3. Fallback: rightmost still takes priority
-        return xDiff;
+        // 2. Horizontal difference in the same tier (Right to Left in Manga)
+        const xDiff = cB.x - cA.x;
+        if (Math.abs(xDiff) > 3) {
+            return xDiff;
+        }
+
+        // 3. Tie-breaker
+        return yDiff;
     });
 }
 
