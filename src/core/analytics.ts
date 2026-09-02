@@ -2,14 +2,16 @@
  * Telemetry & Funnel Analytics for Manga Translator Studio
  * Client-side event tracking -> Cloudflare Worker -> Google Sheets
  */
+import { globalState } from './state';
 
-// Thay bằng URL Cloudflare Worker của bạn sau khi deploy
 export const TELEMETRY_WORKER_URL = 'https://manga-telemetry.linh18961.workers.dev';
 
 export interface AnalyticsState {
     distinctId: string;
     sessionCount: number;
     completedChapters: number;
+    currentChapterNumber: number;
+    currentChapterHasExported: boolean;
     firstSeenAt: number;
 }
 
@@ -27,7 +29,6 @@ export interface AnalyticsEvent {
 class TelemetryTracker {
     private state: AnalyticsState;
     private queue: AnalyticsEvent[] = [];
-    private currentChapterPages = 0;
     private chapterStartTime = 0;
     private isFlushing = false;
     private endpointUrl = TELEMETRY_WORKER_URL;
@@ -51,6 +52,12 @@ class TelemetryTracker {
             if (raw) {
                 const parsed: AnalyticsState = JSON.parse(raw);
                 parsed.sessionCount = (parsed.sessionCount || 1) + 1;
+                if (!parsed.currentChapterNumber) {
+                    parsed.currentChapterNumber = (parsed.completedChapters || 0) + 1;
+                }
+                if (parsed.currentChapterHasExported === undefined) {
+                    parsed.currentChapterHasExported = false;
+                }
                 this.persistIdentity(parsed);
                 return parsed;
             }
@@ -60,6 +67,8 @@ class TelemetryTracker {
             distinctId: crypto.randomUUID(),
             sessionCount: 1,
             completedChapters: 0,
+            currentChapterNumber: 1,
+            currentChapterHasExported: false,
             firstSeenAt: Date.now()
         };
         this.persistIdentity(fresh);
@@ -86,17 +95,31 @@ class TelemetryTracker {
         } catch (_) { }
     }
 
+    private getCurrentPageCount(): number {
+        try {
+            if (globalState && Array.isArray(globalState.pages)) {
+                return globalState.pages.length;
+            }
+        } catch (_) { }
+        return 0;
+    }
+
     public track(eventName: string, properties: Record<string, any> = {}, explicitChapterNumber?: number) {
         const chapterNum = explicitChapterNumber !== undefined
             ? explicitChapterNumber
-            : this.state.completedChapters + 1;
+            : this.state.currentChapterNumber;
+
+        const livePageCount = this.getCurrentPageCount();
+        const pageCount = properties.page_count !== undefined
+            ? properties.page_count
+            : livePageCount;
 
         const evt: AnalyticsEvent = {
             distinct_id: this.state.distinctId,
             event: eventName,
             session_count: this.state.sessionCount,
             chapter_number: chapterNum,
-            page_count: properties.page_count || this.currentChapterPages || 0,
+            page_count: pageCount,
             is_new_user: this.state.sessionCount === 1 && this.state.completedChapters === 0,
             timestamp: Date.now(),
             properties: {
@@ -142,8 +165,8 @@ class TelemetryTracker {
     }
 
     private setupAutoSync() {
-        // Tự động flush mỗi 40s
-        setInterval(() => this.flush(), 40_000);
+        // Tự động flush mỗi 30s
+        setInterval(() => this.flush(), 30_000);
 
         // Khi có mạng trở lại
         window.addEventListener('online', () => this.flush());
@@ -158,16 +181,26 @@ class TelemetryTracker {
 
     public trackAppOpen() {
         this.track('user_joined', {
-            is_first_session: this.state.sessionCount === 1
-        });
+            is_first_session: this.state.sessionCount === 1,
+            page_count: 0
+        }, this.state.currentChapterNumber);
     }
 
-    public trackUpload(pageCount: number) {
-        this.currentChapterPages = pageCount;
+    public trackUpload(incomingPagesCount: number) {
+        // Nếu chapter trước đó đã export xong, upload mới đồng nghĩa bắt đầu Chapter tiếp theo
+        if (this.state.currentChapterHasExported) {
+            this.state.currentChapterNumber += 1;
+            this.state.currentChapterHasExported = false;
+            this.persistIdentity(this.state);
+        }
+
         this.chapterStartTime = Date.now();
+        const totalPages = this.getCurrentPageCount();
+
         this.track('page_uploaded', {
-            page_count: pageCount,
-            working_on_chapter: this.state.completedChapters + 1
+            uploaded_batch_count: incomingPagesCount,
+            page_count: totalPages || incomingPagesCount,
+            chapter_number: this.state.currentChapterNumber
         });
     }
 
@@ -175,25 +208,35 @@ class TelemetryTracker {
         this.track('ocr_executed', { mode });
     }
 
-    public trackTranslate(mode: 'single' | 'all', pageCount: number = 1) {
-        this.track('translate_executed', { mode, page_count: pageCount });
+    public trackTranslate(mode: 'single' | 'all', pageCount?: number) {
+        this.track('translate_executed', {
+            mode,
+            page_count: pageCount || this.getCurrentPageCount()
+        });
     }
 
-    public trackExport(format: string = 'all') {
-        this.track('export_executed', { format });
+    public trackExportSingle(format: string = 'image') {
+        this.track('export_single_executed', { format });
+    }
 
-        // Đánh dấu HOÀN THÀNH chapter khi export
-        const completedNumber = this.state.completedChapters + 1;
-        this.state.completedChapters = completedNumber;
-        this.persistIdentity(this.state);
+    public trackExportChapter(format: string = 'zip') {
+        const totalPages = this.getCurrentPageCount();
+        this.track('export_chapter_executed', { format, page_count: totalPages });
 
-        this.track('chapter_completed', {
-            chapter_number: completedNumber,
-            total_pages: this.currentChapterPages,
-            duration_minutes: this.chapterStartTime ? Math.round((Date.now() - this.chapterStartTime) / 60000) : 0
-        }, completedNumber);
+        // Chỉ tăng completedChapters 1 lần cho mỗi chapter (tránh user bấm export zip nhiều lần)
+        if (!this.state.currentChapterHasExported) {
+            this.state.currentChapterHasExported = true;
+            this.state.completedChapters += 1;
+            this.persistIdentity(this.state);
 
-        // Bắn ngay event hoàn thành
+            this.track('chapter_completed', {
+                chapter_number: this.state.currentChapterNumber,
+                total_pages: totalPages,
+                duration_minutes: this.chapterStartTime ? Math.round((Date.now() - this.chapterStartTime) / 60000) : 0
+            }, this.state.currentChapterNumber);
+        }
+
+        // Bắn ngay event hoàn thành về server
         this.flush();
     }
 

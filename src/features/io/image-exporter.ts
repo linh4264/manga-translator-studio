@@ -9,6 +9,7 @@ import { renderPageToCanvas2D, renderOverlays, commitActiveEditingState } from '
 import { saveEraserDrawingToPage } from '../inpainting';
 import { selectPage, updateProcessingOverlay } from '../../ui/index';
 import { getPageExportMimeType } from './file-loader';
+import { analytics } from '../../core/analytics';
 
 declare const JSZip: any;
 
@@ -81,6 +82,7 @@ export async function exportActivePage(): Promise<void> {
             document.body.appendChild(tempDownloadLink);
             tempDownloadLink.click();
             document.body.removeChild(tempDownloadLink);
+            analytics.trackExportSingle('single');
             showToast("Đã bắt đầu tải ảnh xuống máy!", "success");
         } catch (downloadErr) {
             console.warn("Direct programmatic download failed:", downloadErr);
@@ -161,6 +163,7 @@ export async function exportCurrentPagePSD(): Promise<void> {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
+        analytics.trackExportSingle('psd');
         updateProcessingOverlay(false);
         showToast(`🎉 Đã xuất file Photoshop (${fileName}) phân lớp thành công!`, "success");
     } catch (e: any) {
@@ -359,6 +362,8 @@ export async function runBatchExport(options?: BatchExportOptions): Promise<void
             tempDownloadLink.click();
             document.body.removeChild(tempDownloadLink);
             setTimeout(() => URL.revokeObjectURL(zipDownloadUrl), 1000);
+
+            analytics.trackExportChapter('zip');
 
             if (failedPages.length > 0) {
                 const failedStr = failedPages.map(f => `Trang ${f.index}`).join(', ');

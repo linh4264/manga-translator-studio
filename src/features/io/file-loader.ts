@@ -17,6 +17,7 @@ import { elements } from '../../core/elements';
 import { showToast } from '../../core/utils';
 import { updatePageListUI, selectPage, updateActiveBlockEditor } from '../../ui/index';
 import { MangaPage } from '../../types/index';
+import { analytics } from '../../core/analytics';
 
 export function getPageExportMimeType(
     page: MangaPage,
@@ -146,6 +147,7 @@ export function handleUploadedFiles(filesList: FileList | File[]): void {
         if (loaded === addedCount) {
             sortPagesByName();
             if (successCount > 0) {
+                analytics.trackUpload(successCount);
                 showToast(`Đã tải và nén tối ưu thành công ${successCount} trang truyện!`, 'success');
 
                 if (globalState.activePageIndex === -1 && globalState.pages.length > 0) {

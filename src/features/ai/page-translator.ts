@@ -41,6 +41,7 @@ import {
 import { executeTextTranslationStep, executeChapterTranslationStep } from './translation-pipeline';
 import { getAiConfig, getTranslationContext } from './ai-state';
 import { setCachedTranslationsBatch } from './translation-cache';
+import { analytics } from '../../core/analytics';
 
 
 export async function translateActivePage(force: boolean = false): Promise<void> {
@@ -211,6 +212,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                     isBackgroundMode ? progressVal : 35
                 );
 
+                analytics.trackOCR(isBackgroundMode ? 'batch' : 'single');
                 detectedRawBlocks = await executeOcrVisionStep({
                     rawBase64,
                     mimeType,
@@ -563,6 +565,7 @@ export async function runBatchTranslation(): Promise<void> {
 
     setCancelTranslationFlag(false);
     setIsBatchTranslating(true);
+    analytics.trackTranslate('all', globalState.pages.length);
     showToast('Đang tiến hành dịch toàn bộ Chapter dưới nền. Bạn có thể tiếp tục xem và chỉnh sửa!', 'success');
 
     for (let i = 0; i < globalState.pages.length; i++) {

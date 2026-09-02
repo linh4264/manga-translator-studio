@@ -1,4 +1,5 @@
 import { initApplication } from './core/bootstrap';
+import './core/analytics';
 
 document.addEventListener('DOMContentLoaded', async () => {
     await initApplication();
