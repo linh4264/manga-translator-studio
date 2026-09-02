@@ -49,17 +49,12 @@ export interface StoryMemoryState {
     chapterStoryMemory: StoryMemoryItem[];
 }
 
-import { isProUser } from '../auth/auth-manager';
-
 export function getAiConfig(): AiConfigState {
-    const isPro = isProUser();
     const provider = (globalState.aiProvider || 'gemini') as any;
 
-    // In Basic version with Gemini provider, lock model to Gemini 3.1 Flash-Lite for 100% reliable free execution
-    const isBasicGemini = !isPro && provider === 'gemini';
-    const selectedModel = isBasicGemini ? 'gemini-3.1-flash-lite' : (globalState.selectedModel || DEFAULT_MODEL);
-    const ocrModel = isBasicGemini ? 'gemini-3.1-flash-lite' : (globalState.ocrModel || DEFAULT_OCR_MODEL);
-    const translationModel = isBasicGemini ? 'gemini-3.1-flash-lite' : (globalState.translationModel || DEFAULT_TRANSLATION_MODEL);
+    const selectedModel = globalState.selectedModel || DEFAULT_MODEL;
+    const ocrModel = globalState.ocrModel || DEFAULT_OCR_MODEL;
+    const translationModel = globalState.translationModel || DEFAULT_TRANSLATION_MODEL;
 
     return {
         apiKey: (globalState.apiKey || '').trim(),
