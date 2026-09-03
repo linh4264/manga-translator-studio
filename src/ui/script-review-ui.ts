@@ -6,7 +6,7 @@ import { globalState, savePageToDB, activatePage, debounceSavePage } from '../co
 import { elements } from '../core/elements';
 import { showToast, escapeHTML } from '../core/utils';
 import { getAiConfig, getTranslationContext } from '../features/ai/ai-state';
-import { getConfiguredApiEndpoint, getGeminiGenerateContentUrl } from '../features/ai/ai-config';
+import { getConfiguredApiEndpoint, getGeminiGenerateContentUrl, GEMINI_SAFETY_SETTINGS_BLOCK_NONE } from '../features/ai/ai-config';
 import { executeAiJsonRequestWithRetry } from '../features/ai/ai-client';
 import { parseGeminiJsonText } from '../core/utils/json';
 import { requestOverlayRender } from '../features/canvas/canvas-service';
@@ -411,7 +411,8 @@ async function polishSingleBlockWithAi(pageIndex: number, blockId: string, actio
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: promptText }] }],
-                generationConfig: { temperature: 0.5, maxOutputTokens: 256 }
+                generationConfig: { temperature: 0.5, maxOutputTokens: 256 },
+                safetySettings: GEMINI_SAFETY_SETTINGS_BLOCK_NONE
             })
         });
 

@@ -19,7 +19,7 @@ import { elements } from '../../core/elements';
 import { showToast } from '../../core/utils';
 import { refineAiBlockBox, mergeOverlappingAiBlocks, extractTextAnchor, sortMangaReadingOrder } from '../ocr/ocr-service';
 import { requestOverlayRender, autoMatchBlockStyle, autoFitBlock, isBlockAutoFit, getReferenceDisplayDimensions } from '../canvas/canvas-service';
-import { getConfiguredApiEndpoint, getGeminiGenerateContentUrl } from './ai-config';
+import { getConfiguredApiEndpoint, getGeminiGenerateContentUrl, GEMINI_SAFETY_SETTINGS_BLOCK_NONE } from './ai-config';
 import {
     cancelTranslationFlag,
     isBatchTranslating,
@@ -351,6 +351,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                             required: ["blocks"]
                         }
                     },
+                    safetySettings: GEMINI_SAFETY_SETTINGS_BLOCK_NONE,
                     systemInstruction: {
                         parts: [{ text: systemInstruction }]
                     }

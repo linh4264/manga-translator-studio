@@ -1,7 +1,7 @@
 // 2-Step & Chapter Chunk Translation Pipelines
 import { uiUpdateBackgroundTaskOverlay } from '../../core/state';
 import { parseGeminiJsonText } from '../../core/utils/json';
-import { getGeminiGenerateContentUrl } from './ai-config';
+import { getGeminiGenerateContentUrl, GEMINI_SAFETY_SETTINGS_BLOCK_NONE } from './ai-config';
 import { executeAiJsonRequestWithRetry, AiRetryInfo } from './ai-client';
 import { matchTranslationsToBlocks } from './matching-engine';
 import { getTranslationGuidancePrompt } from './prompt-builder';
@@ -142,6 +142,7 @@ export async function executeTextTranslationStep({
                     required: ["blocks"]
                 }
             },
+            safetySettings: GEMINI_SAFETY_SETTINGS_BLOCK_NONE,
             systemInstruction: {
                 parts: [{ text: transSystemInstruction }]
             }
@@ -329,6 +330,7 @@ export async function executeChapterChunkTranslationStep({
                     required: ["blocks"]
                 }
             },
+            safetySettings: GEMINI_SAFETY_SETTINGS_BLOCK_NONE,
             systemInstruction: {
                 parts: [{ text: transSystemInstruction }]
             }

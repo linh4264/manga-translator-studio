@@ -3,7 +3,7 @@ import { globalState } from '../../core/state';
 import { elements } from '../../core/elements';
 import { parseGeminiJsonText } from '../../core/utils/json';
 import { mergeOverlappingAiBlocks } from '../ocr/ocr-service';
-import { getGeminiGenerateContentUrl } from './ai-config';
+import { getGeminiGenerateContentUrl, GEMINI_SAFETY_SETTINGS_BLOCK_NONE } from './ai-config';
 import { cancelTranslationFlag } from './story-memory';
 import { getAiConfig } from './ai-state';
 import { MangaPage } from '../../types/index';
@@ -471,6 +471,7 @@ export async function executeOcrVisionStep({
                     required: ["blocks"]
                 }
             },
+            safetySettings: GEMINI_SAFETY_SETTINGS_BLOCK_NONE,
             systemInstruction: {
                 parts: [{ text: ocrSystemInstruction }]
             }

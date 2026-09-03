@@ -2,6 +2,13 @@ import { getAiConfig } from './ai-state';
 
 export const DEFAULT_GEMINI_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta';
 
+export const GEMINI_SAFETY_SETTINGS_BLOCK_NONE = [
+    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+];
+
 export function getConfiguredAiProvider(): string {
     return getAiConfig().aiProvider;
 }

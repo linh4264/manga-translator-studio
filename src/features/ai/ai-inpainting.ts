@@ -9,7 +9,7 @@ import { DEFAULT_MODEL } from '../../config/constants';
 import { elements } from '../../core/elements';
 import { showToast } from '../../core/utils/dom';
 import { requestOverlayRender } from '../canvas/canvas-service';
-import { getConfiguredAiProvider, getGeminiGenerateContentUrl } from './ai-config';
+import { getConfiguredAiProvider, getGeminiGenerateContentUrl, GEMINI_SAFETY_SETTINGS_BLOCK_NONE } from './ai-config';
 import { getGeminiApiKey } from './story-memory';
 import { MangaBlock, MangaPage } from '../../types/index';
 
@@ -165,7 +165,8 @@ export async function runAIEraseTextPage(): Promise<void> {
             }],
             generationConfig: {
                 responseModalities: ['IMAGE', 'TEXT']
-            }
+            },
+            safetySettings: GEMINI_SAFETY_SETTINGS_BLOCK_NONE
         };
 
         const controller = new AbortController();

@@ -5,7 +5,7 @@ import { elements } from '../core/elements';
 import { showToast, escapeHTML } from '../core/utils';
 import { safeSetLocalStorage } from '../core/utils/storage';
 import { parseGeminiJsonText } from '../core/utils/json';
-import { getGeminiGenerateContentUrl, getConfiguredAiProvider } from './ai/ai-config';
+import { getGeminiGenerateContentUrl, getConfiguredAiProvider, GEMINI_SAFETY_SETTINGS_BLOCK_NONE } from './ai/ai-config';
 import { getAiConfig } from './ai/ai-state';
 import { ensureModalElement } from '../core/component-loader';
 import { ToeicWord } from '../types/index';
@@ -294,8 +294,8 @@ Return ONLY the JSON. Do not wrap it in markdown code fences or anything else. J
             generationConfig: {
                 responseMimeType: "application/json",
                 maxOutputTokens: 8192
-            }
-
+            },
+            safetySettings: GEMINI_SAFETY_SETTINGS_BLOCK_NONE
         };
 
         const response = await fetch(apiUrl, {
