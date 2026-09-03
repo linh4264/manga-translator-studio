@@ -40,7 +40,6 @@ import {
 } from './ai-client';
 import { executeTextTranslationStep, executeChapterTranslationStep } from './translation-pipeline';
 import { getAiConfig, getTranslationContext } from './ai-state';
-import { setCachedTranslationsBatch } from './translation-cache';
 import { analytics } from '../../core/analytics';
 
 
@@ -372,16 +371,6 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 throw new Error("Phản hồi từ AI bị lỗi định dạng JSON hoặc bị ngắt câu.");
             }
             finalBlocks = mergeOverlappingAiBlocks(data.blocks);
-
-            setCachedTranslationsBatch((finalBlocks || []).map((b: any) => ({
-                original: b.original,
-                translated: b.translated,
-                targetLang,
-                speaker: b.speaker,
-                target: b.target,
-                contextSignature: [ctx.comicUniverse, ctx.comicTone, (ctx.comicGenres || []).join('-'), (ctx.translationContextPrompt || '').trim()].filter(Boolean).join('_'),
-                modelId: aiConfig.selectedModel
-            })));
         }
 
         activeStep = "Bố cục & Canh chỉnh bong bóng";

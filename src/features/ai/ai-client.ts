@@ -174,6 +174,10 @@ export function isRetryableAiError(error: any, httpStatus?: number): boolean {
 
     const msg = (error.message || String(error)).toLowerCase();
     if (msg.includes('429') || msg.includes('quota') || msg.includes('rate limit') || msg.includes('resource_exhausted')) {
+        // Daily quota exhaustion cannot be fixed by immediate retries and just burns remaining RPD
+        if (msg.includes('per day') || msg.includes('daily') || msg.includes('day') || msg.includes('rpd')) {
+            return false;
+        }
         return true;
     }
     if (msg.includes('500') || msg.includes('502') || msg.includes('503') || msg.includes('504')) {

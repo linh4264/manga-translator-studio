@@ -83,7 +83,7 @@ export const settingsState: SettingsState = {
     comicTone: typeof localStorage !== 'undefined' ? (localStorage.getItem('manga_comic_tone') || 'classic') : 'classic',
     translationContextPrompt: typeof localStorage !== 'undefined' ? (localStorage.getItem('gemini_manga_translation_context_prompt') || '') : '',
     apiDelay: 2,
-    maxRetries: 3,
+    maxRetries: 1,
     inpaintMethod: DEFAULT_INPAINT_METHOD,
     customInpaintEndpoint: ''
 };

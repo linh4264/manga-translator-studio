@@ -14,7 +14,6 @@ import { getBase64, enhanceImageForOcr, ensurePageImageData, executeOcrVisionSte
 import { refineAiBlockBox, extractTextAnchor, sortMangaReadingOrder } from '../ocr/ocr-service';
 import { getDefaultFontForBlockType, cancelTranslationFlag, setCancelTranslationFlag, setIsBatchTranslating } from '../ai/story-memory';
 import { executeChapterTranslationStep } from '../ai/translation-pipeline';
-import { getCachedTranslation, setCachedTranslation } from '../ai/translation-cache';
 import { autoMatchBlockStyle, autoFitBlock, isBlockAutoFit, getReferenceDisplayDimensions, requestOverlayRender } from '../canvas/canvas-service';
 import { DEFAULT_AI_BLOCK_BOX, TARGET_LANG_MAP } from '../../config/constants';
 
@@ -228,9 +227,8 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
         const targetLang = ctx.targetLanguage || 'vi';
         const targetLangName = TARGET_LANG_MAP[targetLang] || 'Vietnamese';
 
-        // Step 3.1: Check existing translations and Two-Tier Cache first (0ms, 0 tokens)
+        // Step 3.1: Check existing translations (Resume mode)
         const blocksToTranslate: any[] = [];
-        let cacheHitCount = 0;
 
         for (let pIdx = 0; pIdx < pages.length; pIdx++) {
             const p = pages[pIdx];
@@ -241,33 +239,18 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
                     // If already translated (Resume mode), preserve existing translation
                     if (b.translated && b.translated.trim()) continue;
 
-                    // Try Two-Tier Hash Cache
-                    const cached = await getCachedTranslation(b.original, targetLang, {
+                    blocksToTranslate.push({
+                        id: b.id,
+                        original: b.original,
+                        pageIndex: pIdx,
                         speaker: b.speaker,
                         target: b.target
                     });
-
-                    if (cached && cached.translated) {
-                        b.translated = cached.translated;
-                        cacheHitCount++;
-                    } else {
-                        blocksToTranslate.push({
-                            id: b.id,
-                            original: b.original,
-                            pageIndex: pIdx,
-                            speaker: b.speaker,
-                            target: b.target
-                        });
-                    }
                 }
             }
         }
 
-        if (cacheHitCount > 0) {
-            showToast(`⚡ Đã tái sử dụng ${cacheHitCount} câu từ bộ nhớ đệm (Cache Hit)!`, "info");
-        }
-
-        // Step 3.2: Translate uncached / pending blocks in story context
+        // Step 3.2: Translate pending blocks in story context
         if (blocksToTranslate.length > 0) {
             const transModelToUse = aiConfig.translationModel || 'gemini-2.5-flash';
             const glossaryNames = ctx.preserveNames ? (ctx.glossaryNames || '').trim() : "";
@@ -318,11 +301,6 @@ export async function runAutoPilotChapterPipeline(): Promise<boolean> {
 
                         if (rawTrans) {
                             b.translated = rawTrans;
-                            // Cache newly translated dialogue
-                            setCachedTranslation(b.original, rawTrans, targetLang, {
-                                speaker: b.speaker,
-                                target: b.target
-                            });
                         }
 
                         b.autoFitCache = null;
