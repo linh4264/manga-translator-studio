@@ -44,19 +44,20 @@ export async function enhanceImageForOcr(file: File): Promise<File> {
                 return;
             }
 
-            ctx.filter = 'contrast(125%) brightness(102%) grayscale(100%)';
+            // Moderate contrast to sharpen faint text without fusing tiny furigana strokes into kanji:
+            ctx.filter = 'contrast(112%) brightness(101%) grayscale(100%)';
             ctx.drawImage(img, 0, 0);
 
             canvas.toBlob((blob) => {
                 canvas.width = 0;
                 canvas.height = 0;
                 if (blob) {
-                    const enhancedFile = new File([blob], file.name, { type: 'image/jpeg' });
+                    const enhancedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.png'), { type: 'image/png' });
                     resolve(enhancedFile);
                 } else {
                     resolve(file);
                 }
-            }, 'image/jpeg', 0.92);
+            }, 'image/png');
         };
         img.onerror = () => {
             URL.revokeObjectURL(url);
@@ -531,6 +532,10 @@ export async function executeOcrVisionStep({
         "  4. Floating / Handwritten / Whisper text outside bubbles.",
         "  5. Multi-column vertical Japanese text (縦書き): Read EVERY column from Right to Left.",
         "  6. Hand-drawn Sound Effects (SFX) and background text signs.",
+        "JAPANESE FURIGANA (RUBY TEXT) MANDATE (QUY TẮC BÓC TÁCH FURIGANA / ルビ):",
+        "- Japanese manga frequently prints tiny pronunciation kana (Furigana / ルビ) alongside Kanji (e.g. せんぱい next to 先輩, ちか next to 近).",
+        "- Transcribe ONLY the primary main Kanji and Kana characters (e.g. transcribe '先輩が', NEVER blend strokes into mutant characters like '笹い□' or output furigana as standalone letters).",
+        "- NEVER fuse or blend tiny ruby characters into Kanji strokes. Strictly ignore ruby text and transcribe canonical Kanji.",
         "BLOCK TYPE CLASSIFICATION RULE: 'dialogue', 'narration', 'thought', 'sfx'.",
         "MANGA READING ORDER MANDATE: Output blocks in authentic Manga reading order: From Right to Left (RTL) first across columns/panels, then Top to Bottom (TTB) within each column/panel.",
         "STRICT SEPARATION RULE: Every individual speech bubble must be output as its own separate block with distinct center anchor [x, y].",
@@ -578,6 +583,7 @@ export async function executeOcrVisionStep({
                 ]
             }],
             generationConfig: {
+                temperature: 0.1,
                 responseMimeType: "application/json",
                 maxOutputTokens: 4096,
                 responseSchema: {

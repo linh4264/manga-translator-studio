@@ -266,6 +266,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 "Detect every manga speech bubble, narration box, thought bubble, and SFX label, classify its block type ('dialogue'|'narration'|'thought'|'sfx'), then return JSON only.",
                 "EXHAUSTIVE OCR COMPLETENESS MANDATE (BẢO TOÀN 100% NỘI DUNG CHỮ, TUYỆT ĐỐI KHÔNG BỎ SÓT):",
                 "- Detect and transcribe 100% of text on this manga page without skipping.",
+                "JAPANESE FURIGANA (RUBY TEXT) MANDATE: Manga text frequently includes tiny pronunciation guide kana (furigana/ルビ) next to Kanji (e.g. せんぱい next to 先輩, ちか next to 近). Transcribe ONLY the primary main Kanji and Kana characters. NEVER blend ruby characters into kanji (which causes mutant characters like 笹 or □) and NEVER output furigana as standalone letters.",
                 multimodalGuidance,
                 "POSITION FORMULA:",
                 "Output exactly two integers [x, y] on a 0–1000 coordinate scale.",
