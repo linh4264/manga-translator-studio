@@ -45,17 +45,30 @@ export function formatBlockPayloadForAi(b: any): any {
     return item;
 }
 
-export function buildMultimodalGroundingInstruction(hasVisualImage: boolean): string {
+export function buildMultimodalGroundingInstruction(hasVisualImage: boolean, targetLang: string = 'vi'): string {
     if (!hasVisualImage) return "";
+    const isVi = targetLang === 'vi';
+    const pronounGuidance = isVi
+        ? [
+            "   - SAME-GENDER / SCHOOLGIRL SCENES: If two female students / schoolgirls are speaking or confessing, NEVER use romantic heterosexual pronouns like 'anh - em'! Use natural peer pronouns: 'cậu - tớ', 'mình - bạn', or senior/junior 'chị - em'.",
+            "   - MALE-MALE PEERS: Use 'cậu - tớ', 'mày - tao', or 'anh - em' depending on intimacy.",
+            "   - Only use 'anh - em' when there is clear visual proof of a heterosexual male-female romance or an older brother/younger sister relationship."
+        ]
+        : [
+            "   - Inspect character gender, school uniforms, age hierarchy, and intimacy to select natural peer, respectful, or affectionate forms of address."
+        ];
+
+    const idiomGuidance = isVi
+        ? "4. NATURAL MANGA CONVERSATIONAL IDIOMS: Translate situational phrases idiomatically into natural publication-grade Vietnamese dialogue (e.g. 「〜そういうことだから」 ➔ 'Vậy... chuyện là thế đấy nhé!' / 'Thế nên là vậy đấy...')."
+        : "4. NATURAL MANGA CONVERSATIONAL IDIOMS: Translate situational phrases idiomatically with authentic conversational cadence and subtext.";
+
     return [
         "MULTIMODAL VISUAL CONTEXT & SCENE GROUNDING:",
         "1. High-resolution image(s) of the manga page(s) are attached. Each dialogue block includes a 'location' (e.g. Top-Right, Middle-Right, Bottom-Left) and optional 'type' ('thought', 'dialogue', 'narration') indicating its position and bubble style on the page.",
         "2. GENDER & RELATIONSHIP INSPECTION: Inspect characters in the scene (hair, school uniforms, skirts, ribbons, facial features, blushing/embarrassment, and body language).",
-        "   - SAME-GENDER / SCHOOLGIRL SCENES: If two female students / schoolgirls are speaking or confessing, NEVER use romantic heterosexual pronouns like 'anh - em'! Use natural peer pronouns: 'cậu - tớ', 'mình - bạn', or senior/junior 'chị - em'.",
-        "   - MALE-MALE PEERS: Use 'cậu - tớ', 'mày - tao', or 'anh - em' depending on intimacy.",
-        "   - Only use 'anh - em' when there is clear visual proof of a heterosexual male-female romance or an older brother/younger sister relationship.",
-        "3. THOUGHT vs DIALOGUE BUBBLES: Blocks with type 'thought' or circular/cloud-like floating bubbles without tail pointers are internal monologues or recollections (e.g. remembering a confession 「好き」 ➔ 'Tớ thích cậu...', pondering 「さっきの なんだったんだろう」 ➔ 'Chuyện lúc nãy... rốt cuộc là sao chứ?').",
-        "4. NATURAL MANGA CONVERSATIONAL IDIOMS: Translate situational phrases idiomatically into natural publication-grade Vietnamese dialogue (e.g. 「〜そういうことだから」 ➔ 'Vậy... chuyện là thế đấy nhé!' / 'Thế nên là vậy đấy...')."
+        ...pronounGuidance,
+        "3. THOUGHT vs DIALOGUE BUBBLES: Blocks with type 'thought' or circular/cloud-like floating bubbles without tail pointers are internal monologues or recollections (e.g. remembering a confession 「好き」 ➔ " + (isVi ? "'Tớ thích cậu...'" : "'I like you...'") + ", pondering 「さっきの なんだったんだろう」 ➔ " + (isVi ? "'Chuyện lúc nãy... rốt cuộc là sao chứ?'" : "'What was that just now?'") + ").",
+        idiomGuidance
     ].join("\n");
 }
 
@@ -94,7 +107,7 @@ export async function executeTextTranslationStep({
     const targetLang = ctx.targetLanguage || 'vi';
     const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
     const hasVisualImage = Boolean(rawBase64 && rawBase64.trim());
-    const multimodalGuidance = buildMultimodalGroundingInstruction(hasVisualImage);
+    const multimodalGuidance = buildMultimodalGroundingInstruction(hasVisualImage, targetLang);
 
     const transSystemInstruction = [
         `You are a master manga translator and publication editor specializing in translating Japanese/Korean/Chinese comic dialogues into natural, expressive, and fluent ${targetLangName}.`,
@@ -270,7 +283,7 @@ export async function executeChapterChunkTranslationStep({
         pageGroups.some(g => pageImagesMap.has(g.pageIndex))
     );
 
-    const multimodalGuidance = buildMultimodalGroundingInstruction(hasMultimodalImages);
+    const multimodalGuidance = buildMultimodalGroundingInstruction(hasMultimodalImages, targetLang);
 
     const transSystemInstruction = [
         `You are a master manga translator and senior editor specializing in translating entire manga chapters with coherent storytelling, seamless conversational flow, and natural, expressive, publication-grade ${targetLangName} dialogue.`,

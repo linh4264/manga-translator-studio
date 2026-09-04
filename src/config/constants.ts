@@ -60,7 +60,7 @@ export const COMIC_UNIVERSE_PRESETS: Record<string, { id: string; label: string;
     manga: {
         id: 'manga',
         label: '🇯🇵 Japanese Manga',
-        prompt: '- COMIC UNIVERSE (JAPANESE MANGA SCANLATION): Follow authentic Japanese manga scanlation standards. Honorifics (-san, -kun, -chan, -sama, -senpai) and emotional particles (ne, yo, wa, zo) should be adapted with rich cultural fidelity. Balance inner monologue depth with punchy bubble dialogue.'
+        prompt: '- COMIC UNIVERSE (JAPANESE MANGA SCANLATION): Follow authentic Japanese manga scanlation standards. Honorifics (-san, -kun, -chan, -sama, -senpai) and emotional particles (ne, yo, wa, zo) should be adapted with rich cultural fidelity. Balance inner monologue depth with natural, expressive bubble dialogue.'
     },
     manhwa: {
         id: 'manhwa',

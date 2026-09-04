@@ -50,7 +50,7 @@ export function getTranslationGuidancePrompt(
         `  1. Không thêm thắt thông tin, sự kiện hoặc chi tiết không có trong câu gốc hoặc context.`,
         `  2. Không tự giải thích một câu mơ hồ. Khi bản gốc cố ý mơ hồ, giữ lại mức độ mơ hồ đó trong bản dịch ("When the source is ambiguous, preserve the ambiguity unless the surrounding context strongly resolves it.").`,
         `  3. Không tự suy ra speaker intent nếu bằng chứng không đủ.`,
-        `  4. Không thêm chủ ngữ, cảm xúc, quan hệ, lý do, hành động hoặc thông tin nền nếu nguồn không hỗ trợ.`,
+        `  4. BỔ SUNG ĐẠI TỪ / CHỦ NGỮ HỢP NGỮ CẢNH: Khi ngôn ngữ nguồn tỉnh lược chủ ngữ/tân ngữ (đặc trưng ngữ pháp tiếng Nhật/Hàn/Trung), BẮT BUỘC suy luận và bổ sung đại từ xưng hô tự nhiên theo bối cảnh nhân vật. TUY NHIÊN, tuyệt đối không tự bịa thêm các sự kiện, hành động, lý do hay chi tiết cốt truyện không có trong nguồn.`,
         `  5. Context chỉ được dùng để disambiguate khi có bằng chứng rõ ràng, không được dùng để bịa thêm nội dung.`
     );
 
@@ -291,7 +291,7 @@ export function getTranslationGuidancePrompt(
         `- TRANSLATION RULES: Keep ${targetLangName} natural and idiomatic while preserving source fidelity. Prefer natural meaning over literal wording. Preserve character voice, emotions, jokes, pacing, and subtext.`,
         dialogueRule,
         '- CONTEXT RULE: Use neighboring bubbles to infer who is speaking and emotional tone. Disambiguate without inventing unsupported content.',
-        '- BUBBLE RULE: Keep manga-friendly phrasing short and punchy. Do not overexplain or drop core meaning.'
+        '- BUBBLE RULE: Keep manga-friendly phrasing natural, fluent, and emotionally faithful. Preserve full pronouns and conversational cadence without robotic brevity or overexplaining.'
     );
 
     getModelTranslationProfile(currentModelId, targetLang).forEach((rule) => guidanceParts.push(rule));

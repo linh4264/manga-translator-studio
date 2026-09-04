@@ -544,7 +544,7 @@ export async function executeOcrVisionStep({
         "- Do not use the center of the empty bubble area.",
         "- For SFX outside bubbles, use the center of the visible glyphs.",
         "Return valid JSON only matching schema {\"blocks\": [{\"id\": \"b1\", \"type\": \"dialogue\", \"original\": \"...\", \"box\": [500, 300], \"vertical\": true}]}."
-    ].join(" ");
+    ].join("\n");
 
     const safeMimeType = mimeType || 'image/png';
     let requestBody: string;

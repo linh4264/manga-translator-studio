@@ -39,7 +39,7 @@ import {
     executeOcrVisionStep,
     AiRetryInfo
 } from './ai-client';
-import { executeTextTranslationStep, executeChapterTranslationStep } from './translation-pipeline';
+import { executeTextTranslationStep, executeChapterTranslationStep, buildMultimodalGroundingInstruction } from './translation-pipeline';
 import { getAiConfig, getTranslationContext } from './ai-state';
 import { analytics } from '../../core/analytics';
 
@@ -260,11 +260,13 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
 
         } else {
             const pronounTerm = targetLang === 'vi' ? 'pronouns (xưng hô)' : 'pronouns';
+            const multimodalGuidance = buildMultimodalGroundingInstruction(true, targetLang);
 
             const systemInstruction = [
                 "Detect every manga speech bubble, narration box, thought bubble, and SFX label, classify its block type ('dialogue'|'narration'|'thought'|'sfx'), then return JSON only.",
                 "EXHAUSTIVE OCR COMPLETENESS MANDATE (BẢO TOÀN 100% NỘI DUNG CHỮ, TUYỆT ĐỐI KHÔNG BỎ SÓT):",
                 "- Detect and transcribe 100% of text on this manga page without skipping.",
+                multimodalGuidance,
                 "POSITION FORMULA:",
                 "Output exactly two integers [x, y] on a 0–1000 coordinate scale.",
                 "[x, y] is the center point of the VISIBLE TEXT GLYPHS, not the center of the speech bubble.",
@@ -275,7 +277,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 "- Do not use the center of the empty bubble area.",
                 "- For SFX outside bubbles, use the center of the visible glyphs.",
                 "- TEXT FORMAT: Keep translated text natural. The layout engine automatically wraps lines to fit the speech bubble.",
-                `Translate to short, natural ${targetLangName} that matches the scene and speaker relationship.`,
+                `Translate to natural, expressive, publication-grade ${targetLangName} dialogue that matches the scene, emotional nuance, and speaker relationship.`,
                 `Maintain character voice, ${pronounTerm} consistency, and terminology across the page, allowing natural shifts if emotions or interpersonal dynamics change.`,
                 ctx.preserveNames ? "Keep proper names unchanged unless the glossary says otherwise." : "",
                 glossaryNames ? `Keep these names exactly as written: ${glossaryNames}.` : "",
@@ -302,7 +304,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                         { role: "system", content: systemInstruction },
                         { role: "user", content: openAiUserContent }
                     ],
-                    temperature: 0.3,
+                    temperature: 0.55,
                     max_tokens: 4096,
                     response_format: { type: "json_object" }
                 });
@@ -320,6 +322,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                     contents: [{ parts: contentsParts }],
                     generationConfig: {
                         responseMimeType: "application/json",
+                        temperature: 0.55,
                         maxOutputTokens: 4096,
 
                         responseSchema: {

@@ -59,14 +59,14 @@ export function getModelTranslationProfile(modelId?: string, targetLang?: string
             `- MODEL RULE: Check the provided previous page dialogues context and reuse established ${pronounTerm} and tone for the same characters.`,
             `- MODEL RULE: Keep ${pronounSimple} stable and conversational across dialogue on the page, shifting naturally only when emotions or relations change.`,
             `- MODEL RULE: Translate to natural, everyday ${targetLangName} manga speech without forcing slang. Avoid overly formal, literal, or robotic wording.`,
-            '- MODEL RULE: Keep translations short and compact so they fit inside speech bubbles easily without omitting core meaning.'
+            '- MODEL RULE: Render dialogue with natural, expressive conversational flow. Auto-fit handles speech bubble layout, so do not over-prune or cut words into robotic brevity.'
         ];
     }
 
     if (normalized.includes('flash-lite')) {
         return [
             '- MODEL PROFILE: Flash-Lite.',
-            `- MODEL RULE: Prioritize short, natural, high-confidence ${targetLangName}. Prefer simple, stable pronouns and avoid ornate wording.`,
+            `- MODEL RULE: Prioritize natural, fluent, high-confidence ${targetLangName}. Maintain stable character pronouns and conversational cadence without ornate or stilted wording.`,
             `- MODEL RULE: If speaker relationship is unclear, use the safest neutral ${targetLangName} pronoun pair that still sounds natural in manga dialogue.`,
             '- MODEL RULE: Preserve consistency across repeated lines while respecting contextual nuance.'
         ];
@@ -75,7 +75,7 @@ export function getModelTranslationProfile(modelId?: string, targetLang?: string
     if (normalized.includes('flash')) {
         return [
             '- MODEL PROFILE: Flash.',
-            `- MODEL RULE: Balance naturalness, brevity, and fidelity. Keep tone faithful and maintain stable pronouns across nearby bubbles unless mood shifts.`,
+            `- MODEL RULE: Balance naturalness, emotional fidelity, and publication cadence. Keep tone faithful and maintain stable pronouns across nearby bubbles unless mood shifts.`,
             `- MODEL RULE: Prefer conversational ${targetLangName} that sounds like real manga dialogue instead of literal sentence-by-sentence translation.`
         ];
     }
