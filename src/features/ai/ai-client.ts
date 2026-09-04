@@ -52,7 +52,11 @@ export async function enhanceImageForOcr(file: File): Promise<File> {
                 canvas.width = 0;
                 canvas.height = 0;
                 if (blob) {
-                    const enhancedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.png'), { type: 'image/png' });
+                    const originalName = (file as any)?.name || 'enhanced_page.png';
+                    const enhancedName = originalName.replace(/\.[^.]+$/, '.png');
+                    const enhancedFile = (typeof File !== 'undefined')
+                        ? new File([blob], enhancedName, { type: 'image/png' })
+                        : blob as unknown as File;
                     resolve(enhancedFile);
                 } else {
                     resolve(file);
