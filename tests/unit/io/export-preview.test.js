@@ -1,4 +1,4 @@
-import { test, expect, describe, beforeEach } from 'vitest';
+import { test, expect, describe, beforeEach, afterEach } from 'vitest';
 import '../../setup/browser-env.js';
 import '../../setup/indexeddb-mock.js';
 
@@ -34,6 +34,8 @@ describe('Export Preview & Targeted Export Engine', () => {
                 id: 'page_1',
                 name: '001.jpg',
                 src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+                file: new Blob(['fake-1'], { type: 'image/jpeg' }),
+                originalFile: new Blob(['fake-1'], { type: 'image/jpeg' }),
                 status: 'translated',
                 blocks: [
                     {
@@ -50,6 +52,8 @@ describe('Export Preview & Targeted Export Engine', () => {
                 id: 'page_2',
                 name: '002.png',
                 src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+                file: new Blob(['fake-2'], { type: 'image/png' }),
+                originalFile: new Blob(['fake-2'], { type: 'image/png' }),
                 status: 'translated',
                 blocks: [
                     {
@@ -66,6 +70,8 @@ describe('Export Preview & Targeted Export Engine', () => {
                 id: 'page_3',
                 name: '003.webp',
                 src: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+                file: new Blob(['fake-3'], { type: 'image/webp' }),
+                originalFile: new Blob(['fake-3'], { type: 'image/webp' }),
                 status: 'translated',
                 blocks: []
             }
@@ -73,6 +79,10 @@ describe('Export Preview & Targeted Export Engine', () => {
         globalState.activePageIndex = 0;
         globalState.exportFormat = 'auto';
         globalState.pdfQuality = 'hd';
+    });
+
+    afterEach(() => {
+        closePreviewMode();
     });
 
     test('1. getPageExportMimeType handles format overrides and custom quality', () => {

@@ -167,7 +167,11 @@ export async function runPdfExport(options?: PdfExportOptions): Promise<void> {
     } finally {
         globalState.selectedBlockId = prevSelectedId;
         if (prevPageIndex !== -1 && prevPageIndex < globalState.pages.length) {
-            selectPage(prevPageIndex);
+            try {
+                await selectPage(prevPageIndex);
+            } catch (e) {
+                // Ignore fallback selection errors
+            }
         }
         updateProcessingOverlay(false);
     }

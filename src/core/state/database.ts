@@ -688,12 +688,21 @@ export function deactivatePage(page: MangaPage | null | undefined): void {
     if (page.file) revokeSafeMediaUrl(page.file);
     if (page.src && page.src.startsWith('blob:')) {
         URL.revokeObjectURL(page.src);
+        page.src = null;
     }
     if (page.apiSrc && page.apiSrc.startsWith('blob:')) {
         URL.revokeObjectURL(page.apiSrc);
+        page.apiSrc = null;
     }
-    page.src = null;
-    page.apiSrc = null;
+    // Only nullify non-blob src/apiSrc if page can actually be restored from backing file or DB:
+    if (page.originalFile || page.file || (page.id && dbInstance)) {
+        if (page.src && page.src.startsWith('blob:')) {
+            page.src = null;
+        }
+        if (page.apiSrc && page.apiSrc.startsWith('blob:')) {
+            page.apiSrc = null;
+        }
+    }
     page.imageDataCache = null;
     if (page.blocks) {
         page.blocks.forEach((b: MangaBlock) => {
