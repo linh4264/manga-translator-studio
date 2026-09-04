@@ -97,3 +97,33 @@ test('Token Estimator - estimateChapterChunkTokens returns realistic duration an
     assert.ok(metrics.predictedOutputTokens > 30, 'Output tokens must include JSON overhead');
     assert.ok(metrics.estimatedDurationSec >= 5, 'Duration should be at least 5s');
 });
+
+test('Token Estimator - partitionBlocksByTokenBudget balances chunk token loads evenly instead of skewed [1800, 216]', () => {
+    // Construct 3 pages:
+    // Page 0: 25 blocks = 900 tokens
+    // Page 1: 25 blocks = 900 tokens
+    // Page 2: 6 blocks = 216 tokens
+    // Budget = 1800 tokens. Total = 2016 tokens.
+    // A greedy algorithm would pack Page 0 + Page 1 = 1800 in Chunk 0, and only Page 2 = 216 in Chunk 1.
+    // The balanced DP algorithm must split as Page 0 (900) in Chunk 0, and Page 1 + 2 (1116) in Chunk 1!
+    const testBlocks = [];
+    for (let b = 0; b < 25; b++) {
+        testBlocks.push({ id: `p1_b${b}`, original: 'This is a dialogue line on page one.', pageIndex: 0 });
+    }
+    for (let b = 0; b < 25; b++) {
+        testBlocks.push({ id: `p2_b${b}`, original: 'This is a dialogue line on page two.', pageIndex: 1 });
+    }
+    for (let b = 0; b < 6; b++) {
+        testBlocks.push({ id: `p3_b${b}`, original: 'Short line on page three.', pageIndex: 2 });
+    }
+
+    const chunks = partitionBlocksByTokenBudget(testBlocks, 1800);
+    assert.strictEqual(chunks.length, 2, 'Must partition into exactly 2 chunks');
+
+    const chunk0Tokens = chunks[0].reduce((sum, b) => sum + estimateBlockOutputTokens(b), 0);
+    const chunk1Tokens = chunks[1].reduce((sum, b) => sum + estimateBlockOutputTokens(b), 0);
+
+    // Balanced split: both chunks should be close to 1000 tokens (e.g. within [800, 1200]), neither should be ~200 or ~1800
+    assert.ok(chunk0Tokens >= 800 && chunk0Tokens <= 1200, `Chunk 0 should be balanced (~900 tokens), got ${chunk0Tokens}`);
+    assert.ok(chunk1Tokens >= 800 && chunk1Tokens <= 1200, `Chunk 1 should be balanced (~1116 tokens), got ${chunk1Tokens}`);
+});

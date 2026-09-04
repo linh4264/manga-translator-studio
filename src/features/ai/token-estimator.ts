@@ -110,10 +110,11 @@ export function estimateChapterChunkTokens(
 }
 
 /**
- * Dynamic Token-based Chapter Chunking
- * Partitions blocks page-by-page so that no chunk exceeds the safe token budget.
- * For Flash Lite models (4,096 ceiling), budget is ~1,800 tokens (~45-55 blocks).
- * For Standard models, budget is ~2,200 tokens (~55-70 blocks).
+ * Dynamic Token-based Chapter Chunking (Balanced Partitioning)
+ * Partitions blocks page-by-page so that:
+ * 1. Minimum number of chunks (minK) is preserved (protecting strict Free Tier RPD quotas).
+ * 2. Every chunk stays safely below the model's safe token budget.
+ * 3. Output token load is dynamically balanced across chunks (e.g. 50% + 50% instead of skewed 90% + 10%).
  */
 export function partitionBlocksByTokenBudget<T extends { pageIndex?: number; original?: string; id?: string }>(
     allBlocks: T[],
@@ -138,28 +139,124 @@ export function partitionBlocksByTokenBudget<T extends { pageIndex?: number; ori
         pagesMap.get(pIdx)!.push(b);
     }
 
-    const chunks: T[][] = [];
-    let currentChunk: T[] = [];
-    let currentChunkTokens = 0;
+    const N = pageOrder.length;
+    if (N === 0) return [];
 
-    for (const pIdx of pageOrder) {
+    // Calculate token cost for each page
+    const pageTokens: number[] = pageOrder.map(pIdx => {
         const pageBlocks = pagesMap.get(pIdx) || [];
-        const pageTokens = pageBlocks.reduce((sum, b) => sum + estimateBlockOutputTokens(b), 0);
+        return pageBlocks.reduce((sum, b) => sum + estimateBlockOutputTokens(b), 0);
+    });
 
-        // If adding this page exceeds the budget and we already have blocks in currentChunk, seal it
-        if (currentChunk.length > 0 && (currentChunkTokens + pageTokens > budget)) {
-            chunks.push(currentChunk);
-            currentChunk = [];
-            currentChunkTokens = 0;
+    const totalTokens = pageTokens.reduce((a, b) => a + b, 0);
+
+    // If total tokens fit comfortably within budget, keep in 1 single chunk (1 RPD!)
+    if (totalTokens <= budget) {
+        return [allBlocks];
+    }
+
+    const maxPageTokens = Math.max(...pageTokens);
+    const effectiveBudget = Math.max(budget, maxPageTokens);
+
+    // 1. Calculate greedy partition as baseline & to determine minimum chunk count (minK)
+    const greedyChunks: T[][] = [];
+    let curChunk: T[] = [];
+    let curTokens = 0;
+    for (let i = 0; i < N; i++) {
+        const pIdx = pageOrder[i];
+        const pTokens = pageTokens[i];
+        const pBlocks = pagesMap.get(pIdx) || [];
+
+        if (curChunk.length > 0 && curTokens + pTokens > effectiveBudget) {
+            greedyChunks.push(curChunk);
+            curChunk = [];
+            curTokens = 0;
+        }
+        curChunk.push(...pBlocks);
+        curTokens += pTokens;
+    }
+    if (curChunk.length > 0) {
+        greedyChunks.push(curChunk);
+    }
+
+    const minK = greedyChunks.length;
+    if (minK <= 1) {
+        return greedyChunks;
+    }
+
+    // 2. Balanced Partition Optimization:
+    // Partition N pages into minK chunks such that every chunk <= effectiveBudget
+    // and variance from targetTokens is minimized (e.g. 1100 + 1100 instead of 2000 + 200).
+    const targetTokens = totalTokens / minK;
+
+    // Prefix sums for O(1) range token queries: pref[i] = sum(pageTokens[0...i-1])
+    const pref = new Float64Array(N + 1);
+    for (let i = 0; i < N; i++) {
+        pref[i + 1] = pref[i] + pageTokens[i];
+    }
+    const getRangeTokens = (start: number, end: number) => pref[end] - pref[start];
+
+    // dp[i][k]: min penalty to partition first i pages into k chunks
+    // parent[i][k]: the split point j (0..i-1) for the k-th chunk
+    const dp: number[][] = Array.from({ length: N + 1 }, () => Array(minK + 1).fill(Infinity));
+    const parent: number[][] = Array.from({ length: N + 1 }, () => Array(minK + 1).fill(-1));
+
+    dp[0][0] = 0;
+
+    for (let k = 1; k <= minK; k++) {
+        for (let i = k; i <= N; i++) {
+            // j is the start of the k-th chunk (0 <= j < i)
+            for (let j = k - 1; j < i; j++) {
+                if (dp[j][k - 1] === Infinity) continue;
+                const chunkTokens = getRangeTokens(j, i);
+                if (chunkTokens > effectiveBudget) continue;
+
+                // Squared deviation from ideal balanced target
+                const diff = chunkTokens - targetTokens;
+                const penalty = diff * diff;
+                const totalPenalty = dp[j][k - 1] + penalty;
+
+                if (totalPenalty < dp[i][k]) {
+                    dp[i][k] = totalPenalty;
+                    parent[i][k] = j;
+                }
+            }
+        }
+    }
+
+    // If DP successfully found a balanced partition for minK chunks, reconstruct it
+    if (dp[N][minK] !== Infinity) {
+        const splitIndices: number[] = [];
+        let currI = N;
+        let currK = minK;
+        while (currK > 0) {
+            const prevI = parent[currI][currK];
+            splitIndices.push(prevI);
+            currI = prevI;
+            currK--;
+        }
+        splitIndices.reverse(); // [0, split1, split2, ..., N]
+
+        const balancedChunks: T[][] = [];
+        for (let k = 0; k < minK; k++) {
+            const startPageIdx = splitIndices[k];
+            const endPageIdx = k + 1 < minK ? splitIndices[k + 1] : N;
+            const chunkBlocks: T[] = [];
+            for (let p = startPageIdx; p < endPageIdx; p++) {
+                const realPageIdx = pageOrder[p];
+                const pBlocks = pagesMap.get(realPageIdx) || [];
+                chunkBlocks.push(...pBlocks);
+            }
+            if (chunkBlocks.length > 0) {
+                balancedChunks.push(chunkBlocks);
+            }
         }
 
-        currentChunk.push(...pageBlocks);
-        currentChunkTokens += pageTokens;
+        if (balancedChunks.length === minK) {
+            return balancedChunks;
+        }
     }
 
-    if (currentChunk.length > 0) {
-        chunks.push(currentChunk);
-    }
-
-    return chunks;
+    // Fallback to greedy if edge constraint prevented DP reconstruction
+    return greedyChunks;
 }
