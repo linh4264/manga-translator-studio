@@ -34,6 +34,7 @@ import {
     getBase64,
     enhanceImageForOcr,
     ensurePageImageData,
+    generateContextThumbnailBase64,
     executeAiJsonRequestWithRetry,
     executeOcrVisionStep,
     AiRetryInfo
@@ -236,7 +237,7 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                 activeStep = "Dịch ngữ cảnh văn học";
                 updateProgressMsg(
                     "Bước 2/2: Đang dịch ngữ cảnh văn học...",
-                    `Trang ${pageIndex + 1}/${totalPages}: Sử dụng ${transModelToUse} (Text Only)...`,
+                    `Trang ${pageIndex + 1}/${totalPages}: Sử dụng ${transModelToUse} (Kèm bối cảnh hình ảnh)...`,
                     isBackgroundMode ? progressVal : 70
                 );
 
@@ -251,6 +252,8 @@ export async function translatePage(pageIndex: number, isBackgroundMode: boolean
                     endpoint,
                     requestHeaders,
                     contextOptions: ctx,
+                    rawBase64,
+                    mimeType,
                     onRetry: handleRetry
                 });
             }
@@ -730,7 +733,11 @@ export async function runBatchTranslation(): Promise<void> {
                                 allChapterBlocks.push({
                                     id: b.id,
                                     original: b.original,
-                                    pageIndex: i
+                                    pageIndex: i,
+                                    box: b.box,
+                                    type: b.type,
+                                    speaker: b.speaker,
+                                    target: b.target
                                 });
                             }
                         });
@@ -740,8 +747,41 @@ export async function runBatchTranslation(): Promise<void> {
                 if (allChapterBlocks.length > 0) {
                     uiUpdateBackgroundTaskOverlay(
                         true,
+                        "Giai đoạn 2/2: Đang chuẩn bị ảnh ngữ cảnh thị giác...",
+                        `Đang tối ưu bối cảnh hình ảnh của Chapter cho Model dịch (${queuedIndices.length} trang)...`,
+                        65
+                    );
+
+                    const pageImagesMap = new Map<number, string>();
+                    for (let qIdx = 0; qIdx < queuedIndices.length; qIdx++) {
+                        if (cancelTranslationFlag) break;
+                        const pageIdx = queuedIndices[qIdx];
+                        const pageObj = globalState.pages[pageIdx];
+                        if (pageObj && pageObj.blocks && pageObj.blocks.some(b => b.original && b.original.trim())) {
+                            try {
+                                const thumbB64 = await generateContextThumbnailBase64(pageObj, 1200, 0.80);
+                                if (thumbB64) {
+                                    pageImagesMap.set(pageIdx, thumbB64);
+                                }
+                            } catch (thumbErr) {
+                                console.warn(`Không thể tạo ảnh ngữ cảnh cho trang ${pageIdx + 1}:`, thumbErr);
+                            }
+                        }
+                    }
+
+                    if (cancelTranslationFlag) {
+                        showToast("Đã dừng tiến trình dịch Chapter.", "warn");
+                        return;
+                    }
+
+                    const contextNotice = pageImagesMap.size > 0
+                        ? ` (kèm ${pageImagesMap.size} ảnh ngữ cảnh thị giác)`
+                        : '';
+
+                    uiUpdateBackgroundTaskOverlay(
+                        true,
                         "Giai đoạn 2/2: Đang dịch toàn bộ Chapter...",
-                        `Đang gửi ${allChapterBlocks.length} câu thoại của toàn bộ Chapter đến ${transModelToUse} (1 Request duy nhất)...`,
+                        `Đang gửi ${allChapterBlocks.length} câu thoại${contextNotice} đến ${transModelToUse} (Tối ưu tiết kiệm RPD)...`,
                         75
                     );
 
@@ -756,6 +796,7 @@ export async function runBatchTranslation(): Promise<void> {
                             endpoint,
                             requestHeaders,
                             contextOptions: ctx,
+                            pageImagesMap,
                             onRetry: (info) => {
                                 const delaySec = Math.max(1, Math.round(info.delayMs / 1000));
                                 uiUpdateBackgroundTaskOverlay(

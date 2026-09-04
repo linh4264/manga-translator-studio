@@ -138,6 +138,138 @@ export async function ensurePageImageData(page?: MangaPage): Promise<ImageData |
     return null;
 }
 
+/**
+ * Generates an ultra-lightweight JPEG base64 string for a manga page to serve as visual context
+ * during Multimodal Chapter Translation. Typically scales to max dimension 900px at ~0.60 quality,
+ * resulting in ~70-90KB per page so a 30-page chapter fits easily within ~2.5MB payload.
+ */
+export async function generateContextThumbnailBase64(
+    page?: MangaPage,
+    maxDimension: number = 1200,
+    quality: number = 0.80
+): Promise<string | null> {
+    if (!page) return null;
+
+    const getTargetDimensions = (origW: number, origH: number) => {
+        if (origW <= 0 || origH <= 0) return { w: maxDimension, h: maxDimension };
+        const maxSide = Math.max(origW, origH);
+        if (maxSide <= maxDimension) {
+            return { w: origW, h: origH };
+        }
+        const scale = maxDimension / maxSide;
+        return {
+            w: Math.max(1, Math.round(origW * scale)),
+            h: Math.max(1, Math.round(origH * scale))
+        };
+    };
+
+    const canvasToBase64 = (canvas: HTMLCanvasElement): string | null => {
+        try {
+            if (typeof canvas.toDataURL !== 'function') return null;
+            const dataUrl = canvas.toDataURL('image/jpeg', quality);
+            if (!dataUrl || !dataUrl.startsWith('data:')) return null;
+            const commaIdx = dataUrl.indexOf(',');
+            return commaIdx !== -1 ? dataUrl.substring(commaIdx + 1) : dataUrl;
+        } catch (e) {
+            return null;
+        }
+    };
+
+    const fileSource = page.file || page.originalFile;
+
+    // Path 1: From fileSource via createImageBitmap (fastest off-thread decoding)
+    if (fileSource && typeof createImageBitmap === 'function') {
+        try {
+            const bitmap = await createImageBitmap(fileSource);
+            const { w, h } = getTargetDimensions(bitmap.width, bitmap.height);
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(bitmap, 0, 0, w, h);
+                const b64 = canvasToBase64(canvas);
+                canvas.width = 0;
+                canvas.height = 0;
+                if (typeof bitmap.close === 'function') bitmap.close();
+                if (b64) return b64;
+            }
+        } catch (e) { }
+    }
+
+    // Path 2: Using Image element with page.src or Blob URL
+    if (page.src || (fileSource && typeof URL !== 'undefined' && URL.createObjectURL)) {
+        let createdBlobUrl: string | null = null;
+        try {
+            const srcUrl = page.src || (createdBlobUrl = URL.createObjectURL(fileSource as Blob));
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.src = srcUrl;
+            await new Promise<void>((resolve, reject) => {
+                if (img.complete && (img.naturalWidth > 0 || img.width > 0)) return resolve();
+                img.onload = () => resolve();
+                img.onerror = reject;
+                setTimeout(reject, 8000);
+            });
+
+            const { w, h } = getTargetDimensions(img.naturalWidth || img.width, img.naturalHeight || img.height);
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(img, 0, 0, w, h);
+                const b64 = canvasToBase64(canvas);
+                canvas.width = 0;
+                canvas.height = 0;
+                if (b64) return b64;
+            }
+        } catch (e) { } finally {
+            if (createdBlobUrl) {
+                URL.revokeObjectURL(createdBlobUrl);
+            }
+        }
+    }
+
+    // Path 3: From page.imageDataCache if available
+    if (page.imageDataCache && page.imageDataCache.data && page.imageDataCache.width > 0) {
+        try {
+            const srcW = page.imageDataCache.width;
+            const srcH = page.imageDataCache.height;
+            const { w, h } = getTargetDimensions(srcW, srcH);
+            const srcCanvas = document.createElement('canvas');
+            srcCanvas.width = srcW;
+            srcCanvas.height = srcH;
+            const srcCtx = srcCanvas.getContext('2d');
+            if (srcCtx) {
+                srcCtx.putImageData(page.imageDataCache, 0, 0);
+                const dstCanvas = document.createElement('canvas');
+                dstCanvas.width = w;
+                dstCanvas.height = h;
+                const dstCtx = dstCanvas.getContext('2d');
+                if (dstCtx) {
+                    dstCtx.drawImage(srcCanvas, 0, 0, w, h);
+                    const b64 = canvasToBase64(dstCanvas);
+                    srcCanvas.width = 0;
+                    srcCanvas.height = 0;
+                    dstCanvas.width = 0;
+                    dstCanvas.height = 0;
+                    if (b64) return b64;
+                }
+            }
+        } catch (e) { }
+    }
+
+    // Path 4: Fallback to getBase64 on fileSource directly if canvas is unavailable (e.g. headless node test env)
+    if (fileSource) {
+        try {
+            return await getBase64(fileSource);
+        } catch (e) { }
+    }
+
+    return null;
+}
+
 export interface AiRetryInfo {
     attempt: number;
     maxRetries: number;
@@ -269,7 +401,10 @@ export async function executeAiJsonRequestWithRetry<T = any>(
             const result = await response.json();
             const jsonText = opts.isOpenAiFormat
                 ? (result.choices?.[0]?.message?.content || result.choices?.[0]?.text)
-                : result.candidates?.[0]?.content?.parts?.[0]?.text;
+                : (result.candidates?.[0]?.content?.parts || [])
+                    .filter((p: any) => !p.thought)
+                    .map((p: any) => p.text || '')
+                    .join('') || result.candidates?.[0]?.content?.parts?.[0]?.text;
 
             if (parser) {
                 return parser(jsonText || "");

@@ -64,7 +64,10 @@ export function getTranslationGuidancePrompt(
                 `     - [JA] "嘘だろ…！？" ➔ Dịch dở: "Nó là một sự dối trá đúng không?" | Dịch chuẩn Manga: "Đùa nhau à...?" / "Không thể nào...!"`,
                 `     - [JA] "そんな顔するなよ" ➔ Dịch dở: "Đừng làm khuôn mặt như vậy." | Dịch chuẩn Manga: "Làm cái mặt gì đấy?" / "Bớt bày vẻ mặt đó đi."`,
                 `     - [JA] "何してるんだ？" ➔ Dịch dở: "Bạn đang làm gì vậy?" | Dịch chuẩn Manga: "Làm gì đấy?" / "Tính làm trò gì hả?"`,
-                `     - [JA] "しょうがないな…" ➔ Dịch dở: "Nó không thể giúp được." | Dịch chuẩn Manga: "Đành chịu thôi..." / "Biết sao giờ..."`
+                `     - [JA] "しょうがないな…" ➔ Dịch dở: "Nó không thể giúp được." | Dịch chuẩn Manga: "Đành chịu thôi..." / "Biết sao giờ..."`,
+                `     - [JA] "好き" (Tỏ tình / Độc thoại nội tâm) ➔ Dịch dở: "Thích" / "Anh thích em" | Dịch chuẩn Manga: "Tớ thích cậu..." / "Mình thích cậu..."`,
+                `     - [JA] "じゃあそういうことだから" (Bối rối rời đi) ➔ Dịch dở: "Vậy thì là vì chuyện đó" | Dịch chuẩn Manga: "Vậy... chuyện là thế đấy nhé!" / "Thế nên là vậy đấy..."`,
+                `     - [JA] "さっきの、なんだったんだろう" (Tự hỏi một mình) ➔ Dịch dở: "Cái vừa rồi là gì vậy nhỉ?" | Dịch chuẩn Manga: "Chuyện lúc nãy... rốt cuộc là sao chứ?" / "Ý cậu ấy vừa rồi... là sao nhỉ?"`
             );
         } else if (srcLang === 'zh') {
             fewShotExamples.push(
@@ -102,7 +105,11 @@ export function getTranslationGuidancePrompt(
             `     - Duy trì một cặp xưng hô mặc định ổn định dựa trên quan hệ nhân vật và phân cảnh: bạn bè thân (mày-tao, cậu-tớ, ông-tôi), tình cảm (anh-em), gia đình (bố-con, mẹ-con), thứ bậc (sếp-em, tiền bối-em, chú-cháu).`,
             `     - Cho phép thay đổi xưng hô hoặc speech style khi phân cảnh cho thấy rõ cảm xúc, khoảng cách quan hệ, địa vị hoặc thái độ đã chuyển biến (VD: bình thường xưng "anh-em" hoặc "cậu-tớ", lúc nổi giận/xung đột có thể chuyển sang "mày-tao" nếu ngữ cảnh thực sự hỗ trợ).`,
             `     - Không tự ý đổi xưng hô chỉ vì muốn làm câu nghe mạnh hơn khi không có biến chuyển cảm xúc tương ứng.`,
-            `     - Japanese pronouns are clues about persona, NOT fixed Vietnamese mappings.`,
+            `     - 🚫 CẢNH BÁO QUAN TRỌNG VỀ GIỚI TÍNH & BỐI CẢNH MANGA:`,
+            `       * BẮT BUỘC quan sát/đối chiếu diện mạo nhân vật từ hình ảnh hoặc ngữ cảnh học đường: Nếu là hai nữ sinh (cùng giới / bạn nữ / bách hợp / yuri), TUYỆT ĐỐI CẤM dùng đại từ nam-nữ "anh - em"! Phải dùng đại từ bạn bè đồng trang lứa tự nhiên như "cậu - tớ", "mình - bạn", hoặc xưng hô tiền bối "chị - em".`,
+            `       * Nếu là hai nam sinh: dùng "cậu - tớ", "mày - tao", hoặc "anh - em".`,
+            `       * CHỈ DÙNG "anh - em" khi có bằng chứng rõ ràng là nam - nữ yêu đương hoặc anh em trong gia đình.`,
+            `       * PHÂN BIỆT BÓNG THOẠI TRỰC TIẾP VÀ SUY NGHĨ / HỒI TƯỞNG: Các bóng tròn lơ lửng, đám mây, hoặc không có đuôi nhọn chỉ vào miệng là độc thoại nội tâm hoặc hồi tưởng (như nhớ lại lời tỏ tình "好き" ➔ "Tớ thích cậu...", tự nhủ "さっきの なんだったんだろう" ➔ "Chuyện lúc nãy... rốt cuộc là sao chứ?"). Dịch thể hiện được sự ngập ngừng, thầm thì nội tâm.`,
             `  4. CHUYỂN ĐỔI TỪ CẢM THÁN & TỪ LÓNG (SLANG/IDIOMS/EXCLAMATIONS):`,
             `     - Dịch thoát ý linh hoạt từ lóng, quán ngữ và từ cảm thán sang khẩu ngữ tiếng Việt tương đương, giữ trọn năng lượng và thần thái của nhân vật khi được ngữ cảnh hỗ trợ.`,
             `  5. SÚC TÍCH, ĐẮM THÉP & VỪA KHUNG BÓNG THOẠI (COMPACT MANGA BUBBLE FIT):`,
@@ -149,6 +156,10 @@ export function getTranslationGuidancePrompt(
                 `     - ヤバい (Yabai) -> "Tệ rồi!", "Đỉnh vãi!", "Chết dở!", "Vãi thật!".`,
                 `     - べつに (Betsuni) -> "Đâu có gì...", "Chả có gì hết."`,
                 `     - うざい (Uzai) -> "Phiền phức!", "Chướng mắt!".`,
+                `     - じゃあそういうことだから / そういうことだから -> "Vậy... chuyện là thế đấy nhé!", "Thế nên là vậy đấy...", "Vậy là hiểu rồi chứ!".`,
+                `     - 好き (Suki) -> Tỏ tình/Tâm sự: "Tớ thích cậu...", "Mình thích cậu...", "Anh thích em" (chỉ khi rõ nam-nữ). Khi trong bóng hồi tưởng/suy nghĩ: giữ sắc thái ngập ngừng/ngượng ngùng.`,
+                `     - さっきの (Sakkino) -> "Chuyện lúc nãy...", "Chuyện vừa rồi...".`,
+                `     - なんだったんだろう (Nandattan darou) -> "Rốt cuộc là sao chứ?", "Là sao vậy nhỉ?", "Ý cậu ấy là sao ta?".`,
                 `  4. HẬU TỐ XƯNG HÔ (HONORIFICS): GIỮ NGUYÊN các hậu tố danh xưng Nhật Bản quen thuộc ghép phía sau tên riêng:`,
                 `     - ～さん (-san), ～ちゃん (-chan), ～くん (-kun), ～様 (-sama), ～先輩 (-senpai), ～先生 (-sensei), ～殿 (-dono).`,
                 `  5. TỪ TƯỢNG THANH / TỪ TƯỢNG HÌNH (SFX): Dịch sang từ cảm thán hoặc từ mô tả âm thanh/hành động tự nhiên trong tiếng Việt.`
