@@ -25,7 +25,8 @@
     "@types/node": "^20.17.0",
     "typescript": "^5.7.3",
     "vite": "^6.4.3",
-    "vitest": "^3.2.6"
+    "vitest": "^3.2.6",
+    "wrangler": "^4.129.0"
   },
   "keywords": [
     "manga",
