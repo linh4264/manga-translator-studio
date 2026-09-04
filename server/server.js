@@ -100,8 +100,13 @@ function resolveTsImports(code, currentDir) {
 }
 
 function getSafeRedirectUrl(targetRelativePath, query) {
-    const cleanPath = '/' + String(targetRelativePath || '').replace(/^[\\\/]+/, '').replace(/\\/g, '/') + '/';
-    return query ? `${cleanPath}?${query}` : cleanPath;
+    const cleanRel = String(targetRelativePath || '')
+        .replace(/^[\\\/]+/, '')
+        .replace(/\\/g, '/')
+        .replace(/[^a-zA-Z0-9_\-\/]/g, '');
+    const cleanQuery = query ? String(query).replace(/[^a-zA-Z0-9_\-=&]/g, '') : '';
+    const cleanPath = '/' + cleanRel + '/';
+    return cleanQuery ? `${cleanPath}?${cleanQuery}` : cleanPath;
 }
 
 function resolveTargetFile(rawUrl) {
@@ -214,14 +219,14 @@ const server = http.createServer((req, res) => {
     const resolved = resolveTargetFile(req.url || '/');
 
     if (resolved.status === 301 && resolved.redirect) {
-        const rawRedirect = String(resolved.redirect || '/');
-        const safeRedirect = '/' + rawRedirect.replace(/^[\\\/]+/, '').replace(/\\/g, '/');
-        if (safeRedirect.startsWith('/') && !safeRedirect.startsWith('//')) {
+        const target = String(resolved.redirect || '/');
+        // Validate against strict relative URL pattern to prevent open redirection (CWE-601)
+        if (/^\/[a-zA-Z0-9_\-\/]+(\?[a-zA-Z0-9_\-=&]*)?$/.test(target) && !target.startsWith('//')) {
             res.writeHead(301, {
-                'Location': safeRedirect,
+                'Location': target,
                 'Content-Type': 'text/plain; charset=utf-8'
             });
-            res.end(`Redirecting to ${escapeHTML(safeRedirect)}`);
+            res.end(`Redirecting to ${escapeHTML(target)}`);
         } else {
             res.writeHead(301, {
                 'Location': '/',

@@ -189,12 +189,11 @@ test('Multimodal Chapter Translation - Adaptive Chunking handles large chapters 
         const foundBlocks = [];
         parts.forEach(p => {
             if (p.text && p.text.includes('p')) {
-                const matches = p.text.match(/"id":\s*"(p\d+_b\d+)"/g);
-                if (matches) {
-                    matches.forEach(m => {
-                        const id = m.replace(/"id":\s*"/, '').replace('"', '');
-                        foundBlocks.push({ id, translated: `Dịch: ${id}` });
-                    });
+                const regex = /"id":\s*"(p\d+_b\d+)"/g;
+                let match;
+                while ((match = regex.exec(p.text)) !== null) {
+                    const id = match[1];
+                    foundBlocks.push({ id, translated: `Dịch: ${id}` });
                 }
             }
         });
