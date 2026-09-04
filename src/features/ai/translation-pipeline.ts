@@ -494,7 +494,7 @@ export async function executeChapterTranslationStep({
             ? `Giai đoạn 2/2: Đang dịch Chapter (Nhóm ${cIdx + 1}/${chunks.length})...`
             : "Giai đoạn 2/2: Đang dịch toàn bộ Chapter...";
 
-        const initialDetail = `Đang dịch ${chunk.length} câu thoại (~${chunkMetrics.predictedOutputTokens.toLocaleString()} tokens • Ước tính ~${chunkMetrics.estimatedDurationSec}s)...`;
+        const initialDetail = `Đang dịch ${chunk.length} câu thoại (~${chunkMetrics.predictedOutputTokens.toLocaleString()} tokens) • ⏳ Đếm ngược: còn ~${chunkMetrics.estimatedDurationSec}s...`;
         const initialProgress = Math.round(50 + ((cIdx + 0.1) / chunks.length) * 45);
 
         uiUpdateBackgroundTaskOverlay(true, chunkTitle, initialDetail, initialProgress);
@@ -511,7 +511,7 @@ export async function executeChapterTranslationStep({
             }
         }
 
-        // Live Heartbeat Timer: Updates the UI every second with active runtime
+        // Live Countdown Heartbeat: Updates the UI every second with live countdown & elapsed time
         const startTime = Date.now();
         const timer = setInterval(() => {
             if (cancelTranslationFlag) {
@@ -519,11 +519,15 @@ export async function executeChapterTranslationStep({
                 return;
             }
             const elapsedSec = Math.round((Date.now() - startTime) / 1000);
-            const liveProgress = Math.round(50 + ((cIdx + Math.min(0.9, elapsedSec / Math.max(10, chunkMetrics.estimatedDurationSec))) / chunks.length) * 45);
+            const remainingSec = Math.max(0, chunkMetrics.estimatedDurationSec - elapsedSec);
+            const countdownText = remainingSec > 0
+                ? `⏳ Đếm ngược: còn ~${remainingSec}s (đã chạy ${elapsedSec}s)`
+                : `⏳ Đang hoàn tất phản hồi AI (${elapsedSec}s)...`;
+            const liveProgress = Math.round(50 + ((cIdx + Math.min(0.95, elapsedSec / Math.max(10, chunkMetrics.estimatedDurationSec * 1.2))) / chunks.length) * 45);
             uiUpdateBackgroundTaskOverlay(
                 true,
                 chunkTitle,
-                `Đang dịch ${chunk.length} câu thoại (~${chunkMetrics.predictedOutputTokens.toLocaleString()} tokens • Ước tính ~${chunkMetrics.estimatedDurationSec}s) • Đang xử lý: ${elapsedSec}s...`,
+                `Đang dịch ${chunk.length} câu thoại (~${chunkMetrics.predictedOutputTokens.toLocaleString()} tokens) • ${countdownText}`,
                 liveProgress
             );
         }, 1000);
