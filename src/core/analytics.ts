@@ -133,18 +133,19 @@ class TelemetryTracker {
 
         // Tự động flush nếu có >= 5 events trong hàng đợi
         if (this.queue.length >= 5) {
-            this.flush();
+            this.flush().catch(() => {});
         }
     }
 
     public async flush() {
-        if (this.isFlushing || this.queue.length === 0 || !navigator.onLine) return;
-        if (!this.endpointUrl || this.endpointUrl.includes('your-worker')) return;
-
-        this.isFlushing = true;
-        const batch = [...this.queue];
-
         try {
+            const isOnline = (typeof navigator !== 'undefined' && 'onLine' in navigator) ? navigator.onLine : true;
+            if (this.isFlushing || this.queue.length === 0 || !isOnline) return;
+            if (!this.endpointUrl || this.endpointUrl.includes('your-worker')) return;
+
+            this.isFlushing = true;
+            const batch = [...this.queue];
+
             const res = await fetch(this.endpointUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -166,14 +167,14 @@ class TelemetryTracker {
 
     private setupAutoSync() {
         // Tự động flush mỗi 30s
-        setInterval(() => this.flush(), 30_000);
+        setInterval(() => this.flush().catch(() => {}), 30_000);
 
         // Khi có mạng trở lại
-        window.addEventListener('online', () => this.flush());
+        window.addEventListener('online', () => this.flush().catch(() => {}));
 
         // Khi người dùng tắt hoặc ẩn tab
         window.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'hidden') this.flush();
+            if (document.visibilityState === 'hidden') this.flush().catch(() => {});
         });
     }
 
@@ -237,7 +238,7 @@ class TelemetryTracker {
         }
 
         // Bắn ngay event hoàn thành về server
-        this.flush();
+        this.flush().catch(() => {});
     }
 
     public getState(): Readonly<AnalyticsState> {

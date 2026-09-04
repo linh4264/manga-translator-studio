@@ -452,6 +452,22 @@ export function setupBrowserEnvironment() {
         globalThis.window.Image = globalThis.Image;
     }
 
+    try {
+        if (typeof globalThis.navigator === 'undefined') {
+            Object.defineProperty(globalThis, 'navigator', {
+                value: { onLine: true, userAgent: 'Mozilla/5.0' },
+                configurable: true,
+                writable: true
+            });
+        } else if (typeof globalThis.navigator.onLine === 'undefined') {
+            Object.defineProperty(globalThis.navigator, 'onLine', {
+                value: true,
+                configurable: true,
+                writable: true
+            });
+        }
+    } catch (_) { }
+
     if (typeof globalThis.URL.createObjectURL === 'undefined') {
         globalThis.URL.createObjectURL = (blob) => 'blob:http://localhost/mock-blob-' + Math.random().toString(36).slice(2);
         globalThis.URL.revokeObjectURL = () => {};
